@@ -35,6 +35,27 @@ public class PlayerHeat : MonoBehaviour
     [Range(0f, 1f)]
     public float minimumHeavyHeatGeneration = 0.2f;
 
+    [Header("Heavy Power Scaling")]
+
+    [Range(0f, 1f)]
+    public float minimumHeavyDamageMultiplier = 0.2f;
+
+    [Range(0f, 1f)]
+    public float minimumHeavyAreaMultiplier = 0.5f;
+
+    public float maximumHeavyDamageMultiplier = 1.5f;
+    public float maximumHeavyAreaMultiplier = 1.5f;
+
+    [Header("Cooling Delays")]
+    public float heatCoolingDelay = 5f;
+    public float superheatCoolingDelay = 10f;
+
+    private float timeSinceHeatIncrease;
+    private float timeSinceSuperheatIncrease;
+
+    [Header("Cold Superheat Cooling")]
+    public int coldLightSuperheatMultiplier = 4;
+
     private int currentHeat = 0;
     private int currentSuperheat = 0;
 
@@ -94,8 +115,10 @@ public class PlayerHeat : MonoBehaviour
         if (playerState.IsDead())
             return;
 
-        UpdatePassiveHeat();
+        timeSinceHeatIncrease += Time.deltaTime;
+        timeSinceSuperheatIncrease += Time.deltaTime;
 
+        UpdatePassiveHeat();
         UpdatePassiveSuperheat();
 
         CheckDeath();
@@ -103,6 +126,12 @@ public class PlayerHeat : MonoBehaviour
 
     void UpdatePassiveHeat()
     {
+        if (timeSinceHeatIncrease < heatCoolingDelay)
+        {
+            heatCoolingAccumulator = 0f;
+            return;
+        }
+
         // Heat negativo não se recupera sozinho.
         if (currentHeat <= 0)
         {
@@ -173,6 +202,12 @@ public class PlayerHeat : MonoBehaviour
             return;
         }
 
+        if (timeSinceSuperheatIncrease < superheatCoolingDelay)
+        {
+            superheatAccumulator = 0f;
+            return;
+        }
+
         // ====================================
         // ZONA NORMAL / FRIA
         // ====================================
@@ -211,6 +246,8 @@ public class PlayerHeat : MonoBehaviour
     {
         if (amount <= 0)
             return;
+
+        timeSinceHeatIncrease = 0f;
 
         // Heat negativo também recebe Heat normalmente.
         // É assim que Heavy futuramente tirará
@@ -261,6 +298,8 @@ public class PlayerHeat : MonoBehaviour
     {
         if (amount <= 0)
             return;
+
+        timeSinceSuperheatIncrease = 0f;
 
         currentSuperheat += amount;
 
@@ -313,6 +352,129 @@ public class PlayerHeat : MonoBehaviour
             );
 
         return finalHeatGeneration;
+    }
+
+    public int CalculateHeavyDamage(int baseDamage)
+    {
+        if (baseDamage <= 0)
+            return 0;
+
+        float multiplier = CalculateHeavyDamageMultiplier();
+
+        int finalDamage = Mathf.RoundToInt(baseDamage * multiplier);
+
+        return finalDamage;
+    }
+
+    float CalculateHeavyDamageMultiplier()
+    {
+        // =========================
+        // HEAT NEGATIVO
+        // =========================
+
+        if (currentHeat < 0)
+        {
+            float coldAmount = (float)currentHeat / minHeat;
+
+            coldAmount = Mathf.Clamp01(coldAmount);
+
+            return Mathf.Lerp(
+                1f,
+                minimumHeavyDamageMultiplier,
+                coldAmount
+            );
+        }
+
+        // =========================
+        // HEAT POSITIVO
+        // =========================
+
+        float hotAmount = (float)currentHeat / maxHeat;
+
+        hotAmount = Mathf.Clamp01(hotAmount);
+
+        return Mathf.Lerp(
+            1f,
+            maximumHeavyDamageMultiplier,
+            hotAmount
+        );
+    }
+
+    public float CalculateHeavyArea(float baseArea)
+    {
+        if (baseArea <= 0f)
+            return 0f;
+
+        float multiplier = CalculateHeavyAreaMultiplier();
+
+        return baseArea * multiplier;
+    }
+
+    float CalculateHeavyAreaMultiplier()
+    {
+        // =========================
+        // HEAT NEGATIVO
+        // =========================
+
+        if (currentHeat < 0)
+        {
+            float coldAmount = (float)currentHeat / minHeat;
+
+            coldAmount = Mathf.Clamp01(coldAmount);
+
+            return Mathf.Lerp(
+                1f,
+                minimumHeavyAreaMultiplier,
+                coldAmount
+            );
+        }
+
+        // =========================
+        // HEAT POSITIVO
+        // =========================
+
+        float hotAmount = (float)currentHeat / maxHeat;
+
+        hotAmount = Mathf.Clamp01(hotAmount);
+
+        return Mathf.Lerp(
+            1f,
+            maximumHeavyAreaMultiplier,
+            hotAmount
+        );
+    }
+
+    public void CoolFromLight(int heatAmount, int superheatAmount)
+    {
+        // ====================================
+        // HEAT
+        // ====================================
+
+        // Light só reduz Heat se ele estiver acima de zero.
+        if (currentHeat > 0)
+        {
+            currentHeat -= heatAmount;
+
+            // Light nunca empurra Heat para valores negativos.
+            if (currentHeat < 0)
+            {
+                currentHeat = 0;
+            }
+        }
+
+        // ====================================
+        // SUPERHEAT
+        // ====================================
+
+        int finalSuperheatCooling = superheatAmount;
+
+        // Se estamos no frio, Light remove Superheat mais rápido.
+        if (currentHeat < 0)
+        {
+            finalSuperheatCooling *= coldLightSuperheatMultiplier;
+        }
+
+        RemoveSuperheat(finalSuperheatCooling);
     }
 
     void CheckDeath()

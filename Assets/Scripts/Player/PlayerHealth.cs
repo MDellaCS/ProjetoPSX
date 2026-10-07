@@ -2,31 +2,38 @@ using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
-    public int maxHealth = 100;
     public float successfulDodgeFlashDuration = 0.15f;
+    public float staggerDuration = 0.8f;
 
-    private int currentHealth;
     private bool isInvulnerable;
 
     private Renderer playerRenderer;
-    private PlayerHeavyCombo playerHeavyCombo;
-    public float staggerDuration = 0.8f;
 
     private PlayerState playerState;
+    private PlayerCombat playerCombat;
+    private PlayerMovement playerMovement;
+
     private PlayerLightCombo playerLightCombo;
+    private PlayerHeavyCombo playerHeavyCombo;
+
+    private PlayerHeat playerHeat;
+
     private float staggerTimer;
     private Color normalColor;
-    private PlayerCombat playerCombat;
 
     void Start()
     {
-        currentHealth = maxHealth;
         playerRenderer = GetComponent<Renderer>();
         normalColor = playerRenderer.material.color;
-        playerCombat = GetComponent<PlayerCombat>();
+
         playerState = GetComponent<PlayerState>();
+        playerCombat = GetComponent<PlayerCombat>();
+        playerMovement = GetComponent<PlayerMovement>();
+
         playerLightCombo = GetComponent<PlayerLightCombo>();
         playerHeavyCombo = GetComponent<PlayerHeavyCombo>();
+
+        playerHeat = GetComponent<PlayerHeat>();
     }
 
     void Update()
@@ -44,11 +51,14 @@ public class PlayerHealth : MonoBehaviour
 
     void StartStagger()
     {
-        playerState.ChangeState(PlayerState.State.Stagger);
+        playerState.ChangeState(
+            PlayerState.State.Stagger
+        );
 
         staggerTimer = staggerDuration;
 
-        playerRenderer.material.color = Color.yellow;
+        playerRenderer.material.color =
+            Color.yellow;
 
         playerCombat.CancelAttack();
         playerLightCombo.CancelCombo();
@@ -57,9 +67,17 @@ public class PlayerHealth : MonoBehaviour
 
     void EndStagger()
     {
-        playerRenderer.material.color = normalColor;
+        // Se o dano levou o jogador à morte,
+        // não podemos voltar para Normal.
+        if (playerState.IsDead())
+            return;
 
-        playerState.ChangeState(PlayerState.State.Normal);
+        playerRenderer.material.color =
+            normalColor;
+
+        playerState.ChangeState(
+            PlayerState.State.Normal
+        );
     }
 
     public void TakeDamage(
@@ -69,24 +87,61 @@ public class PlayerHealth : MonoBehaviour
         float knockbackDuration
     )
     {
+        if (playerState.IsDead())
+            return;
+
+        // =========================
+        // DODGE / INVULNERABILIDADE
+        // =========================
+
         if (isInvulnerable)
         {
-            playerRenderer.material.color = Color.magenta;
+            playerRenderer.material.color =
+                Color.magenta;
 
-            CancelInvoke(nameof(ReturnToDodgeColor));
-            Invoke(nameof(ReturnToDodgeColor), successfulDodgeFlashDuration);
+            CancelInvoke(
+                nameof(ReturnToDodgeColor)
+            );
+
+            Invoke(
+                nameof(ReturnToDodgeColor),
+                successfulDodgeFlashDuration
+            );
 
             return;
         }
 
-        currentHealth -= damage;
+        // =========================
+        // DANO = PERDA DE HEAT
+        // =========================
 
-        Vector3 knockbackDirection = transform.position - attackerPosition;
+        playerHeat.RemoveHeat(damage);
+
+        // Se chegamos a -1000,
+        // PlayerHeat já colocou o jogador
+        // no estado Dead.
+        if (playerState.IsDead())
+        {
+            Debug.Log(
+                "Dano recebido: " +
+                damage +
+                " Heat"
+            );
+
+            return;
+        }
+
+        // =========================
+        // KNOCKBACK
+        // =========================
+
+        Vector3 knockbackDirection =
+            transform.position -
+            attackerPosition;
 
         knockbackDirection.y = 0f;
-        knockbackDirection.Normalize();
 
-        PlayerMovement playerMovement = GetComponent<PlayerMovement>();
+        knockbackDirection.Normalize();
 
         playerMovement.ApplyKnockback(
             knockbackDirection,
@@ -94,36 +149,51 @@ public class PlayerHealth : MonoBehaviour
             knockbackDuration
         );
 
-        Debug.Log("Player tomou " + damage + " de dano!");
-        Debug.Log("Vida: " + currentHealth + "/" + maxHealth);
+        Debug.Log(
+            "Player perdeu " +
+            damage +
+            " Heat!"
+        );
 
-        CameraFollow.Instance.ImpactShake(knockbackDirection);
-        HitStopManager.Instance.HitStop();
-        StartStagger();
+        Debug.Log(
+            "Heat atual: " +
+            playerHeat.CurrentHeat
+        );
 
-        if (currentHealth <= 0)
+        // =========================
+        // IMPACTO
+        // =========================
+
+        if (CameraFollow.Instance != null)
         {
-            Die();
+            CameraFollow.Instance.ImpactShake(
+                knockbackDirection
+            );
         }
+
+        if (HitStopManager.Instance != null)
+        {
+            HitStopManager.Instance.HitStop();
+        }
+
+        // =========================
+        // STAGGER
+        // =========================
+
+        StartStagger();
     }
 
     void ReturnToDodgeColor()
     {
         if (isInvulnerable)
         {
-            playerRenderer.material.color = Color.green;
+            playerRenderer.material.color =
+                Color.green;
         }
     }
 
     public void SetInvulnerable(bool value)
     {
         isInvulnerable = value;
-    }
-
-    void Die()
-    {
-        Debug.Log("Player morreu!");
-
-        playerState.ChangeState(PlayerState.State.Dead);
     }
 }

@@ -15,4 +15,6 @@ public class PlayerAttackData
     public float attackRadius = 1f;
 
     public int heatGenerated = 0;
+    public int heatRemovedOnHit = 0;
+    public int superheatRemovedOnHit = 0;
 }

@@ -29,9 +29,10 @@ public class PlayerLightCombo : MonoBehaviour
 
     private PlayerCombat playerCombat;
     private PlayerState playerState;
+    private PlayerHeat playerHeat;
+    private PlayerAttackData currentLightAttack;
 
-    private LightComboRoute comboRoute =
-        LightComboRoute.None;
+    private LightComboRoute comboRoute = LightComboRoute.None;
 
     private int comboStep = 0;
 
@@ -43,11 +44,9 @@ public class PlayerLightCombo : MonoBehaviour
 
     void Start()
     {
-        playerCombat =
-            GetComponent<PlayerCombat>();
-
-        playerState =
-            GetComponent<PlayerState>();
+        playerCombat = GetComponent<PlayerCombat>();
+        playerState = GetComponent<PlayerState>();
+        playerHeat = GetComponent<PlayerHeat>();
     }
 
     void Update()
@@ -103,17 +102,30 @@ public class PlayerLightCombo : MonoBehaviour
         ExecuteAttack(lightAttack1);
     }
 
-    void ExecuteAttack(
-        PlayerAttackData attack
-    )
+    void ExecuteAttack(PlayerAttackData attack)
     {
         lightAttackBuffered = false;
-
         waitingForCombo = false;
+
+        currentLightAttack = attack;
 
         playerCombat.StartAttack(
             attack,
-            OnAttackFinished
+            OnAttackFinished,
+            OnLightAttackHit,
+            attack.damage,
+            attack.attackRadius
+        );
+    }
+
+    void OnLightAttackHit()
+    {
+        if (currentLightAttack == null)
+            return;
+
+        playerHeat.CoolFromLight(
+            currentLightAttack.heatRemovedOnHit,
+            currentLightAttack.superheatRemovedOnHit
         );
     }
 

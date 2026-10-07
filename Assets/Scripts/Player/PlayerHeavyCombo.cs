@@ -111,12 +111,23 @@ public class PlayerHeavyCombo : MonoBehaviour
 
         waitingForCombo = false;
 
+        // Primeiro calculamos o poder do golpe usando o Heat atual
+        int finalDamage = playerHeat.CalculateHeavyDamage(attack.damage);
+        float finalRadius = playerHeat.CalculateHeavyArea(attack.attackRadius);
+
+        // Depois calculamos quanto Heat este Heavy gera
         int generatedHeat = playerHeat.CalculateHeavyHeatGeneration(attack.heatGenerated);
+
+        // Agora o Heavy gera seu Heat
         playerHeat.AddHeat(generatedHeat);
 
+        // Finalmente executamos o golpe com os valores calculados
         playerCombat.StartAttack(
             attack,
-            OnAttackFinished
+            OnAttackFinished,
+            null,
+            finalDamage,
+            finalRadius
         );
     }
 

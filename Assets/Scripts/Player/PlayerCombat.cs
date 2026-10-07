@@ -11,19 +11,21 @@ public class PlayerCombat : MonoBehaviour
         Recovery
     }
 
-    private AttackPhase attackPhase =
-        AttackPhase.None;
+    private AttackPhase attackPhase = AttackPhase.None;
 
-    private HashSet<EnemyHealth> enemiesHit =
-        new HashSet<EnemyHealth>();
+    private HashSet<EnemyHealth> enemiesHit = new HashSet<EnemyHealth>();
 
     private PlayerState playerState;
-
     private PlayerAttackData currentAttack;
 
     private float attackTimer;
+    private int currentDamage;
+    private float currentAttackRadius;
+
+    private bool hasTriggeredHitCallback;
 
     private System.Action attackFinishedCallback;
+    private System.Action attackHitCallback;
 
     public bool IsAttacking
     {
@@ -48,7 +50,10 @@ public class PlayerCombat : MonoBehaviour
 
     public void StartAttack(
         PlayerAttackData attack,
-        System.Action onAttackFinished
+        System.Action onAttackFinished,
+        System.Action onAttackHit,
+        int damage,
+        float attackRadius
     )
     {
         if (attack == null)
@@ -56,8 +61,16 @@ public class PlayerCombat : MonoBehaviour
 
         currentAttack = attack;
 
+        currentDamage = damage;
+        currentAttackRadius = attackRadius;
+
         attackFinishedCallback =
             onAttackFinished;
+
+        attackHitCallback =
+            onAttackHit;
+
+        hasTriggeredHitCallback = false;
 
         enemiesHit.Clear();
 
@@ -128,6 +141,8 @@ public class PlayerCombat : MonoBehaviour
         attackPhase = AttackPhase.None;
 
         currentAttack = null;
+        currentDamage = 0;
+        currentAttackRadius = 0f;
 
         enemiesHit.Clear();
 
@@ -139,6 +154,9 @@ public class PlayerCombat : MonoBehaviour
             attackFinishedCallback;
 
         attackFinishedCallback = null;
+        attackHitCallback = null;
+
+        hasTriggeredHitCallback = false;
 
         callback?.Invoke();
     }
@@ -165,7 +183,7 @@ public class PlayerCombat : MonoBehaviour
 
         Collider[] hits = Physics.OverlapSphere(
             attackPosition,
-            currentAttack.attackRadius
+            currentAttackRadius
         );
 
         foreach (Collider hit in hits)
@@ -173,15 +191,21 @@ public class PlayerCombat : MonoBehaviour
             EnemyHealth enemy =
                 hit.GetComponent<EnemyHealth>();
 
-            if (enemy != null &&
-                !enemiesHit.Contains(enemy))
+            if (enemy != null && !enemiesHit.Contains(enemy))
             {
                 enemy.TakeDamage(
-                    currentAttack.damage,
+                    currentDamage,
                     transform.position
                 );
 
                 enemiesHit.Add(enemy);
+
+                if (!hasTriggeredHitCallback)
+                {
+                    hasTriggeredHitCallback = true;
+
+                    attackHitCallback?.Invoke();
+                }
             }
         }
     }
@@ -191,12 +215,17 @@ public class PlayerCombat : MonoBehaviour
         attackPhase = AttackPhase.None;
 
         currentAttack = null;
+        currentDamage = 0;
+        currentAttackRadius = 0f;
 
         attackTimer = 0f;
 
         enemiesHit.Clear();
 
         attackFinishedCallback = null;
+        attackHitCallback = null;
+
+        hasTriggeredHitCallback = false;
     }
 
     void OnDrawGizmos()
@@ -216,7 +245,7 @@ public class PlayerCombat : MonoBehaviour
 
         Gizmos.DrawWireSphere(
             attackPosition,
-            currentAttack.attackRadius
+            currentAttackRadius
         );
     }
 }
