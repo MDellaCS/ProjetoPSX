@@ -11,7 +11,10 @@ public class PlayerState : MonoBehaviour
         Dead
     }
 
-    public State currentState = State.Normal;
+    [SerializeField]
+    private State currentState = State.Normal;
+
+    public State CurrentState => currentState;
 
     public bool IsNormal()
     {
@@ -40,6 +43,14 @@ public class PlayerState : MonoBehaviour
 
     public void ChangeState(State newState)
     {
+        // Morte é um estado terminal
+        if (currentState == State.Dead)
+            return;
+
+        // Evita transições redundantes
+        if (currentState == newState)
+            return;
+
         currentState = newState;
     }
 }

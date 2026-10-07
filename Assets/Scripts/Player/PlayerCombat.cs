@@ -22,10 +22,14 @@ public class PlayerCombat : MonoBehaviour
     private int currentDamage;
     private float currentAttackRadius;
 
-    private bool hasTriggeredHitCallback;
-
     private System.Action attackFinishedCallback;
     private System.Action attackHitCallback;
+
+    [Header("Attack Rotation")]
+    [SerializeField] private float windupRotationSpeed = 180f;
+
+    private PlayerMovement playerMovement;
+    private Vector3 attackFacingDirection;
 
     public bool IsAttacking
     {
@@ -38,6 +42,7 @@ public class PlayerCombat : MonoBehaviour
     void Start()
     {
         playerState = GetComponent<PlayerState>();
+        playerMovement = GetComponent<PlayerMovement>();
     }
 
     void Update()
@@ -48,7 +53,7 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    public void StartAttack(
+    public bool StartAttack(
         PlayerAttackData attack,
         System.Action onAttackFinished,
         System.Action onAttackHit,
@@ -56,8 +61,13 @@ public class PlayerCombat : MonoBehaviour
         float attackRadius
     )
     {
-        if (attack == null)
-            return;
+        if (attack == null ||
+            IsAttacking ||
+            playerState == null ||
+            !playerState.IsNormal())
+        {
+            return false;
+        }
 
         currentAttack = attack;
 
@@ -70,13 +80,18 @@ public class PlayerCombat : MonoBehaviour
         attackHitCallback =
             onAttackHit;
 
-        hasTriggeredHitCallback = false;
-
         enemiesHit.Clear();
 
         playerState.ChangeState(
             PlayerState.State.Attacking
         );
+
+        attackFacingDirection = transform.forward;
+
+        if (playerMovement != null && playerMovement.DesiredDirection.sqrMagnitude > 0.0001f)
+        {
+            attackFacingDirection = playerMovement.DesiredDirection.normalized;
+        }
 
         ChangeAttackPhase(
             AttackPhase.Windup,
@@ -87,6 +102,8 @@ public class PlayerCombat : MonoBehaviour
             "Ataque iniciado: " +
             currentAttack.attackName
         );
+
+        return true;
     }
 
     void UpdateAttack()
@@ -94,6 +111,8 @@ public class PlayerCombat : MonoBehaviour
         switch (attackPhase)
         {
             case AttackPhase.Windup:
+
+                RotateDuringWindup();
 
                 attackTimer -= Time.deltaTime;
 
@@ -136,9 +155,28 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    void FinishAttack()
+    private void FinishAttack()
+    {
+        // Guarda o callback antes de limpar os dados.
+        System.Action callback = attackFinishedCallback;
+
+        ResetAttack();
+
+        // Só libera o estado se ainda estiver atacando.
+        if (playerState.IsAttacking())
+        {
+            playerState.ChangeState(
+                PlayerState.State.Normal
+            );
+        }
+
+        callback?.Invoke();
+    }
+
+    private void ResetAttack()
     {
         attackPhase = AttackPhase.None;
+        attackTimer = 0f;
 
         currentAttack = null;
         currentDamage = 0;
@@ -146,25 +184,11 @@ public class PlayerCombat : MonoBehaviour
 
         enemiesHit.Clear();
 
-        playerState.ChangeState(
-            PlayerState.State.Normal
-        );
-
-        System.Action callback =
-            attackFinishedCallback;
-
         attackFinishedCallback = null;
         attackHitCallback = null;
-
-        hasTriggeredHitCallback = false;
-
-        callback?.Invoke();
     }
 
-    void ChangeAttackPhase(
-        AttackPhase newPhase,
-        float duration
-    )
+    void ChangeAttackPhase(AttackPhase newPhase, float duration)
     {
         attackPhase = newPhase;
 
@@ -188,8 +212,7 @@ public class PlayerCombat : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
-            EnemyHealth enemy =
-                hit.GetComponent<EnemyHealth>();
+            EnemyHealth enemy = hit.GetComponentInParent<EnemyHealth>();
 
             if (enemy != null && !enemiesHit.Contains(enemy))
             {
@@ -200,32 +223,43 @@ public class PlayerCombat : MonoBehaviour
 
                 enemiesHit.Add(enemy);
 
-                if (!hasTriggeredHitCallback)
-                {
-                    hasTriggeredHitCallback = true;
-
-                    attackHitCallback?.Invoke();
-                }
+                attackHitCallback?.Invoke();
             }
         }
     }
 
     public void CancelAttack()
     {
-        attackPhase = AttackPhase.None;
+        if (!IsAttacking)
+            return;
 
-        currentAttack = null;
-        currentDamage = 0;
-        currentAttackRadius = 0f;
+        ResetAttack();
+    }
 
-        attackTimer = 0f;
+    private void RotateDuringWindup()
+    {
+        if (playerMovement == null)
+            return;
 
-        enemiesHit.Clear();
+        Vector3 direction = playerMovement.DesiredDirection;
+        direction.y = 0f;
 
-        attackFinishedCallback = null;
-        attackHitCallback = null;
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            attackFacingDirection = direction.normalized;
+        }
 
-        hasTriggeredHitCallback = false;
+        if (attackFacingDirection.sqrMagnitude < 0.0001f)
+            return;
+
+        Quaternion targetRotation =
+            Quaternion.LookRotation(attackFacingDirection);
+
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation,
+            targetRotation,
+            windupRotationSpeed * Time.deltaTime
+        );
     }
 
     void OnDrawGizmos()

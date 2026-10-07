@@ -17,6 +17,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 dodgeDirection;
 
     public Transform cameraTransform;
+    public Vector3 DesiredDirection { get; private set; }
 
     private CharacterController controller;
     private PlayerHealth playerHealth;
@@ -55,8 +56,10 @@ public class PlayerMovement : MonoBehaviour
         cameraRight.Normalize();
 
         Vector3 direction = (cameraForward * input.y + cameraRight * input.x).normalized;
+        
+        DesiredDirection = direction;
 
-        if (direction != Vector3.zero)
+        if (playerState.IsNormal() && direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
 

@@ -48,13 +48,18 @@ public class EnemyMovement : MonoBehaviour
 
             float distance = direction.magnitude;
 
-            if (distance > stoppingDistance)
+            if (distance > 0.01f)
             {
                 direction.Normalize();
 
-                horizontalVelocity = direction * speed;
-
+                // Continua olhando para o jogador, mesmo quando está parado
                 transform.rotation = Quaternion.LookRotation(direction);
+
+                // Só se movimenta se estiver longe
+                if (distance > stoppingDistance)
+                {
+                    horizontalVelocity = direction * speed;
+                }
             }
         }
 

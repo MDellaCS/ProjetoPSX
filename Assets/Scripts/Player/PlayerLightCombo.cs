@@ -35,11 +35,9 @@ public class PlayerLightCombo : MonoBehaviour
     private LightComboRoute comboRoute = LightComboRoute.None;
 
     private int comboStep = 0;
-
     private bool waitingForCombo = false;
-
+    private bool comboActive = false;
     private bool lightAttackBuffered = false;
-
     private float comboWaitTimer = 0f;
 
     void Start()
@@ -68,6 +66,12 @@ public class PlayerLightCombo : MonoBehaviour
         // de um combo.
         if (waitingForCombo)
         {
+            if (!playerState.IsNormal() || playerCombat.IsAttacking)
+            {
+                EndCombo();
+                return;
+            }
+
             ContinueComboFromWait();
             return;
         }
@@ -75,7 +79,11 @@ public class PlayerLightCombo : MonoBehaviour
         // Estamos no meio de um golpe.
         if (playerCombat.IsAttacking)
         {
-            lightAttackBuffered = true;
+            if (comboActive)
+            {
+                lightAttackBuffered = true;
+            }
+
             return;
         }
 
@@ -88,10 +96,11 @@ public class PlayerLightCombo : MonoBehaviour
 
     void StartCombo()
     {
+        comboActive = true;
+
         comboStep = 1;
 
-        comboRoute =
-            LightComboRoute.None;
+        comboRoute =  LightComboRoute.None;
 
         waitingForCombo = false;
 
@@ -104,18 +113,35 @@ public class PlayerLightCombo : MonoBehaviour
 
     void ExecuteAttack(PlayerAttackData attack)
     {
+        if (attack == null)
+        {
+            Debug.LogWarning(
+                "Light Combo: ataque não configurado.",
+                this
+            );
+
+            EndCombo();
+            return;
+        }
+
         lightAttackBuffered = false;
         waitingForCombo = false;
 
         currentLightAttack = attack;
 
-        playerCombat.StartAttack(
+        bool started = playerCombat.StartAttack(
             attack,
             OnAttackFinished,
             OnLightAttackHit,
             attack.damage,
             attack.attackRadius
         );
+
+        if (!started)
+        {
+            EndCombo();
+            return;
+        }
     }
 
     void OnLightAttackHit()
@@ -157,6 +183,12 @@ public class PlayerLightCombo : MonoBehaviour
     {
         if (!waitingForCombo)
             return;
+
+        if (!playerState.IsNormal() || playerCombat.IsAttacking)
+        {
+            EndCombo();
+            return;
+        }
 
         comboWaitTimer += Time.deltaTime;
 
@@ -300,14 +332,15 @@ public class PlayerLightCombo : MonoBehaviour
     {
         comboStep = 0;
 
-        comboRoute =
-            LightComboRoute.None;
+        comboRoute = LightComboRoute.None;
 
         waitingForCombo = false;
 
         lightAttackBuffered = false;
 
         comboWaitTimer = 0f;
+
+        comboActive = false;
     }
 
     public void CancelCombo()

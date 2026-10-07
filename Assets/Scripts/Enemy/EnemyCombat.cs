@@ -16,6 +16,10 @@ public class EnemyCombat : MonoBehaviour
 
     public Transform target;
 
+    [Header("Attack Tracking")]
+    [Min(0f)]
+    public float windupRotationSpeed = 180f;
+
     public int attackDamage = 20;
     public float attackKnockbackForce = 8f;
     public float attackKnockbackDuration = 0.2f;
@@ -118,6 +122,9 @@ public class EnemyCombat : MonoBehaviour
 
     void UpdateWindup()
     {
+        // Acompanha o jogador durante a preparação
+        RotateTowardsTarget();
+
         stateTimer -= Time.deltaTime;
 
         if (stateTimer <= 0f)
@@ -186,6 +193,29 @@ public class EnemyCombat : MonoBehaviour
             stateTimer = staggerDuration;
             enemyRenderer.material.color = Color.yellow;
         }
+    }
+
+    void RotateTowardsTarget()
+    {
+        if (target == null)
+            return;
+
+        Vector3 direction = target.position - transform.position;
+
+        // Ignora diferenças de altura
+        direction.y = 0f;
+
+        // Evita tentar girar com uma direção nula
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation,
+            targetRotation,
+            windupRotationSpeed * Time.deltaTime
+        );
     }
 
     void Attack()

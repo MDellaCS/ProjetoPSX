@@ -37,10 +37,9 @@ public class PlayerHeavyCombo : MonoBehaviour
         HeavyComboRoute.None;
 
     private int comboStep = 0;
-
     private bool waitingForCombo = false;
+    private bool comboActive = false;
     private bool heavyAttackBuffered = false;
-
     private float comboWaitTimer = 0f;
 
     void Start()
@@ -69,6 +68,12 @@ public class PlayerHeavyCombo : MonoBehaviour
         // Existe um Heavy Combo esperando continuação.
         if (waitingForCombo)
         {
+            if (!playerState.IsNormal() || playerCombat.IsAttacking)
+            {
+                EndCombo();
+                return;
+            }
+
             ContinueComboFromWait();
             return;
         }
@@ -76,7 +81,11 @@ public class PlayerHeavyCombo : MonoBehaviour
         // Estamos executando algum ataque.
         if (playerCombat.IsAttacking)
         {
-            heavyAttackBuffered = true;
+            if (comboActive)
+            {
+                heavyAttackBuffered = true;
+            }
+
             return;
         }
 
@@ -89,10 +98,11 @@ public class PlayerHeavyCombo : MonoBehaviour
 
     void StartCombo()
     {
+        comboActive = true;
+
         comboStep = 1;
 
-        comboRoute =
-            HeavyComboRoute.None;
+        comboRoute = HeavyComboRoute.None;
 
         waitingForCombo = false;
 
@@ -107,28 +117,47 @@ public class PlayerHeavyCombo : MonoBehaviour
         PlayerAttackData attack
     )
     {
+        if (attack == null)
+        {
+            Debug.LogWarning(
+                "Heavy Combo: ataque não configurado.",
+                this
+            );
+
+            EndCombo();
+            return;
+        }
+
         heavyAttackBuffered = false;
 
         waitingForCombo = false;
 
-        // Primeiro calculamos o poder do golpe usando o Heat atual
-        int finalDamage = playerHeat.CalculateHeavyDamage(attack.damage);
-        float finalRadius = playerHeat.CalculateHeavyArea(attack.attackRadius);
+        int finalDamage = playerHeat.CalculateHeavyDamage(
+            attack.damage
+        );
 
-        // Depois calculamos quanto Heat este Heavy gera
-        int generatedHeat = playerHeat.CalculateHeavyHeatGeneration(attack.heatGenerated);
+        float finalRadius = playerHeat.CalculateHeavyArea(
+            attack.attackRadius
+        );
 
-        // Agora o Heavy gera seu Heat
-        playerHeat.AddHeat(generatedHeat);
+        int generatedHeat = playerHeat.CalculateHeavyHeatGeneration(
+            attack.heatGenerated
+        );
 
-        // Finalmente executamos o golpe com os valores calculados
-        playerCombat.StartAttack(
+        // Tenta iniciar o ataque primeiro.
+        bool started = playerCombat.StartAttack(
             attack,
             OnAttackFinished,
-            null,
+            () => playerHeat.AddHeat(generatedHeat),
             finalDamage,
             finalRadius
         );
+
+        if (!started)
+        {
+            EndCombo();
+            return;
+        }
     }
 
     void OnAttackFinished()
@@ -157,6 +186,12 @@ public class PlayerHeavyCombo : MonoBehaviour
     {
         if (!waitingForCombo)
             return;
+
+        if (!playerState.IsNormal() || playerCombat.IsAttacking)
+        {
+            EndCombo();
+            return;
+        }
 
         comboWaitTimer += Time.deltaTime;
 
@@ -381,14 +416,15 @@ public class PlayerHeavyCombo : MonoBehaviour
     {
         comboStep = 0;
 
-        comboRoute =
-            HeavyComboRoute.None;
+        comboRoute = HeavyComboRoute.None;
 
         waitingForCombo = false;
 
         heavyAttackBuffered = false;
 
         comboWaitTimer = 0f;
+
+        comboActive = false;
     }
 
     public void CancelCombo()

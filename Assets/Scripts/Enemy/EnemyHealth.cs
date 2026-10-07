@@ -8,6 +8,7 @@ public class EnemyHealth : MonoBehaviour
     public float knockbackDuration = 0.2f;
 
     private int currentHealth;
+    private DamageNumberSpawner damageNumberSpawner;
 
     private Renderer enemyRenderer;
     private Color normalColor;
@@ -26,11 +27,15 @@ public class EnemyHealth : MonoBehaviour
 
         enemyMovement = GetComponent<EnemyMovement>();
         enemyCombat = GetComponent<EnemyCombat>();
+
+        damageNumberSpawner = GetComponent<DamageNumberSpawner>();
     }
 
     public void TakeDamage(int damage, Vector3 attackerPosition)
     {
         currentHealth -= damage;
+
+        damageNumberSpawner?.ShowDamage(damage);
 
         Debug.Log("Inimigo tomou " + damage + " de dano!");
 
