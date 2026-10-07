@@ -166,6 +166,8 @@ MonoBehaviour:
   currentState: 0
   target: {fileID: 0}
   attackDamage: 20
+  attackKnockbackForce: 6
+  attackKnockbackDuration: 0.2
   attackRange: 2
   detectionRange: 13.5
   hitboxDistance: 1.75
@@ -173,4 +175,4 @@ MonoBehaviour:
   windupDuration: 1.21
   recoveryDuration: 0.83
   attackDuration: 1.04
-  stunDuration: 0.8
+  staggerDuration: 0.8

@@ -166,6 +166,8 @@ MonoBehaviour:
   currentState: 0
   target: {fileID: 0}
   attackDamage: 40
+  attackKnockbackForce: 15
+  attackKnockbackDuration: 0.4
   attackRange: 3
   detectionRange: 20
   hitboxDistance: 2.5

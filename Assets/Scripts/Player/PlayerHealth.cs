@@ -9,9 +9,11 @@ public class PlayerHealth : MonoBehaviour
     private bool isInvulnerable;
 
     private Renderer playerRenderer;
+    private PlayerHeavyCombo playerHeavyCombo;
     public float staggerDuration = 0.8f;
 
-    private bool isStaggered;
+    private PlayerState playerState;
+    private PlayerLightCombo playerLightCombo;
     private float staggerTimer;
     private Color normalColor;
     private PlayerCombat playerCombat;
@@ -22,11 +24,14 @@ public class PlayerHealth : MonoBehaviour
         playerRenderer = GetComponent<Renderer>();
         normalColor = playerRenderer.material.color;
         playerCombat = GetComponent<PlayerCombat>();
+        playerState = GetComponent<PlayerState>();
+        playerLightCombo = GetComponent<PlayerLightCombo>();
+        playerHeavyCombo = GetComponent<PlayerHeavyCombo>();
     }
 
     void Update()
     {
-        if (isStaggered)
+        if (playerState.IsStaggered())
         {
             staggerTimer -= Time.deltaTime;
 
@@ -39,21 +44,30 @@ public class PlayerHealth : MonoBehaviour
 
     void StartStagger()
     {
-        isStaggered = true;
+        playerState.ChangeState(PlayerState.State.Stagger);
+
         staggerTimer = staggerDuration;
 
         playerRenderer.material.color = Color.yellow;
 
         playerCombat.CancelAttack();
+        playerLightCombo.CancelCombo();
+        playerHeavyCombo.CancelCombo();
     }
 
     void EndStagger()
     {
-        isStaggered = false;
         playerRenderer.material.color = normalColor;
+
+        playerState.ChangeState(PlayerState.State.Normal);
     }
 
-    public void TakeDamage(int damage, Vector3 attackerPosition)
+    public void TakeDamage(
+        int damage,
+        Vector3 attackerPosition,
+        float knockbackForce,
+        float knockbackDuration
+    )
     {
         if (isInvulnerable)
         {
@@ -76,8 +90,8 @@ public class PlayerHealth : MonoBehaviour
 
         playerMovement.ApplyKnockback(
             knockbackDirection,
-            8f,
-            0.2f
+            knockbackForce,
+            knockbackDuration
         );
 
         Debug.Log("Player tomou " + damage + " de dano!");
@@ -109,10 +123,7 @@ public class PlayerHealth : MonoBehaviour
     void Die()
     {
         Debug.Log("Player morreu!");
-    }
 
-    public bool IsStaggered
-    {
-        get { return isStaggered; }
+        playerState.ChangeState(PlayerState.State.Dead);
     }
 }

@@ -17,6 +17,8 @@ public class EnemyCombat : MonoBehaviour
     public Transform target;
 
     public int attackDamage = 20;
+    public float attackKnockbackForce = 8f;
+    public float attackKnockbackDuration = 0.2f;
 
     // Distâncias da IA
     public float attackRange = 2f;
@@ -207,7 +209,9 @@ public class EnemyCombat : MonoBehaviour
             {
                 player.TakeDamage(
                     attackDamage,
-                    transform.position
+                    transform.position,
+                    attackKnockbackForce,
+                    attackKnockbackDuration
                 );
                 hasDealtDamage = true;
                 break;

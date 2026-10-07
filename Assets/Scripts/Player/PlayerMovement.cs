@@ -9,6 +9,7 @@ public class PlayerMovement : MonoBehaviour
     public float dodgeSpeed = 15f;
     public float dodgeDuration = 0.5f;
     private Vector3 knockbackVelocity;
+    private PlayerState playerState;
     private float knockbackTimer;
 
     private bool isDodging;
@@ -29,6 +30,7 @@ public class PlayerMovement : MonoBehaviour
         playerHealth = GetComponent<PlayerHealth>();
         playerRenderer = GetComponent<Renderer>();
         normalColor = playerRenderer.material.color;
+        playerState = GetComponent<PlayerState>();
     }
 
     void Update()
@@ -65,13 +67,13 @@ public class PlayerMovement : MonoBehaviour
             );
         }
 
-        if (Keyboard.current.leftShiftKey.wasPressedThisFrame && !isDodging && !playerHealth.IsStaggered)
+        if (Keyboard.current.leftShiftKey.wasPressedThisFrame && playerState.IsNormal())
         {
-            isDodging = true;
+            playerState.ChangeState(PlayerState.State.Dodging);
+
             dodgeTimer = dodgeDuration;
 
             playerHealth.SetInvulnerable(true);
-
             playerRenderer.material.color = Color.green;
 
             if (direction != Vector3.zero)
@@ -98,11 +100,11 @@ public class PlayerMovement : MonoBehaviour
             velocity = knockbackVelocity;
             knockbackTimer -= Time.deltaTime;
         }
-        else if (playerHealth.IsStaggered)
+        else if (playerState.IsStaggered())
         {
             velocity = Vector3.zero;
         }
-        else if (isDodging)
+        else if (playerState.IsDodging())
         {
             velocity = dodgeDirection * dodgeSpeed;
 
@@ -110,14 +112,19 @@ public class PlayerMovement : MonoBehaviour
 
             if (dodgeTimer <= 0f)
             {
-                isDodging = false;
+                playerState.ChangeState(PlayerState.State.Normal);
+
                 playerHealth.SetInvulnerable(false);
                 playerRenderer.material.color = normalColor;
             }
         }
-        else
+        else if (playerState.IsNormal())
         {
             velocity = direction * speed;
+        }
+        else
+        {
+            velocity = Vector3.zero;
         }
 
         velocity.y = verticalVelocity;

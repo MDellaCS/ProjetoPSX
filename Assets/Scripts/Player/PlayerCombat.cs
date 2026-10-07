@@ -1,82 +1,183 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using System.Collections.Generic;
-
 
 public class PlayerCombat : MonoBehaviour
 {
-    public int attackDamage = 25;
+    private enum AttackPhase
+    {
+        None,
+        Windup,
+        Active,
+        Recovery
+    }
 
-    public float attackDistance = 1.5f;
-    public float attackRadius = 1f;
-    public float attackDuration = 0.2f;
+    private AttackPhase attackPhase =
+        AttackPhase.None;
 
-    private bool isAttacking;
-    private HashSet<EnemyHealth> enemiesHit = new HashSet<EnemyHealth>();
+    private HashSet<EnemyHealth> enemiesHit =
+        new HashSet<EnemyHealth>();
+
+    private PlayerState playerState;
+
+    private PlayerAttackData currentAttack;
+
     private float attackTimer;
-    private PlayerHealth playerHealth;
+
+    private System.Action attackFinishedCallback;
+
+    public bool IsAttacking
+    {
+        get
+        {
+            return attackPhase != AttackPhase.None;
+        }
+    }
 
     void Start()
     {
-        playerHealth = GetComponent<PlayerHealth>();
+        playerState = GetComponent<PlayerState>();
     }
 
     void Update()
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && !isAttacking && !playerHealth.IsStaggered)
-        {
-            StartAttack();
-        }
-
-        if (isAttacking)
+        if (IsAttacking)
         {
             UpdateAttack();
         }
     }
 
-    void StartAttack()
+    public void StartAttack(
+        PlayerAttackData attack,
+        System.Action onAttackFinished
+    )
     {
-        isAttacking = true;
+        if (attack == null)
+            return;
+
+        currentAttack = attack;
+
+        attackFinishedCallback =
+            onAttackFinished;
+
         enemiesHit.Clear();
-        attackTimer = attackDuration;
+
+        playerState.ChangeState(
+            PlayerState.State.Attacking
+        );
+
+        ChangeAttackPhase(
+            AttackPhase.Windup,
+            currentAttack.windupDuration
+        );
+
+        Debug.Log(
+            "Ataque iniciado: " +
+            currentAttack.attackName
+        );
     }
 
     void UpdateAttack()
     {
-        Attack();
-
-        attackTimer -= Time.deltaTime;
-
-        if (attackTimer <= 0f)
+        switch (attackPhase)
         {
-            isAttacking = false;
+            case AttackPhase.Windup:
+
+                attackTimer -= Time.deltaTime;
+
+                if (attackTimer <= 0f)
+                {
+                    ChangeAttackPhase(
+                        AttackPhase.Active,
+                        currentAttack.activeDuration
+                    );
+                }
+
+                break;
+
+            case AttackPhase.Active:
+
+                Attack();
+
+                attackTimer -= Time.deltaTime;
+
+                if (attackTimer <= 0f)
+                {
+                    ChangeAttackPhase(
+                        AttackPhase.Recovery,
+                        currentAttack.recoveryDuration
+                    );
+                }
+
+                break;
+
+            case AttackPhase.Recovery:
+
+                attackTimer -= Time.deltaTime;
+
+                if (attackTimer <= 0f)
+                {
+                    FinishAttack();
+                }
+
+                break;
         }
     }
 
-    public void CancelAttack()
+    void FinishAttack()
     {
-        isAttacking = false;
+        attackPhase = AttackPhase.None;
+
+        currentAttack = null;
+
         enemiesHit.Clear();
+
+        playerState.ChangeState(
+            PlayerState.State.Normal
+        );
+
+        System.Action callback =
+            attackFinishedCallback;
+
+        attackFinishedCallback = null;
+
+        callback?.Invoke();
+    }
+
+    void ChangeAttackPhase(
+        AttackPhase newPhase,
+        float duration
+    )
+    {
+        attackPhase = newPhase;
+
+        attackTimer = duration;
     }
 
     void Attack()
     {
+        if (currentAttack == null)
+            return;
+
         Vector3 attackPosition =
-            transform.position + transform.forward * attackDistance;
+            transform.position +
+            transform.forward *
+            currentAttack.attackDistance;
 
         Collider[] hits = Physics.OverlapSphere(
             attackPosition,
-            attackRadius
+            currentAttack.attackRadius
         );
 
         foreach (Collider hit in hits)
         {
-            EnemyHealth enemy = hit.GetComponent<EnemyHealth>();
+            EnemyHealth enemy =
+                hit.GetComponent<EnemyHealth>();
 
-            if (enemy != null && !enemiesHit.Contains(enemy))
+            if (enemy != null &&
+                !enemiesHit.Contains(enemy))
             {
                 enemy.TakeDamage(
-                    attackDamage,
+                    currentAttack.damage,
                     transform.position
                 );
 
@@ -85,18 +186,37 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    public void CancelAttack()
+    {
+        attackPhase = AttackPhase.None;
+
+        currentAttack = null;
+
+        attackTimer = 0f;
+
+        enemiesHit.Clear();
+
+        attackFinishedCallback = null;
+    }
+
     void OnDrawGizmos()
     {
-        if (!isAttacking)
+        if (attackPhase != AttackPhase.Active)
             return;
 
-        Vector3 attackPosition = transform.position + transform.forward * attackDistance;
+        if (currentAttack == null)
+            return;
+
+        Vector3 attackPosition =
+            transform.position +
+            transform.forward *
+            currentAttack.attackDistance;
 
         Gizmos.color = Color.cyan;
 
         Gizmos.DrawWireSphere(
             attackPosition,
-            attackRadius
+            currentAttack.attackRadius
         );
     }
 }
