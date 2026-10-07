@@ -46,6 +46,10 @@ public class PlayerHeat : MonoBehaviour
     [Min(0)]
     public int maximumHeavyBonusDamage = 150;
 
+    [Header("Heavy Additive Poise")]
+    [Min(0)]
+    public int maximumHeavyBonusPoise = 75;
+
     [Header("Heat Power Curve")]
 
     // Referência de balanceamento, NÃO limite de Heat.
@@ -418,6 +422,20 @@ public class PlayerHeat : MonoBehaviour
         return 1f +
             (maximumHeavyAreaMultiplier - 1f) *
             GetPositiveHeatPower();
+    }
+
+    public int CalculateHeavyPoiseDamage(int basePoiseDamage)
+    {
+        if (basePoiseDamage <= 0)
+            return 0;
+
+        if (currentHeat <= 0)
+            return basePoiseDamage;
+
+        float bonusPoise =
+            maximumHeavyBonusPoise * GetPositiveHeatPower();
+
+        return basePoiseDamage + Mathf.RoundToInt(bonusPoise);
     }
 
     public void CoolFromLight(

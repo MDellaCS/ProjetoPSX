@@ -17,6 +17,8 @@ public class PlayerCombat : MonoBehaviour
 
     private PlayerState playerState;
     private PlayerAttackData currentAttack;
+    private PlayerHeat playerHeat;
+    private bool currentAttackIsHeavy;
 
     private float attackTimer;
     private int currentDamage;
@@ -43,6 +45,7 @@ public class PlayerCombat : MonoBehaviour
     {
         playerState = GetComponent<PlayerState>();
         playerMovement = GetComponent<PlayerMovement>();
+        playerHeat = GetComponent<PlayerHeat>();
     }
 
     void Update()
@@ -58,7 +61,8 @@ public class PlayerCombat : MonoBehaviour
         System.Action onAttackFinished,
         System.Action onAttackHit,
         int damage,
-        float attackRadius
+        float attackRadius,
+        bool isHeavy = false
     )
     {
         if (attack == null ||
@@ -68,6 +72,8 @@ public class PlayerCombat : MonoBehaviour
         {
             return false;
         }
+
+        currentAttackIsHeavy = isHeavy;
 
         currentAttack = attack;
 
@@ -186,6 +192,7 @@ public class PlayerCombat : MonoBehaviour
 
         attackFinishedCallback = null;
         attackHitCallback = null;
+        currentAttackIsHeavy = false;
     }
 
     void ChangeAttackPhase(AttackPhase newPhase, float duration)
@@ -216,9 +223,17 @@ public class PlayerCombat : MonoBehaviour
 
             if (enemy != null && !enemiesHit.Contains(enemy))
             {
+                int finalPoiseDamage = currentAttack.staggerDamage;
+
+                if (currentAttackIsHeavy && playerHeat != null)
+                {
+                    finalPoiseDamage = playerHeat.CalculateHeavyPoiseDamage(finalPoiseDamage);
+                }
+
                 enemy.TakeDamage(
                     currentDamage,
-                    transform.position
+                    transform.position,
+                    finalPoiseDamage
                 );
 
                 enemiesHit.Add(enemy);

@@ -17,4 +17,11 @@ public class PlayerAttackData
     public int heatGenerated = 0;
     public int heatRemovedOnHit = 0;
     public int superheatRemovedOnHit = 0;
+
+    [Header("Stagger")]
+    [Min(0)]
+    public int staggerDamage = 10;
+
+    [Header("Attack Type")]
+    public bool isHeavy = false;
 }

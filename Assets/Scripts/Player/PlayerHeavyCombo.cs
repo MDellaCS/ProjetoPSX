@@ -150,7 +150,8 @@ public class PlayerHeavyCombo : MonoBehaviour
             OnAttackFinished,
             () => playerHeat.AddHeat(generatedHeat),
             finalDamage,
-            finalRadius
+            finalRadius,
+            isHeavy: true
         );
 
         if (!started)

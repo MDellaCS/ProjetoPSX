@@ -16,6 +16,15 @@ public class EnemyCombat : MonoBehaviour
 
     public Transform target;
 
+    [Header("Stagger Knockback")]
+    [Min(0f)]
+    public float staggerKnockbackForce = 8f;
+
+    [Min(0f)]
+    public float staggerKnockbackDuration = 0.2f;
+
+    private EnemyMovement enemyMovement;
+
     [Header("Attack Tracking")]
     [Min(0f)]
     public float windupRotationSpeed = 180f;
@@ -47,6 +56,7 @@ public class EnemyCombat : MonoBehaviour
     void Start()
     {
         enemyRenderer = GetComponent<Renderer>();
+        enemyMovement = GetComponent<EnemyMovement>();
         normalColor = enemyRenderer.material.color;
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -279,8 +289,22 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
-    public void ApplyStagger()
+    public void ApplyStagger(Vector3 attackerPosition)
     {
         ChangeState(EnemyState.Staggered);
+
+        Vector3 direction = transform.position - attackerPosition;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        direction.Normalize();
+
+        enemyMovement.ApplyKnockback(
+            direction,
+            staggerKnockbackForce,
+            staggerKnockbackDuration
+        );
     }
 }

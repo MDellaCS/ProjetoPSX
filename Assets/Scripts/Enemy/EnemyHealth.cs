@@ -4,9 +4,6 @@ public class EnemyHealth : MonoBehaviour
 {
     public int maxHealth = 100;
 
-    public float knockbackForce = 8f;
-    public float knockbackDuration = 0.2f;
-
     private int currentHealth;
     private DamageNumberSpawner damageNumberSpawner;
 
@@ -18,9 +15,23 @@ public class EnemyHealth : MonoBehaviour
     private EnemyMovement enemyMovement;
     private EnemyCombat enemyCombat;
 
+    [Header("Poise")]
+    [Min(1)]
+    public int maxPoise = 60;
+
+    [Min(0f)]
+    public float poiseRecoveryDelay = 3f;
+
+    [Min(0f)]
+    public float poiseRecoveryPerSecond = 20f;
+
+    private float currentPoise;
+    private float timeSinceLastPoiseDamage;
+
     void Start()
     {
         currentHealth = maxHealth;
+        currentPoise = maxPoise;
 
         enemyRenderer = GetComponent<Renderer>();
         normalColor = enemyRenderer.material.color;
@@ -31,7 +42,27 @@ public class EnemyHealth : MonoBehaviour
         damageNumberSpawner = GetComponent<DamageNumberSpawner>();
     }
 
-    public void TakeDamage(int damage, Vector3 attackerPosition)
+    void Update()
+    {
+        if (currentPoise >= maxPoise)
+            return;
+
+        timeSinceLastPoiseDamage += Time.deltaTime;
+
+        if (timeSinceLastPoiseDamage < poiseRecoveryDelay)
+            return;
+
+        currentPoise = Mathf.Min(
+            maxPoise,
+            currentPoise + poiseRecoveryPerSecond * Time.deltaTime
+        );
+    }
+
+    public void TakeDamage(
+        int damage,
+        Vector3 attackerPosition,
+        int staggerDamage
+    )
     {
         currentHealth -= damage;
 
@@ -41,25 +72,30 @@ public class EnemyHealth : MonoBehaviour
 
         FlashDamage();
 
-        Vector3 knockbackDirection = transform.position - attackerPosition;
-
-        knockbackDirection.y = 0f;
-        knockbackDirection.Normalize();
-
-        enemyMovement.ApplyKnockback(
-            knockbackDirection,
-            knockbackForce,
-            knockbackDuration
-        );
-
         // CameraFollow.Instance.ImpactShake(knockbackDirection);
         // HitStopManager.Instance.HitStop();
-        enemyCombat.ApplyStagger();
+        ApplyPoiseDamage(staggerDamage, attackerPosition);
 
         if (currentHealth <= 0)
         {
             Die();
         }
+    }
+
+    private void ApplyPoiseDamage(int amount, Vector3 attackerPosition)
+    {
+        if (amount <= 0)
+            return;
+
+        currentPoise -= amount;
+        timeSinceLastPoiseDamage = 0f;
+
+        if (currentPoise > 0f)
+            return;
+
+        enemyCombat.ApplyStagger(attackerPosition);
+
+        currentPoise = maxPoise;
     }
 
     void FlashDamage()
