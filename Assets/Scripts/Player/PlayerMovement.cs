@@ -8,6 +8,8 @@ public class PlayerMovement : MonoBehaviour
     public float rotationSpeed = 10f;
     public float dodgeSpeed = 15f;
     public float dodgeDuration = 0.5f;
+    private Vector3 knockbackVelocity;
+    private float knockbackTimer;
 
     private bool isDodging;
     private float dodgeTimer;
@@ -63,7 +65,7 @@ public class PlayerMovement : MonoBehaviour
             );
         }
 
-        if (Keyboard.current.spaceKey.wasPressedThisFrame && !isDodging)
+        if (Keyboard.current.leftShiftKey.wasPressedThisFrame && !isDodging && !playerHealth.IsStaggered)
         {
             isDodging = true;
             dodgeTimer = dodgeDuration;
@@ -91,7 +93,16 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 velocity;
 
-        if (isDodging)
+        if (knockbackTimer > 0f)
+        {
+            velocity = knockbackVelocity;
+            knockbackTimer -= Time.deltaTime;
+        }
+        else if (playerHealth.IsStaggered)
+        {
+            velocity = Vector3.zero;
+        }
+        else if (isDodging)
         {
             velocity = dodgeDirection * dodgeSpeed;
 
@@ -108,8 +119,19 @@ public class PlayerMovement : MonoBehaviour
         {
             velocity = direction * speed;
         }
+
         velocity.y = verticalVelocity;
 
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    public void ApplyKnockback(
+        Vector3 direction,
+        float force,
+        float duration
+    )
+    {
+        knockbackVelocity = direction * force;
+        knockbackTimer = duration;
     }
 }

@@ -8,7 +8,8 @@ public class EnemyCombat : MonoBehaviour
         Chasing,
         Windup,
         Attacking,
-        Recovery
+        Recovery,
+        Staggered
     }
 
     public EnemyState currentState = EnemyState.Idle;
@@ -16,12 +17,23 @@ public class EnemyCombat : MonoBehaviour
     public Transform target;
 
     public int attackDamage = 20;
+
+    // Distâncias da IA
     public float attackRange = 2f;
     public float detectionRange = 8f;
+
+    // Hitbox do ataque
+    public float hitboxDistance = 1f;
+    public float hitboxRadius = 1f;
+
+    // Tempos dos estados
     public float windupDuration = 0.5f;
     public float recoveryDuration = 0.8f;
+    public float attackDuration = 0.2f;
+    public float staggerDuration = 0.8f;
 
     private float stateTimer;
+    private bool hasDealtDamage;
 
     private Renderer enemyRenderer;
     private Color normalColor;
@@ -30,6 +42,13 @@ public class EnemyCombat : MonoBehaviour
     {
         enemyRenderer = GetComponent<Renderer>();
         normalColor = enemyRenderer.material.color;
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+
+        if (player != null)
+        {
+            target = player.transform;
+        }
     }
 
     void Update()
@@ -58,12 +77,19 @@ public class EnemyCombat : MonoBehaviour
             case EnemyState.Recovery:
                 UpdateRecovery();
                 break;
+
+            case EnemyState.Staggered:
+                UpdateStaggered();
+                break;
         }
     }
 
     void UpdateIdle()
     {
-        float distance = Vector3.Distance(transform.position, target.position);
+        float distance = Vector3.Distance(
+            transform.position,
+            target.position
+        );
 
         if (distance <= detectionRange)
         {
@@ -73,7 +99,10 @@ public class EnemyCombat : MonoBehaviour
 
     void UpdateChasing()
     {
-        float distance = Vector3.Distance(transform.position, target.position);
+        float distance = Vector3.Distance(
+            transform.position,
+            target.position
+        );
 
         if (distance <= attackRange)
         {
@@ -99,7 +128,12 @@ public class EnemyCombat : MonoBehaviour
     {
         Attack();
 
-        ChangeState(EnemyState.Recovery);
+        stateTimer -= Time.deltaTime;
+
+        if (stateTimer <= 0f)
+        {
+            ChangeState(EnemyState.Recovery);
+        }
     }
 
     void UpdateRecovery()
@@ -112,6 +146,17 @@ public class EnemyCombat : MonoBehaviour
         }
     }
 
+    void UpdateStaggered()
+    {
+        stateTimer -= Time.deltaTime;
+
+        if (stateTimer <= 0f)
+        {
+            enemyRenderer.material.color = normalColor;
+            ChangeState(EnemyState.Chasing);
+        }
+    }
+
     void ChangeState(EnemyState newState)
     {
         currentState = newState;
@@ -119,34 +164,89 @@ public class EnemyCombat : MonoBehaviour
         if (newState == EnemyState.Windup)
         {
             stateTimer = windupDuration;
-
             enemyRenderer.material.color = Color.magenta;
+        }
+
+        if (newState == EnemyState.Attacking)
+        {
+            stateTimer = attackDuration;
+            hasDealtDamage = false;
         }
 
         if (newState == EnemyState.Recovery)
         {
             stateTimer = recoveryDuration;
-
             enemyRenderer.material.color = normalColor;
+        }
+
+        if (newState == EnemyState.Staggered)
+        {
+            stateTimer = staggerDuration;
+            enemyRenderer.material.color = Color.yellow;
         }
     }
 
     void Attack()
     {
-        PlayerHealth player = target.GetComponent<PlayerHealth>();
+        if (hasDealtDamage)
+            return;
 
-        if (player != null)
+        Vector3 hitboxPosition =
+            transform.position + transform.forward * hitboxDistance;
+
+        Collider[] hits = Physics.OverlapSphere(
+            hitboxPosition,
+            hitboxRadius
+        );
+
+        foreach (Collider hit in hits)
         {
-            player.TakeDamage(attackDamage);
+            PlayerHealth player = hit.GetComponent<PlayerHealth>();
+
+            if (player != null)
+            {
+                player.TakeDamage(
+                    attackDamage,
+                    transform.position
+                );
+                hasDealtDamage = true;
+                break;
+            }
         }
     }
 
     void OnDrawGizmos()
     {
+        // Área de detecção
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, detectionRange);
+        Gizmos.DrawWireSphere(
+            transform.position,
+            detectionRange
+        );
 
+        // Área que inicia o ataque
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawWireSphere(
+            transform.position,
+            attackRange
+        );
+
+        // Hitbox real do golpe
+        if (currentState == EnemyState.Attacking)
+        {
+            Vector3 hitboxPosition =
+                transform.position + transform.forward * hitboxDistance;
+
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(
+                hitboxPosition,
+                hitboxRadius
+            );
+        }
+    }
+
+    public void ApplyStagger()
+    {
+        ChangeState(EnemyState.Staggered);
     }
 }
