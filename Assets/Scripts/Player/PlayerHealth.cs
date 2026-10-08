@@ -77,16 +77,17 @@ public class PlayerHealth : MonoBehaviour
         );
     }
 
-    public void TakeDamage(
+    public bool TakeDamage(
         int damage,
         Vector3 attackerPosition,
         float knockbackForce,
         float knockbackDuration,
-        bool causedByEnemy = false
+        bool causedByEnemy = false,
+        bool isUnblockable = false
     )
     {
         if (playerState.IsDead())
-            return;
+            return false;
 
         // Um ataque inimigo conectado, mesmo bloqueado ou aparado, mantém o jogador em combate.
         if (causedByEnemy)
@@ -98,9 +99,11 @@ public class PlayerHealth : MonoBehaviour
         // BLOCK / PARRY
         // =========================
 
-        if (playerGuard != null && playerGuard.TryDefend(damage))
+        if (!isUnblockable &&
+            playerGuard != null &&
+            playerGuard.TryDefend(damage))
         {
-            return;
+            return playerGuard.LastDefenseWasParry;
         }
 
         // =========================
@@ -125,7 +128,7 @@ public class PlayerHealth : MonoBehaviour
                 " Heat"
             );
 
-            return;
+            return false;
         }
 
         // =========================
@@ -181,6 +184,8 @@ public class PlayerHealth : MonoBehaviour
         {
             StartStagger();
         }
+
+        return false;
     }
 
 }

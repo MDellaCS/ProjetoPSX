@@ -63,6 +63,11 @@ public class EnemyMovement : MonoBehaviour
             }
         }
 
+        if (enemyCombat.IsCharging)
+        {
+            horizontalVelocity = transform.forward * enemyCombat.ChargeSpeed;
+        }
+
         Vector3 velocity;
 
         if (knockbackTimer > 0f)

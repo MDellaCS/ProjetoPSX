@@ -44,6 +44,7 @@ public class PlayerGuard : MonoBehaviour
 
     public float CurrentGuard => currentGuard;
     public float MaxGuard => maxGuard;
+    public bool LastDefenseWasParry { get; private set; }
 
     void Awake()
     {
@@ -140,11 +141,14 @@ public class PlayerGuard : MonoBehaviour
     // Retorna true quando o ataque foi defendido.
     public bool TryDefend(int incomingDamage)
     {
+        LastDefenseWasParry = false;
+
         if (!playerState.IsBlocking())
             return false;
 
         if (parryTimer > 0f)
         {
+            LastDefenseWasParry = true;
             parryTimer = 0f;
             recoveryTimer = recoveryDelay;
 

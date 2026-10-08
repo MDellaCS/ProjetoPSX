@@ -4,6 +4,9 @@ public class EnemyHealth : MonoBehaviour
 {
     public int maxHealth = 100;
 
+    [HideInInspector]
+    public bool isUnkillable;
+
     private int currentHealth;
     private DamageNumberSpawner damageNumberSpawner;
 
@@ -72,12 +75,20 @@ public class EnemyHealth : MonoBehaviour
 
         FlashDamage();
 
+        enemyCombat.RegisterDamageDuringStun(damage);
+
         // CameraFollow.Instance.ImpactShake(knockbackDirection);
         // HitStopManager.Instance.HitStop();
         ApplyPoiseDamage(staggerDamage, attackerPosition);
 
         if (currentHealth <= 0)
         {
+            if (isUnkillable)
+            {
+                currentHealth = 1;
+                return;
+            }
+
             Die();
         }
     }
@@ -115,5 +126,10 @@ public class EnemyHealth : MonoBehaviour
     {
         Debug.Log("Inimigo morreu!");
         Destroy(gameObject);
+    }
+
+    public void SetUnkillable(bool value)
+    {
+        isUnkillable = value;
     }
 }

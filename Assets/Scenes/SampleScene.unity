@@ -3038,7 +3038,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   speed: 8
-  acceleration: 20
+  acceleration: 50
   deceleration: 75
   rotationSpeed: 10
   gravity: -40
@@ -3048,7 +3048,7 @@ MonoBehaviour:
   airControlMultiplier: 0.75
   airDrag: 10
   dashSpeedMultiplier: 2
-  dashDuration: 0.1
+  dashDuration: 0.2
   dashCooldown: 1
   cameraTransform: {fileID: 330585546}
 --- !u!143 &825647891
@@ -3136,86 +3136,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fdabbf57f47bc424a9a52ae5489ee237, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerLightCombo
-  lightAttack1:
-    attackName: Light 1
-    damage: 20
-    windupDuration: 0.1
-    activeDuration: 0.15
-    recoveryDuration: 0.2
-    attackDistance: 1.5
-    attackRadius: 1
-    heatGenerated: 0
-    heatRemovedOnHit: 30
-    superheatRemovedOnHit: 5
-    staggerDamage: 10
-    isHeavy: 0
-  lightAttack2:
-    attackName: Light 2
-    damage: 25
-    windupDuration: 0.1
-    activeDuration: 0.15
-    recoveryDuration: 0.2
-    attackDistance: 1.6
-    attackRadius: 1
-    heatGenerated: 0
-    heatRemovedOnHit: 40
-    superheatRemovedOnHit: 6
-    staggerDamage: 15
-    isHeavy: 0
-  lightAttack3:
-    attackName: Light 3
-    damage: 40
-    windupDuration: 0.15
-    activeDuration: 0.2
-    recoveryDuration: 0.4
-    attackDistance: 1.7
-    attackRadius: 1.2
-    heatGenerated: 0
-    heatRemovedOnHit: 60
-    superheatRemovedOnHit: 10
-    staggerDamage: 25
-    isHeavy: 0
-  lightPauseAttack2:
-    attackName: Pause Light 2
-    damage: 30
-    windupDuration: 0.15
-    activeDuration: 0.15
-    recoveryDuration: 0.3
-    attackDistance: 1.7
-    attackRadius: 1.1
-    heatGenerated: 0
-    heatRemovedOnHit: 50
-    superheatRemovedOnHit: 8
-    staggerDamage: 10
-    isHeavy: 0
-  lightPauseAttack3:
-    attackName: Pause Light 3
-    damage: 50
-    windupDuration: 0.2
-    activeDuration: 0.2
-    recoveryDuration: 0.45
-    attackDistance: 1.9
-    attackRadius: 1.3
-    heatGenerated: 0
-    heatRemovedOnHit: 75
-    superheatRemovedOnHit: 12
-    staggerDamage: 10
-    isHeavy: 0
-  lightPauseAttack3Alt:
-    attackName: Pause Light 3 Finisher
-    damage: 60
-    windupDuration: 0.3
-    activeDuration: 0.2
-    recoveryDuration: 0.45
-    attackDistance: 2
-    attackRadius: 1.5
-    heatGenerated: 0
-    heatRemovedOnHit: 100
-    superheatRemovedOnHit: 15
-    staggerDamage: 10
-    isHeavy: 0
-  pauseComboDelay: 0.1
-  comboResetTime: 0.4
 --- !u!114 &825647896
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3228,112 +3148,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2fa8e2e40ecc8b4bb821d865821694f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeavyCombo
-  heavyAttack1:
-    attackName: Heavy 1
-    damage: 30
-    windupDuration: 0.2
-    activeDuration: 0.18
-    recoveryDuration: 0.25
-    attackDistance: 1.6
-    attackRadius: 1.1
-    heatGenerated: 50
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 35
-    isHeavy: 1
-  heavyAttack2:
-    attackName: Heavy 2
-    damage: 35
-    windupDuration: 0.22
-    activeDuration: 0.18
-    recoveryDuration: 0.3
-    attackDistance: 1.7
-    attackRadius: 1.15
-    heatGenerated: 60
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 45
-    isHeavy: 1
-  heavyAttack3:
-    attackName: Heavy 3
-    damage: 40
-    windupDuration: 0.25
-    activeDuration: 0.2
-    recoveryDuration: 0.35
-    attackDistance: 1.8
-    attackRadius: 1.25
-    heatGenerated: 75
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 60
-    isHeavy: 1
-  heavyAttack4:
-    attackName: Heavy 4
-    damage: 60
-    windupDuration: 0.35
-    activeDuration: 0.25
-    recoveryDuration: 0.5
-    attackDistance: 2
-    attackRadius: 1.5
-    heatGenerated: 100
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 80
-    isHeavy: 1
-  heavyPauseAttack2:
-    attackName: Heavy 2'
-    damage: 40
-    windupDuration: 0.25
-    activeDuration: 0.2
-    recoveryDuration: 0.3
-    attackDistance: 1.8
-    attackRadius: 1.2
-    heatGenerated: 70
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 10
-    isHeavy: 1
-  heavyPauseAttack3:
-    attackName: Heavy 3'
-    damage: 50
-    windupDuration: 0.3
-    activeDuration: 0.2
-    recoveryDuration: 0.4
-    attackDistance: 1.9
-    attackRadius: 1.35
-    heatGenerated: 90
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 10
-    isHeavy: 1
-  heavyPauseAttack3Alt:
-    attackName: Heavy 3''
-    damage: 65
-    windupDuration: 0.35
-    activeDuration: 0.25
-    recoveryDuration: 0.45
-    attackDistance: 2
-    attackRadius: 1.5
-    heatGenerated: 120
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 10
-    isHeavy: 1
-  heavyPauseAttack4:
-    attackName: Heavy 4'
-    damage: 90
-    windupDuration: 0.45
-    activeDuration: 0.3
-    recoveryDuration: 0.65
-    attackDistance: 2.2
-    attackRadius: 1.7
-    heatGenerated: 150
-    heatRemovedOnHit: 0
-    superheatRemovedOnHit: 0
-    staggerDamage: 10
-    isHeavy: 1
-  pauseComboDelay: 0.1
-  comboResetTime: 0.4
 --- !u!114 &825647897
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3349,6 +3163,7 @@ MonoBehaviour:
   maxHeat: 10000
   minHeat: -10000
   maxSuperheat: 10000
+  excessHeatToSuperheatMultiplier: 0.75
   superheatThreshold: 8500
   passiveHeatCoolingPerSecond: 200
   passiveColdRecoveryPerSecond: 200
@@ -3364,8 +3179,6 @@ MonoBehaviour:
   maximumHeavyBonusPoise: 60
   heatPowerReference: 10000
   heatPowerExponent: 1.5
-  superheatCoolingDelay: 10
-  coldLightSuperheatMultiplier: 4
   minimumHeatPerHitPercent: 0.02
   maximumHeatPerHitPercent: 0.2
   debugHeatInputEnabled: 1

@@ -5,25 +5,25 @@ public class PlayerMovement : MonoBehaviour
 {
     [Header("Walking")]
     [Min(0f)] public float speed = 5f;
-    [Min(0f)] public float acceleration = 30f;
-    [Min(0f)] public float deceleration = 40f;
+    [Min(0f)] public float acceleration = 50f;
+    [Min(0f)] public float deceleration = 65f;
     [Min(0f)] public float rotationSpeed = 10f;
 
     [Header("Gravity")]
-    public float gravity = -20f;
+    public float gravity = -40f;
 
     [Header("Jump")]
-    [Min(0f)] public float jumpInitialSpeed = 5f;
+    [Min(0f)] public float jumpInitialSpeed = 8f;
     [Min(0f)] public float jumpHoldAcceleration = 25f;
     [Min(0f)] public float maxJumpHoldDuration = 0.15f;
 
     [Header("Air Movement")]
-    [Range(0f, 1f)] public float airControlMultiplier = 0.35f;
-    [Min(0f)] public float airDrag = 20f;
+    [Range(0f, 1f)] public float airControlMultiplier = 0.75f;
+    [Min(0f)] public float airDrag = 10f;
 
     [Header("Dash")]
-    [Min(0f)] public float dashSpeedMultiplier = 3f;
-    [Min(0f)] public float dashDuration = 0.5f;
+    [Min(0f)] public float dashSpeedMultiplier = 2f;
+    [Min(0f)] public float dashDuration = 0.2f;
     [Min(0f)] public float dashCooldown = 1f;
 
     [Header("References")]
