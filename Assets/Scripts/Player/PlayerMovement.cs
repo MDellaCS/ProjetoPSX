@@ -1,25 +1,37 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 public class PlayerMovement : MonoBehaviour
 {
+    private const int MaximumJumpCount = 2;
+
     [Header("Walking")]
     [Min(0f)] public float speed = 5f;
     [Min(0f)] public float acceleration = 50f;
     [Min(0f)] public float deceleration = 65f;
     [Min(0f)] public float rotationSpeed = 10f;
 
+    [Header("Attack Momentum")]
+    [Tooltip("Quao rapido a velocidade de corrida restante desaparece ao iniciar um ataque.")]
+    [Min(0f)] public float attackMomentumDeceleration = 70f;
+
     [Header("Gravity")]
-    public float gravity = -40f;
+    public float gravity = -55f;
 
     [Header("Jump")]
-    [Min(0f)] public float jumpInitialSpeed = 8f;
-    [Min(0f)] public float jumpHoldAcceleration = 25f;
+    [Min(0f)] public float jumpInitialSpeed = 12f;
+    [Min(0f)] public float jumpHoldAcceleration = 40f;
     [Min(0f)] public float maxJumpHoldDuration = 0.15f;
 
     [Header("Air Movement")]
-    [Range(0f, 1f)] public float airControlMultiplier = 0.75f;
-    [Min(0f)] public float airDrag = 10f;
+    [FormerlySerializedAs("airControlMultiplier")]
+    [Tooltip("Aceleracao usada para mudar direcao e velocidade enquanto existe input no ar.")]
+    [Min(0f)] public float airControl = 30f;
+    [Tooltip("Multiplicador da Speed no chao que limita a velocidade no ar.")]
+    [Min(0f)] public float airMaxSpeedMultiplier = 1f;
+    [Tooltip("Desaceleracao passiva do momentum no ar quando nao existe input.")]
+    [Min(0f)] public float airDrag = 3f;
 
     [Header("Dash")]
     [Min(0f)] public float dashSpeedMultiplier = 2f;
@@ -41,6 +53,7 @@ public class PlayerMovement : MonoBehaviour
 
     private CharacterController controller;
     private PlayerState playerState;
+    private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
     private Vector3 knockbackVelocity;
@@ -51,17 +64,43 @@ public class PlayerMovement : MonoBehaviour
     private float knockbackTimer;
     private float dashTimer;
     private float dashCooldownTimer;
+    private int jumpsUsed;
+    private bool hasUsedAirDash;
+
+    [SerializeField, HideInInspector]
+    private int airMovementSettingsVersion;
 
     void Start()
     {
+        EnsureAirMovementDefaults();
         controller = GetComponent<CharacterController>();
         playerState = GetComponent<PlayerState>();
+        inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
+    }
+
+    void OnValidate()
+    {
+        EnsureAirMovementDefaults();
+    }
+
+    private void EnsureAirMovementDefaults()
+    {
+        if (airMovementSettingsVersion >= 1)
+            return;
+
+        // Os valores anteriores usavam Air Drag como aceleracao. Esta
+        // migracao aplica valores equivalentes para a nova semantica.
+        airControl = 16f;
+        airMaxSpeedMultiplier = 0.75f;
+        airDrag = 3f;
+        airMovementSettingsVersion = 1;
     }
 
     void Update()
     {
         DesiredDirection = ReadMovementDirection();
 
+        ResetAirActionsWhenGrounded();
         UpdateDashCooldown();
         TryStartDash();
         TryStartJump();
@@ -106,18 +145,24 @@ public class PlayerMovement : MonoBehaviour
         Keyboard keyboard = Keyboard.current;
 
         if (keyboard == null ||
-            !keyboard.leftShiftKey.wasPressedThisFrame ||
             !playerState.IsNormal() ||
             dashCooldownTimer > 0f ||
+            (!IsGrounded && hasUsedAirDash) ||
             DesiredDirection.sqrMagnitude < 0.0001f)
         {
             return;
         }
 
+        if (!inputBuffer.TryConsume(PlayerBufferedInput.Dash))
+            return;
+
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
         dashDirection = DesiredDirection;
+
+        if (!IsGrounded)
+            hasUsedAirDash = true;
 
         // O dash substitui a velocidade anterior imediatamente.
         horizontalVelocity = dashDirection * GetDashSpeed();
@@ -139,15 +184,50 @@ public class PlayerMovement : MonoBehaviour
         Keyboard keyboard = Keyboard.current;
 
         if (keyboard == null ||
-            !keyboard.spaceKey.wasPressedThisFrame ||
-            !controller.isGrounded ||
-            !playerState.IsNormal())
+            !playerState.IsNormal() ||
+            jumpsUsed >= MaximumJumpCount)
         {
             return;
         }
 
+        if (!inputBuffer.TryConsume(PlayerBufferedInput.Jump))
+            return;
+
+        bool isAirJump = !IsGrounded;
+
+        if (isAirJump)
+        {
+            // O pulo no ar funciona como uma correcao agressiva de trajeto:
+            // ele substitui o momentum anterior pela direcao atual, como Dash.
+            horizontalVelocity = DesiredDirection * speed;
+        }
+
         verticalVelocity = jumpInitialSpeed;
         jumpHoldTimer = maxJumpHoldDuration;
+        jumpsUsed++;
+    }
+
+    private void ResetAirActionsWhenGrounded()
+    {
+        if (!IsGrounded)
+        {
+            // Sair de uma borda nao concede dois pulos extras. Se o player
+            // ja esta no ar sem ter pulado, consideramos o primeiro pulo
+            // gasto e mantemos somente o pulo aereo disponivel.
+            if (jumpsUsed == 0)
+                jumpsUsed = 1;
+
+            return;
+        }
+
+        // Enquanto o player sobe, o CharacterController pode ainda reportar
+        // grounded por um frame. A velocidade vertical evita resetar o pulo
+        // que acabou de começar.
+        if (verticalVelocity > 0f)
+            return;
+
+        jumpsUsed = 0;
+        hasUsedAirDash = false;
     }
 
     private void UpdateVerticalVelocity()
@@ -198,6 +278,16 @@ public class PlayerMovement : MonoBehaviour
             return Vector3.zero;
         }
 
+        if (playerState.IsAttacking())
+        {
+            // O avanco proprio do ataque e aplicado por PlayerCombat. Aqui desaceleramos o movimento que ja existia para evitar um corte brusco de velocidade ao atacar enquanto corre.
+            return Vector3.MoveTowards(
+                horizontalVelocity,
+                Vector3.zero,
+                attackMomentumDeceleration * Time.deltaTime
+            );
+        }
+
         if (playerState.IsDashing())
         {
             if (UpdateDash())
@@ -235,12 +325,22 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateAirVelocity()
     {
-        Vector3 targetVelocity =
-            DesiredDirection * speed * airControlMultiplier;
+        if (DesiredDirection.sqrMagnitude > 0.0001f)
+        {
+            float maximumAirSpeed = speed * airMaxSpeedMultiplier;
+            Vector3 targetVelocity =
+                DesiredDirection * maximumAirSpeed;
+
+            return Vector3.MoveTowards(
+                horizontalVelocity,
+                targetVelocity,
+                airControl * Time.deltaTime
+            );
+        }
 
         return Vector3.MoveTowards(
             horizontalVelocity,
-            targetVelocity,
+            Vector3.zero,
             airDrag * Time.deltaTime
         );
     }
@@ -295,5 +395,15 @@ public class PlayerMovement : MonoBehaviour
     {
         knockbackVelocity = direction * force;
         knockbackTimer = duration;
+    }
+
+    public void ApplyAttackMovement(Vector3 displacement)
+    {
+        if (controller == null || displacement.sqrMagnitude <= 0.000001f)
+            return;
+
+        // PlayerCombat planeja o ataque; PlayerMovement continua sendo o unico
+        // responsavel por mover o CharacterController e respeitar colisoes.
+        controller.Move(displacement);
     }
 }

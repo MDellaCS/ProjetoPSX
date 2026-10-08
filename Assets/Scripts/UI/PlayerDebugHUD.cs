@@ -150,8 +150,6 @@ public class PlayerDebugHUD : MonoBehaviour
             .Append(playerGuard.CurrentGuard.ToString("F0"))
             .Append(" / ")
             .AppendLine(playerGuard.MaxGuard.ToString("F0"));
-        textBuilder.Append("PARRY HEAT: ")
-            .AppendLine(playerGuard.HasParryHeatBuff ? "ACTIVE" : "OFF");
         textBuilder.Append("ATTACKING: ")
             .AppendLine(playerCombat.IsAttacking ? "YES" : "NO");
 

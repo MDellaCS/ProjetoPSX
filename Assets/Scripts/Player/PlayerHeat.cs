@@ -86,7 +86,6 @@ public class PlayerHeat : MonoBehaviour
     private float debugHeatAccumulator;
 
     private PlayerState playerState;
-    private PlayerGuard playerGuard;
     private PlayerCombat playerCombat;
 
     public int CurrentHeat => currentHeat;
@@ -98,7 +97,6 @@ public class PlayerHeat : MonoBehaviour
     void Start()
     {
         playerState = GetComponent<PlayerState>();
-        playerGuard = GetComponent<PlayerGuard>();
         playerCombat = GetComponent<PlayerCombat>();
     }
 
@@ -301,11 +299,6 @@ public class PlayerHeat : MonoBehaviour
     {
         if (amount <= 0)
             return;
-
-        if (currentHeat < 0 && playerGuard != null && playerGuard.HasParryHeatBuff)
-        {
-            amount = Mathf.RoundToInt(amount * playerGuard.ParryHeatMultiplier);
-        }
 
         // Heat negativo também recebe Heat normalmente.
         int availableHeat = maxHeat - currentHeat;

@@ -71,8 +71,6 @@ public class EnemyHealth : MonoBehaviour
 
         damageNumberSpawner?.ShowDamage(damage);
 
-        Debug.Log("Inimigo tomou " + damage + " de dano!");
-
         FlashDamage();
 
         enemyCombat.RegisterDamageDuringStun(damage);

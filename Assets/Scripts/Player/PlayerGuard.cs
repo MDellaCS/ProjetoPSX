@@ -24,19 +24,10 @@ public class PlayerGuard : MonoBehaviour
     [Min(0f)] public float guardAfterBreak = 50f;
     [Min(1f)] public float brokenDamageMultiplier = 1.5f;
 
-    [Header("Parry Heat Buff")]
-    [Min(0f)] public float parryHeatBonus = 0.20f;
-    [Min(0f)] public float parryHeatBuffDuration = 5f;
-
-    private float parryHeatBuffTimer;
-
-    public bool HasParryHeatBuff => parryHeatBuffTimer > 0f;
-    public float ParryHeatMultiplier => HasParryHeatBuff ? 1f + parryHeatBonus : 1f;
-
     private PlayerState playerState;
     private PlayerCombat playerCombat;
-    private PlayerLightCombo lightCombo;
-    private PlayerHeavyCombo heavyCombo;
+    private PlayerComboController comboController;
+    private PlayerInputBuffer inputBuffer;
 
     private float parryTimer;
     private float recoveryTimer;
@@ -50,8 +41,8 @@ public class PlayerGuard : MonoBehaviour
     {
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
-        lightCombo = GetComponent<PlayerLightCombo>();
-        heavyCombo = GetComponent<PlayerHeavyCombo>();
+        comboController = PlayerComboController.GetOrAdd(gameObject);
+        inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
 
         currentGuard = maxGuard;
     }
@@ -60,14 +51,6 @@ public class PlayerGuard : MonoBehaviour
     {
         if (playerState.IsDead())
             return;
-
-        if (parryHeatBuffTimer > 0f)
-        {
-            parryHeatBuffTimer = Mathf.Max(
-                0f,
-                parryHeatBuffTimer - Time.deltaTime
-            );
-        }
 
         if (playerState.IsGuardBroken())
         {
@@ -89,8 +72,8 @@ public class PlayerGuard : MonoBehaviour
 
         if (keyboard != null)
         {
-            if (keyboard.qKey.wasPressedThisFrame &&
-                playerState.IsNormal())
+            if (playerState.IsNormal() &&
+                inputBuffer.TryConsume(PlayerBufferedInput.Block))
             {
                 StartBlock();
             }
@@ -125,8 +108,7 @@ public class PlayerGuard : MonoBehaviour
     void StartBlock()
     {
         playerCombat.CancelAttack();
-        lightCombo.CancelCombo();
-        heavyCombo.CancelCombo();
+        comboController.CancelCombo();
 
         playerState.ChangeState(PlayerState.State.Blocking);
         parryTimer = parryWindow;
@@ -152,9 +134,7 @@ public class PlayerGuard : MonoBehaviour
             parryTimer = 0f;
             recoveryTimer = recoveryDelay;
 
-            parryHeatBuffTimer = parryHeatBuffDuration;
-
-            Debug.Log("PARRY! Buff de Heat ativado.");
+            Debug.Log("PARRY!");
             return true;
         }
 
@@ -188,8 +168,7 @@ public class PlayerGuard : MonoBehaviour
         breakTimer = guardBreakDuration;
 
         playerCombat.CancelAttack();
-        lightCombo.CancelCombo();
-        heavyCombo.CancelCombo();
+        comboController.CancelCombo();
 
         playerState.ChangeState(PlayerState.State.GuardBroken);
 

@@ -22,6 +22,7 @@ public class PlayerCombat : MonoBehaviour
     private bool currentAttackIsHeavy;
 
     private float attackTimer;
+    private float windupElapsed;
     private int currentDamage;
     private float currentAttackRadius;
 
@@ -29,7 +30,8 @@ public class PlayerCombat : MonoBehaviour
     private System.Action attackHitCallback;
 
     [Header("Attack Rotation")]
-    [SerializeField] private float windupRotationSpeed = 180f;
+    [FormerlySerializedAs("windupRotationSpeed")]
+    [SerializeField] private float attackingRotationSpeed = 300f;
 
     [Header("Combat Status")]
     [Min(0f)]
@@ -57,7 +59,10 @@ public class PlayerCombat : MonoBehaviour
 
     void Awake()
     {
-        combatTimer = combatTimerDuration;
+        // O player nasce fora de combate. O timer so e preenchido por aggro ou dano real.
+        combatTimer = 0f;
+        PlayerInputBuffer.GetOrAdd(gameObject);
+        PlayerComboController.GetOrAdd(gameObject);
     }
 
     void Start()
@@ -171,6 +176,7 @@ public class PlayerCombat : MonoBehaviour
             case AttackPhase.Windup:
 
                 RotateDuringWindup();
+                ApplyWindupMovement();
 
                 attackTimer -= Time.deltaTime;
 
@@ -186,6 +192,7 @@ public class PlayerCombat : MonoBehaviour
 
             case AttackPhase.Active:
 
+                RotateDuringActive();
                 Attack();
 
                 attackTimer -= Time.deltaTime;
@@ -235,6 +242,7 @@ public class PlayerCombat : MonoBehaviour
     {
         attackPhase = AttackPhase.None;
         attackTimer = 0f;
+        windupElapsed = 0f;
 
         currentAttack = null;
         currentDamage = 0;
@@ -252,6 +260,72 @@ public class PlayerCombat : MonoBehaviour
         attackPhase = newPhase;
 
         attackTimer = duration;
+
+        if (newPhase == AttackPhase.Windup)
+            windupElapsed = 0f;
+    }
+
+    private void ApplyWindupMovement()
+    {
+        if (currentAttack == null ||
+            playerMovement == null ||
+            currentAttack.windupMoveDistance <= 0f ||
+            currentAttack.windupDuration <= 0f)
+        {
+            return;
+        }
+
+        float moveStart = Mathf.Min(
+            currentAttack.windupMoveStart,
+            currentAttack.windupMoveEnd
+        );
+        float moveEnd = Mathf.Max(
+            currentAttack.windupMoveStart,
+            currentAttack.windupMoveEnd
+        );
+
+        if (moveEnd <= moveStart)
+            return;
+
+        float previousTime = windupElapsed / currentAttack.windupDuration;
+        windupElapsed = Mathf.Min(
+            currentAttack.windupDuration,
+            windupElapsed + Time.deltaTime
+        );
+        float currentTime = windupElapsed / currentAttack.windupDuration;
+
+        float previousProgress = GetWindupMoveProgress(
+            previousTime,
+            moveStart,
+            moveEnd
+        );
+        float currentProgress = GetWindupMoveProgress(
+            currentTime,
+            moveStart,
+            moveEnd
+        );
+
+        float distance = currentAttack.windupMoveDistance *
+            (currentProgress - previousProgress);
+        // O avanco segue a frente atual. O giro durante o Windup permite
+        // steer sem alterar a distancia total planejada para o ataque.
+        playerMovement.ApplyAttackMovement(transform.forward * distance);
+    }
+
+    private float GetWindupMoveProgress(
+        float windupTime,
+        float moveStart,
+        float moveEnd)
+    {
+        float normalizedTime = Mathf.InverseLerp(
+            moveStart,
+            moveEnd,
+            windupTime
+        );
+        AnimationCurve curve = currentAttack.windupMoveCurve;
+        return curve != null
+            ? Mathf.Clamp01(curve.Evaluate(normalizedTime))
+            : normalizedTime;
     }
 
     void Attack()
@@ -318,16 +392,38 @@ public class PlayerCombat : MonoBehaviour
             attackFacingDirection = direction.normalized;
         }
 
-        if (attackFacingDirection.sqrMagnitude < 0.0001f)
+        RotateTowards(attackFacingDirection);
+    }
+
+    private void RotateDuringActive()
+    {
+        if (playerMovement == null)
+        {
+            return;
+        }
+
+        Vector3 direction = playerMovement.DesiredDirection;
+
+        if (direction.sqrMagnitude <= 0.0001f)
+            return;
+
+        RotateTowards(direction);
+    }
+
+    private void RotateTowards(Vector3 direction)
+    {
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.0001f)
             return;
 
         Quaternion targetRotation =
-            Quaternion.LookRotation(attackFacingDirection);
+            Quaternion.LookRotation(direction.normalized);
 
         transform.rotation = Quaternion.RotateTowards(
             transform.rotation,
             targetRotation,
-            windupRotationSpeed * Time.deltaTime
+            attackingRotationSpeed * Time.deltaTime
         );
     }
 

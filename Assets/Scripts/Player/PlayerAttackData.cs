@@ -14,6 +14,21 @@ public class PlayerAttackData
     public float attackDistance = 1.5f;
     public float attackRadius = 1f;
 
+    [Header("Windup Movement")]
+    [Min(0f)]
+    [Tooltip("Distancia total percorrida durante o Windup.")]
+    public float windupMoveDistance = 0f;
+
+    [Range(0f, 1f)]
+    public float windupMoveStart = 0f;
+
+    [Range(0f, 1f)]
+    public float windupMoveEnd = 1f;
+
+    [Tooltip("Distribuicao do avanco dentro da janela de movimento.")]
+    public AnimationCurve windupMoveCurve =
+        AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
     public int heatGenerated = 0;
     public int heatRemovedOnHit = 0;
 

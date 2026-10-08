@@ -8,3 +8,32 @@
 - A geração mínima de Heat por pesado é intencional, para evitar que Cold extremo impeça qualquer recuperação.
 - Heat ganho e resfriamento por inimigo atingido são intencionais.
 - O dano do pesado usa o Heat existente antes do acerto; o Heat ganho fortalece ataques seguintes.
+
+## TODO — Possivel simplificacao do sistema
+
+Avaliar substituir completamente Cold e Superheat por Vida comum + Heat apenas positivo.
+
+- Vida volta a ser uma barra independente e clara para o jogador.
+- Heat passa a ir apenas de zero ao maximo.
+- Heat alto aumenta tanto o dano causado quanto o dano recebido pelo jogador.
+- O risco deve crescer mais rapido perto do maximo: a vulnerabilidade no topo deve superar levemente o ganho ofensivo, para Heat maximo ser uma aposta e nao o estado ideal permanente.
+- Pesados geram Heat; leves podem reduzi-lo ou gerar menos Heat.
+- Heat decai fora de combate.
+- Considerar Parry como ferramenta de controle de risco, reduzindo Heat, sem restaurar o antigo buff de geracao de Heat.
+
+Exemplo inicial para testes futuros:
+
+| Heat | Dano causado | Dano recebido |
+| ---: | ---: | ---: |
+| 0% | 100% | 100% |
+| 50% | 140% | 130% |
+| 80% | 190% | 180% |
+| 100% | 250% | 275% |
+
+## TODO — Melhorias de camera
+
+- Revisitar a suavizacao de colisao com paredes e validar que nao causa saltos, clipping ou atraso excessivo.
+
+## TODO — Movimento
+
+- Permitir configurar o segundo pulo separadamente do primeiro (velocidade inicial, aceleracao ao segurar e duracao maxima). Por enquanto, ambos usam os mesmos valores de pulo.

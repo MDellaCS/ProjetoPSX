@@ -11,8 +11,7 @@ public class PlayerHealth : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerGuard playerGuard;
 
-    private PlayerLightCombo playerLightCombo;
-    private PlayerHeavyCombo playerHeavyCombo;
+    private PlayerComboController comboController;
 
     private PlayerHeat playerHeat;
 
@@ -26,8 +25,7 @@ public class PlayerHealth : MonoBehaviour
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
         playerGuard = GetComponent<PlayerGuard>();
-        playerLightCombo = GetComponent<PlayerLightCombo>();
-        playerHeavyCombo = GetComponent<PlayerHeavyCombo>();
+        comboController = PlayerComboController.GetOrAdd(gameObject);
         playerHeat = GetComponent<PlayerHeat>();
 
         normalColor = playerRenderer.material.color;
@@ -58,8 +56,7 @@ public class PlayerHealth : MonoBehaviour
             Color.yellow;
 
         playerCombat.CancelAttack();
-        playerLightCombo.CancelCombo();
-        playerHeavyCombo.CancelCombo();
+        comboController.CancelCombo();
     }
 
     void EndStagger()
