@@ -3,47 +3,68 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 5f;
+    [Header("Walking")]
+    [Min(0f)] public float speed = 5f;
+    [Min(0f)] public float acceleration = 30f;
+    [Min(0f)] public float deceleration = 40f;
+    [Min(0f)] public float rotationSpeed = 10f;
+
+    [Header("Gravity")]
     public float gravity = -20f;
-    public float rotationSpeed = 10f;
-    public float dodgeSpeed = 15f;
-    public float dodgeDuration = 0.5f;
-    private Vector3 knockbackVelocity;
-    private PlayerState playerState;
-    private float knockbackTimer;
 
-    private bool isDodging;
-    private float dodgeTimer;
-    private Vector3 dodgeDirection;
+    [Header("Dash")]
+    [Min(0f)] public float dashSpeedMultiplier = 3f;
+    [Min(0f)] public float dashDuration = 0.5f;
 
+    [Header("References")]
     public Transform cameraTransform;
+
     public Vector3 DesiredDirection { get; private set; }
 
     private CharacterController controller;
-    private PlayerHealth playerHealth;
+    private PlayerState playerState;
+
+    private Vector3 horizontalVelocity;
+    private Vector3 knockbackVelocity;
+    private Vector3 dashDirection;
+
     private float verticalVelocity;
-    private Renderer playerRenderer;
-    private Color normalColor;
+    private float knockbackTimer;
+    private float dashTimer;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        playerHealth = GetComponent<PlayerHealth>();
-        playerRenderer = GetComponent<Renderer>();
-        normalColor = playerRenderer.material.color;
         playerState = GetComponent<PlayerState>();
     }
 
     void Update()
     {
-        Vector2 input = Vector2.zero;
+        DesiredDirection = ReadMovementDirection();
 
-        if (Keyboard.current != null)
+        TryStartDash();
+        UpdateVerticalVelocity();
+
+        horizontalVelocity = CalculateHorizontalVelocity();
+        RotateTowardsMovement();
+
+        MoveCharacter();
+    }
+
+    private Vector3 ReadMovementDirection()
+    {
+        if (cameraTransform == null)
+            return Vector3.zero;
+
+        Vector2 input = Vector2.zero;
+        Keyboard keyboard = Keyboard.current;
+
+        if (keyboard != null)
         {
-            if (Keyboard.current.wKey.isPressed) input.y += 1;
-            if (Keyboard.current.sKey.isPressed) input.y -= 1;
-            if (Keyboard.current.dKey.isPressed) input.x += 1;
-            if (Keyboard.current.aKey.isPressed) input.x -= 1;
+            if (keyboard.wKey.isPressed) input.y += 1f;
+            if (keyboard.sKey.isPressed) input.y -= 1f;
+            if (keyboard.dKey.isPressed) input.x += 1f;
+            if (keyboard.aKey.isPressed) input.x -= 1f;
         }
 
         Vector3 cameraForward = cameraTransform.forward;
@@ -55,86 +76,125 @@ public class PlayerMovement : MonoBehaviour
         cameraForward.Normalize();
         cameraRight.Normalize();
 
-        Vector3 direction = (cameraForward * input.y + cameraRight * input.x).normalized;
+        return (cameraForward * input.y + cameraRight * input.x).normalized;
+    }
 
-        DesiredDirection = direction;
+    private void TryStartDash()
+    {
+        Keyboard keyboard = Keyboard.current;
 
-        if (playerState.IsNormal() && direction != Vector3.zero)
+        if (keyboard == null ||
+            !keyboard.leftShiftKey.wasPressedThisFrame ||
+            !playerState.IsNormal() ||
+            DesiredDirection.sqrMagnitude < 0.0001f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
-
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRotation,
-                rotationSpeed * Time.deltaTime
-            );
+            return;
         }
 
-        if (Keyboard.current.leftShiftKey.wasPressedThisFrame && playerState.IsNormal())
-        {
-            playerState.ChangeState(PlayerState.State.Dodging);
+        playerState.ChangeState(PlayerState.State.Dashing);
+        dashTimer = dashDuration;
+        dashDirection = DesiredDirection;
 
-            dodgeTimer = dodgeDuration;
+        // O dash substitui a velocidade anterior imediatamente.
+        horizontalVelocity = dashDirection * GetDashSpeed();
+    }
 
-            playerHealth.SetInvulnerable(true);
-            playerRenderer.material.color = Color.green;
-
-            if (direction != Vector3.zero)
-            {
-                dodgeDirection = direction;
-            }
-            else
-            {
-                dodgeDirection = transform.forward;
-            }
-        }
-
+    private void UpdateVerticalVelocity()
+    {
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
         }
 
         verticalVelocity += gravity * Time.deltaTime;
+    }
 
-        Vector3 velocity;
-
+    private Vector3 CalculateHorizontalVelocity()
+    {
         if (playerState.IsBlocking() || playerState.IsGuardBroken())
         {
             knockbackTimer = 0f;
-            velocity = Vector3.zero;
+            return Vector3.zero;
         }
-        else if (knockbackTimer > 0f)
+
+        if (knockbackTimer > 0f)
         {
-            velocity = knockbackVelocity;
             knockbackTimer -= Time.deltaTime;
+            return knockbackVelocity;
         }
-        else if (playerState.IsStaggered())
+
+        if (playerState.IsStaggered())
         {
-            velocity = Vector3.zero;
+            return Vector3.zero;
         }
-        else if (playerState.IsDodging())
+
+        if (playerState.IsDashing())
         {
-            velocity = dodgeDirection * dodgeSpeed;
-
-            dodgeTimer -= Time.deltaTime;
-
-            if (dodgeTimer <= 0f)
+            if (UpdateDash())
             {
-                playerState.ChangeState(PlayerState.State.Normal);
-
-                playerHealth.SetInvulnerable(false);
-                playerRenderer.material.color = normalColor;
+                return dashDirection * GetDashSpeed();
             }
         }
-        else if (playerState.IsNormal())
+
+        if (!playerState.IsNormal())
         {
-            velocity = direction * speed;
-        }
-        else
-        {
-            velocity = Vector3.zero;
+            return Vector3.zero;
         }
 
+        return CalculateWalkVelocity();
+    }
+
+    private Vector3 CalculateWalkVelocity()
+    {
+        Vector3 targetVelocity = DesiredDirection * speed;
+        float rate = DesiredDirection.sqrMagnitude > 0.0001f
+            ? acceleration
+            : deceleration;
+
+        return Vector3.MoveTowards(
+            horizontalVelocity,
+            targetVelocity,
+            rate * Time.deltaTime
+        );
+    }
+
+    private bool UpdateDash()
+    {
+        dashTimer -= Time.deltaTime;
+
+        if (dashTimer > 0f)
+            return true;
+
+        playerState.ChangeState(PlayerState.State.Normal);
+
+        return false;
+    }
+
+    private float GetDashSpeed()
+    {
+        return speed * dashSpeedMultiplier;
+    }
+
+    private void RotateTowardsMovement()
+    {
+        if (!playerState.IsNormal() ||
+            DesiredDirection.sqrMagnitude < 0.0001f)
+        {
+            return;
+        }
+
+        Quaternion targetRotation = Quaternion.LookRotation(DesiredDirection);
+
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            targetRotation,
+            rotationSpeed * Time.deltaTime
+        );
+    }
+
+    private void MoveCharacter()
+    {
+        Vector3 velocity = horizontalVelocity;
         velocity.y = verticalVelocity;
 
         controller.Move(velocity * Time.deltaTime);

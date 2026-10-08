@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class PlayerState : MonoBehaviour
 {
@@ -6,7 +7,7 @@ public class PlayerState : MonoBehaviour
     {
         Normal,
         Attacking,
-        Dodging,
+        Dashing,
         Stagger,
         Dead,
         Blocking,
@@ -20,7 +21,8 @@ public class PlayerState : MonoBehaviour
     [SerializeField] private Color blockingColor = Color.blue;
     [SerializeField] private Color guardBrokenColor = Color.red;
     [SerializeField] private Color attackingColor = Color.yellow;
-    [SerializeField] private Color dodgingColor = Color.cyan;
+    [FormerlySerializedAs("dodgingColor")]
+    [SerializeField] private Color dashingColor = Color.cyan;
     [SerializeField] private Color staggerColor = new Color(1f, 0.5f, 0f);
     [SerializeField] private Color deadColor = Color.gray;
 
@@ -33,7 +35,7 @@ public class PlayerState : MonoBehaviour
 
     public bool IsNormal() => currentState == State.Normal;
     public bool IsAttacking() => currentState == State.Attacking;
-    public bool IsDodging() => currentState == State.Dodging;
+    public bool IsDashing() => currentState == State.Dashing;
     public bool IsStaggered() => currentState == State.Stagger;
     public bool IsDead() => currentState == State.Dead;
     public bool IsBlocking() => currentState == State.Blocking;
@@ -88,8 +90,8 @@ public class PlayerState : MonoBehaviour
                 debugMaterial.color = attackingColor;
                 break;
 
-            case State.Dodging:
-                debugMaterial.color = dodgingColor;
+            case State.Dashing:
+                debugMaterial.color = dashingColor;
                 break;
 
             case State.Stagger:

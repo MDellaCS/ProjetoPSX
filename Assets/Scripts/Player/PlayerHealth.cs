@@ -2,10 +2,7 @@ using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
-    public float successfulDodgeFlashDuration = 0.15f;
     public float staggerDuration = 0.8f;
-
-    private bool isInvulnerable;
 
     private Renderer playerRenderer;
 
@@ -89,27 +86,6 @@ public class PlayerHealth : MonoBehaviour
     {
         if (playerState.IsDead())
             return;
-
-        // =========================
-        // DODGE / INVULNERABILIDADE
-        // =========================
-
-        if (isInvulnerable)
-        {
-            playerRenderer.material.color =
-                Color.magenta;
-
-            CancelInvoke(
-                nameof(ReturnToDodgeColor)
-            );
-
-            Invoke(
-                nameof(ReturnToDodgeColor),
-                successfulDodgeFlashDuration
-            );
-
-            return;
-        }
 
         // =========================
         // BLOCK / PARRY
@@ -200,17 +176,4 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    void ReturnToDodgeColor()
-    {
-        if (isInvulnerable)
-        {
-            playerRenderer.material.color =
-                Color.green;
-        }
-    }
-
-    public void SetInvulnerable(bool value)
-    {
-        isInvulnerable = value;
-    }
 }
