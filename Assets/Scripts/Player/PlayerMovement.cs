@@ -12,14 +12,32 @@ public class PlayerMovement : MonoBehaviour
     [Header("Gravity")]
     public float gravity = -20f;
 
+    [Header("Jump")]
+    [Min(0f)] public float jumpInitialSpeed = 5f;
+    [Min(0f)] public float jumpHoldAcceleration = 25f;
+    [Min(0f)] public float maxJumpHoldDuration = 0.15f;
+
+    [Header("Air Movement")]
+    [Range(0f, 1f)] public float airControlMultiplier = 0.35f;
+    [Min(0f)] public float airDrag = 20f;
+
     [Header("Dash")]
     [Min(0f)] public float dashSpeedMultiplier = 3f;
     [Min(0f)] public float dashDuration = 0.5f;
+    [Min(0f)] public float dashCooldown = 1f;
 
     [Header("References")]
     public Transform cameraTransform;
 
     public Vector3 DesiredDirection { get; private set; }
+    public float HorizontalSpeed => horizontalVelocity.magnitude;
+    public float VerticalSpeed => verticalVelocity;
+    public bool IsGrounded => controller != null && controller.isGrounded;
+    public float DashCooldownRemaining => dashCooldownTimer;
+    public bool IsDashReady =>
+        dashCooldownTimer <= 0f &&
+        playerState != null &&
+        playerState.IsNormal();
 
     private CharacterController controller;
     private PlayerState playerState;
@@ -29,8 +47,10 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 dashDirection;
 
     private float verticalVelocity;
+    private float jumpHoldTimer;
     private float knockbackTimer;
     private float dashTimer;
+    private float dashCooldownTimer;
 
     void Start()
     {
@@ -42,7 +62,9 @@ public class PlayerMovement : MonoBehaviour
     {
         DesiredDirection = ReadMovementDirection();
 
+        UpdateDashCooldown();
         TryStartDash();
+        TryStartJump();
         UpdateVerticalVelocity();
 
         horizontalVelocity = CalculateHorizontalVelocity();
@@ -86,6 +108,7 @@ public class PlayerMovement : MonoBehaviour
         if (keyboard == null ||
             !keyboard.leftShiftKey.wasPressedThisFrame ||
             !playerState.IsNormal() ||
+            dashCooldownTimer > 0f ||
             DesiredDirection.sqrMagnitude < 0.0001f)
         {
             return;
@@ -93,10 +116,38 @@ public class PlayerMovement : MonoBehaviour
 
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
+        dashCooldownTimer = dashCooldown;
         dashDirection = DesiredDirection;
 
         // O dash substitui a velocidade anterior imediatamente.
         horizontalVelocity = dashDirection * GetDashSpeed();
+    }
+
+    private void UpdateDashCooldown()
+    {
+        if (dashCooldownTimer <= 0f)
+            return;
+
+        dashCooldownTimer = Mathf.Max(
+            0f,
+            dashCooldownTimer - Time.deltaTime
+        );
+    }
+
+    private void TryStartJump()
+    {
+        Keyboard keyboard = Keyboard.current;
+
+        if (keyboard == null ||
+            !keyboard.spaceKey.wasPressedThisFrame ||
+            !controller.isGrounded ||
+            !playerState.IsNormal())
+        {
+            return;
+        }
+
+        verticalVelocity = jumpInitialSpeed;
+        jumpHoldTimer = maxJumpHoldDuration;
     }
 
     private void UpdateVerticalVelocity()
@@ -104,9 +155,28 @@ public class PlayerMovement : MonoBehaviour
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
+            jumpHoldTimer = 0f;
         }
 
+        ApplyJumpHold();
+
         verticalVelocity += gravity * Time.deltaTime;
+    }
+
+    private void ApplyJumpHold()
+    {
+        Keyboard keyboard = Keyboard.current;
+
+        if (keyboard == null ||
+            !keyboard.spaceKey.isPressed ||
+            jumpHoldTimer <= 0f ||
+            verticalVelocity <= 0f)
+        {
+            return;
+        }
+
+        verticalVelocity += jumpHoldAcceleration * Time.deltaTime;
+        jumpHoldTimer -= Time.deltaTime;
     }
 
     private Vector3 CalculateHorizontalVelocity()
@@ -146,6 +216,11 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateWalkVelocity()
     {
+        if (!IsGrounded || verticalVelocity > 0f)
+        {
+            return CalculateAirVelocity();
+        }
+
         Vector3 targetVelocity = DesiredDirection * speed;
         float rate = DesiredDirection.sqrMagnitude > 0.0001f
             ? acceleration
@@ -155,6 +230,18 @@ public class PlayerMovement : MonoBehaviour
             horizontalVelocity,
             targetVelocity,
             rate * Time.deltaTime
+        );
+    }
+
+    private Vector3 CalculateAirVelocity()
+    {
+        Vector3 targetVelocity =
+            DesiredDirection * speed * airControlMultiplier;
+
+        return Vector3.MoveTowards(
+            horizontalVelocity,
+            targetVelocity,
+            airDrag * Time.deltaTime
         );
     }
 

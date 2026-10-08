@@ -81,11 +81,18 @@ public class PlayerHealth : MonoBehaviour
         int damage,
         Vector3 attackerPosition,
         float knockbackForce,
-        float knockbackDuration
+        float knockbackDuration,
+        bool causedByEnemy = false
     )
     {
         if (playerState.IsDead())
             return;
+
+        // Um ataque inimigo conectado, mesmo bloqueado ou aparado, mantém o jogador em combate.
+        if (causedByEnemy)
+        {
+            playerCombat.RegisterDamageTakenFromEnemy();
+        }
 
         // =========================
         // BLOCK / PARRY

@@ -1,7 +1,11 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class EnemyCombat : MonoBehaviour
 {
+    private static readonly HashSet<EnemyCombat> activeEnemies =
+        new HashSet<EnemyCombat>();
+
     public enum EnemyState
     {
         Idle,
@@ -52,6 +56,31 @@ public class EnemyCombat : MonoBehaviour
 
     private Renderer enemyRenderer;
     private Color normalColor;
+
+    void OnEnable()
+    {
+        activeEnemies.Add(this);
+    }
+
+    void OnDisable()
+    {
+        activeEnemies.Remove(this);
+    }
+
+    public static bool IsAnyEnemyAggroedOn(Transform player)
+    {
+        foreach (EnemyCombat enemy in activeEnemies)
+        {
+            if (enemy != null &&
+                enemy.target == player &&
+                enemy.currentState != EnemyState.Idle)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     void Start()
     {
@@ -251,7 +280,8 @@ public class EnemyCombat : MonoBehaviour
                     attackDamage,
                     transform.position,
                     attackKnockbackForce,
-                    attackKnockbackDuration
+                    attackKnockbackDuration,
+                    causedByEnemy: true
                 );
                 hasDealtDamage = true;
                 break;

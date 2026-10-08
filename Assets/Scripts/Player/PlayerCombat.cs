@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
 
 public class PlayerCombat : MonoBehaviour
 {
@@ -30,8 +31,15 @@ public class PlayerCombat : MonoBehaviour
     [Header("Attack Rotation")]
     [SerializeField] private float windupRotationSpeed = 180f;
 
+    [Header("Combat Status")]
+    [Min(0f)]
+    [FormerlySerializedAs("outOfCombatDamageDelay")]
+    [SerializeField] private float combatTimerDuration = 5f;
+
     private PlayerMovement playerMovement;
     private Vector3 attackFacingDirection;
+    private bool hasAggroedEnemies;
+    private float combatTimer;
 
     public bool IsAttacking
     {
@@ -39,6 +47,17 @@ public class PlayerCombat : MonoBehaviour
         {
             return attackPhase != AttackPhase.None;
         }
+    }
+
+    public bool HasAggroedEnemies => hasAggroedEnemies;
+    public bool IsOutOfCombat =>
+        !hasAggroedEnemies &&
+        combatTimer <= 0f;
+    public float CombatTimer => combatTimer;
+
+    void Awake()
+    {
+        combatTimer = combatTimerDuration;
     }
 
     void Start()
@@ -50,10 +69,43 @@ public class PlayerCombat : MonoBehaviour
 
     void Update()
     {
+        UpdateCombatStatus();
+
         if (IsAttacking)
         {
             UpdateAttack();
         }
+    }
+
+    private void UpdateCombatStatus()
+    {
+        hasAggroedEnemies = EnemyCombat.IsAnyEnemyAggroedOn(transform);
+
+        if (hasAggroedEnemies)
+        {
+            ResetCombatTimer();
+            return;
+        }
+
+        combatTimer = Mathf.Max(
+            0f,
+            combatTimer - Time.deltaTime
+        );
+    }
+
+    public void RegisterDamageDealtToEnemy()
+    {
+        ResetCombatTimer();
+    }
+
+    public void RegisterDamageTakenFromEnemy()
+    {
+        ResetCombatTimer();
+    }
+
+    private void ResetCombatTimer()
+    {
+        combatTimer = combatTimerDuration;
     }
 
     public bool StartAttack(
@@ -235,6 +287,8 @@ public class PlayerCombat : MonoBehaviour
                     transform.position,
                     finalPoiseDamage
                 );
+
+                RegisterDamageDealtToEnemy();
 
                 enemiesHit.Add(enemy);
 

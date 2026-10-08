@@ -8,9 +8,9 @@ public class PlayerGuard : MonoBehaviour
     [SerializeField] private float currentGuard;
 
     [Header("Guard Damage Normalization")]
-    [Min(0f)] public float minimumGuardDamage = 8f;
-    [Min(0f)] public float guardDamageRange = 32f;
-    [Min(0.01f)] public float damageReference = 40f;
+    [Min(0f)] public float minimumGuardDamage = 1f;
+    [Min(0f)] public float guardDamageRange = 99f;
+    [Min(0.01f)] public float damageReference = 100f;
 
     [Header("Parry")]
     [Min(0f)] public float parryWindow = 0.2f;
@@ -43,6 +43,7 @@ public class PlayerGuard : MonoBehaviour
     private float breakTimer;
 
     public float CurrentGuard => currentGuard;
+    public float MaxGuard => maxGuard;
 
     void Awake()
     {
