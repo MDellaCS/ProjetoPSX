@@ -150,8 +150,7 @@ public class PlayerLightCombo : MonoBehaviour
             return;
 
         playerHeat.CoolFromLight(
-            currentLightAttack.heatRemovedOnHit,
-            currentLightAttack.superheatRemovedOnHit
+            currentLightAttack.heatRemovedOnHit
         );
     }
 

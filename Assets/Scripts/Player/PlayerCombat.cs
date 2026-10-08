@@ -34,7 +34,7 @@ public class PlayerCombat : MonoBehaviour
     [Header("Combat Status")]
     [Min(0f)]
     [FormerlySerializedAs("outOfCombatDamageDelay")]
-    [SerializeField] private float combatTimerDuration = 5f;
+    [SerializeField] private float combatTimerDuration = 10f;
 
     private PlayerMovement playerMovement;
     private Vector3 attackFacingDirection;

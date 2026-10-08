@@ -3041,14 +3041,14 @@ MonoBehaviour:
   acceleration: 20
   deceleration: 75
   rotationSpeed: 10
-  gravity: -20
-  jumpInitialSpeed: 5
+  gravity: -40
+  jumpInitialSpeed: 8
   jumpHoldAcceleration: 25
   maxJumpHoldDuration: 0.15
-  airControlMultiplier: 0.35
-  airDrag: 20
-  dashSpeedMultiplier: 2.5
-  dashDuration: 0.2
+  airControlMultiplier: 0.75
+  airDrag: 10
+  dashSpeedMultiplier: 2
+  dashDuration: 0.1
   dashCooldown: 1
   cameraTransform: {fileID: 330585546}
 --- !u!143 &825647891
@@ -3089,7 +3089,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCombat
   windupRotationSpeed: 180
-  outOfCombatDamageDelay: 5
+  combatTimerDuration: 10
 --- !u!114 &825647893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3346,27 +3346,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7d3af05aa5fe7142b23c06ae921e737, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeat
-  maxHeat: 1000
-  minHeat: -1000
-  maxSuperheat: 1000
-  superheatThreshold: 850
-  passiveHeatCoolingPerSecond: 20
-  maxPassiveSuperheatPerSecond: 30
-  superheatFullRateReference: 1000
-  passiveSuperheatCoolingPerSecond: 10
-  coldSuperheatCoolingPerSecond: 40
+  maxHeat: 10000
+  minHeat: -10000
+  maxSuperheat: 10000
+  superheatThreshold: 8500
+  passiveHeatCoolingPerSecond: 200
+  passiveColdRecoveryPerSecond: 200
+  coldRecoveryLimitPercent: 0.75
+  maxPassiveSuperheatPerSecond: 300
+  superheatFullRateReference: 10000
+  passiveSuperheatCoolingPerSecond: 100
+  coldSuperheatCoolingPerSecond: 400
   minimumHeavyHeatGeneration: 0.2
   minimumHeavyDamageMultiplier: 0.2
   maximumHeavyDamageMultiplier: 5
   maximumHeavyBonusDamage: 150
-  maximumHeavyBonusPoise: 75
-  heatPowerReference: 1000
+  maximumHeavyBonusPoise: 60
+  heatPowerReference: 10000
   heatPowerExponent: 1.5
-  heatCoolingDelay: 5
   superheatCoolingDelay: 10
   coldLightSuperheatMultiplier: 4
   minimumHeatPerHitPercent: 0.02
   maximumHeatPerHitPercent: 0.2
+  debugHeatInputEnabled: 1
+  debugHeatPerSecond: 1000
 --- !u!114 &825647898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5585,7 +5588,6 @@ GameObject:
   - component: {fileID: 1278918861}
   - component: {fileID: 1278918860}
   - component: {fileID: 1278918859}
-  - component: {fileID: 1278918858}
   m_Layer: 5
   m_Name: DebugHUD
   m_TagString: Untagged
@@ -5613,24 +5615,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!114 &1278918858
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1278918856}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc0a36a1593567c4592390c8914655cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerHeatUI
-  playerHeat: {fileID: 825647897}
-  coldFill: {fileID: 0}
-  hotFill: {fileID: 0}
-  heatText: {fileID: 0}
-  superheatFill: {fileID: 0}
-  superheatText: {fileID: 0}
 --- !u!114 &1278918859
 MonoBehaviour:
   m_ObjectHideFlags: 0
