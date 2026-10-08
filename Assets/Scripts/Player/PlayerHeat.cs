@@ -36,11 +36,7 @@ public class PlayerHeat : MonoBehaviour
     [Range(0f, 1f)]
     public float minimumHeavyDamageMultiplier = 0.2f;
 
-    [Range(0f, 1f)]
-    public float minimumHeavyAreaMultiplier = 0.5f;
-
     public float maximumHeavyDamageMultiplier = 5f;
-    public float maximumHeavyAreaMultiplier = 1.5f;
 
     [Header("Heavy Additive Damage")]
     [Min(0)]
@@ -87,6 +83,7 @@ public class PlayerHeat : MonoBehaviour
     private float superheatAccumulator;
 
     private PlayerState playerState;
+    private PlayerGuard playerGuard;
 
     public int CurrentHeat => currentHeat;
     public int CurrentSuperheat => currentSuperheat;
@@ -97,6 +94,7 @@ public class PlayerHeat : MonoBehaviour
     void Start()
     {
         playerState = GetComponent<PlayerState>();
+        playerGuard = GetComponent<PlayerGuard>();
     }
 
     void Update()
@@ -228,6 +226,11 @@ public class PlayerHeat : MonoBehaviour
     {
         if (amount <= 0)
             return;
+
+        if (currentHeat < 0 && playerGuard != null && playerGuard.HasParryHeatBuff)
+        {
+            amount = Mathf.RoundToInt(amount * playerGuard.ParryHeatMultiplier);
+        }
 
         timeSinceHeatIncrease = 0f;
 
@@ -381,46 +384,6 @@ public class PlayerHeat : MonoBehaviour
 
         return 1f +
             (maximumHeavyDamageMultiplier - 1f) *
-            GetPositiveHeatPower();
-    }
-
-    public float CalculateHeavyArea(float baseArea)
-    {
-        if (baseArea <= 0f)
-            return 0f;
-
-        float multiplier =
-            CalculateHeavyAreaMultiplier();
-
-        return baseArea * multiplier;
-    }
-
-    float CalculateHeavyAreaMultiplier()
-    {
-        // ====================================
-        // HEAT NEGATIVO — LINEAR
-        // ====================================
-
-        if (currentHeat < 0)
-        {
-            float coldAmount =
-                (float)currentHeat / minHeat;
-
-            coldAmount = Mathf.Clamp01(coldAmount);
-
-            return Mathf.Lerp(
-                1f,
-                minimumHeavyAreaMultiplier,
-                coldAmount
-            );
-        }
-
-        // ====================================
-        // HEAT POSITIVO — EXPONENCIAL
-        // ====================================
-
-        return 1f +
-            (maximumHeavyAreaMultiplier - 1f) *
             GetPositiveHeatPower();
     }
 

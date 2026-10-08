@@ -246,9 +246,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 250
-  knockbackForce: 3
-  knockbackDuration: 0.2
   damageFlashDuration: 35
+  maxPoise: 60
+  poiseRecoveryDelay: 3
+  poiseRecoveryPerSecond: 20
 --- !u!114 &3509596655090010076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -279,6 +280,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombat
   currentState: 0
   target: {fileID: 0}
+  staggerKnockbackForce: 8
+  staggerKnockbackDuration: 0.2
   windupRotationSpeed: 20
   attackDamage: 600
   attackKnockbackForce: 15
@@ -287,8 +290,8 @@ MonoBehaviour:
   detectionRange: 20
   hitboxDistance: 2.5
   hitboxRadius: 3
-  windupDuration: 2.5
-  recoveryDuration: 2
+  windupDuration: 0.8
+  recoveryDuration: 3
   attackDuration: 1
   staggerDuration: 1.5
 --- !u!114 &1010347489535525858

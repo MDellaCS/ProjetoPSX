@@ -12,6 +12,7 @@ public class PlayerHealth : MonoBehaviour
     private PlayerState playerState;
     private PlayerCombat playerCombat;
     private PlayerMovement playerMovement;
+    private PlayerGuard playerGuard;
 
     private PlayerLightCombo playerLightCombo;
     private PlayerHeavyCombo playerHeavyCombo;
@@ -24,16 +25,15 @@ public class PlayerHealth : MonoBehaviour
     void Start()
     {
         playerRenderer = GetComponent<Renderer>();
-        normalColor = playerRenderer.material.color;
-
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
-
+        playerGuard = GetComponent<PlayerGuard>();
         playerLightCombo = GetComponent<PlayerLightCombo>();
         playerHeavyCombo = GetComponent<PlayerHeavyCombo>();
-
         playerHeat = GetComponent<PlayerHeat>();
+
+        normalColor = playerRenderer.material.color;
     }
 
     void Update()
@@ -112,8 +112,22 @@ public class PlayerHealth : MonoBehaviour
         }
 
         // =========================
+        // BLOCK / PARRY
+        // =========================
+
+        if (playerGuard != null && playerGuard.TryDefend(damage))
+        {
+            return;
+        }
+
+        // =========================
         // DANO = PERDA DE HEAT
         // =========================
+
+        if (playerGuard != null)
+        {
+            damage = playerGuard.CalculateIncomingDamage(damage);
+        }
 
         playerHeat.RemoveHeat(damage);
 
@@ -180,7 +194,10 @@ public class PlayerHealth : MonoBehaviour
         // STAGGER
         // =========================
 
-        StartStagger();
+        if (!playerState.IsGuardBroken())
+        {
+            StartStagger();
+        }
     }
 
     void ReturnToDodgeColor()

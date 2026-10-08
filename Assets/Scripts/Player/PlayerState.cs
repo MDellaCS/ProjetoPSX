@@ -8,49 +8,97 @@ public class PlayerState : MonoBehaviour
         Attacking,
         Dodging,
         Stagger,
-        Dead
+        Dead,
+        Blocking,
+        GuardBroken
     }
+
+    [Header("Debug - State Colors")]
+    [SerializeField] private Renderer playerRenderer;
+
+    [SerializeField] private Color normalColor = Color.white;
+    [SerializeField] private Color blockingColor = Color.blue;
+    [SerializeField] private Color guardBrokenColor = Color.red;
+    [SerializeField] private Color attackingColor = Color.yellow;
+    [SerializeField] private Color dodgingColor = Color.cyan;
+    [SerializeField] private Color staggerColor = new Color(1f, 0.5f, 0f);
+    [SerializeField] private Color deadColor = Color.gray;
+
+    private Material debugMaterial;
 
     [SerializeField]
     private State currentState = State.Normal;
 
     public State CurrentState => currentState;
 
-    public bool IsNormal()
-    {
-        return currentState == State.Normal;
-    }
-
-    public bool IsAttacking()
-    {
-        return currentState == State.Attacking;
-    }
-
-    public bool IsDodging()
-    {
-        return currentState == State.Dodging;
-    }
-
-    public bool IsStaggered()
-    {
-        return currentState == State.Stagger;
-    }
-
-    public bool IsDead()
-    {
-        return currentState == State.Dead;
-    }
+    public bool IsNormal() => currentState == State.Normal;
+    public bool IsAttacking() => currentState == State.Attacking;
+    public bool IsDodging() => currentState == State.Dodging;
+    public bool IsStaggered() => currentState == State.Stagger;
+    public bool IsDead() => currentState == State.Dead;
+    public bool IsBlocking() => currentState == State.Blocking;
+    public bool IsGuardBroken() => currentState == State.GuardBroken;
 
     public void ChangeState(State newState)
     {
-        // Morte é um estado terminal
         if (currentState == State.Dead)
             return;
 
-        // Evita transições redundantes
+        // Durante Guard Break, só permite voltar ao normal ou morrer. A liberação é controlada pelo PlayerGuard.
+        if (currentState == State.GuardBroken &&
+            newState != State.Normal &&
+            newState != State.Dead)
+            return;
+
         if (currentState == newState)
             return;
 
         currentState = newState;
+        UpdateStateColor();
+    }
+
+    void Awake()
+    {
+        if (playerRenderer != null)
+            debugMaterial = playerRenderer.material;
+
+        UpdateStateColor();
+    }
+
+    private void UpdateStateColor()
+    {
+        if (debugMaterial == null)
+            return;
+
+        switch (currentState)
+        {
+            case State.Normal:
+                debugMaterial.color = normalColor;
+                break;
+
+            case State.Blocking:
+                debugMaterial.color = blockingColor;
+                break;
+
+            case State.GuardBroken:
+                debugMaterial.color = guardBrokenColor;
+                break;
+
+            case State.Attacking:
+                debugMaterial.color = attackingColor;
+                break;
+
+            case State.Dodging:
+                debugMaterial.color = dodgingColor;
+                break;
+
+            case State.Stagger:
+                debugMaterial.color = staggerColor;
+                break;
+
+            case State.Dead:
+                debugMaterial.color = deadColor;
+                break;
+        }
     }
 }

@@ -136,9 +136,7 @@ public class PlayerHeavyCombo : MonoBehaviour
             attack.damage
         );
 
-        float finalRadius = playerHeat.CalculateHeavyArea(
-            attack.attackRadius
-        );
+        float finalRadius = attack.attackRadius;
 
         int generatedHeat = playerHeat.CalculateHeavyHeatGeneration(
             attack.heatGenerated

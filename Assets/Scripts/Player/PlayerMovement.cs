@@ -56,7 +56,7 @@ public class PlayerMovement : MonoBehaviour
         cameraRight.Normalize();
 
         Vector3 direction = (cameraForward * input.y + cameraRight * input.x).normalized;
-        
+
         DesiredDirection = direction;
 
         if (playerState.IsNormal() && direction != Vector3.zero)
@@ -98,7 +98,12 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 velocity;
 
-        if (knockbackTimer > 0f)
+        if (playerState.IsBlocking() || playerState.IsGuardBroken())
+        {
+            knockbackTimer = 0f;
+            velocity = Vector3.zero;
+        }
+        else if (knockbackTimer > 0f)
         {
             velocity = knockbackVelocity;
             knockbackTimer -= Time.deltaTime;
