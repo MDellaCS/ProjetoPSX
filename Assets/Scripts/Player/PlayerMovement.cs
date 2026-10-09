@@ -7,7 +7,7 @@ public class PlayerMovement : MonoBehaviour
     private const int MaximumJumpCount = 2;
 
     [Header("Walking")]
-    [Min(0f)] public float speed = 5f;
+    [Min(0f)] public float speed = 7.5f;
     [Min(0f)] public float acceleration = 60f;
     [Min(0f)] public float deceleration = 75f;
     [Min(0f)] public float rotationSpeed = 15f;
@@ -33,10 +33,10 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float slideSteeringSpeed = 50f;
 
     [Header("Gravity")]
-    public float gravity = -55f;
+    public float gravity = -60f;
 
     [Header("Jump")]
-    [Min(0f)] public float jumpInitialSpeed = 12f;
+    [Min(0f)] public float jumpInitialSpeed = 13f;
     [Min(0f)] public float jumpHoldAcceleration = 40f;
     [Min(0f)] public float maxJumpHoldDuration = 0.15f;
 
