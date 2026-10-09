@@ -3493,7 +3493,6 @@ GameObject:
   - component: {fileID: 825647897}
   - component: {fileID: 825647898}
   - component: {fileID: 825647899}
-  - component: {fileID: 825647900}
   - component: {fileID: 825647901}
   - component: {fileID: 825647902}
   m_Layer: 0
@@ -3683,8 +3682,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerState
   playerRenderer: {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
-  blockingColor: {r: 0, g: 0, b: 1, a: 1}
-  guardBrokenColor: {r: 1, g: 0, b: 0, a: 1}
   attackingColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   dashingColor: {r: 0, g: 1, b: 1, a: 1}
   slidingColor: {r: 1, g: 0.5, b: 0, a: 1}
@@ -3757,29 +3754,6 @@ MonoBehaviour:
   gameOverPanel: {fileID: 232351544}
   deathMessageText: {fileID: 2021806367}
   showDelay: 1.5
---- !u!114 &825647900
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 825647885}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d6ac2f2567dd02b4ea65e218d0fe2e74, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerGuard
-  maxGuard: 100
-  currentGuard: 0
-  minimumGuardDamage: 1
-  guardDamageRange: 99
-  damageReference: 100
-  parryWindow: 0.2
-  recoveryDelay: 2
-  recoveryPerSecond: 25
-  guardBreakDuration: 2
-  guardAfterBreak: 50
-  brokenDamageMultiplier: 1.5
 --- !u!114 &825647901
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4498,8 +4472,8 @@ MonoBehaviour:
     windupDuration: 0.08
     activeDuration: 0.01
     recoveryDuration: 0.35
-    attackDistance: 1.35
-    attackRadius: 1
+    attackDistance: 1
+    attackRadius: 3
     windupMoveDistance: 0
     windupMoveStart: 0
     windupMoveEnd: 1
@@ -7282,6 +7256,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Heavy Enemy (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 7568889262350615957, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: canBeLaunched
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7322,7 +7300,6 @@ MonoBehaviour:
     hitboxRadius: 0.8
     knockbackForce: 4
     knockbackDuration: 0.12
-    isUnblockable: 0
     movesForward: 0
     movementSpeed: 0
 --- !u!43 &1249159378
@@ -8352,7 +8329,6 @@ MonoBehaviour:
     hitboxRadius: 0.8
     knockbackForce: 4
     knockbackDuration: 0.12
-    isUnblockable: 0
     movesForward: 0
     movementSpeed: 0
 --- !u!1 &1836985209

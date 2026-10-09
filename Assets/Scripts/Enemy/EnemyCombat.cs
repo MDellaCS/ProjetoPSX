@@ -4,7 +4,7 @@ using UnityEngine;
 public class EnemyCombat : MonoBehaviour
 {
     private static readonly HashSet<EnemyCombat> activeEnemies = new HashSet<EnemyCombat>();
-    public enum EnemyState { Idle, Chasing, Windup, Attacking, Recovery, Staggered, Stunned }
+    public enum EnemyState { Idle, Chasing, Windup, Attacking, Recovery, Staggered }
     public EnemyState currentState = EnemyState.Idle;
     public Transform target;
 
@@ -17,19 +17,16 @@ public class EnemyCombat : MonoBehaviour
     [Header("Attacks")]
     public EnemyAttackData quickSlash = new EnemyAttackData { attackName = "Quick Slash", damage = 15, maximumRange = 2.2f, windupDuration = .2f, activeDuration = .15f, recoveryDuration = .35f, hitboxDistance = 1.2f, hitboxRadius = .8f, knockbackForce = 4f, knockbackDuration = .12f };
     public EnemyAttackData heavyStrike = new EnemyAttackData { attackName = "Heavy Strike", damage = 40, maximumRange = 2.8f, windupDuration = .75f, activeDuration = .2f, recoveryDuration = .9f, hitboxDistance = 1.6f, hitboxRadius = 1f, knockbackForce = 9f, knockbackDuration = .25f };
-    public EnemyAttackData charge = new EnemyAttackData { attackName = "Charge", damage = 30, minimumRange = 1.5f, maximumRange = 8f, windupDuration = .65f, activeDuration = .45f, recoveryDuration = 1.2f, hitboxDistance = 1.3f, hitboxRadius = .9f, knockbackForce = 10f, knockbackDuration = .3f, isUnblockable = true, movesForward = true, movementSpeed = 10f };
+    public EnemyAttackData charge = new EnemyAttackData { attackName = "Charge", damage = 30, minimumRange = 1.5f, maximumRange = 8f, windupDuration = .65f, activeDuration = .45f, recoveryDuration = 1.2f, hitboxDistance = 1.3f, hitboxRadius = .9f, knockbackForce = 10f, knockbackDuration = .3f, movesForward = true, movementSpeed = 10f };
 
-    [Header("Stagger and Stun")]
+    [Header("Stagger")]
     public float staggerDuration = .8f;
     public float staggerKnockbackForce = 8f;
     public float staggerKnockbackDuration = .2f;
-    public float stunDuration = 1.2f;
-    public int stunDamageBreakpoint = 80;
 
     private EnemyMovement enemyMovement;
     private EnemyAttackData currentAttack;
     private float stateTimer;
-    private int stunDamageTaken;
     private bool hasDealtDamage;
     private Renderer enemyRenderer;
     private Color normalColor;
@@ -84,7 +81,6 @@ public class EnemyCombat : MonoBehaviour
             case EnemyState.Attacking: UpdateAttacking(); break;
             case EnemyState.Recovery: UpdateTimedState(EnemyState.Chasing); break;
             case EnemyState.Staggered: UpdateTimedState(EnemyState.Chasing); break;
-            case EnemyState.Stunned: UpdateTimedState(EnemyState.Chasing); break;
         }
     }
 
@@ -111,7 +107,6 @@ public class EnemyCombat : MonoBehaviour
                 break;
             case EnemyState.Recovery:
             case EnemyState.Staggered:
-            case EnemyState.Stunned:
                 UpdateTimedState(EnemyState.Idle);
                 break;
         }
@@ -169,11 +164,10 @@ public class EnemyCombat : MonoBehaviour
     {
         currentState = state;
         if (state == EnemyState.Chasing || state == EnemyState.Idle) { enemyRenderer.material.color = normalColor; }
-        else if (state == EnemyState.Windup) { stateTimer = currentAttack.windupDuration; enemyRenderer.material.color = currentAttack.isUnblockable ? Color.red : Color.magenta; }
+        else if (state == EnemyState.Windup) { stateTimer = currentAttack.windupDuration; enemyRenderer.material.color = currentAttack.movesForward ? Color.red : Color.magenta; }
         else if (state == EnemyState.Attacking) { stateTimer = currentAttack.activeDuration; hasDealtDamage = false; }
         else if (state == EnemyState.Recovery) { stateTimer = currentAttack.recoveryDuration; enemyRenderer.material.color = normalColor; }
         else if (state == EnemyState.Staggered) { stateTimer = staggerDuration; enemyRenderer.material.color = Color.yellow; }
-        else if (state == EnemyState.Stunned) { stateTimer = stunDuration; enemyRenderer.material.color = Color.cyan; }
         else if (state == EnemyState.Idle && isTrainingDummy) { stateTimer = trainingDummyAttackInterval; }
     }
 
@@ -192,9 +186,8 @@ public class EnemyCombat : MonoBehaviour
         {
             PlayerHealth player = hit.GetComponentInParent<PlayerHealth>();
             if (player == null) continue;
-            bool parried = player.TakeDamage(currentAttack.damage, transform.position, currentAttack.knockbackForce, currentAttack.knockbackDuration, true, currentAttack.isUnblockable);
+            player.TakeDamage(currentAttack.damage, transform.position, currentAttack.knockbackForce, currentAttack.knockbackDuration, true);
             hasDealtDamage = true;
-            if (parried) ApplyStun();
             break;
         }
     }
@@ -206,21 +199,11 @@ public class EnemyCombat : MonoBehaviour
         if (direction.sqrMagnitude > .0001f) enemyMovement.ApplyKnockback(direction.normalized, staggerKnockbackForce, staggerKnockbackDuration);
     }
 
-    public void ApplyStun() { stunDamageTaken = 0; ChangeState(EnemyState.Stunned); }
-
     public void InterruptForLaunch()
     {
         currentAttack = null;
         hasDealtDamage = false;
         ChangeState(EnemyState.Staggered);
-    }
-
-    public void RegisterDamageDuringStun(int damage)
-    {
-        if (currentState != EnemyState.Stunned || damage <= 0) return;
-        stunDamageTaken += damage;
-        if (stunDamageTaken >= stunDamageBreakpoint)
-            ChangeState(isTrainingDummy ? EnemyState.Idle : EnemyState.Chasing);
     }
 
     public void ConfigureAsTrainingDummy(

@@ -11,6 +11,10 @@ public class EnemyHealth : MonoBehaviour
     [Tooltip("Desmarque para inimigos que nao podem ser lancados para cima.")]
     public bool canBeLaunched = true;
 
+    [Header("Enemy Juggle")]
+    [Tooltip("Desmarque para inimigos que podem receber Launch Up, mas nao acompanham os ataques aereos do jogador.")]
+    public bool canBeJuggled = true;
+
     private int currentHealth;
     private DamageNumberSpawner damageNumberSpawner;
 
@@ -77,8 +81,6 @@ public class EnemyHealth : MonoBehaviour
 
         FlashDamage();
 
-        enemyCombat.RegisterDamageDuringStun(damage);
-
         // CameraFollow.Instance.ImpactShake(knockbackDirection);
         // HitStopManager.Instance.HitStop();
         ApplyPoiseDamage(staggerDamage, attackerPosition);
@@ -142,5 +144,36 @@ public class EnemyHealth : MonoBehaviour
 
         enemyCombat?.InterruptForLaunch();
         enemyMovement?.ApplyLaunchUp(initialSpeed, gravityMagnitude);
+    }
+
+    public void ApplyAerialJuggleLight(
+        float liftSpeed,
+        float gravityMagnitude,
+        float gravityMultiplier,
+        float duration)
+    {
+        if (!canBeJuggled ||
+            enemyMovement == null ||
+            !enemyMovement.IsLaunched)
+            return;
+
+        enemyCombat?.InterruptForLaunch();
+        enemyMovement?.BeginAerialJuggleLight(
+            liftSpeed,
+            gravityMagnitude,
+            gravityMultiplier,
+            duration
+        );
+    }
+
+    public void ApplyAerialJuggleDive(float fallSpeed)
+    {
+        if (!canBeJuggled ||
+            enemyMovement == null ||
+            !enemyMovement.IsLaunched)
+            return;
+
+        enemyCombat?.InterruptForLaunch();
+        enemyMovement?.BeginAerialJuggleDive(fallSpeed);
     }
 }

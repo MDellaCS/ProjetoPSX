@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Transforma um inimigo existente em um alvo de teste: ele nao persegue nem
-/// gira para o jogador, mas ainda recebe dano, poise, stagger e parry.
+/// gira para o jogador, mas ainda recebe dano, poise e stagger.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EnemyCombat))]

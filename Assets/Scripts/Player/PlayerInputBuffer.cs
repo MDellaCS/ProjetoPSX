@@ -6,8 +6,7 @@ public enum PlayerBufferedInput
     LightAttack,
     HeavyAttack,
     Jump,
-    Dash,
-    Block
+    Dash
 }
 
 /// <summary>
@@ -87,8 +86,6 @@ public class PlayerInputBuffer : MonoBehaviour
         if (keyboard.leftShiftKey.wasPressedThisFrame)
             Buffer(PlayerBufferedInput.Dash);
 
-        if (keyboard.qKey.wasPressedThisFrame)
-            Buffer(PlayerBufferedInput.Block);
     }
 
     private void Buffer(PlayerBufferedInput input)

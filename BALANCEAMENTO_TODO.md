@@ -19,7 +19,6 @@ Avaliar substituir completamente Cold e Superheat por Vida comum + Heat apenas p
 - O risco deve crescer mais rapido perto do maximo: a vulnerabilidade no topo deve superar levemente o ganho ofensivo, para Heat maximo ser uma aposta e nao o estado ideal permanente.
 - Pesados geram Heat; leves podem reduzi-lo ou gerar menos Heat.
 - Heat decai fora de combate.
-- Considerar Parry como ferramenta de controle de risco, reduzindo Heat, sem restaurar o antigo buff de geracao de Heat.
 
 Exemplo inicial para testes futuros:
 

@@ -26,6 +26,7 @@ public class PlayerCombat : MonoBehaviour
     private int currentDamage;
     private float currentAttackRadius;
     private bool aerialDiveCancelQueued;
+    private bool recoveryCancelQueued;
 
     private System.Action attackFinishedCallback;
     private System.Action attackHitCallback;
@@ -216,10 +217,13 @@ public class PlayerCombat : MonoBehaviour
                 {
                     if (playerMovement != null && !playerMovement.IsAerialDiving)
                     {
-                        ChangeAttackPhase(
-                            AttackPhase.Recovery,
-                            currentAttack.recoveryDuration
-                        );
+                        if (recoveryCancelQueued)
+                            FinishAttack();
+                        else
+                            ChangeAttackPhase(
+                                AttackPhase.Recovery,
+                                currentAttack.recoveryDuration
+                            );
                     }
 
                     // O Dive nao usa Active por tempo. Enquanto a queda estiver ativa, a hitbox permanece ativa ate o chao.
@@ -230,7 +234,7 @@ public class PlayerCombat : MonoBehaviour
 
                 if (attackTimer <= 0f)
                 {
-                    if (aerialDiveCancelQueued)
+                    if (aerialDiveCancelQueued || recoveryCancelQueued)
                     {
                         FinishAttack();
                         break;
@@ -245,6 +249,12 @@ public class PlayerCombat : MonoBehaviour
                 break;
 
             case AttackPhase.Recovery:
+
+                if (recoveryCancelQueued)
+                {
+                    FinishAttack();
+                    break;
+                }
 
                 attackTimer -= Time.deltaTime;
 
@@ -285,6 +295,7 @@ public class PlayerCombat : MonoBehaviour
         currentDamage = 0;
         currentAttackRadius = 0f;
         aerialDiveCancelQueued = false;
+        recoveryCancelQueued = false;
 
         enemiesHit.Clear();
 
@@ -430,6 +441,8 @@ public class PlayerCombat : MonoBehaviour
                     );
                 }
 
+                ApplyAerialJuggle(enemy);
+
                 RegisterDamageDealtToEnemy();
 
                 enemiesHit.Add(enemy);
@@ -463,6 +476,46 @@ public class PlayerCombat : MonoBehaviour
         if (attackPhase == AttackPhase.Recovery)
             FinishAttack();
 
+        return true;
+    }
+
+    private void ApplyAerialJuggle(EnemyHealth enemy)
+    {
+        if (enemy == null ||
+            currentAttack == null ||
+            !currentAttack.isAerial)
+        {
+            return;
+        }
+
+        if (currentAttack.isHeavy)
+        {
+            enemy.ApplyAerialJuggleDive(aerialDiveFallSpeed);
+            return;
+        }
+
+        float gravityMagnitude = playerMovement != null
+            ? Mathf.Abs(playerMovement.gravity)
+            : 0f;
+
+        enemy.ApplyAerialJuggleLight(
+            aerialLightLiftSpeed,
+            gravityMagnitude,
+            aerialLightGravityMultiplier,
+            currentAttack.windupDuration + currentAttack.activeDuration
+        );
+    }
+
+    public bool QueueRecoveryCancel()
+    {
+        if (!IsAttacking ||
+            (attackPhase != AttackPhase.Active &&
+             attackPhase != AttackPhase.Recovery))
+        {
+            return false;
+        }
+
+        recoveryCancelQueued = true;
         return true;
     }
 

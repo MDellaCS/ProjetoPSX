@@ -5,22 +5,19 @@ public class PlayerState : MonoBehaviour
 {
     public enum State
     {
-        Normal,
-        Attacking,
-        Dashing,
-        Stagger,
-        Dead,
-        Blocking,
-        GuardBroken,
-        Sliding
+        Normal = 0,
+        Attacking = 1,
+        Dashing = 2,
+        Stagger = 3,
+        Dead = 4,
+        // Mantem o valor serializado do slide apos remover os estados defensivos.
+        Sliding = 7
     }
 
     [Header("Debug - State Colors")]
     [SerializeField] private Renderer playerRenderer;
 
     [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color blockingColor = Color.blue;
-    [SerializeField] private Color guardBrokenColor = Color.red;
     [SerializeField] private Color attackingColor = Color.yellow;
     [FormerlySerializedAs("dodgingColor")]
     [SerializeField] private Color dashingColor = Color.cyan;
@@ -41,18 +38,10 @@ public class PlayerState : MonoBehaviour
     public bool IsSliding() => currentState == State.Sliding;
     public bool IsStaggered() => currentState == State.Stagger;
     public bool IsDead() => currentState == State.Dead;
-    public bool IsBlocking() => currentState == State.Blocking;
-    public bool IsGuardBroken() => currentState == State.GuardBroken;
 
     public void ChangeState(State newState)
     {
         if (currentState == State.Dead)
-            return;
-
-        // Durante Guard Break, só permite voltar ao normal ou morrer. A liberação é controlada pelo PlayerGuard.
-        if (currentState == State.GuardBroken &&
-            newState != State.Normal &&
-            newState != State.Dead)
             return;
 
         if (currentState == newState)
@@ -79,14 +68,6 @@ public class PlayerState : MonoBehaviour
         {
             case State.Normal:
                 debugMaterial.color = normalColor;
-                break;
-
-            case State.Blocking:
-                debugMaterial.color = blockingColor;
-                break;
-
-            case State.GuardBroken:
-                debugMaterial.color = guardBrokenColor;
                 break;
 
             case State.Attacking:

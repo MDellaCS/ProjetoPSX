@@ -17,7 +17,6 @@ public class PlayerDebugHUD : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerState playerState;
     private PlayerHeat playerHeat;
-    private PlayerGuard playerGuard;
     private PlayerCombat playerCombat;
 
     private bool isVisible;
@@ -71,7 +70,6 @@ public class PlayerDebugHUD : MonoBehaviour
         playerMovement = playerTransform.GetComponent<PlayerMovement>();
         playerState = playerTransform.GetComponent<PlayerState>();
         playerHeat = playerTransform.GetComponent<PlayerHeat>();
-        playerGuard = playerTransform.GetComponent<PlayerGuard>();
         playerCombat = playerTransform.GetComponent<PlayerCombat>();
     }
 
@@ -80,7 +78,6 @@ public class PlayerDebugHUD : MonoBehaviour
         return playerMovement != null &&
                playerState != null &&
                playerHeat != null &&
-               playerGuard != null &&
                playerCombat != null;
     }
 
@@ -131,10 +128,6 @@ public class PlayerDebugHUD : MonoBehaviour
             .Append(playerHeat.CurrentSuperheat)
             .Append(" / ")
             .AppendLine(playerHeat.MaxSuperheat.ToString());
-        textBuilder.Append("GUARD: ")
-            .Append(playerGuard.CurrentGuard.ToString("F0"))
-            .Append(" / ")
-            .AppendLine(playerGuard.MaxGuard.ToString("F0"));
         textBuilder.Append("ATTACKING: ")
             .AppendLine(playerCombat.IsAttacking ? "YES" : "NO");
 

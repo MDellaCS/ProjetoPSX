@@ -14,7 +14,6 @@ public class EnemyAttackData
     public float hitboxRadius;
     public float knockbackForce;
     public float knockbackDuration;
-    public bool isUnblockable;
     public bool movesForward;
     public float movementSpeed;
 }

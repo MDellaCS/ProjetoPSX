@@ -73,7 +73,7 @@ public class PlayerComboController : MonoBehaviour
     public PlayerAttackData aerialL2 = AerialLight("Air L2", 24, .07f, .13f, .1f, 1.45f, .85f, 180, 12);
     public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 250, 18);
     public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
-    public PlayerAttackData aerialH1 = AerialHeavy("Air H1", 50, .08f, .01f, .35f, 1.35f, 1.00f, 500, 38);
+    public PlayerAttackData aerialH1 = AerialHeavy("Air H1", 50, .08f, .01f, .35f, 1f, 3f, 500, 38);
 
 
     #region Runtime References

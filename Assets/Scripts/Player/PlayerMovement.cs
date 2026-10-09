@@ -4,6 +4,13 @@ using UnityEngine.Serialization;
 
 public class PlayerMovement : MonoBehaviour
 {
+    private enum RecoveryCancelAction
+    {
+        None,
+        Jump,
+        Dash
+    }
+
     private const int MaximumJumpCount = 2;
 
     [Header("Walking")]
@@ -71,7 +78,8 @@ public class PlayerMovement : MonoBehaviour
 
     private CharacterController controller;
     private PlayerState playerState;
-    private PlayerGuard playerGuard;
+    private PlayerCombat playerCombat;
+    private PlayerComboController comboController;
     private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
@@ -92,6 +100,7 @@ public class PlayerMovement : MonoBehaviour
     private bool hasUsedAirDash;
     private bool isCrouching;
     private bool isAerialDiving;
+    private RecoveryCancelAction queuedRecoveryCancelAction;
 
     [SerializeField, HideInInspector]
     private int airMovementSettingsVersion;
@@ -101,7 +110,8 @@ public class PlayerMovement : MonoBehaviour
         EnsureAirMovementDefaults();
         controller = GetComponent<CharacterController>();
         playerState = GetComponent<PlayerState>();
-        playerGuard = GetComponent<PlayerGuard>();
+        playerCombat = GetComponent<PlayerCombat>();
+        comboController = PlayerComboController.GetOrAdd(gameObject);
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
 
     }
@@ -173,11 +183,28 @@ public class PlayerMovement : MonoBehaviour
     private void TryStartDash()
     {
         Keyboard keyboard = Keyboard.current;
+
+        if (playerState.IsAttacking())
+        {
+            if (dashCooldownTimer <= 0f &&
+                (IsGrounded || !hasUsedAirDash) &&
+                DesiredDirection.sqrMagnitude > 0.0001f)
+            {
+                TryQueueRecoveryCancel(
+                    PlayerBufferedInput.Dash,
+                    RecoveryCancelAction.Dash
+                );
+            }
+
+            return;
+        }
+
+        bool isQueuedDash = queuedRecoveryCancelAction ==
+            RecoveryCancelAction.Dash;
         bool canStartDash = playerState.IsNormal() ||
-            playerState.IsBlocking() ||
             playerState.IsSliding();
 
-        if (keyboard == null ||
+        if ((keyboard == null && !isQueuedDash) ||
             !canStartDash ||
             dashCooldownTimer > 0f ||
             (!IsGrounded && hasUsedAirDash) ||
@@ -186,11 +213,12 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (!inputBuffer.TryConsume(PlayerBufferedInput.Dash))
+        if (!isQueuedDash &&
+            !inputBuffer.TryConsume(PlayerBufferedInput.Dash))
             return;
 
+        queuedRecoveryCancelAction = RecoveryCancelAction.None;
         SetCrouching(false);
-        playerGuard?.CancelBlock();
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
@@ -218,16 +246,35 @@ public class PlayerMovement : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
 
+        if (playerState.IsAttacking())
+        {
+            if (jumpsUsed < MaximumJumpCount)
+            {
+                TryQueueRecoveryCancel(
+                    PlayerBufferedInput.Jump,
+                    RecoveryCancelAction.Jump
+                );
+            }
+
+            return;
+        }
+
+        bool isQueuedJump = queuedRecoveryCancelAction ==
+            RecoveryCancelAction.Jump;
+
         bool canStartJump = playerState.IsNormal() || playerState.IsSliding();
 
-        if (keyboard == null || !canStartJump || jumpsUsed >= MaximumJumpCount)
+        if ((keyboard == null && !isQueuedJump) || !canStartJump ||
+            jumpsUsed >= MaximumJumpCount)
         {
             return;
         }
 
-        if (!inputBuffer.TryConsume(PlayerBufferedInput.Jump))
+        if (!isQueuedJump &&
+            !inputBuffer.TryConsume(PlayerBufferedInput.Jump))
             return;
 
+        queuedRecoveryCancelAction = RecoveryCancelAction.None;
         // Pular e deslizar sao acoes mutuamente exclusivas. O pulo encerra o slide antes de aplicar o impulso vertical.
         EndSlide();
         SetCrouching(false);
@@ -244,6 +291,22 @@ public class PlayerMovement : MonoBehaviour
         verticalVelocity = jumpInitialSpeed;
         jumpHoldTimer = maxJumpHoldDuration;
         jumpsUsed++;
+    }
+
+    private void TryQueueRecoveryCancel(
+        PlayerBufferedInput input,
+        RecoveryCancelAction action)
+    {
+        if (!inputBuffer.HasBuffered(input) ||
+            playerCombat == null ||
+            !playerCombat.QueueRecoveryCancel())
+        {
+            return;
+        }
+
+        inputBuffer.TryConsume(input);
+        queuedRecoveryCancelAction = action;
+        comboController?.CancelCombo();
     }
 
     private void ResetAirActionsWhenGrounded()
@@ -372,12 +435,6 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateHorizontalVelocity()
     {
-        if (playerState.IsBlocking() || playerState.IsGuardBroken())
-        {
-            knockbackTimer = 0f;
-            return Vector3.zero;
-        }
-
         if (knockbackTimer > 0f)
         {
             knockbackTimer -= Time.deltaTime;

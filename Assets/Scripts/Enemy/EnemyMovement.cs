@@ -10,7 +10,11 @@ public class EnemyMovement : MonoBehaviour
 
     private float verticalVelocity;
     private float launchGravityMagnitude;
+    private float aerialJuggleTimer;
+    private float aerialJuggleGravityMultiplier = 1f;
+    private float aerialJuggleDiveFallSpeed;
     private bool isLaunched;
+    private bool isAerialJuggleDiving;
 
     public Transform target;
     private CharacterController controller;
@@ -39,10 +43,7 @@ public class EnemyMovement : MonoBehaviour
             verticalVelocity = -2f;
         }
 
-        float currentGravity = isLaunched
-            ? -launchGravityMagnitude
-            : gravity;
-        verticalVelocity += currentGravity * Time.deltaTime;
+        UpdateAerialJuggleMovement();
 
         // Movimento horizontal
         Vector3 horizontalVelocity = Vector3.zero;
@@ -99,6 +100,7 @@ public class EnemyMovement : MonoBehaviour
         {
             isLaunched = false;
             verticalVelocity = -2f;
+            ResetAerialJuggleMovement();
         }
     }
 
@@ -118,5 +120,67 @@ public class EnemyMovement : MonoBehaviour
         verticalVelocity = initialSpeed;
         launchGravityMagnitude = gravityMagnitude;
         isLaunched = true;
+        ResetAerialJuggleMovement();
+    }
+
+    public void BeginAerialJuggleLight(
+        float liftSpeed,
+        float gravityMagnitude,
+        float gravityMultiplier,
+        float duration)
+    {
+        knockbackTimer = 0f;
+        verticalVelocity = liftSpeed;
+        launchGravityMagnitude = gravityMagnitude;
+        aerialJuggleGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
+        aerialJuggleTimer = Mathf.Max(aerialJuggleTimer, duration);
+        aerialJuggleDiveFallSpeed = 0f;
+        isAerialJuggleDiving = false;
+        isLaunched = true;
+    }
+
+    public void BeginAerialJuggleDive(float fallSpeed)
+    {
+        knockbackTimer = 0f;
+        aerialJuggleTimer = 0f;
+        aerialJuggleGravityMultiplier = 1f;
+        aerialJuggleDiveFallSpeed = fallSpeed;
+        isAerialJuggleDiving = true;
+        isLaunched = true;
+    }
+
+    private void UpdateAerialJuggleMovement()
+    {
+        if (isAerialJuggleDiving)
+        {
+            verticalVelocity = -aerialJuggleDiveFallSpeed;
+            return;
+        }
+
+        if (aerialJuggleTimer > 0f)
+        {
+            aerialJuggleTimer = Mathf.Max(
+                0f,
+                aerialJuggleTimer - Time.deltaTime
+            );
+
+            if (aerialJuggleTimer <= 0f)
+                aerialJuggleGravityMultiplier = 1f;
+        }
+
+        float currentGravity = isLaunched
+            ? -launchGravityMagnitude
+            : gravity;
+        verticalVelocity += currentGravity *
+            aerialJuggleGravityMultiplier *
+            Time.deltaTime;
+    }
+
+    private void ResetAerialJuggleMovement()
+    {
+        aerialJuggleTimer = 0f;
+        aerialJuggleGravityMultiplier = 1f;
+        aerialJuggleDiveFallSpeed = 0f;
+        isAerialJuggleDiving = false;
     }
 }

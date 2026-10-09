@@ -9,8 +9,6 @@ public class PlayerHealth : MonoBehaviour
     private PlayerState playerState;
     private PlayerCombat playerCombat;
     private PlayerMovement playerMovement;
-    private PlayerGuard playerGuard;
-
     private PlayerComboController comboController;
 
     private PlayerHeat playerHeat;
@@ -24,7 +22,6 @@ public class PlayerHealth : MonoBehaviour
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
-        playerGuard = GetComponent<PlayerGuard>();
         comboController = PlayerComboController.GetOrAdd(gameObject);
         playerHeat = GetComponent<PlayerHeat>();
 
@@ -74,42 +71,21 @@ public class PlayerHealth : MonoBehaviour
         );
     }
 
-    public bool TakeDamage(
+    public void TakeDamage(
         int damage,
         Vector3 attackerPosition,
         float knockbackForce,
         float knockbackDuration,
-        bool causedByEnemy = false,
-        bool isUnblockable = false
+        bool causedByEnemy = false
     )
     {
         if (playerState.IsDead())
-            return false;
+            return;
 
-        // Um ataque inimigo conectado, mesmo bloqueado ou aparado, mantém o jogador em combate.
+        // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {
             playerCombat.RegisterDamageTakenFromEnemy();
-        }
-
-        // =========================
-        // BLOCK / PARRY
-        // =========================
-
-        if (!isUnblockable &&
-            playerGuard != null &&
-            playerGuard.TryDefend(damage))
-        {
-            return playerGuard.LastDefenseWasParry;
-        }
-
-        // =========================
-        // DANO = PERDA DE HEAT
-        // =========================
-
-        if (playerGuard != null)
-        {
-            damage = playerGuard.CalculateIncomingDamage(damage);
         }
 
         playerHeat.RemoveHeat(damage);
@@ -125,7 +101,7 @@ public class PlayerHealth : MonoBehaviour
                 " Heat"
             );
 
-            return false;
+            return;
         }
 
         // =========================
@@ -177,12 +153,7 @@ public class PlayerHealth : MonoBehaviour
         // STAGGER
         // =========================
 
-        if (!playerState.IsGuardBroken())
-        {
-            StartStagger();
-        }
-
-        return false;
+        StartStagger();
     }
 
 }
