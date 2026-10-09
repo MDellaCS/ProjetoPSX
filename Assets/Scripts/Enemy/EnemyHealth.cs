@@ -1,7 +1,12 @@
+using System;
 using UnityEngine;
 
 public class EnemyHealth : MonoBehaviour
 {
+    public static event Action<EnemyHealth> EnemyDied;
+    public event Action<EnemyHealth, int, int> HealthChanged;
+    public event Action<EnemyHealth> Died;
+
     public int maxHealth = 100;
 
     [HideInInspector]
@@ -38,8 +43,13 @@ public class EnemyHealth : MonoBehaviour
 
     private float currentPoise;
     private float timeSinceLastPoiseDamage;
+    private bool hasDied;
 
-    void Start()
+    public bool IsDead => hasDied;
+    public int CurrentHealth => currentHealth;
+    public int MaxHealth => maxHealth;
+
+    void Awake()
     {
         currentHealth = maxHealth;
         currentPoise = maxPoise;
@@ -90,11 +100,16 @@ public class EnemyHealth : MonoBehaviour
             if (isUnkillable)
             {
                 currentHealth = 1;
+                HealthChanged?.Invoke(this, currentHealth, maxHealth);
                 return;
             }
 
+            HealthChanged?.Invoke(this, 0, maxHealth);
             Die();
+            return;
         }
+
+        HealthChanged?.Invoke(this, currentHealth, maxHealth);
     }
 
     private void ApplyPoiseDamage(int amount, Vector3 attackerPosition)
@@ -128,6 +143,12 @@ public class EnemyHealth : MonoBehaviour
 
     void Die()
     {
+        if (hasDied)
+            return;
+
+        hasDied = true;
+        Died?.Invoke(this);
+        EnemyDied?.Invoke(this);
         Debug.Log("Inimigo morreu!");
         Destroy(gameObject);
     }

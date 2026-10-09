@@ -75,6 +75,11 @@ public class PlayerMovement : MonoBehaviour
         playerState.IsNormal();
     public bool IsCrouching => isCrouching;
     public bool IsAerialDiving => isAerialDiving;
+    public bool IsLaunched => isLaunched;
+    public bool IsGroundDash =>
+        playerState != null &&
+        playerState.IsDashing() &&
+        dashStartedGrounded;
 
     private CharacterController controller;
     private PlayerState playerState;
@@ -96,10 +101,13 @@ public class PlayerMovement : MonoBehaviour
     private float aerialLightTimer;
     private float aerialGravityMultiplier = 1f;
     private float aerialDiveFallSpeed;
+    private float launchGravityMagnitude;
     private int jumpsUsed;
     private bool hasUsedAirDash;
+    private bool dashStartedGrounded;
     private bool isCrouching;
     private bool isAerialDiving;
+    private bool isLaunched;
     private RecoveryCancelAction queuedRecoveryCancelAction;
 
     [SerializeField, HideInInspector]
@@ -219,12 +227,13 @@ public class PlayerMovement : MonoBehaviour
 
         queuedRecoveryCancelAction = RecoveryCancelAction.None;
         SetCrouching(false);
+        dashStartedGrounded = IsGrounded;
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
         dashDirection = DesiredDirection;
 
-        if (!IsGrounded)
+        if (!dashStartedGrounded)
             hasUsedAirDash = true;
 
         // O dash substitui a velocidade anterior imediatamente.
@@ -372,10 +381,19 @@ public class PlayerMovement : MonoBehaviour
 
     private void UpdateVerticalVelocity()
     {
+        if (isLaunched && controller.isGrounded && verticalVelocity < 0f)
+        {
+            isLaunched = false;
+            verticalVelocity = -2f;
+            jumpHoldTimer = 0f;
+        }
+
         if (playerState.IsDashing())
         {
-            // Dash aereo nao sobe nem cai: preserva a altura ate terminar.
-            verticalVelocity = 0f;
+            // Dash iniciado no chao mantem uma pequena pressao para baixo,
+            // preservando o contato com o solo. O dash aereo continua sem
+            // gravidade, portanto mantem a altura durante toda a duracao.
+            verticalVelocity = dashStartedGrounded ? -2f : 0f;
             jumpHoldTimer = 0f;
             return;
         }
@@ -387,10 +405,17 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        if (isLaunched)
+        {
+            verticalVelocity += -launchGravityMagnitude * Time.deltaTime;
+            return;
+        }
+
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
             jumpHoldTimer = 0f;
+            isLaunched = false;
         }
 
         ApplyJumpHold();
@@ -676,6 +701,7 @@ public class PlayerMovement : MonoBehaviour
             return true;
 
         playerState.ChangeState(PlayerState.State.Normal);
+        dashStartedGrounded = false;
 
         return false;
     }
@@ -755,6 +781,7 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         isAerialDiving = false;
+        isLaunched = false;
         // O leve aereo substitui o momentum vertical do pulo. Primeiro ele
         // interrompe a subida/queda atual e o hold do pulo; depois aplica
         // somente o lift configurado para o ataque.
@@ -772,6 +799,7 @@ public class PlayerMovement : MonoBehaviour
 
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
+        isLaunched = false;
         aerialDiveFallSpeed = fallSpeed;
         isAerialDiving = true;
     }
@@ -782,5 +810,18 @@ public class PlayerMovement : MonoBehaviour
         aerialDiveFallSpeed = 0f;
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
+    }
+
+    public void ApplySelfLaunchUp(float initialSpeed, float gravityMagnitude)
+    {
+        // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
+        isAerialDiving = false;
+        aerialLightTimer = 0f;
+        aerialGravityMultiplier = 1f;
+        aerialDiveFallSpeed = 0f;
+        jumpHoldTimer = 0f;
+        verticalVelocity = initialSpeed;
+        launchGravityMagnitude = Mathf.Max(0f, gravityMagnitude);
+        isLaunched = true;
     }
 }

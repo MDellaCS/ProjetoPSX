@@ -26,8 +26,7 @@ public class PlayerAttackData
     public float windupMoveEnd = 1f;
 
     [Tooltip("Distribuicao do avanco dentro da janela de movimento.")]
-    public AnimationCurve windupMoveCurve =
-        AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    public AnimationCurve windupMoveCurve = CreateWindupEaseInCurve();
 
     public int heatGenerated = 0;
     public int heatRemovedOnHit = 0;
@@ -39,5 +38,30 @@ public class PlayerAttackData
     [Header("Attack Type")]
     public bool isHeavy = false;
     public bool isLaunchUp = false;
+    public bool launchesPlayer = false;
     public bool isAerial = false;
+    public bool isDashAttack = false;
+
+    private static AnimationCurve CreateWindupEaseInCurve()
+    {
+        // y = x²: pouco deslocamento no inicio e aceleracao clara no fim.
+        return new AnimationCurve(
+            new Keyframe(0f, 0f, 0f, 0f),
+            new Keyframe(1f, 1f, 2f, 2f)
+        );
+    }
+}
+
+/// <summary>
+/// Uma unica entrada que executa varios ataques em ordem, sem exigir inputs
+/// adicionais. Cada golpe preserva seus proprios dados de dano, hitbox e movimento.
+/// </summary>
+[System.Serializable]
+public class PlayerAttackSequence
+{
+    public string sequenceName;
+    public bool isDashAttack;
+    public PlayerAttackData[] strikes;
+
+    public bool HasStrikes => strikes != null && strikes.Length > 0;
 }

@@ -19,6 +19,8 @@ public class EnemyCombat : MonoBehaviour
     public EnemyAttackData heavyStrike = new EnemyAttackData { attackName = "Heavy Strike", damage = 40, maximumRange = 2.8f, windupDuration = .75f, activeDuration = .2f, recoveryDuration = .9f, hitboxDistance = 1.6f, hitboxRadius = 1f, knockbackForce = 9f, knockbackDuration = .25f };
     public EnemyAttackData charge = new EnemyAttackData { attackName = "Charge", damage = 30, minimumRange = 1.5f, maximumRange = 8f, windupDuration = .65f, activeDuration = .45f, recoveryDuration = 1.2f, hitboxDistance = 1.3f, hitboxRadius = .9f, knockbackForce = 10f, knockbackDuration = .3f, movesForward = true, movementSpeed = 10f };
 
+    private EnemyAttackOption[] customAttackOptions;
+
     [Header("Stagger")]
     public float staggerDuration = .8f;
     public float staggerKnockbackForce = 8f;
@@ -31,6 +33,8 @@ public class EnemyCombat : MonoBehaviour
     private Renderer enemyRenderer;
     private Color normalColor;
     private bool isTrainingDummy;
+    private bool isEncounterEngaged;
+    private bool isWaitingForEncounter;
     private bool trainingDummyAttacks;
     private float trainingDummyAttackInterval;
     private EnemyAttackData trainingDummyAttack;
@@ -63,6 +67,9 @@ public class EnemyCombat : MonoBehaviour
 
     void Update()
     {
+        if (isWaitingForEncounter)
+            return;
+
         if (enemyMovement != null && enemyMovement.IsLaunched)
             return;
 
@@ -75,7 +82,10 @@ public class EnemyCombat : MonoBehaviour
         if (target == null) return;
         switch (currentState)
         {
-            case EnemyState.Idle: if (DistanceToTarget() <= detectionRange) ChangeState(EnemyState.Chasing); break;
+            case EnemyState.Idle:
+                if (isEncounterEngaged || DistanceToTarget() <= detectionRange)
+                    ChangeState(EnemyState.Chasing);
+                break;
             case EnemyState.Chasing: UpdateChasing(); break;
             case EnemyState.Windup: UpdateWindup(); break;
             case EnemyState.Attacking: UpdateAttacking(); break;
@@ -115,7 +125,11 @@ public class EnemyCombat : MonoBehaviour
     void UpdateChasing()
     {
         float distance = DistanceToTarget();
-        if (distance > detectionRange) { ChangeState(EnemyState.Idle); return; }
+        if (!isEncounterEngaged && distance > detectionRange)
+        {
+            ChangeState(EnemyState.Idle);
+            return;
+        }
         currentAttack = SelectAttack(distance);
         if (currentAttack != null) ChangeState(EnemyState.Windup);
     }
@@ -143,6 +157,9 @@ public class EnemyCombat : MonoBehaviour
 
     EnemyAttackData SelectAttack(float distance)
     {
+        if (customAttackOptions != null && customAttackOptions.Length > 0)
+            return SelectCustomAttack(distance);
+
         float quick = distance <= closeRange ? 60f : distance <= mediumRange ? 25f : 0f;
         float heavy = distance <= closeRange ? 35f : distance <= mediumRange ? 35f : 0f;
         float dash = distance <= closeRange ? 5f : distance <= mediumRange ? 40f : 100f;
@@ -155,6 +172,46 @@ public class EnemyCombat : MonoBehaviour
         if ((roll -= quick) < 0f) return quickSlash;
         if ((roll -= heavy) < 0f) return heavyStrike;
         return charge;
+    }
+
+    private EnemyAttackData SelectCustomAttack(float distance)
+    {
+        float totalWeight = 0f;
+
+        foreach (EnemyAttackOption option in customAttackOptions)
+        {
+            if (option == null || !IsValid(option.attack, distance))
+                continue;
+
+            totalWeight += GetAttackWeight(option, distance);
+        }
+
+        if (totalWeight <= 0f)
+            return null;
+
+        float roll = Random.value * totalWeight;
+        foreach (EnemyAttackOption option in customAttackOptions)
+        {
+            if (option == null || !IsValid(option.attack, distance))
+                continue;
+
+            roll -= GetAttackWeight(option, distance);
+            if (roll < 0f)
+                return option.attack;
+        }
+
+        return null;
+    }
+
+    private float GetAttackWeight(EnemyAttackOption option, float distance)
+    {
+        if (distance <= closeRange)
+            return option.closeWeight;
+
+        if (distance <= mediumRange)
+            return option.mediumWeight;
+
+        return option.farWeight;
     }
 
     bool IsValid(EnemyAttackData attack, float distance) => attack != null && distance >= attack.minimumRange && distance <= attack.maximumRange;
@@ -206,6 +263,30 @@ public class EnemyCombat : MonoBehaviour
         ChangeState(EnemyState.Staggered);
     }
 
+    public void SetEncounterEngaged(Transform player)
+    {
+        if (player == null)
+            return;
+
+        target = player;
+        isWaitingForEncounter = false;
+        isEncounterEngaged = true;
+    }
+
+    public void SetWaitingForEncounter()
+    {
+        isWaitingForEncounter = true;
+        isEncounterEngaged = false;
+        currentAttack = null;
+        hasDealtDamage = false;
+        currentState = EnemyState.Idle;
+    }
+
+    public void SetCustomAttackOptions(EnemyAttackOption[] options)
+    {
+        customAttackOptions = options;
+    }
+
     public void ConfigureAsTrainingDummy(
         bool attacksRegularly,
         float attackInterval,
@@ -222,4 +303,14 @@ public class EnemyCombat : MonoBehaviour
         if (enemyRenderer != null)
             enemyRenderer.material.color = normalColor;
     }
+}
+
+[System.Serializable]
+public class EnemyAttackOption
+{
+    public EnemyAttackData attack;
+
+    [Min(0f)] public float closeWeight = 1f;
+    [Min(0f)] public float mediumWeight = 1f;
+    [Min(0f)] public float farWeight = 1f;
 }

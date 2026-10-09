@@ -18,18 +18,22 @@ public class PlayerCombat : MonoBehaviour
 
     private PlayerState playerState;
     private PlayerAttackData currentAttack;
+    private PlayerAttackSequence currentSequence;
     private PlayerHeat playerHeat;
     private bool currentAttackIsHeavy;
 
     private float attackTimer;
     private float windupElapsed;
     private int currentDamage;
+    private int currentHeatGenerated;
     private float currentAttackRadius;
+    private int sequenceStrikeIndex;
     private bool aerialDiveCancelQueued;
     private bool recoveryCancelQueued;
+    private bool hasLaunchedPlayer;
 
     private System.Action attackFinishedCallback;
-    private System.Action attackHitCallback;
+    private System.Action<PlayerAttackData, int> attackHitCallback;
 
     [Header("Attack Rotation")]
     [FormerlySerializedAs("windupRotationSpeed")]
@@ -67,6 +71,7 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
+    public bool IsExecutingAttackSequence => currentSequence != null;
     public bool HasAggroedEnemies => hasAggroedEnemies;
     public bool IsOutOfCombat =>
         !hasAggroedEnemies &&
@@ -102,7 +107,8 @@ public class PlayerCombat : MonoBehaviour
     {
         hasAggroedEnemies = EnemyCombat.IsAnyEnemyAggroedOn(transform);
 
-        if (hasAggroedEnemies)
+        if (hasAggroedEnemies ||
+            EnemyEncounter.IsPlayerInActiveEncounter(transform))
         {
             ResetCombatTimer();
             return;
@@ -132,28 +138,27 @@ public class PlayerCombat : MonoBehaviour
     public bool StartAttack(
         PlayerAttackData attack,
         System.Action onAttackFinished,
-        System.Action onAttackHit,
+        System.Action<PlayerAttackData, int> onAttackHit,
         int damage,
         float attackRadius,
-        bool isHeavy = false
+        bool isHeavy = false,
+        int generatedHeat = 0
     )
     {
+        bool canStartAttack = playerState != null &&
+            (playerState.IsNormal() ||
+             (attack != null &&
+              attack.isDashAttack &&
+              playerState.IsDashing() &&
+              playerMovement != null &&
+              playerMovement.IsGroundDash));
+
         if (attack == null ||
             IsAttacking ||
-            playerState == null ||
-            !playerState.IsNormal())
+            !canStartAttack)
         {
             return false;
         }
-
-        currentAttackIsHeavy = isHeavy;
-
-        currentAttack = attack;
-
-        ApplyAerialAttackMovement(attack);
-
-        currentDamage = damage;
-        currentAttackRadius = attackRadius;
 
         attackFinishedCallback =
             onAttackFinished;
@@ -161,22 +166,16 @@ public class PlayerCombat : MonoBehaviour
         attackHitCallback =
             onAttackHit;
 
-        enemiesHit.Clear();
-
         playerState.ChangeState(
             PlayerState.State.Attacking
         );
 
-        attackFacingDirection = transform.forward;
-
-        if (playerMovement != null && playerMovement.DesiredDirection.sqrMagnitude > 0.0001f)
-        {
-            attackFacingDirection = playerMovement.DesiredDirection.normalized;
-        }
-
-        ChangeAttackPhase(
-            AttackPhase.Windup,
-            currentAttack.windupDuration
+        BeginAttack(
+            attack,
+            damage,
+            attackRadius,
+            isHeavy,
+            generatedHeat
         );
 
         Debug.Log(
@@ -212,10 +211,19 @@ public class PlayerCombat : MonoBehaviour
 
                 RotateDuringActive();
                 Attack();
+                ApplySelfLaunchUpIfNeeded();
 
                 if (currentAttack.isAerial && currentAttack.isHeavy)
                 {
-                    if (playerMovement != null && !playerMovement.IsAerialDiving)
+                    // Durante a queda, Active nao consome tempo: a hitbox fica
+                    // ativa ate tocar o chao. Ao aterrissar, o mesmo timer de
+                    // Active passa a contar normalmente antes do Recovery.
+                    if (playerMovement != null && playerMovement.IsAerialDiving)
+                        break;
+
+                    attackTimer -= Time.deltaTime;
+
+                    if (attackTimer <= 0f)
                     {
                         if (recoveryCancelQueued)
                             FinishAttack();
@@ -226,7 +234,6 @@ public class PlayerCombat : MonoBehaviour
                             );
                     }
 
-                    // O Dive nao usa Active por tempo. Enquanto a queda estiver ativa, a hitbox permanece ativa ate o chao.
                     break;
                 }
 
@@ -269,6 +276,9 @@ public class PlayerCombat : MonoBehaviour
 
     private void FinishAttack()
     {
+        if (TryAdvanceSequence())
+            return;
+
         // Guarda o callback antes de limpar os dados.
         System.Action callback = attackFinishedCallback;
 
@@ -292,10 +302,14 @@ public class PlayerCombat : MonoBehaviour
         windupElapsed = 0f;
 
         currentAttack = null;
+        currentSequence = null;
         currentDamage = 0;
+        currentHeatGenerated = 0;
         currentAttackRadius = 0f;
+        sequenceStrikeIndex = 0;
         aerialDiveCancelQueued = false;
         recoveryCancelQueued = false;
+        hasLaunchedPlayer = false;
 
         enemiesHit.Clear();
 
@@ -303,6 +317,19 @@ public class PlayerCombat : MonoBehaviour
         attackHitCallback = null;
         currentAttackIsHeavy = false;
         playerMovement?.StopAerialAttackMovement();
+    }
+
+    private bool TryAdvanceSequence()
+    {
+        if (currentSequence == null)
+            return false;
+
+        sequenceStrikeIndex++;
+        if (sequenceStrikeIndex >= currentSequence.strikes.Length)
+            return false;
+
+        BeginSequenceStrike();
+        return true;
     }
 
     void ChangeAttackPhase(AttackPhase newPhase, float duration)
@@ -447,7 +474,7 @@ public class PlayerCombat : MonoBehaviour
 
                 enemiesHit.Add(enemy);
 
-                attackHitCallback?.Invoke();
+                attackHitCallback?.Invoke(currentAttack, currentHeatGenerated);
             }
         }
     }
@@ -477,6 +504,109 @@ public class PlayerCombat : MonoBehaviour
             FinishAttack();
 
         return true;
+    }
+
+    private void ApplySelfLaunchUpIfNeeded()
+    {
+        if (currentAttack == null ||
+            !currentAttack.launchesPlayer ||
+            hasLaunchedPlayer)
+        {
+            return;
+        }
+
+        // Acontece depois da hitbox: o Dash H1 conecta no alvo no chao,
+        // mas tambem lanca o player quando o golpe erra.
+        playerMovement?.ApplySelfLaunchUp(
+            launchUpInitialSpeed,
+            launchUpGravityMagnitude
+        );
+        hasLaunchedPlayer = true;
+    }
+
+    public bool StartAttackSequence(
+        PlayerAttackSequence sequence,
+        System.Action onAttackFinished,
+        System.Action<PlayerAttackData, int> onAttackHit)
+    {
+        if (sequence == null ||
+            !sequence.HasStrikes ||
+            IsAttacking ||
+            playerState == null)
+        {
+            return false;
+        }
+
+        bool canStartSequence = playerState.IsNormal() ||
+            (sequence.isDashAttack &&
+             playerState.IsDashing() &&
+             playerMovement != null &&
+             playerMovement.IsGroundDash);
+
+        if (!canStartSequence)
+            return false;
+
+        currentSequence = sequence;
+        sequenceStrikeIndex = 0;
+        attackFinishedCallback = onAttackFinished;
+        attackHitCallback = onAttackHit;
+
+        playerState.ChangeState(PlayerState.State.Attacking);
+        BeginSequenceStrike();
+        return true;
+    }
+
+    private void BeginSequenceStrike()
+    {
+        PlayerAttackData attack = currentSequence.strikes[sequenceStrikeIndex];
+
+        if (attack == null)
+        {
+            FinishAttack();
+            return;
+        }
+
+        int damage = attack.isHeavy && playerHeat != null
+            ? playerHeat.CalculateHeavyDamage(attack.damage)
+            : attack.damage;
+        int generatedHeat = attack.isHeavy && playerHeat != null
+            ? playerHeat.CalculateHeavyHeatGeneration(attack.heatGenerated)
+            : 0;
+
+        BeginAttack(
+            attack,
+            damage,
+            attack.attackRadius,
+            attack.isHeavy,
+            generatedHeat
+        );
+    }
+
+    private void BeginAttack(
+        PlayerAttackData attack,
+        int damage,
+        float attackRadius,
+        bool isHeavy,
+        int generatedHeat)
+    {
+        currentAttackIsHeavy = isHeavy;
+        currentAttack = attack;
+        currentDamage = damage;
+        currentHeatGenerated = generatedHeat;
+        currentAttackRadius = attackRadius;
+        hasLaunchedPlayer = false;
+        enemiesHit.Clear();
+
+        ApplyAerialAttackMovement(attack);
+
+        attackFacingDirection = transform.forward;
+        if (playerMovement != null &&
+            playerMovement.DesiredDirection.sqrMagnitude > 0.0001f)
+        {
+            attackFacingDirection = playerMovement.DesiredDirection.normalized;
+        }
+
+        ChangeAttackPhase(AttackPhase.Windup, currentAttack.windupDuration);
     }
 
     private void ApplyAerialJuggle(EnemyHealth enemy)

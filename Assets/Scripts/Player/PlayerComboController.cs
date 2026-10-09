@@ -27,7 +27,8 @@ public class PlayerComboController : MonoBehaviour
         AerialL2,
         AerialL3,
         AerialL4,
-        AerialH1
+        AerialH1,
+        DashH1
     }
 
     private enum AttackInput
@@ -73,7 +74,11 @@ public class PlayerComboController : MonoBehaviour
     public PlayerAttackData aerialL2 = AerialLight("Air L2", 24, .07f, .13f, .1f, 1.45f, .85f, 180, 12);
     public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 250, 18);
     public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
-    public PlayerAttackData aerialH1 = AerialHeavy("Air H1", 50, .08f, .01f, .35f, 1f, 3f, 500, 38);
+    public PlayerAttackData aerialH1 = AerialHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 350, 38);
+
+    [Header("8. Dash Attacks")]
+    public PlayerAttackSequence dashLightSequence = DashLightSequence();
+    public PlayerAttackData dashH1 = DashLaunchHeavy("Dash H1", 35, .10f, .18f, .2f, 1.70f, 1.15f, 380, 52, .45f);
 
 
     #region Runtime References
@@ -111,11 +116,15 @@ public class PlayerComboController : MonoBehaviour
     [SerializeField, HideInInspector]
     private int windupMovementDataVersion;
 
+    [SerializeField, HideInInspector]
+    private int dashAttackDataVersion;
+
     #endregion
 
     private void Awake()
     {
         EnsureWindupMovementDefaults();
+        EnsureDashAttackDefaults();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
         playerState = GetComponent<PlayerState>();
@@ -126,6 +135,7 @@ public class PlayerComboController : MonoBehaviour
     private void OnValidate()
     {
         EnsureWindupMovementDefaults();
+        EnsureDashAttackDefaults();
     }
 
     private void EnsureWindupMovementDefaults()
@@ -148,6 +158,17 @@ public class PlayerComboController : MonoBehaviour
         SetWindupMovement(heavyRepeat, .30f);
 
         windupMovementDataVersion = 1;
+    }
+
+    private void EnsureDashAttackDefaults()
+    {
+        if (dashAttackDataVersion >= 1)
+            return;
+
+        if (dashLightSequence == null || !dashLightSequence.HasStrikes)
+            dashLightSequence = DashLightSequence();
+
+        dashAttackDataVersion = 1;
     }
 
     private static void SetWindupMovement(
@@ -194,6 +215,15 @@ public class PlayerComboController : MonoBehaviour
 
     private void ReadInput()
     {
+        // Sequencias sao um unico comando. Inputs extras durante a execucao
+        // nao viram continuidade nem vazam para um ataque terrestre depois.
+        if (playerCombat != null && playerCombat.IsExecutingAttackSequence)
+        {
+            inputBuffer.TryConsume(PlayerBufferedInput.LightAttack);
+            inputBuffer.TryConsume(PlayerBufferedInput.HeavyAttack);
+            return;
+        }
+
         TryHandleBufferedInput(
             PlayerBufferedInput.LightAttack,
             AttackInput.Light
@@ -225,6 +255,9 @@ public class PlayerComboController : MonoBehaviour
         if (playerCombat.IsAttacking)
             return currentNode != ComboNode.None && !hasBufferedInput;
 
+        if (playerState.IsDashing())
+            return true;
+
         if (waitingForContinuation)
             return playerState.IsNormal();
 
@@ -253,6 +286,19 @@ public class PlayerComboController : MonoBehaviour
                 hasBufferedInput = true;
                 bufferedInput = input;
             }
+            return;
+        }
+
+        if (playerState.IsDashing())
+        {
+            if (playerMovement == null || !playerMovement.IsGroundDash)
+                return;
+
+            CancelCombo();
+            if (input == AttackInput.Light)
+                ExecuteSequence(dashLightSequence);
+            else
+                Execute(ComboNode.DashH1);
             return;
         }
 
@@ -357,10 +403,11 @@ public class PlayerComboController : MonoBehaviour
         bool started = playerCombat.StartAttack(
             attack,
             OnAttackFinished,
-            () => OnAttackHit(attack, generatedHeat),
+            (_, _) => OnAttackHit(attack, generatedHeat),
             damage,
             attack.attackRadius,
-            attack.isHeavy
+            attack.isHeavy,
+            generatedHeat
         );
 
         if (!started)
@@ -376,6 +423,30 @@ public class PlayerComboController : MonoBehaviour
             playerHeat.AddHeat(generatedHeat);
         else
             playerHeat.CoolFromLight(attack.heatRemovedOnHit);
+    }
+
+    private void ExecuteSequence(PlayerAttackSequence sequence)
+    {
+        if (sequence == null || !sequence.HasStrikes)
+        {
+            Debug.LogWarning("Moveset: sequencia de ataque nao configurada.", this);
+            return;
+        }
+
+        currentNode = ComboNode.None;
+        isAerialCombo = false;
+        waitingForContinuation = false;
+        hasBufferedInput = false;
+        waitTimer = 0f;
+
+        bool started = playerCombat.StartAttackSequence(
+            sequence,
+            OnAttackFinished,
+            OnAttackHit
+        );
+
+        if (!started)
+            CancelCombo();
     }
 
     private void OnAttackFinished()
@@ -396,6 +467,7 @@ public class PlayerComboController : MonoBehaviour
         // Segurar um botao por tempo suficiente transforma qualquer no atual
         // em Hold, inclusive depois de L2, H2 ou rotas mistas.
         if (!isAerialCombo &&
+            !IsDashNode(currentNode) &&
             TryGetHeldRepeatNode(out ComboNode repeatNode))
         {
             Execute(repeatNode);
@@ -498,6 +570,7 @@ public class PlayerComboController : MonoBehaviour
             case ComboNode.AerialL3: return aerialL3;
             case ComboNode.AerialL4: return aerialL4;
             case ComboNode.AerialH1: return aerialH1;
+            case ComboNode.DashH1: return dashH1;
             default: return null;
         }
     }
@@ -533,6 +606,11 @@ public class PlayerComboController : MonoBehaviour
             node == ComboNode.AerialL4;
     }
 
+    private static bool IsDashNode(ComboNode node)
+    {
+        return node == ComboNode.DashH1;
+    }
+
     public static PlayerComboController GetOrAdd(GameObject player)
     {
         PlayerComboController combo = player.GetComponent<PlayerComboController>();
@@ -564,5 +642,35 @@ public class PlayerComboController : MonoBehaviour
     private static PlayerAttackData AerialHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger)
     {
         return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGenerated = generateHeat, staggerDamage = stagger, isHeavy = true, isAerial = true };
+    }
+
+    private static PlayerAttackData DashLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger, float windupMoveDistance)
+    {
+        PlayerAttackData attack = Light(name, damage, windup, active, recovery, distance, radius, coolHeat, stagger, windupMoveDistance);
+        attack.isDashAttack = true;
+        return attack;
+    }
+
+    private static PlayerAttackSequence DashLightSequence()
+    {
+        return new PlayerAttackSequence
+        {
+            sequenceName = "Dash Light",
+            isDashAttack = true,
+            strikes = new[]
+            {
+                DashLight("Dash L1", 22, .04f, .12f, .12f, 1.40f, .90f, 180, 10, 1.00f),
+                DashLight("Dash L2", 28, .05f, .13f, .14f, 1.55f, .95f, 220, 14, 1.05f),
+                DashLight("Dash L3", 42, .08f, .17f, .32f, 1.80f, 1.10f, 320, 24, 1.20f)
+            }
+        };
+    }
+
+    private static PlayerAttackData DashLaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger, float windupMoveDistance)
+    {
+        PlayerAttackData attack = LaunchHeavy(name, damage, windup, active, recovery, distance, radius, generateHeat, stagger, windupMoveDistance);
+        attack.isDashAttack = true;
+        attack.launchesPlayer = true;
+        return attack;
     }
 }

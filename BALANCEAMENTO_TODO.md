@@ -37,6 +37,10 @@ Exemplo inicial para testes futuros:
 
 - Permitir configurar o segundo pulo separadamente do primeiro (velocidade inicial, aceleracao ao segurar e duracao maxima). Por enquanto, ambos usam os mesmos valores de pulo.
 
+## Resolvido - Monitorar movimento
+
+- Dash terrestre agora preserva contato com o chao para evitar ataques em buffer serem roteados como aereos. Observar se o CharacterController ainda reporta `GROUNDED: NO` por alguns frames apos o dash.
+
 ## TODO - Lock-on
 
 - Reimplementar Lock-on: selecao e troca de alvo, rotacao do player e enquadramento de camera devem ser validados juntos antes de entrar novamente no prototipo.
