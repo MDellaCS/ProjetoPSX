@@ -11,7 +11,8 @@ public class PlayerState : MonoBehaviour
         Stagger,
         Dead,
         Blocking,
-        GuardBroken
+        GuardBroken,
+        Sliding
     }
 
     [Header("Debug - State Colors")]
@@ -23,6 +24,7 @@ public class PlayerState : MonoBehaviour
     [SerializeField] private Color attackingColor = Color.yellow;
     [FormerlySerializedAs("dodgingColor")]
     [SerializeField] private Color dashingColor = Color.cyan;
+    [SerializeField] private Color slidingColor = new Color(1f, 0.5f, 0f);
     [SerializeField] private Color staggerColor = new Color(1f, 0.5f, 0f);
     [SerializeField] private Color deadColor = Color.gray;
 
@@ -36,6 +38,7 @@ public class PlayerState : MonoBehaviour
     public bool IsNormal() => currentState == State.Normal;
     public bool IsAttacking() => currentState == State.Attacking;
     public bool IsDashing() => currentState == State.Dashing;
+    public bool IsSliding() => currentState == State.Sliding;
     public bool IsStaggered() => currentState == State.Stagger;
     public bool IsDead() => currentState == State.Dead;
     public bool IsBlocking() => currentState == State.Blocking;
@@ -92,6 +95,10 @@ public class PlayerState : MonoBehaviour
 
             case State.Dashing:
                 debugMaterial.color = dashingColor;
+                break;
+
+            case State.Sliding:
+                debugMaterial.color = slidingColor;
                 break;
 
             case State.Stagger:

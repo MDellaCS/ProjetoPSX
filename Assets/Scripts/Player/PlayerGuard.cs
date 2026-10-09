@@ -120,6 +120,14 @@ public class PlayerGuard : MonoBehaviour
         playerState.ChangeState(PlayerState.State.Normal);
     }
 
+    public void CancelBlock()
+    {
+        if (!playerState.IsBlocking())
+            return;
+
+        StopBlock();
+    }
+
     // Retorna true quando o ataque foi defendido.
     public bool TryDefend(int incomingDamage)
     {

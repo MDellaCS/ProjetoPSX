@@ -118,25 +118,15 @@ public class PlayerDebugHUD : MonoBehaviour
                     ? "OUT OF COMBAT"
                     : "IN COMBAT"
             );
-        textBuilder.Append("ENEMY AGGRO: ")
-            .AppendLine(playerCombat.HasAggroedEnemies ? "YES" : "NO");
-        textBuilder.Append("COMBAT TIMER: ")
-            .AppendLine(FormatCombatTimer());
-        textBuilder.Append("GROUNDED: ")
-            .AppendLine(playerMovement.IsGrounded ? "YES" : "NO");
-        textBuilder.Append("MOVE SPEED: ")
-            .Append(playerMovement.HorizontalSpeed.ToString("F2"))
-            .Append(" / ")
-            .AppendLine(playerMovement.speed.ToString("F2"));
-        textBuilder.Append("VERTICAL SPEED: ")
-            .AppendLine(playerMovement.VerticalSpeed.ToString("F2"));
+        textBuilder.Append("ENEMY AGGRO: ").AppendLine(playerCombat.HasAggroedEnemies ? "YES" : "NO");
+        textBuilder.Append("COMBAT TIMER: ").AppendLine(FormatCombatTimer());
+        textBuilder.Append("GROUNDED: ").AppendLine(playerMovement.IsGrounded ? "YES" : "NO");
+        textBuilder.Append("CROUCHING: ").AppendLine(playerMovement.IsCrouching ? "YES" : "NO");
+        textBuilder.Append("SLIDING: ").AppendLine(playerState.IsSliding() ? "YES" : "NO");
+        textBuilder.Append("MOVE SPEED: ").Append(playerMovement.HorizontalSpeed.ToString("F2")).Append(" / ").AppendLine(playerMovement.speed.ToString("F2"));
+        textBuilder.Append("VERTICAL SPEED: ").AppendLine(playerMovement.VerticalSpeed.ToString("F2"));
 
-        textBuilder.Append("DASH: ")
-            .AppendLine(
-                playerMovement.IsDashReady
-                    ? "READY"
-                    : playerMovement.DashCooldownRemaining.ToString("F2") + " s"
-            );
+        textBuilder.Append("DASH: ").AppendLine(playerMovement.DashCooldownRemaining.ToString("F2") + " s");
 
         textBuilder.Append("HEAT: ")
             .Append(FormatSigned(playerHeat.CurrentHeat))

@@ -8,13 +8,29 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Walking")]
     [Min(0f)] public float speed = 5f;
-    [Min(0f)] public float acceleration = 50f;
-    [Min(0f)] public float deceleration = 65f;
-    [Min(0f)] public float rotationSpeed = 10f;
+    [Min(0f)] public float acceleration = 60f;
+    [Min(0f)] public float deceleration = 75f;
+    [Min(0f)] public float rotationSpeed = 15f;
 
     [Header("Attack Momentum")]
     [Tooltip("Quao rapido a velocidade de corrida restante desaparece ao iniciar um ataque.")]
     [Min(0f)] public float attackMomentumDeceleration = 70f;
+
+    [Header("Crouch")]
+    [Tooltip("Botao lateral voltar do mouse. Deve permanecer pressionado para agachar.")]
+    [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.45f;
+
+    [Header("Slide")]
+    [Tooltip("Multiplicador da Speed necessario para iniciar um slide. 1.1 significa 110% da velocidade base.")]
+    [Min(0f)] public float slideStartSpeedPercent = 1.1f;
+    [Tooltip("Velocidade abaixo da qual o slide termina.")]
+    [Min(0f)] public float slideEndSpeed = 0.2f;
+    [Tooltip("Quanto o slide perde de velocidade no chao plano.")]
+    [Min(0f)] public float slideFriction = 16f;
+    [Tooltip("Aceleracao adicional ao deslizar em uma descida.")]
+    [Min(0f)] public float slideSlopeAcceleration = 24f;
+    [Tooltip("Velocidade, em graus por segundo, para curvar levemente o slide.")]
+    [Min(0f)] public float slideSteeringSpeed = 50f;
 
     [Header("Gravity")]
     public float gravity = -55f;
@@ -50,14 +66,18 @@ public class PlayerMovement : MonoBehaviour
         dashCooldownTimer <= 0f &&
         playerState != null &&
         playerState.IsNormal();
+    public bool IsCrouching => isCrouching;
 
     private CharacterController controller;
     private PlayerState playerState;
+    private PlayerGuard playerGuard;
     private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
     private Vector3 knockbackVelocity;
     private Vector3 dashDirection;
+    private Vector3 slideDirection;
+    private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
     private float verticalVelocity;
     private float jumpHoldTimer;
@@ -66,6 +86,7 @@ public class PlayerMovement : MonoBehaviour
     private float dashCooldownTimer;
     private int jumpsUsed;
     private bool hasUsedAirDash;
+    private bool isCrouching;
 
     [SerializeField, HideInInspector]
     private int airMovementSettingsVersion;
@@ -75,7 +96,9 @@ public class PlayerMovement : MonoBehaviour
         EnsureAirMovementDefaults();
         controller = GetComponent<CharacterController>();
         playerState = GetComponent<PlayerState>();
+        playerGuard = GetComponent<PlayerGuard>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
+
     }
 
     void OnValidate()
@@ -100,8 +123,10 @@ public class PlayerMovement : MonoBehaviour
     {
         DesiredDirection = ReadMovementDirection();
 
+        UpdateCrouchState();
         ResetAirActionsWhenGrounded();
         UpdateDashCooldown();
+        TryStartSlide();
         TryStartDash();
         TryStartJump();
         UpdateVerticalVelocity();
@@ -143,9 +168,12 @@ public class PlayerMovement : MonoBehaviour
     private void TryStartDash()
     {
         Keyboard keyboard = Keyboard.current;
+        bool canStartDash = playerState.IsNormal() ||
+            playerState.IsBlocking() ||
+            playerState.IsSliding();
 
         if (keyboard == null ||
-            !playerState.IsNormal() ||
+            !canStartDash ||
             dashCooldownTimer > 0f ||
             (!IsGrounded && hasUsedAirDash) ||
             DesiredDirection.sqrMagnitude < 0.0001f)
@@ -156,6 +184,8 @@ public class PlayerMovement : MonoBehaviour
         if (!inputBuffer.TryConsume(PlayerBufferedInput.Dash))
             return;
 
+        SetCrouching(false);
+        playerGuard?.CancelBlock();
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
@@ -183,15 +213,19 @@ public class PlayerMovement : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
 
-        if (keyboard == null ||
-            !playerState.IsNormal() ||
-            jumpsUsed >= MaximumJumpCount)
+        bool canStartJump = playerState.IsNormal() || playerState.IsSliding();
+
+        if (keyboard == null || !canStartJump || jumpsUsed >= MaximumJumpCount)
         {
             return;
         }
 
         if (!inputBuffer.TryConsume(PlayerBufferedInput.Jump))
             return;
+
+        // Pular e deslizar sao acoes mutuamente exclusivas. O pulo encerra o slide antes de aplicar o impulso vertical.
+        EndSlide();
+        SetCrouching(false);
 
         bool isAirJump = !IsGrounded;
 
@@ -230,8 +264,54 @@ public class PlayerMovement : MonoBehaviour
         hasUsedAirDash = false;
     }
 
+    private void UpdateCrouchState()
+    {
+        Mouse mouse = Mouse.current;
+        bool wantsToCrouch = mouse != null && mouse.backButton.isPressed;
+        bool canCrouch = IsGrounded &&
+            (playerState.IsNormal() || playerState.IsSliding());
+
+        SetCrouching(wantsToCrouch && canCrouch);
+    }
+
+    private void TryStartSlide()
+    {
+        bool hasEnoughSpeed = horizontalVelocity.magnitude >= speed * slideStartSpeedPercent;
+        bool isMovingDownhill = IsMovingDownhill(horizontalVelocity);
+
+        if (!playerState.IsNormal() ||
+            !IsGrounded ||
+            !isCrouching ||
+            (!hasEnoughSpeed && !isMovingDownhill))
+        {
+            return;
+        }
+
+        slideDirection = Vector3.ProjectOnPlane(
+            horizontalVelocity,
+            Vector3.up
+        ).normalized;
+        playerState.ChangeState(PlayerState.State.Sliding);
+    }
+
+    private void SetCrouching(bool value)
+    {
+        if (isCrouching == value)
+            return;
+
+        isCrouching = value;
+    }
+
     private void UpdateVerticalVelocity()
     {
+        if (playerState.IsDashing())
+        {
+            // Dash aereo nao sobe nem cai: preserva a altura ate terminar.
+            verticalVelocity = 0f;
+            jumpHoldTimer = 0f;
+            return;
+        }
+
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
@@ -296,12 +376,162 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
+        if (playerState.IsSliding())
+            return CalculateSlideVelocity();
+
         if (!playerState.IsNormal())
         {
             return Vector3.zero;
         }
 
         return CalculateWalkVelocity();
+    }
+
+    private Vector3 CalculateSlideVelocity()
+    {
+        if (!IsGrounded || !IsCrouchHeld())
+        {
+            EndSlide();
+            return horizontalVelocity;
+        }
+
+        if (DesiredDirection.sqrMagnitude > 0.0001f)
+        {
+            slideDirection = Vector3.RotateTowards(
+                slideDirection,
+                DesiredDirection,
+                slideSteeringSpeed * Mathf.Deg2Rad * Time.deltaTime,
+                0f
+            ).normalized;
+        }
+
+        float slideSpeed = horizontalVelocity.magnitude;
+        slideSpeed = Mathf.Max(
+            0f,
+            slideSpeed - slideFriction * Time.deltaTime
+        );
+        slideSpeed += GetDownhillSlideAcceleration(slideDirection) *
+            Time.deltaTime;
+
+        if (slideSpeed <= slideEndSpeed)
+        {
+            EndSlide();
+            return horizontalVelocity;
+        }
+
+        return GetGroundAlignedVelocity(slideDirection * slideSpeed);
+    }
+
+    private float GetDownhillSlideAcceleration(Vector3 direction)
+    {
+        if (!TryGetGroundNormal(out Vector3 groundNormal))
+            return 0f;
+
+        Vector3 downhillDirection = Vector3.ProjectOnPlane(
+            Vector3.down,
+            groundNormal
+        );
+
+        if (downhillDirection.sqrMagnitude <= 0.0001f)
+            return 0f;
+
+        return Mathf.Max(
+            0f,
+            Vector3.Dot(direction, downhillDirection.normalized)
+        ) * slideSlopeAcceleration;
+    }
+
+    private bool IsMovingDownhill(Vector3 velocity)
+    {
+        if (velocity.sqrMagnitude <= 0.0001f ||
+            !TryGetGroundNormal(out Vector3 groundNormal))
+        {
+            return false;
+        }
+
+        Vector3 downhillDirection = Vector3.ProjectOnPlane(
+            Vector3.down,
+            groundNormal
+        );
+
+        return downhillDirection.sqrMagnitude > 0.0001f &&
+            Vector3.Dot(
+                velocity.normalized,
+                downhillDirection.normalized
+            ) > 0.1f;
+    }
+
+    private Vector3 GetGroundAlignedVelocity(Vector3 velocity)
+    {
+        if (velocity.sqrMagnitude <= 0.0001f ||
+            !IsGrounded ||
+            !TryGetGroundNormal(out Vector3 groundNormal))
+        {
+            return velocity;
+        }
+
+        Vector3 alignedVelocity = Vector3.ProjectOnPlane(
+            velocity,
+            groundNormal
+        );
+
+        if (alignedVelocity.sqrMagnitude <= 0.0001f)
+            return Vector3.zero;
+
+        return alignedVelocity.normalized * velocity.magnitude;
+    }
+
+    private bool TryGetGroundNormal(out Vector3 groundNormal)
+    {
+        groundNormal = Vector3.up;
+
+        if (controller == null)
+            return false;
+
+        int hitCount = Physics.RaycastNonAlloc(
+            controller.bounds.center,
+            Vector3.down,
+            groundHits,
+            controller.bounds.extents.y + 0.2f,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Ignore
+        );
+
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit hit = groundHits[i];
+
+            if (hit.collider.transform == transform ||
+                hit.collider.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            if (hit.distance >= closestDistance)
+                continue;
+
+            closestDistance = hit.distance;
+            groundNormal = hit.normal;
+        }
+
+        return closestDistance < float.MaxValue;
+    }
+
+    private bool IsCrouchHeld()
+    {
+        Mouse mouse = Mouse.current;
+        return mouse != null && mouse.backButton.isPressed;
+    }
+
+    private void EndSlide()
+    {
+        if (!playerState.IsSliding())
+            return;
+
+        playerState.ChangeState(PlayerState.State.Normal);
+        SetCrouching(IsGrounded && IsCrouchHeld());
     }
 
     private Vector3 CalculateWalkVelocity()
@@ -311,16 +541,21 @@ public class PlayerMovement : MonoBehaviour
             return CalculateAirVelocity();
         }
 
-        Vector3 targetVelocity = DesiredDirection * speed;
+        float currentSpeed = isCrouching
+            ? speed * crouchSpeedMultiplier
+            : speed;
+        Vector3 targetVelocity = DesiredDirection * currentSpeed;
         float rate = DesiredDirection.sqrMagnitude > 0.0001f
             ? acceleration
             : deceleration;
 
-        return Vector3.MoveTowards(
+        Vector3 walkVelocity = Vector3.MoveTowards(
             horizontalVelocity,
             targetVelocity,
             rate * Time.deltaTime
         );
+
+        return GetGroundAlignedVelocity(walkVelocity);
     }
 
     private Vector3 CalculateAirVelocity()
@@ -382,9 +617,17 @@ public class PlayerMovement : MonoBehaviour
     private void MoveCharacter()
     {
         Vector3 velocity = horizontalVelocity;
-        velocity.y = verticalVelocity;
+        velocity.y += verticalVelocity;
 
-        controller.Move(velocity * Time.deltaTime);
+        CollisionFlags collisionFlags = controller.Move(
+            velocity * Time.deltaTime
+        );
+
+        if (playerState.IsSliding() &&
+            (collisionFlags & CollisionFlags.Sides) != 0)
+        {
+            EndSlide();
+        }
     }
 
     public void ApplyKnockback(
