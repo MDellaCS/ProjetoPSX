@@ -1,0 +1,70 @@
+#player-hud {
+    position: absolute;
+    left: 32px;
+    bottom: 32px;
+    width: 420px;
+    padding: 12px;
+    background-color: rgba(8, 10, 14, 0.82);
+    border-left-width: 2px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgb(205, 212, 225);
+    border-top-color: rgb(205, 212, 225);
+    border-right-color: rgb(205, 212, 225);
+    border-bottom-color: rgb(205, 212, 225);
+}
+
+#heat-value,
+#superheat-value,
+#dash-text {
+    color: rgb(235, 238, 244);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.meter-track {
+    height: 16px;
+    margin-bottom: 10px;
+    background-color: rgb(33, 38, 48);
+}
+
+#heat-cold-fill {
+    position: absolute;
+    right: 50%;
+    height: 100%;
+    background-color: rgb(52, 177, 235);
+}
+
+#heat-hot-fill {
+    position: absolute;
+    left: 50%;
+    height: 100%;
+    background-color: rgb(238, 106, 38);
+}
+
+#heat-zero-marker {
+    position: absolute;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background-color: rgb(245, 245, 245);
+}
+
+#superheat-fill {
+    height: 100%;
+    background-color: rgb(221, 55, 74);
+}
+
+#dash-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2px;
+}
+
+#dash-indicator {
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+    background-color: rgb(230, 245, 255);
+}

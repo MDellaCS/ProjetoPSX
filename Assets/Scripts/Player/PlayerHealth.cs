@@ -144,11 +144,6 @@ public class PlayerHealth : MonoBehaviour
             );
         }
 
-        if (HitStopManager.Instance != null)
-        {
-            HitStopManager.Instance.HitStop();
-        }
-
         // =========================
         // STAGGER
         // =========================

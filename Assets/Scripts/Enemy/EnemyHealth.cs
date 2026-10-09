@@ -91,8 +91,6 @@ public class EnemyHealth : MonoBehaviour
 
         FlashDamage();
 
-        // CameraFollow.Instance.ImpactShake(knockbackDirection);
-        // HitStopManager.Instance.HitStop();
         ApplyPoiseDamage(staggerDamage, attackerPosition);
 
         if (currentHealth <= 0)

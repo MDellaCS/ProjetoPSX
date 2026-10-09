@@ -1,0 +1,23 @@
+#debug-panel {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    min-width: 250px;
+    padding: 12px;
+    background-color: rgba(0, 0, 0, 0.78);
+    border-left-width: 2px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgb(120, 180, 255);
+    border-top-color: rgb(120, 180, 255);
+    border-right-color: rgb(120, 180, 255);
+    border-bottom-color: rgb(120, 180, 255);
+}
+
+#debug-text {
+    color: rgb(225, 240, 255);
+    font-size: 14px;
+    unity-font-style: normal;
+    white-space: normal;
+}

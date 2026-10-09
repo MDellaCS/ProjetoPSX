@@ -1,0 +1,19 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="PlayerHUD.uss" />
+    <ui:VisualElement name="player-hud">
+        <ui:Label name="heat-value" text="HEAT  0 / 10000" />
+        <ui:VisualElement name="heat-track" class="meter-track">
+            <ui:VisualElement name="heat-cold-fill" />
+            <ui:VisualElement name="heat-hot-fill" />
+            <ui:VisualElement name="heat-zero-marker" />
+        </ui:VisualElement>
+        <ui:Label name="superheat-value" text="SUPERHEAT  0 / 10000" />
+        <ui:VisualElement name="superheat-track" class="meter-track">
+            <ui:VisualElement name="superheat-fill" />
+        </ui:VisualElement>
+        <ui:VisualElement name="dash-row">
+            <ui:VisualElement name="dash-indicator" />
+            <ui:Label name="dash-text" text="DASH READY" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

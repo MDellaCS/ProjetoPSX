@@ -44,3 +44,7 @@ Exemplo inicial para testes futuros:
 ## TODO - Lock-on
 
 - Reimplementar Lock-on: selecao e troca de alvo, rotacao do player e enquadramento de camera devem ser validados juntos antes de entrar novamente no prototipo.
+
+## TODO - Hit Stop
+
+- Reintroduzir Hit Stop como um sistema de impacto completo: deve suportar intensidades e duracoes por acao, funcionar com ataques do jogador e inimigos, preservar UI/input necessarios e restaurar corretamente o tempo mesmo com impactos consecutivos. O antigo sistema global de `Time.timeScale = 0` foi removido por ser simples demais para o combate final.
