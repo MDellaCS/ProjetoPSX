@@ -238,6 +238,14 @@ public class EnemyCombat : MonoBehaviour
     void Attack()
     {
         if (hasDealtDamage || currentAttack == null) return;
+
+        if (currentAttack.firesProjectile)
+        {
+            FireProjectile();
+            hasDealtDamage = true;
+            return;
+        }
+
         Vector3 position = transform.position + transform.forward * currentAttack.hitboxDistance;
         foreach (Collider hit in Physics.OverlapSphere(position, currentAttack.hitboxRadius))
         {
@@ -247,6 +255,45 @@ public class EnemyCombat : MonoBehaviour
             hasDealtDamage = true;
             break;
         }
+    }
+
+    private void FireProjectile()
+    {
+        if (currentAttack.projectilePrefab == null)
+        {
+            Debug.LogWarning(
+                "EnemyCombat: ataque de projetil sem Projectile Prefab.",
+                this
+            );
+            return;
+        }
+
+        Vector3 spawnPosition = currentAttack.projectileSpawnPoint != null
+            ? currentAttack.projectileSpawnPoint.position
+            : transform.position + Vector3.up + transform.forward * 0.8f;
+        Vector3 aimPoint = target != null
+            ? target.position + Vector3.up
+            : spawnPosition + transform.forward;
+        Vector3 direction = aimPoint - spawnPosition;
+
+        if (direction.sqrMagnitude <= 0.0001f)
+            direction = transform.forward;
+
+        EnemyProjectile projectile = Instantiate(
+            currentAttack.projectilePrefab,
+            spawnPosition,
+            Quaternion.LookRotation(direction.normalized)
+        );
+        projectile.Launch(
+            transform,
+            direction,
+            currentAttack.damage,
+            currentAttack.knockbackForce,
+            currentAttack.knockbackDuration,
+            currentAttack.projectileSpeed,
+            currentAttack.projectileHitRadius,
+            currentAttack.projectileLifetime
+        );
     }
 
     public void ApplyStagger(Vector3 attackerPosition)

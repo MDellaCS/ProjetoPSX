@@ -193,7 +193,8 @@ public class CameraFollow : MonoBehaviour
         {
             if (hit.collider.transform.IsChildOf(target) ||
                 target.IsChildOf(hit.collider.transform) ||
-                hit.collider.GetComponentInParent<EnemyHealth>() != null)
+                hit.collider.GetComponentInParent<EnemyHealth>() != null ||
+                hit.collider.GetComponentInParent<EnemyProjectile>() != null)
             {
                 continue;
             }

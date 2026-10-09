@@ -10,6 +10,8 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(PanelRenderer))]
 public class PlayerDebugToolkitHUD : MonoBehaviour
 {
+    public static bool IsVisible { get; private set; }
+
     [Header("References")]
     [SerializeField] private PanelRenderer panelRenderer;
     [SerializeField] private Transform playerTransform;
@@ -37,13 +39,20 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             panelRenderer.RegisterUIReloadCallback(HandleUIReload);
 
         ResolvePlayerComponents();
-        isVisible = visibleOnStart;
+        SetVisible(visibleOnStart);
     }
 
     private void OnDestroy()
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+
+        IsVisible = false;
+    }
+
+    private void OnDisable()
+    {
+        IsVisible = false;
     }
 
     private void Update()
@@ -122,6 +131,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private void SetVisible(bool value)
     {
         isVisible = value;
+        IsVisible = value;
 
         if (debugPanel != null)
         {

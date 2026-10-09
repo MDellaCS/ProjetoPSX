@@ -16,4 +16,12 @@ public class EnemyAttackData
     public float knockbackDuration;
     public bool movesForward;
     public float movementSpeed;
+
+    [Header("Projectile")]
+    public bool firesProjectile;
+    public EnemyProjectile projectilePrefab;
+    public Transform projectileSpawnPoint;
+    public float projectileSpeed;
+    public float projectileHitRadius;
+    public float projectileLifetime;
 }

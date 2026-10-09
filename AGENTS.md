@@ -6,4 +6,4 @@
 - O jogo é um hack-and-slash inspirado em God of War, Devil May Cry e Dark Souls.
 - O estilo visual é retrô de PS1, com modelos low-poly.
 - As mecânicas devem priorizar agressividade extrema e recompensar decisões de risco.
-- "F3" ou "o F3" referencia a tela de debug com valores do jogo/jogador.
+- "F3" ou "o F3" referencia a tela de debug com valores do jogo/jogador. Quando criar um gizmo, exiba-o quando em F3.
