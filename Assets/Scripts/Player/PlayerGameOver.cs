@@ -1,13 +1,12 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using TMPro;
 using UnityEngine.InputSystem;
 
 public class PlayerGameOver : MonoBehaviour
 {
     [Header("Interface")]
-    [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private TMP_Text deathMessageText;
+    [Tooltip("Opcional. Se vazio, encontra o GameOverHUD global da cena.")]
+    [SerializeField] private GameOverHUD gameOverHUD;
 
     [Header("Timing")]
     [SerializeField] private float showDelay = 1.5f;
@@ -24,8 +23,6 @@ public class PlayerGameOver : MonoBehaviour
         playerState = GetComponent<PlayerState>();
         playerHeat = GetComponent<PlayerHeat>();
 
-        if (gameOverPanel != null)
-            gameOverPanel.SetActive(false);
     }
 
     void Update()
@@ -56,30 +53,29 @@ public class PlayerGameOver : MonoBehaviour
     void ShowGameOver()
     {
         gameOverVisible = true;
+        ResolveGameOverHUD();
 
-        if (deathMessageText != null && playerHeat != null)
-        {
-            if (playerHeat.CurrentHeat <= playerHeat.MinHeat)
-            {
-                deathMessageText.text =
-                    "VOCE SUCUMBIU AO FRIO EXTREMO";
-            }
-            else if (
-                playerHeat.CurrentSuperheat >=
-                playerHeat.MaxSuperheat
-            )
-            {
-                deathMessageText.text =
-                    "VOCE FOI CONSUMIDO PELO CALOR";
-            }
-            else
-            {
-                deathMessageText.text = "VOCE MORREU";
-            }
-        }
+        gameOverHUD?.Show(GetDeathMessage());
+    }
 
-        if (gameOverPanel != null)
-            gameOverPanel.SetActive(true);
+    private string GetDeathMessage()
+    {
+        if (playerHeat == null)
+            return "VOCE MORREU";
+
+        if (playerHeat.CurrentHeat <= playerHeat.MinHeat)
+            return "VOCE SUCUMBIU AO FRIO EXTREMO";
+
+        if (playerHeat.CurrentSuperheat >= playerHeat.MaxSuperheat)
+            return "VOCE FOI CONSUMIDO PELO CALOR";
+
+        return "VOCE MORREU";
+    }
+
+    private void ResolveGameOverHUD()
+    {
+        if (gameOverHUD == null)
+            gameOverHUD = FindAnyObjectByType<GameOverHUD>();
     }
 
     void RestartGame()

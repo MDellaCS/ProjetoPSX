@@ -11,6 +11,7 @@ public class BossController : MonoBehaviour
     [SerializeField] private string bossName = "The Warden";
 
     [Header("HUD")]
+    [Tooltip("Opcional. Se ficar vazio, o boss encontra automaticamente o BossHealthHUD da cena.")]
     [SerializeField] private BossHealthHUD bossHealthHUD;
 
     [Header("Boss Attacks")]
@@ -89,6 +90,7 @@ public class BossController : MonoBehaviour
 
     private void OnEnable()
     {
+        ResolveBossHealthHUD();
         bossHealthHUD?.Show(this);
     }
 
@@ -112,5 +114,13 @@ public class BossController : MonoBehaviour
     private void HandleDeath(EnemyHealth _)
     {
         bossHealthHUD?.Hide(this);
+    }
+
+    private void ResolveBossHealthHUD()
+    {
+        if (bossHealthHUD != null)
+            return;
+
+        bossHealthHUD = FindAnyObjectByType<BossHealthHUD>();
     }
 }

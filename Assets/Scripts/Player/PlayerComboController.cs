@@ -78,7 +78,7 @@ public class PlayerComboController : MonoBehaviour
 
     [Header("8. Dash Attacks")]
     public PlayerAttackSequence dashLightSequence = DashLightSequence();
-    public PlayerAttackData dashH1 = DashLaunchHeavy("Dash H1", 35, .10f, .18f, .2f, 1.70f, 1.15f, 380, 52, .45f);
+    public PlayerAttackData dashH1 = DashLaunchHeavy("Dash H1", 35, .10f, .18f, .05f, 1.70f, 1.15f, 380, 52, .45f);
 
 
     #region Runtime References

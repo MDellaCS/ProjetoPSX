@@ -15,8 +15,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Walking")]
     [Min(0f)] public float speed = 7.5f;
-    [Min(0f)] public float acceleration = 60f;
-    [Min(0f)] public float deceleration = 75f;
+    [Min(0f)] public float acceleration = 120f;
+    [Min(0f)] public float deceleration = 220f;
     [Min(0f)] public float rotationSpeed = 15f;
 
     [Header("Attack Momentum")]
@@ -57,7 +57,9 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float airDrag = 3f;
 
     [Header("Dash")]
-    [Min(0f)] public float dashSpeedMultiplier = 2f;
+    [FormerlySerializedAs("dashSpeedMultiplier")]
+    [Tooltip("Impulso unico do Dash, calculado a partir da Speed base do jogador.")]
+    [Min(0f)] public float dashImpulseMultiplier = 1.5f;
     [Min(0f)] public float dashDuration = 0.2f;
     [Min(0f)] public float dashCooldown = 1f;
 
@@ -89,7 +91,6 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 horizontalVelocity;
     private Vector3 knockbackVelocity;
-    private Vector3 dashDirection;
     private Vector3 slideDirection;
     private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
@@ -231,13 +232,13 @@ public class PlayerMovement : MonoBehaviour
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
-        dashDirection = DesiredDirection;
 
         if (!dashStartedGrounded)
             hasUsedAirDash = true;
 
-        // O dash substitui a velocidade anterior imediatamente.
-        horizontalVelocity = dashDirection * GetDashSpeed();
+        // O Dash soma um impulso ao momentum atual. Consequentemente, dar
+        // Dash na mesma direcao acelera o player; no sentido oposto, freia.
+        horizontalVelocity += DesiredDirection * GetDashImpulse();
     }
 
     private void UpdateDashCooldown()
@@ -287,15 +288,6 @@ public class PlayerMovement : MonoBehaviour
         // Pular e deslizar sao acoes mutuamente exclusivas. O pulo encerra o slide antes de aplicar o impulso vertical.
         EndSlide();
         SetCrouching(false);
-
-        bool isAirJump = !IsGrounded;
-
-        if (isAirJump)
-        {
-            // O pulo no ar funciona como uma correcao agressiva de trajeto:
-            // ele substitui o momentum anterior pela direcao atual, como Dash.
-            horizontalVelocity = DesiredDirection * speed;
-        }
 
         verticalVelocity = jumpInitialSpeed;
         jumpHoldTimer = maxJumpHoldDuration;
@@ -485,7 +477,10 @@ public class PlayerMovement : MonoBehaviour
         {
             if (UpdateDash())
             {
-                return dashDirection * GetDashSpeed();
+                // A duracao controla somente o state/altura do Dash. O
+                // impulso foi aplicado uma vez ao iniciar e agora preserva
+                // o momentum acumulado.
+                return horizontalVelocity;
             }
         }
 
@@ -706,9 +701,9 @@ public class PlayerMovement : MonoBehaviour
         return false;
     }
 
-    private float GetDashSpeed()
+    private float GetDashImpulse()
     {
-        return speed * dashSpeedMultiplier;
+        return speed * dashImpulseMultiplier;
     }
 
     private void RotateTowardsMovement()
@@ -815,6 +810,10 @@ public class PlayerMovement : MonoBehaviour
     public void ApplySelfLaunchUp(float initialSpeed, float gravityMagnitude)
     {
         // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
+        // Launch Up e uma trajetoria vertical intencional: ele limpa qualquer momentum horizontal anterior antes de aplicar o impulso para cima.
+        horizontalVelocity = Vector3.zero;
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
         isAerialDiving = false;
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;

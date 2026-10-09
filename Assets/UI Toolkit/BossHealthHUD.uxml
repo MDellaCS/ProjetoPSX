@@ -1,0 +1,10 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="BossHealthHUD.uss" />
+    <ui:VisualElement name="boss-hud">
+        <ui:Label name="boss-name" text="BOSS NAME" />
+        <ui:VisualElement name="boss-health-track">
+            <ui:VisualElement name="boss-health-fill" />
+        </ui:VisualElement>
+        <ui:Label name="boss-health-value" text="0 / 0" />
+    </ui:VisualElement>
+</ui:UXML>

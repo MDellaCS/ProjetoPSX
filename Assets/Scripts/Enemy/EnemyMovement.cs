@@ -116,6 +116,8 @@ public class EnemyMovement : MonoBehaviour
 
     public void ApplyLaunchUp(float initialSpeed, float gravityMagnitude)
     {
+        // Launch Up substitui qualquer deslocamento pendente por uma trajetoria vertical limpa, para inimigo e jogador usarem a mesma leitura de combate.
+        knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravityMagnitude = gravityMagnitude;

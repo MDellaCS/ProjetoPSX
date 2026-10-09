@@ -1,0 +1,45 @@
+#game-over-overlay {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.78);
+}
+
+#game-over-content {
+    width: 620px;
+    padding: 30px;
+    background-color: rgba(18, 9, 12, 0.94);
+    border-left-width: 3px;
+    border-top-width: 3px;
+    border-right-width: 3px;
+    border-bottom-width: 3px;
+    border-left-color: rgb(190, 56, 65);
+    border-top-color: rgb(190, 56, 65);
+    border-right-color: rgb(190, 56, 65);
+    border-bottom-color: rgb(190, 56, 65);
+}
+
+#game-over-title {
+    color: rgb(235, 68, 76);
+    font-size: 42px;
+    unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: 16px;
+}
+
+#game-over-message {
+    color: rgb(250, 230, 230);
+    font-size: 20px;
+    -unity-text-align: middle-center;
+    margin-bottom: 28px;
+}
+
+#game-over-retry {
+    color: rgb(190, 190, 195);
+    font-size: 15px;
+    -unity-text-align: middle-center;
+}

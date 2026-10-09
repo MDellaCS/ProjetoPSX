@@ -1,5 +1,6 @@
 # Instruções do projeto
 
+- Versão do Unity: `6000.6.4f1`.
 - Pode ler, mas nunca modificar arquivos `.unity`.
 - Fazer commits e pushes apenas quando solicitado.
 - O jogo é um hack-and-slash inspirado em God of War, Devil May Cry e Dark Souls.

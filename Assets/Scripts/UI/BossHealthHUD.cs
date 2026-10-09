@@ -1,32 +1,39 @@
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 /// <summary>
-/// Exibe a identidade e a vida do chefe atualmente ativo.
-/// Fica no Canvas; o BossController recebe a referencia pelo Inspector.
+/// HUD de chefe em UI Toolkit. Um unico PanelRenderer e reutilizado pelo
+/// BossController atualmente ativo.
 /// </summary>
+[RequireComponent(typeof(PanelRenderer))]
 public class BossHealthHUD : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private GameObject hudRoot;
-    [SerializeField] private TMP_Text bossNameText;
-    [SerializeField] private Image healthFill;
+    [SerializeField] private PanelRenderer panelRenderer;
 
     private BossController currentBoss;
     private EnemyHealth currentHealth;
 
+    private VisualElement bossPanel;
+    private Label bossNameText;
+    private VisualElement healthFill;
+    private Label healthValueText;
+
     private void Awake()
     {
-        if (hudRoot == null)
-            hudRoot = gameObject;
+        if (panelRenderer == null)
+            panelRenderer = GetComponent<PanelRenderer>();
 
-        SetVisible(false);
+        if (panelRenderer != null)
+            panelRenderer.RegisterUIReloadCallback(HandleUIReload);
     }
 
     private void OnDestroy()
     {
         UnsubscribeFromHealth();
+
+        if (panelRenderer != null)
+            panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
     }
 
     public void Show(BossController boss)
@@ -44,16 +51,7 @@ public class BossHealthHUD : MonoBehaviour
                 currentHealth.HealthChanged += UpdateHealth;
         }
 
-        if (bossNameText != null)
-            bossNameText.text = boss.BossName;
-
-        if (currentHealth != null)
-            UpdateHealth(
-                currentHealth,
-                currentHealth.CurrentHealth,
-                currentHealth.MaxHealth
-            );
-
+        RefreshVisuals();
         SetVisible(true);
     }
 
@@ -68,12 +66,63 @@ public class BossHealthHUD : MonoBehaviour
         SetVisible(false);
     }
 
+    private void HandleUIReload(
+        PanelRenderer _,
+        VisualElement rootVisualElement,
+        int __)
+    {
+        if (rootVisualElement == null)
+            return;
+
+        bossPanel = rootVisualElement.Q<VisualElement>("boss-hud");
+        bossNameText = rootVisualElement.Q<Label>("boss-name");
+        healthFill = rootVisualElement.Q<VisualElement>("boss-health-fill");
+        healthValueText = rootVisualElement.Q<Label>("boss-health-value");
+
+        ValidateElement(bossPanel, "boss-hud");
+        ValidateElement(bossNameText, "boss-name");
+        ValidateElement(healthFill, "boss-health-fill");
+        ValidateElement(healthValueText, "boss-health-value");
+
+        RefreshVisuals();
+        SetVisible(currentBoss != null);
+    }
+
     private void UpdateHealth(EnemyHealth _, int current, int maximum)
     {
+        UpdateHealthVisuals(current, maximum);
+    }
+
+    private void RefreshVisuals()
+    {
+        if (currentBoss != null && bossNameText != null)
+            bossNameText.text = currentBoss.BossName;
+
+        if (currentHealth != null)
+        {
+            UpdateHealthVisuals(
+                currentHealth.CurrentHealth,
+                currentHealth.MaxHealth
+            );
+        }
+    }
+
+    private void UpdateHealthVisuals(int current, int maximum)
+    {
+        float amount = maximum > 0
+            ? Mathf.Clamp01((float)current / maximum)
+            : 0f;
+
         if (healthFill != null)
-            healthFill.fillAmount = maximum > 0
-                ? Mathf.Clamp01((float)current / maximum)
-                : 0f;
+        {
+            healthFill.style.width = new Length(
+                amount * 100f,
+                LengthUnit.Percent
+            );
+        }
+
+        if (healthValueText != null)
+            healthValueText.text = current + " / " + maximum;
     }
 
     private void UnsubscribeFromHealth()
@@ -84,7 +133,23 @@ public class BossHealthHUD : MonoBehaviour
 
     private void SetVisible(bool value)
     {
-        if (hudRoot != null)
-            hudRoot.SetActive(value);
+        if (bossPanel != null)
+        {
+            bossPanel.style.display = value
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+        }
+    }
+
+    private void ValidateElement(VisualElement element, string elementName)
+    {
+        if (element == null)
+        {
+            Debug.LogWarning(
+                "BossHealthHUD: nao encontrei o elemento '" +
+                elementName + "' no UXML.",
+                this
+            );
+        }
     }
 }
