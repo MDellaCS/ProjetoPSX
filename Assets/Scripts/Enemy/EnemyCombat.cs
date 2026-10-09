@@ -66,6 +66,9 @@ public class EnemyCombat : MonoBehaviour
 
     void Update()
     {
+        if (enemyMovement != null && enemyMovement.IsLaunched)
+            return;
+
         if (isTrainingDummy)
         {
             UpdateTrainingDummy();
@@ -204,6 +207,14 @@ public class EnemyCombat : MonoBehaviour
     }
 
     public void ApplyStun() { stunDamageTaken = 0; ChangeState(EnemyState.Stunned); }
+
+    public void InterruptForLaunch()
+    {
+        currentAttack = null;
+        hasDealtDamage = false;
+        ChangeState(EnemyState.Staggered);
+    }
+
     public void RegisterDamageDuringStun(int damage)
     {
         if (currentState != EnemyState.Stunned || damage <= 0) return;

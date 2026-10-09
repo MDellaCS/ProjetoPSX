@@ -25,6 +25,7 @@ public class PlayerCombat : MonoBehaviour
     private float windupElapsed;
     private int currentDamage;
     private float currentAttackRadius;
+    private bool aerialDiveCancelQueued;
 
     private System.Action attackFinishedCallback;
     private System.Action attackHitCallback;
@@ -32,6 +33,20 @@ public class PlayerCombat : MonoBehaviour
     [Header("Attack Rotation")]
     [FormerlySerializedAs("windupRotationSpeed")]
     [SerializeField] private float attackingRotationSpeed = 300f;
+
+    [Header("Aerial Attack Movement")]
+    [Tooltip("Impulso vertical minimo aplicado por qualquer ataque leve aereo.")]
+    [Min(0f)] public float aerialLightLiftSpeed = 4f;
+    [Tooltip("Multiplicador global de gravidade durante leves aereos.")]
+    [Range(0f, 1f)] public float aerialLightGravityMultiplier = .3f;
+    [Tooltip("Velocidade vertical da queda de qualquer pesado aereo.")]
+    [Min(0f)] public float aerialDiveFallSpeed = 28f;
+
+    [Header("Launch Up")]
+    [Tooltip("Velocidade vertical inicial aplicada por qualquer ataque Launch Up.")]
+    [Min(0f)] public float launchUpInitialSpeed = 12f;
+    [Tooltip("Aceleracao descendente aplicada a inimigos lancados.")]
+    [Min(0f)] public float launchUpGravityMagnitude = 30f;
 
     [Header("Combat Status")]
     [Min(0f)]
@@ -134,6 +149,8 @@ public class PlayerCombat : MonoBehaviour
 
         currentAttack = attack;
 
+        ApplyAerialAttackMovement(attack);
+
         currentDamage = damage;
         currentAttackRadius = attackRadius;
 
@@ -195,10 +212,30 @@ public class PlayerCombat : MonoBehaviour
                 RotateDuringActive();
                 Attack();
 
+                if (currentAttack.isAerial && currentAttack.isHeavy)
+                {
+                    if (playerMovement != null && !playerMovement.IsAerialDiving)
+                    {
+                        ChangeAttackPhase(
+                            AttackPhase.Recovery,
+                            currentAttack.recoveryDuration
+                        );
+                    }
+
+                    // O Dive nao usa Active por tempo. Enquanto a queda estiver ativa, a hitbox permanece ativa ate o chao.
+                    break;
+                }
+
                 attackTimer -= Time.deltaTime;
 
                 if (attackTimer <= 0f)
                 {
+                    if (aerialDiveCancelQueued)
+                    {
+                        FinishAttack();
+                        break;
+                    }
+
                     ChangeAttackPhase(
                         AttackPhase.Recovery,
                         currentAttack.recoveryDuration
@@ -247,12 +284,14 @@ public class PlayerCombat : MonoBehaviour
         currentAttack = null;
         currentDamage = 0;
         currentAttackRadius = 0f;
+        aerialDiveCancelQueued = false;
 
         enemiesHit.Clear();
 
         attackFinishedCallback = null;
         attackHitCallback = null;
         currentAttackIsHeavy = false;
+        playerMovement?.StopAerialAttackMovement();
     }
 
     void ChangeAttackPhase(AttackPhase newPhase, float duration)
@@ -263,6 +302,27 @@ public class PlayerCombat : MonoBehaviour
 
         if (newPhase == AttackPhase.Windup)
             windupElapsed = 0f;
+    }
+
+    private void ApplyAerialAttackMovement(PlayerAttackData attack)
+    {
+        if (playerMovement == null || attack == null)
+            return;
+
+        if (!attack.isAerial)
+            return;
+
+        if (attack.isHeavy)
+        {
+            playerMovement.BeginAerialDive(aerialDiveFallSpeed);
+            return;
+        }
+
+        playerMovement.BeginAerialLight(
+            aerialLightLiftSpeed,
+            aerialLightGravityMultiplier,
+            attack.windupDuration + attack.activeDuration
+        );
     }
 
     private void ApplyWindupMovement()
@@ -362,6 +422,14 @@ public class PlayerCombat : MonoBehaviour
                     finalPoiseDamage
                 );
 
+                if (currentAttack.isLaunchUp)
+                {
+                    enemy.ApplyLaunchUp(
+                        launchUpInitialSpeed,
+                        launchUpGravityMagnitude
+                    );
+                }
+
                 RegisterDamageDealtToEnemy();
 
                 enemiesHit.Add(enemy);
@@ -377,6 +445,25 @@ public class PlayerCombat : MonoBehaviour
             return;
 
         ResetAttack();
+    }
+
+    public bool QueueAerialLightDiveCancel()
+    {
+        if (currentAttack == null ||
+            !currentAttack.isAerial ||
+            currentAttack.isHeavy)
+        {
+            return false;
+        }
+
+        aerialDiveCancelQueued = true;
+
+        // Durante Recovery, o cancelamento e imediato. Durante Windup ou
+        // Active, ele aguarda o fim do Active para nao cortar o golpe no meio.
+        if (attackPhase == AttackPhase.Recovery)
+            FinishAttack();
+
+        return true;
     }
 
     private void RotateDuringWindup()

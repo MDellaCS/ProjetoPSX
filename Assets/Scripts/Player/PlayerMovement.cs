@@ -67,6 +67,7 @@ public class PlayerMovement : MonoBehaviour
         playerState != null &&
         playerState.IsNormal();
     public bool IsCrouching => isCrouching;
+    public bool IsAerialDiving => isAerialDiving;
 
     private CharacterController controller;
     private PlayerState playerState;
@@ -84,9 +85,13 @@ public class PlayerMovement : MonoBehaviour
     private float knockbackTimer;
     private float dashTimer;
     private float dashCooldownTimer;
+    private float aerialLightTimer;
+    private float aerialGravityMultiplier = 1f;
+    private float aerialDiveFallSpeed;
     private int jumpsUsed;
     private bool hasUsedAirDash;
     private bool isCrouching;
+    private bool isAerialDiving;
 
     [SerializeField, HideInInspector]
     private int airMovementSettingsVersion;
@@ -312,6 +317,13 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        if (isAerialDiving)
+        {
+            verticalVelocity = -aerialDiveFallSpeed;
+            jumpHoldTimer = 0f;
+            return;
+        }
+
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
@@ -320,7 +332,26 @@ public class PlayerMovement : MonoBehaviour
 
         ApplyJumpHold();
 
-        verticalVelocity += gravity * Time.deltaTime;
+        UpdateAerialLightTimer();
+        verticalVelocity += gravity * aerialGravityMultiplier *
+            Time.deltaTime;
+    }
+
+    private void UpdateAerialLightTimer()
+    {
+        if (aerialLightTimer <= 0f)
+        {
+            aerialGravityMultiplier = 1f;
+            return;
+        }
+
+        aerialLightTimer = Mathf.Max(
+            0f,
+            aerialLightTimer - Time.deltaTime
+        );
+
+        if (aerialLightTimer <= 0f)
+            aerialGravityMultiplier = 1f;
     }
 
     private void ApplyJumpHold()
@@ -599,11 +630,13 @@ public class PlayerMovement : MonoBehaviour
 
     private void RotateTowardsMovement()
     {
-        if (!playerState.IsNormal() ||
-            DesiredDirection.sqrMagnitude < 0.0001f)
+        if (!playerState.IsNormal())
         {
             return;
         }
+
+        if (DesiredDirection.sqrMagnitude < 0.0001f)
+            return;
 
         Quaternion targetRotation = Quaternion.LookRotation(DesiredDirection);
 
@@ -628,6 +661,12 @@ public class PlayerMovement : MonoBehaviour
         {
             EndSlide();
         }
+
+        if (isAerialDiving &&
+            (collisionFlags & CollisionFlags.Below) != 0)
+        {
+            StopAerialAttackMovement();
+        }
     }
 
     public void ApplyKnockback(
@@ -648,5 +687,43 @@ public class PlayerMovement : MonoBehaviour
         // PlayerCombat planeja o ataque; PlayerMovement continua sendo o unico
         // responsavel por mover o CharacterController e respeitar colisoes.
         controller.Move(displacement);
+    }
+
+    public void BeginAerialLight(
+        float liftSpeed,
+        float gravityMultiplier,
+        float duration)
+    {
+        if (IsGrounded)
+            return;
+
+        isAerialDiving = false;
+        // O leve aereo substitui o momentum vertical do pulo. Primeiro ele
+        // interrompe a subida/queda atual e o hold do pulo; depois aplica
+        // somente o lift configurado para o ataque.
+        verticalVelocity = 0f;
+        jumpHoldTimer = 0f;
+        verticalVelocity = liftSpeed;
+        aerialGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
+        aerialLightTimer = Mathf.Max(aerialLightTimer, duration);
+    }
+
+    public void BeginAerialDive(float fallSpeed)
+    {
+        if (IsGrounded)
+            return;
+
+        aerialLightTimer = 0f;
+        aerialGravityMultiplier = 1f;
+        aerialDiveFallSpeed = fallSpeed;
+        isAerialDiving = true;
+    }
+
+    public void StopAerialAttackMovement()
+    {
+        isAerialDiving = false;
+        aerialDiveFallSpeed = 0f;
+        aerialLightTimer = 0f;
+        aerialGravityMultiplier = 1f;
     }
 }

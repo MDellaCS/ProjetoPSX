@@ -38,4 +38,6 @@ public class PlayerAttackData
 
     [Header("Attack Type")]
     public bool isHeavy = false;
+    public bool isLaunchUp = false;
+    public bool isAerial = false;
 }

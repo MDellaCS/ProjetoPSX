@@ -9,10 +9,14 @@ public class EnemyMovement : MonoBehaviour
     private float knockbackTimer;
 
     private float verticalVelocity;
+    private float launchGravityMagnitude;
+    private bool isLaunched;
 
     public Transform target;
     private CharacterController controller;
     private EnemyCombat enemyCombat;
+
+    public bool IsLaunched => isLaunched;
 
     void Start()
     {
@@ -30,17 +34,21 @@ public class EnemyMovement : MonoBehaviour
     void Update()
     {
         // Gravidade
-        if (controller.isGrounded && verticalVelocity < 0f)
+        if (!isLaunched && controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -2f;
         }
 
-        verticalVelocity += gravity * Time.deltaTime;
+        float currentGravity = isLaunched
+            ? -launchGravityMagnitude
+            : gravity;
+        verticalVelocity += currentGravity * Time.deltaTime;
 
         // Movimento horizontal
         Vector3 horizontalVelocity = Vector3.zero;
 
-        if (target != null && enemyCombat.currentState == EnemyCombat.EnemyState.Chasing)
+        if (!isLaunched && target != null &&
+            enemyCombat.currentState == EnemyCombat.EnemyState.Chasing)
         {
             Vector3 direction = target.position - transform.position;
 
@@ -63,14 +71,14 @@ public class EnemyMovement : MonoBehaviour
             }
         }
 
-        if (enemyCombat.IsCharging)
+        if (!isLaunched && enemyCombat.IsCharging)
         {
             horizontalVelocity = transform.forward * enemyCombat.ChargeSpeed;
         }
 
         Vector3 velocity;
 
-        if (knockbackTimer > 0f)
+        if (!isLaunched && knockbackTimer > 0f)
         {
             velocity = knockbackVelocity;
             knockbackTimer -= Time.deltaTime;
@@ -82,7 +90,16 @@ public class EnemyMovement : MonoBehaviour
 
         velocity.y = verticalVelocity;
 
-        controller.Move(velocity * Time.deltaTime);
+        CollisionFlags collisionFlags = controller.Move(
+            velocity * Time.deltaTime
+        );
+
+        if (isLaunched && verticalVelocity <= 0f &&
+            (collisionFlags & CollisionFlags.Below) != 0)
+        {
+            isLaunched = false;
+            verticalVelocity = -2f;
+        }
     }
 
     public void ApplyKnockback(
@@ -93,5 +110,13 @@ public class EnemyMovement : MonoBehaviour
     {
         knockbackVelocity = direction * force;
         knockbackTimer = duration;
+    }
+
+    public void ApplyLaunchUp(float initialSpeed, float gravityMagnitude)
+    {
+        knockbackTimer = 0f;
+        verticalVelocity = initialSpeed;
+        launchGravityMagnitude = gravityMagnitude;
+        isLaunched = true;
     }
 }

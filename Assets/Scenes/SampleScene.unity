@@ -3599,8 +3599,8 @@ MonoBehaviour:
   slideEndSpeed: 0.2
   slideFriction: 16
   slideSlopeAcceleration: 24
-  slideSteeringSpeed: 60
-  gravity: -55
+  slideSteeringSpeed: 50
+  gravity: -60
   jumpInitialSpeed: 13
   jumpHoldAcceleration: 40
   maxJumpHoldDuration: 0.15
@@ -3650,6 +3650,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCombat
   attackingRotationSpeed: 300
+  aerialLightLiftSpeed: 4
+  aerialLightGravityMultiplier: 0.3
+  aerialDiveFallSpeed: 28
+  launchUpInitialSpeed: 12
+  launchUpGravityMagnitude: 30
   combatTimerDuration: 10
 --- !u!114 &825647893
 MonoBehaviour:
@@ -3829,6 +3834,8 @@ MonoBehaviour:
     heatRemovedOnHit: 250
     staggerDamage: 10
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   l2:
     attackName: L2
     damage: 28
@@ -3868,6 +3875,8 @@ MonoBehaviour:
     heatRemovedOnHit: 300
     staggerDamage: 14
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   l3:
     attackName: L3
     damage: 45
@@ -3907,6 +3916,8 @@ MonoBehaviour:
     heatRemovedOnHit: 450
     staggerDamage: 24
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   l2Prime:
     attackName: L2'
     damage: 35
@@ -3946,6 +3957,8 @@ MonoBehaviour:
     heatRemovedOnHit: 350
     staggerDamage: 18
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   l3Prime:
     attackName: L3'
     damage: 55
@@ -3985,6 +3998,8 @@ MonoBehaviour:
     heatRemovedOnHit: 550
     staggerDamage: 30
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   h1:
     attackName: H1
     damage: 35
@@ -4024,6 +4039,8 @@ MonoBehaviour:
     heatRemovedOnHit: 0
     staggerDamage: 35
     isHeavy: 1
+    isLaunchUp: 0
+    isAerial: 0
   h2:
     attackName: H2
     damage: 55
@@ -4063,6 +4080,8 @@ MonoBehaviour:
     heatRemovedOnHit: 0
     staggerDamage: 55
     isHeavy: 1
+    isLaunchUp: 1
+    isAerial: 0
   h2Prime:
     attackName: H2'
     damage: 70
@@ -4102,6 +4121,8 @@ MonoBehaviour:
     heatRemovedOnHit: 0
     staggerDamage: 70
     isHeavy: 1
+    isLaunchUp: 0
+    isAerial: 0
   h1Prime:
     attackName: H1'
     damage: 65
@@ -4141,6 +4162,8 @@ MonoBehaviour:
     heatRemovedOnHit: 0
     staggerDamage: 65
     isHeavy: 1
+    isLaunchUp: 1
+    isAerial: 0
   l1Prime:
     attackName: L1'
     damage: 30
@@ -4180,6 +4203,8 @@ MonoBehaviour:
     heatRemovedOnHit: 300
     staggerDamage: 15
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   l2DoublePrime:
     attackName: L2''
     damage: 60
@@ -4219,6 +4244,8 @@ MonoBehaviour:
     heatRemovedOnHit: 550
     staggerDamage: 32
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   lightRepeat:
     attackName: L Repeat
     damage: 7
@@ -4258,6 +4285,8 @@ MonoBehaviour:
     heatRemovedOnHit: 30
     staggerDamage: 2
     isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 0
   heavyRepeat:
     attackName: H Repeat
     damage: 20
@@ -4297,6 +4326,213 @@ MonoBehaviour:
     heatRemovedOnHit: 0
     staggerDamage: 20
     isHeavy: 1
+    isLaunchUp: 0
+    isAerial: 0
+  aerialL1:
+    attackName: Air L1
+    damage: 18
+    windupDuration: 0.07
+    activeDuration: 0.15
+    recoveryDuration: 0.1
+    attackDistance: 1.3
+    attackRadius: 0.8
+    windupMoveDistance: 0
+    windupMoveStart: 0
+    windupMoveEnd: 1
+    windupMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heatGenerated: 0
+    heatRemovedOnHit: 150
+    staggerDamage: 8
+    isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 1
+  aerialL2:
+    attackName: Air L2
+    damage: 24
+    windupDuration: 0.07
+    activeDuration: 0.15
+    recoveryDuration: 0.1
+    attackDistance: 1.45
+    attackRadius: 0.85
+    windupMoveDistance: 0
+    windupMoveStart: 0
+    windupMoveEnd: 1
+    windupMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heatGenerated: 0
+    heatRemovedOnHit: 180
+    staggerDamage: 12
+    isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 1
+  aerialL3:
+    attackName: Air L3
+    damage: 36
+    windupDuration: 0.07
+    activeDuration: 0.15
+    recoveryDuration: 0.1
+    attackDistance: 1.65
+    attackRadius: 0.95
+    windupMoveDistance: 0
+    windupMoveStart: 0
+    windupMoveEnd: 1
+    windupMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heatGenerated: 0
+    heatRemovedOnHit: 250
+    staggerDamage: 18
+    isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 1
+  aerialL4:
+    attackName: Air L4
+    damage: 48
+    windupDuration: 0.07
+    activeDuration: 0.15
+    recoveryDuration: 0.3
+    attackDistance: 1.85
+    attackRadius: 1.05
+    windupMoveDistance: 0
+    windupMoveStart: 0
+    windupMoveEnd: 1
+    windupMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heatGenerated: 0
+    heatRemovedOnHit: 300
+    staggerDamage: 26
+    isHeavy: 0
+    isLaunchUp: 0
+    isAerial: 1
+  aerialH1:
+    attackName: Air H1
+    damage: 50
+    windupDuration: 0.08
+    activeDuration: 0.01
+    recoveryDuration: 0.35
+    attackDistance: 1.35
+    attackRadius: 1
+    windupMoveDistance: 0
+    windupMoveStart: 0
+    windupMoveEnd: 1
+    windupMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heatGenerated: 500
+    heatRemovedOnHit: 0
+    staggerDamage: 38
+    isHeavy: 1
+    isLaunchUp: 0
+    isAerial: 1
   windupMovementDataVersion: 1
 --- !u!114 &825647902
 MonoBehaviour:
@@ -6994,6 +7230,101 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1050200314}
   m_CullTransparentMesh: 1
+--- !u!1001 &1235443805
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.04
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.8499997
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 5.23
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5366560632690106492, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6591281131971781540, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: m_Name
+      value: Heavy Enemy (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6591281131971781540, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1235443807}
+  m_SourcePrefab: {fileID: 100100000, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+--- !u!1 &1235443806 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6591281131971781540, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+  m_PrefabInstance: {fileID: 1235443805}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1235443807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1235443806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa719e5a7bd04a9aa2c0927c44664efb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TrainingDummyEnemy
+  isUnkillable: 1
+  attackRegularly: 0
+  attackInterval: 2
+  attack:
+    attackName: Training Strike
+    damage: 15
+    minimumRange: 0
+    maximumRange: 99
+    windupDuration: 0.45
+    activeDuration: 0.15
+    recoveryDuration: 0.55
+    hitboxDistance: 1.2
+    hitboxRadius: 0.8
+    knockbackForce: 4
+    knockbackDuration: 0.12
+    isUnblockable: 0
+    movesForward: 0
+    movementSpeed: 0
 --- !u!43 &1249159378
 Mesh:
   m_ObjectHideFlags: 0
@@ -8115,6 +8446,10 @@ PrefabInstance:
     - target: {fileID: 7568889262350615957, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
       propertyPath: maxHealth
       value: 9999999
+      objectReference: {fileID: 0}
+    - target: {fileID: 7568889262350615957, guid: 714f853ea64b9844b938edf21d3e1530, type: 3}
+      propertyPath: canBeLaunched
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -19824,3 +20159,4 @@ SceneRoots:
   - {fileID: 989563587}
   - {fileID: 416141422}
   - {fileID: 869799184}
+  - {fileID: 1235443805}

@@ -7,6 +7,10 @@ public class EnemyHealth : MonoBehaviour
     [HideInInspector]
     public bool isUnkillable;
 
+    [Header("Launch Up")]
+    [Tooltip("Desmarque para inimigos que nao podem ser lancados para cima.")]
+    public bool canBeLaunched = true;
+
     private int currentHealth;
     private DamageNumberSpawner damageNumberSpawner;
 
@@ -129,5 +133,14 @@ public class EnemyHealth : MonoBehaviour
     public void SetUnkillable(bool value)
     {
         isUnkillable = value;
+    }
+
+    public void ApplyLaunchUp(float initialSpeed, float gravityMagnitude)
+    {
+        if (!canBeLaunched)
+            return;
+
+        enemyCombat?.InterruptForLaunch();
+        enemyMovement?.ApplyLaunchUp(initialSpeed, gravityMagnitude);
     }
 }

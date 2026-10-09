@@ -37,3 +37,7 @@ Exemplo inicial para testes futuros:
 ## TODO — Movimento
 
 - Permitir configurar o segundo pulo separadamente do primeiro (velocidade inicial, aceleracao ao segurar e duracao maxima). Por enquanto, ambos usam os mesmos valores de pulo.
+
+## TODO - Lock-on
+
+- Reimplementar Lock-on: selecao e troca de alvo, rotacao do player e enquadramento de camera devem ser validados juntos antes de entrar novamente no prototipo.

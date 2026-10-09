@@ -86,7 +86,11 @@ public class CameraFollow : MonoBehaviour
 
         Vector3 desiredPosition = ResolveCameraCollision(
             smoothedFocus,
-            smoothedFocus + offset * Mathf.Lerp(1f, combatDistanceMultiplier, combatFraming)
+            smoothedFocus + offset * Mathf.Lerp(
+                1f,
+                combatDistanceMultiplier,
+                combatFraming
+            )
         );
 
         transform.position = desiredPosition + GetShakeOffset();

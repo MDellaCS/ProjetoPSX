@@ -68,16 +68,11 @@ public class PlayerDebugHUD : MonoBehaviour
         if (playerTransform == null)
             return;
 
-        playerMovement =
-            playerTransform.GetComponent<PlayerMovement>();
-        playerState =
-            playerTransform.GetComponent<PlayerState>();
-        playerHeat =
-            playerTransform.GetComponent<PlayerHeat>();
-        playerGuard =
-            playerTransform.GetComponent<PlayerGuard>();
-        playerCombat =
-            playerTransform.GetComponent<PlayerCombat>();
+        playerMovement = playerTransform.GetComponent<PlayerMovement>();
+        playerState = playerTransform.GetComponent<PlayerState>();
+        playerHeat = playerTransform.GetComponent<PlayerHeat>();
+        playerGuard = playerTransform.GetComponent<PlayerGuard>();
+        playerCombat = playerTransform.GetComponent<PlayerCombat>();
     }
 
     private bool HasPlayerComponents()
