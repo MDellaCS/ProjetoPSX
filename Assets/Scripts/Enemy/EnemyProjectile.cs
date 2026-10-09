@@ -112,7 +112,23 @@ public class EnemyProjectile : MonoBehaviour
         Destroy(gameObject);
     }
 
+    private void OnDrawGizmos()
+    {
+        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+            return;
+
+        DrawHitRadiusGizmo();
+    }
+
     private void OnDrawGizmosSelected()
+    {
+        if (Application.isPlaying)
+            return;
+
+        DrawHitRadiusGizmo();
+    }
+
+    private void DrawHitRadiusGizmo()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, defaultHitRadius);

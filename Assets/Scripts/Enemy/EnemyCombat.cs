@@ -350,6 +350,36 @@ public class EnemyCombat : MonoBehaviour
         if (enemyRenderer != null)
             enemyRenderer.material.color = normalColor;
     }
+
+    private void OnDrawGizmos()
+    {
+        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible)
+            return;
+
+        // O ranged possui seus proprios gizmos de distancia e trajetoria.
+        if (GetComponent<EnemyRangedShooter>() != null)
+            return;
+
+        Gizmos.color = new Color(1f, 0.85f, 0.15f, 0.7f);
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        Gizmos.color = new Color(0.3f, 1f, 0.35f, 0.7f);
+        Gizmos.DrawWireSphere(transform.position, closeRange);
+
+        Gizmos.color = new Color(0.25f, 0.75f, 1f, 0.7f);
+        Gizmos.DrawWireSphere(transform.position, mediumRange);
+
+        if (currentState != EnemyState.Attacking || currentAttack == null ||
+            currentAttack.firesProjectile)
+        {
+            return;
+        }
+
+        Vector3 hitboxPosition = transform.position +
+            transform.forward * currentAttack.hitboxDistance;
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(hitboxPosition, currentAttack.hitboxRadius);
+    }
 }
 
 [System.Serializable]

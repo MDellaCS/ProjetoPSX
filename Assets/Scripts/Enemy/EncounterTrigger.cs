@@ -37,6 +37,9 @@ public class EncounterTrigger : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+            return;
+
         Collider trigger = GetComponent<Collider>();
         if (trigger == null)
             return;

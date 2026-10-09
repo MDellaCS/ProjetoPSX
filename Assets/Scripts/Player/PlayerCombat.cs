@@ -699,6 +699,9 @@ public class PlayerCombat : MonoBehaviour
 
     void OnDrawGizmos()
     {
+        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+            return;
+
         if (attackPhase != AttackPhase.Active)
             return;
 

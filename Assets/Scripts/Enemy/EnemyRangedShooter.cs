@@ -79,7 +79,7 @@ public class EnemyRangedShooter : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (Application.isPlaying && PlayerDebugToolkitHUD.IsVisible)
+        if (Application.isPlaying)
             return;
 
         DrawDebugGizmos();
