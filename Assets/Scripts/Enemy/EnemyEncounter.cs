@@ -115,7 +115,6 @@ public class EnemyEncounter : MonoBehaviour
 
     private void Start()
     {
-        UnlockBarriers();
         ResolvePlayer();
     }
 
