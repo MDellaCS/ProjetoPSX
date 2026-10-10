@@ -32,6 +32,7 @@ Exemplo inicial para testes futuros:
 ## TODO — Melhorias de camera
 
 - Revisitar a suavizacao de colisao com paredes e validar que nao causa saltos, clipping ou atraso excessivo.
+- Revisitar camera em ombro direito: encontrar um enquadramento lateral que preserve leitura do player e da arena, sem apenas aumentar a distancia aparente da camera.
 
 ## TODO — Movimento
 

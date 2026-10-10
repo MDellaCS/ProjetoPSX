@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class CameraFollow : MonoBehaviour
 {
@@ -10,6 +11,12 @@ public class CameraFollow : MonoBehaviour
     public Vector3 offset = new Vector3(0f, 7f, -8f);
     [Tooltip("Desloca o ponto para o qual a camera olha. Um pouco acima do player mostra mais do chao.")]
     public Vector3 lookAtOffset = new Vector3(0f, 0.35f, 0f);
+
+    [Header("Mouse Rotation")]
+    [Tooltip("Graus de rotacao horizontal por pixel de movimento do mouse.")]
+    [Min(0f)] public float horizontalMouseSensitivity = 0.05f;
+    [Tooltip("Escape solta o cursor; clique esquerdo o prende novamente.")]
+    [SerializeField] private bool lockCursorOnStart = true;
 
     [Header("Follow Smoothing")]
     [Min(0.01f)] public float followSmoothTime = 0.07f;
@@ -24,6 +31,10 @@ public class CameraFollow : MonoBehaviour
     [Header("Combat Framing")]
     [Tooltip("Multiplica a distancia da camera durante combate. 1.2 equivale a 20% mais distante.")]
     [Min(1f)] public float combatDistanceMultiplier = 1.5f;
+    [Tooltip("Altura efetiva da camera enquanto o player esta fora de combate.")]
+    public float outOfCombatOffsetY = 1f;
+    [Tooltip("Altura efetiva da camera enquanto o player esta em combate.")]
+    public float combatOffsetY = 4.5f;
     [Min(0.01f)] public float combatFramingSmoothTime = 1.5f;
 
     [Header("Scene Collision")]
@@ -45,6 +56,7 @@ public class CameraFollow : MonoBehaviour
     private Vector3 lookAheadVelocity;
     private float combatFraming;
     private float combatFramingVelocity;
+    private float horizontalYaw;
     private Vector3 shakeDirection;
     private float shakeTimer;
     private bool isInitialized;
@@ -64,6 +76,9 @@ public class CameraFollow : MonoBehaviour
         deadZoneAnchor = target.position;
         smoothedFocus = target.position + lookAtOffset;
         isInitialized = true;
+
+        if (lockCursorOnStart)
+            LockCursor();
     }
 
     private void LateUpdate()
@@ -72,11 +87,13 @@ public class CameraFollow : MonoBehaviour
             return;
 
         EnsureInitialized();
+        UpdateMouseRotation();
         UpdateDeadZoneAnchor();
         UpdateLookAhead();
         UpdateCombatFraming();
 
-        Vector3 desiredFocus = deadZoneAnchor + lookAtOffset + lookAheadOffset;
+        Vector3 desiredFocus = deadZoneAnchor + lookAtOffset +
+            lookAheadOffset;
         smoothedFocus = Vector3.SmoothDamp(
             smoothedFocus,
             desiredFocus,
@@ -86,7 +103,7 @@ public class CameraFollow : MonoBehaviour
 
         Vector3 desiredPosition = ResolveCameraCollision(
             smoothedFocus,
-            smoothedFocus + offset * Mathf.Lerp(
+            smoothedFocus + GetRotatedOffset() * Mathf.Lerp(
                 1f,
                 combatDistanceMultiplier,
                 combatFraming
@@ -169,6 +186,52 @@ public class CameraFollow : MonoBehaviour
             combatFramingSmoothTime
         );
 
+    }
+
+    private void UpdateMouseRotation()
+    {
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
+            return;
+
+        if (lockCursorOnStart)
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                return;
+            }
+
+            if (Cursor.lockState != CursorLockMode.Locked)
+            {
+                if (mouse.leftButton.wasPressedThisFrame)
+                    LockCursor();
+
+                return;
+            }
+        }
+
+        horizontalYaw += mouse.delta.ReadValue().x *
+            horizontalMouseSensitivity;
+    }
+
+    private Vector3 GetRotatedOffset()
+    {
+        Vector3 effectiveOffset = offset;
+        effectiveOffset.y = Mathf.Lerp(
+            outOfCombatOffsetY,
+            combatOffsetY,
+            combatFraming
+        );
+        return Quaternion.Euler(0f, horizontalYaw, 0f) * effectiveOffset;
+    }
+
+    private static void LockCursor()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private Vector3 ResolveCameraCollision(Vector3 focus, Vector3 desiredPosition)
