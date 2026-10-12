@@ -10,8 +10,9 @@ public enum PlayerBufferedInput
 }
 
 /// <summary>
-/// Armazena presses recentes ate que a acao correspondente possa executa-los.
-/// A captura tambem acontece sob demanda para nao depender da ordem de Update.
+/// Armazena uma unica acao recente ate que ela possa ser executada.
+/// A primeira acao valida ocupa o buffer; presses adicionais aguardam a proxima
+/// janela, evitando que varias acoes sejam enfileiradas ao mesmo tempo.
 /// </summary>
 public class PlayerInputBuffer : MonoBehaviour
 {
@@ -19,15 +20,9 @@ public class PlayerInputBuffer : MonoBehaviour
     [Tooltip("Por quanto tempo um input pressionado permanece valido.")]
     [Min(0f)] public float bufferDuration = 0.22f;
 
-    private readonly float[] expirationTimes =
-        new float[System.Enum.GetValues(typeof(PlayerBufferedInput)).Length];
+    private PlayerBufferedInput bufferedInput;
+    private float expirationTime = -1f;
     private int lastCapturedFrame = -1;
-
-    private void Awake()
-    {
-        for (int index = 0; index < expirationTimes.Length; index++)
-            expirationTimes[index] = -1f;
-    }
 
     private void Update()
     {
@@ -37,7 +32,8 @@ public class PlayerInputBuffer : MonoBehaviour
     public bool HasBuffered(PlayerBufferedInput input)
     {
         CaptureInputsForCurrentFrame();
-        return expirationTimes[(int)input] >= Time.time;
+        ClearExpiredInput();
+        return expirationTime >= Time.time && bufferedInput == input;
     }
 
     public bool TryConsume(PlayerBufferedInput input)
@@ -45,7 +41,7 @@ public class PlayerInputBuffer : MonoBehaviour
         if (!HasBuffered(input))
             return false;
 
-        expirationTimes[(int)input] = -1f;
+        expirationTime = -1f;
         return true;
     }
 
@@ -90,6 +86,17 @@ public class PlayerInputBuffer : MonoBehaviour
 
     private void Buffer(PlayerBufferedInput input)
     {
-        expirationTimes[(int)input] = Time.time + bufferDuration;
+        ClearExpiredInput();
+        if (expirationTime >= Time.time)
+            return;
+
+        bufferedInput = input;
+        expirationTime = Time.time + bufferDuration;
+    }
+
+    private void ClearExpiredInput()
+    {
+        if (expirationTime < Time.time)
+            expirationTime = -1f;
     }
 }

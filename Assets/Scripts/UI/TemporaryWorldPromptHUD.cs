@@ -18,17 +18,21 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     [Min(0f)] [SerializeField] private float inputCompletionDelay = .25f;
     [Tooltip("Espera entre completar uma interacao e consumir uma dica do tipo Interaction.")]
     [Min(0f)] [SerializeField] private float interactionCompletionDelay = .5f;
+    [Tooltip("Tempo que um prompt que pausa o jogo deve permanecer na tela antes de aceitar sua sequencia de input.")]
+    [Min(0f)] [SerializeField] private float minimumPausedPromptDisplaySeconds = .75f;
 
     [Header("Global Trigger Behavior")]
     [Tooltip("Quanto o collider do trigger cresce depois da primeira entrada do player.")]
     [Min(0f)] [SerializeField] private float triggerExpansionPercent = 25f;
 
     private VisualElement promptPanel;
-    private Label promptTitle;
+    private VisualElement promptKeys;
     private Label promptBody;
     private TemporaryWorldPromptTrigger currentPrompt;
     private float visibleTimer;
     private float completionTimer = -1f;
+    private bool isPausedByPrompt;
+    private float timeScaleBeforePromptPause = 1f;
 
     public float TriggerExpansionPercent => triggerExpansionPercent;
 
@@ -45,6 +49,8 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+
+        ResumeGameIfPausedByPrompt();
     }
 
     private void Update()
@@ -54,23 +60,25 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
 
         if (completionTimer >= 0f)
         {
-            completionTimer -= Time.deltaTime;
+            completionTimer -= Time.unscaledDeltaTime;
             if (completionTimer <= 0f)
                 ConsumeCurrentPrompt();
             return;
         }
 
-        visibleTimer += Time.deltaTime;
-        if (visibleTimer >= autoConsumeAfterVisibleSeconds)
+        visibleTimer += Time.unscaledDeltaTime;
+        if (!currentPrompt.PausesGame && visibleTimer >= autoConsumeAfterVisibleSeconds)
         {
             ConsumeCurrentPrompt();
             return;
         }
 
         if (currentPrompt.PromptType == TemporaryWorldPromptType.Input &&
+            CanAcceptCurrentInput() &&
             currentPrompt.WasConfiguredInputPressedThisFrame())
         {
             completionTimer = inputCompletionDelay;
+            ResumeGameIfPausedByPrompt();
         }
     }
 
@@ -89,13 +97,10 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         visibleTimer = 0f;
         completionTimer = -1f;
 
-        if (promptTitle != null)
-            promptTitle.text = prompt.Title;
-
-        if (promptBody != null)
-            promptBody.text = prompt.GetDisplayText();
+        SetPromptContent(prompt);
 
         SetVisible(true);
+        PauseGameIfRequested(prompt);
         return true;
     }
 
@@ -112,6 +117,7 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         if (currentPrompt != null)
             currentPrompt.Consume();
 
+        ResumeGameIfPausedByPrompt();
         currentPrompt = null;
         completionTimer = -1f;
         visibleTimer = 0f;
@@ -127,26 +133,63 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
             return;
 
         promptPanel = rootVisualElement.Q<VisualElement>("temporary-world-prompt");
-        promptTitle = rootVisualElement.Q<Label>("temporary-world-prompt-title");
+        promptKeys = rootVisualElement.Q<VisualElement>("temporary-world-prompt-keys");
         promptBody = rootVisualElement.Q<Label>("temporary-world-prompt-body");
 
-        if (promptPanel == null || promptTitle == null || promptBody == null)
+        if (promptPanel == null || promptKeys == null || promptBody == null)
         {
             Debug.LogWarning(
                 "TemporaryWorldPromptHUD: UXML precisa de 'temporary-world-prompt', " +
-                "'temporary-world-prompt-title' e 'temporary-world-prompt-body'.",
+                "'temporary-world-prompt-keys' e 'temporary-world-prompt-body'.",
                 this
             );
             return;
         }
 
         if (currentPrompt != null)
-        {
-            promptTitle.text = currentPrompt.Title;
-            promptBody.text = currentPrompt.GetDisplayText();
-        }
+            SetPromptContent(currentPrompt);
 
         SetVisible(currentPrompt != null);
+    }
+
+    private void SetPromptContent(TemporaryWorldPromptTrigger prompt)
+    {
+        if (prompt == null)
+            return;
+
+        if (promptBody != null)
+            promptBody.text = prompt.GetDisplayText();
+
+        if (promptKeys == null)
+            return;
+
+        promptKeys.Clear();
+        for (int index = 0; index < prompt.KeyCount; index++)
+        {
+            TemporaryWorldPromptKey key = prompt.GetKey(index);
+            if (key == null)
+                continue;
+
+            if (promptKeys.childCount > 0)
+            {
+                Label arrow = new() { text = "→" };
+                arrow.AddToClassList("temporary-world-prompt__key-arrow");
+                promptKeys.Add(arrow);
+            }
+
+            if (key.Icon != null)
+            {
+                Image icon = new() { sprite = key.Icon };
+                icon.AddToClassList("temporary-world-prompt__key-icon");
+                promptKeys.Add(icon);
+            }
+            else
+            {
+                Label fallback = new() { text = key.GetFallbackText() };
+                fallback.AddToClassList("temporary-world-prompt__key-fallback");
+                promptKeys.Add(fallback);
+            }
+        }
     }
 
     private void SetVisible(bool value)
@@ -157,5 +200,30 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
                 ? DisplayStyle.Flex
                 : DisplayStyle.None;
         }
+    }
+
+    private bool CanAcceptCurrentInput()
+    {
+        return currentPrompt == null || !currentPrompt.PausesGame ||
+               visibleTimer >= minimumPausedPromptDisplaySeconds;
+    }
+
+    private void PauseGameIfRequested(TemporaryWorldPromptTrigger prompt)
+    {
+        if (isPausedByPrompt || prompt == null || !prompt.PausesGame)
+            return;
+
+        timeScaleBeforePromptPause = Time.timeScale;
+        Time.timeScale = 0f;
+        isPausedByPrompt = true;
+    }
+
+    private void ResumeGameIfPausedByPrompt()
+    {
+        if (!isPausedByPrompt)
+            return;
+
+        Time.timeScale = timeScaleBeforePromptPause;
+        isPausedByPrompt = false;
     }
 }

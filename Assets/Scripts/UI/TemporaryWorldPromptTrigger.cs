@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,25 +9,93 @@ public enum TemporaryWorldPromptType
     Interaction
 }
 
+public enum TemporaryWorldPromptInputDevice
+{
+    Keyboard,
+    Mouse
+}
+
+public enum TemporaryWorldPromptMouseButton
+{
+    Left,
+    Right,
+    Middle,
+    Back,
+    Forward
+}
+
+[Serializable]
+public class TemporaryWorldPromptKey
+{
+    [SerializeField] private TemporaryWorldPromptInputDevice inputDevice;
+    [SerializeField] private Key key = Key.E;
+    [SerializeField] private TemporaryWorldPromptMouseButton mouseButton;
+    [Tooltip("Sprite exibido para esta tecla. Se vazio, o HUD usa o nome da tecla como fallback.")]
+    [SerializeField] private Sprite icon;
+
+    public Sprite Icon => icon;
+
+    public bool WasPressedThisFrame()
+    {
+        if (inputDevice == TemporaryWorldPromptInputDevice.Keyboard)
+        {
+            Keyboard keyboard = Keyboard.current;
+            return keyboard != null && keyboard[key] != null &&
+                   keyboard[key].wasPressedThisFrame;
+        }
+
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
+            return false;
+
+        return mouseButton switch
+        {
+            TemporaryWorldPromptMouseButton.Left => mouse.leftButton.wasPressedThisFrame,
+            TemporaryWorldPromptMouseButton.Right => mouse.rightButton.wasPressedThisFrame,
+            TemporaryWorldPromptMouseButton.Middle => mouse.middleButton.wasPressedThisFrame,
+            TemporaryWorldPromptMouseButton.Back => mouse.backButton.wasPressedThisFrame,
+            TemporaryWorldPromptMouseButton.Forward => mouse.forwardButton.wasPressedThisFrame,
+            _ => false
+        };
+    }
+
+    public string GetFallbackText()
+    {
+        return inputDevice == TemporaryWorldPromptInputDevice.Keyboard
+            ? key.ToString().ToUpperInvariant()
+            : mouseButton switch
+            {
+                TemporaryWorldPromptMouseButton.Left => "M1",
+                TemporaryWorldPromptMouseButton.Right => "M2",
+                TemporaryWorldPromptMouseButton.Middle => "M3",
+                TemporaryWorldPromptMouseButton.Back => "M4",
+                TemporaryWorldPromptMouseButton.Forward => "M5",
+                _ => "MOUSE"
+            };
+    }
+}
+
 /// <summary>
-/// Area no mundo que mostra uma unica dica temporaria. A dica consumida fica
-/// persistida em PlayerPrefs e nao e exibida novamente nas proximas execucoes.
+/// Area no mundo que mostra uma unica dica temporaria. A dica consumida nao
+/// reaparece durante a execucao atual, mas e resetada ao reiniciar o jogo.
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class TemporaryWorldPromptTrigger : MonoBehaviour
 {
-    private const string PlayerPrefsPrefix = "TemporaryWorldPrompt.";
-
-    [Header("Identity")]
-    [Tooltip("Identificador persistente. Nao repita entre triggers. Use Regenerate Prompt ID em duplicatas.")]
-    [SerializeField] private string promptId;
-
     [Header("Prompt")]
     [SerializeField] private TemporaryWorldPromptType promptType;
-    [SerializeField] private string title = "TIP";
-    [TextArea(2, 4)] [SerializeField] private string message = "Press {KEY}";
-    [SerializeField] private Key configuredKey = Key.E;
-    [Tooltip("Para Interaction, permite testar a conclusao pressionando a tecla configurada. Desative quando uma interacao real chamar CompleteInteraction().")]
+    [Tooltip("Escreva somente o texto apos {KEY}. O HUD sempre mostra o icone da tecla primeiro.")]
+    [TextArea(2, 4)] [SerializeField] private string message = "{KEY} PRESS";
+    [Tooltip("Teclas exibidas e reconhecidas em ordem. O HUD coloca uma seta entre cada item.")]
+    [SerializeField] private List<TemporaryWorldPromptKey> keySequence = new()
+    {
+        new TemporaryWorldPromptKey()
+    };
+    [Tooltip("Tempo maximo entre uma tecla e a proxima da sequencia. Zero desativa o limite.")]
+    [Min(0f)] [SerializeField] private float inputSequenceTimeout = .75f;
+    [Tooltip("Pausa o jogo enquanto este prompt de Input estiver visivel. O jogo volta ao normal ao concluir a sequencia.")]
+    [SerializeField] private bool pauseGameUntilInputCompleted;
+    [Tooltip("Para Interaction, permite testar a conclusao usando a sequencia configurada. Desative quando uma interacao real chamar CompleteInteraction().")]
     [SerializeField] private bool keyboardInteractionFallback = true;
 
     private Collider triggerCollider;
@@ -34,19 +103,26 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
     private bool isConsumed;
     private bool hasExpanded;
     private bool playerInside;
+    private int nextSequenceKeyIndex;
+    private float sequenceTimer;
 
     public TemporaryWorldPromptType PromptType => promptType;
-    public string Title => title;
     public bool IsConsumed => isConsumed;
+    public int KeyCount => keySequence?.Count ?? 0;
+    public bool PausesGame => promptType == TemporaryWorldPromptType.Input &&
+                              pauseGameUntilInputCompleted;
 
     private void Awake()
     {
         triggerCollider = GetComponent<Collider>();
-        isConsumed = PlayerPrefs.GetInt(GetSaveKey(), 0) == 1;
+        isConsumed = false;
+        hasExpanded = false;
     }
 
     private void Update()
     {
+        UpdateInputSequenceTimeout();
+
         if (!isConsumed && playerInside)
         {
             ResolveHUD();
@@ -82,27 +158,48 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
 
     public string GetDisplayText()
     {
-        string keyText = configuredKey.ToString().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(message))
         {
             return promptType == TemporaryWorldPromptType.Input
-                ? "PRESS [" + keyText + "]"
-                : "INTERACT [" + keyText + "]";
+                ? "PRESS"
+                : "INTERACT";
         }
 
-        return message.Replace("{KEY}", "[" + keyText + "]");
+        return message.Replace("{KEY}", string.Empty).Trim();
+    }
+
+    public TemporaryWorldPromptKey GetKey(int index)
+    {
+        if (keySequence == null || index < 0 || index >= keySequence.Count)
+            return null;
+
+        return keySequence[index];
     }
 
     public bool WasConfiguredInputPressedThisFrame()
     {
-        Keyboard keyboard = Keyboard.current;
-        return keyboard != null && keyboard[configuredKey] != null &&
-            keyboard[configuredKey].wasPressedThisFrame;
+        TemporaryWorldPromptKey expectedKey = GetKey(nextSequenceKeyIndex);
+        if (expectedKey == null)
+            return false;
+
+        if (!expectedKey.WasPressedThisFrame())
+        {
+            return false;
+        }
+
+        nextSequenceKeyIndex++;
+        sequenceTimer = inputSequenceTimeout;
+        if (nextSequenceKeyIndex < KeyCount)
+            return false;
+
+        nextSequenceKeyIndex = 0;
+        sequenceTimer = 0f;
+        return true;
     }
 
     /// <summary>
     /// Chame quando a interacao real for concluida. Para testes, o fallback de
-    /// teclado tambem chama este metodo ao apertar Configured Key.
+    /// teclado tambem chama este metodo ao concluir a sequencia configurada.
     /// </summary>
     public void CompleteInteraction()
     {
@@ -119,28 +216,25 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
             return;
 
         isConsumed = true;
-        PlayerPrefs.SetInt(GetSaveKey(), 1);
-        PlayerPrefs.Save();
-    }
-
-    [ContextMenu("Reset Consumed State")]
-    public void ResetConsumedState()
-    {
-        isConsumed = false;
-        PlayerPrefs.DeleteKey(GetSaveKey());
-        PlayerPrefs.Save();
-    }
-
-    [ContextMenu("Regenerate Prompt ID")]
-    private void RegeneratePromptId()
-    {
-        promptId = Guid.NewGuid().ToString("N");
     }
 
     private void ResolveHUD()
     {
         if (promptHUD == null)
             promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
+    }
+
+    private void UpdateInputSequenceTimeout()
+    {
+        if (nextSequenceKeyIndex == 0 || inputSequenceTimeout <= 0f)
+            return;
+
+        sequenceTimer -= Time.unscaledDeltaTime;
+        if (sequenceTimer <= 0f)
+        {
+            nextSequenceKeyIndex = 0;
+            sequenceTimer = 0f;
+        }
     }
 
     private void ExpandTriggerArea()
@@ -172,11 +266,6 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
         hasExpanded = true;
     }
 
-    private string GetSaveKey()
-    {
-        return PlayerPrefsPrefix + promptId;
-    }
-
     private static bool IsPlayer(Collider collider)
     {
         return collider != null &&
@@ -186,9 +275,6 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
 
     private void OnValidate()
     {
-        if (string.IsNullOrWhiteSpace(promptId))
-            RegeneratePromptId();
-
         Collider collider = GetComponent<Collider>();
         if (collider != null)
             collider.isTrigger = true;

@@ -16,8 +16,41 @@
     border-bottom-color: rgba(255, 255, 255, 0.25);
 }
 
-.temporary-world-prompt__title {
+.temporary-world-prompt__content {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 3px;
+}
+
+.temporary-world-prompt__keys {
+    flex-direction: row;
+    align-items: center;
+}
+
+.temporary-world-prompt__key-icon {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.temporary-world-prompt__key-arrow {
+    margin-left: 4px;
+    margin-right: 4px;
     color: rgb(255, 193, 60);
+    font-size: 16px;
+    unity-font-style: bold;
+}
+
+.temporary-world-prompt__key-fallback {
+    min-width: 28px;
+    height: 28px;
+    margin-right: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
+    color: rgb(20, 22, 26);
+    background-color: rgb(235, 240, 245);
+    unity-text-align: middle-center;
     font-size: 14px;
     unity-font-style: bold;
 }
@@ -25,6 +58,5 @@
 .temporary-world-prompt__body {
     color: rgb(235, 240, 245);
     font-size: 18px;
-    margin-top: 3px;
     unity-font-style: bold;
 }
