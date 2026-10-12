@@ -46,6 +46,13 @@ Exemplo inicial para testes futuros:
 
 - Reimplementar Lock-on: selecao e troca de alvo, rotacao do player e enquadramento de camera devem ser validados juntos antes de entrar novamente no prototipo.
 
+## TODO - Coordenacao de agressividade inimiga
+
+- Criar um `EnemyAggroCoordinator` central para acompanhar inimigos em aggro no player e escolher um `Primary Aggressor`.
+- O agressor principal recebe bonus de agressividade e prioridade de perseguir/atacar; os demais recebem um teto ou penalidade de agressividade para orbitar, reposicionar e preparar a proxima troca.
+- Trocar o agressor quando ele terminar um combo, sofrer launch/stagger, morrer, perder distancia relevante ou atingir um tempo maximo no papel.
+- Arqueiros e futuros inimigos de area devem poder ignorar parcialmente essa limitacao, pois sua pressao e indireta.
+
 ## TODO - Hit Stop
 
 - Reintroduzir Hit Stop como um sistema de impacto completo: deve suportar intensidades e duracoes por acao, funcionar com ataques do jogador e inimigos, preservar UI/input necessarios e restaurar corretamente o tempo mesmo com impactos consecutivos. O antigo sistema global de `Time.timeScale = 0` foi removido por ser simples demais para o combate final.

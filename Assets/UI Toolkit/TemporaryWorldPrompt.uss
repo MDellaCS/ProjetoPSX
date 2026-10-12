@@ -1,0 +1,30 @@
+.temporary-world-prompt {
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    translate: -50% 0;
+    min-width: 260px;
+    padding: 12px 18px;
+    background-color: rgba(8, 10, 14, 0.88);
+    border-left-width: 3px;
+    border-left-color: rgb(255, 184, 44);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.25);
+    border-right-color: rgba(255, 255, 255, 0.25);
+    border-bottom-color: rgba(255, 255, 255, 0.25);
+}
+
+.temporary-world-prompt__title {
+    color: rgb(255, 193, 60);
+    font-size: 14px;
+    unity-font-style: bold;
+}
+
+.temporary-world-prompt__body {
+    color: rgb(235, 240, 245);
+    font-size: 18px;
+    margin-top: 3px;
+    unity-font-style: bold;
+}

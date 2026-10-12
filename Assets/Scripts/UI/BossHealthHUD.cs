@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 
 /// <summary>
 /// HUD de chefe em UI Toolkit. Um unico PanelRenderer e reutilizado pelo
-/// BossController atualmente ativo.
+/// chefe atualmente ativo.
 /// </summary>
 [RequireComponent(typeof(PanelRenderer))]
 public class BossHealthHUD : MonoBehaviour
@@ -11,8 +11,9 @@ public class BossHealthHUD : MonoBehaviour
     [Header("References")]
     [SerializeField] private PanelRenderer panelRenderer;
 
-    private BossController currentBoss;
-    private EnemyHealth currentHealth;
+    private BaseEnemy currentBoss;
+    private BaseEnemy currentHealth;
+    private string currentBossName;
 
     private VisualElement bossPanel;
     private Label bossNameText;
@@ -36,7 +37,7 @@ public class BossHealthHUD : MonoBehaviour
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
     }
 
-    public void Show(BossController boss)
+    public void Show(BaseEnemy boss, string bossName)
     {
         if (boss == null)
             return;
@@ -45,17 +46,21 @@ public class BossHealthHUD : MonoBehaviour
         {
             UnsubscribeFromHealth();
             currentBoss = boss;
-            currentHealth = boss.GetComponent<EnemyHealth>();
+            currentHealth = boss;
 
             if (currentHealth != null)
                 currentHealth.HealthChanged += UpdateHealth;
         }
 
+        currentBossName = string.IsNullOrWhiteSpace(bossName)
+            ? boss.name
+            : bossName;
+
         RefreshVisuals();
         SetVisible(true);
     }
 
-    public void Hide(BossController boss)
+    public void Hide(BaseEnemy boss)
     {
         if (boss != null && boss != currentBoss)
             return;
@@ -63,6 +68,7 @@ public class BossHealthHUD : MonoBehaviour
         UnsubscribeFromHealth();
         currentBoss = null;
         currentHealth = null;
+        currentBossName = null;
         SetVisible(false);
     }
 
@@ -88,7 +94,7 @@ public class BossHealthHUD : MonoBehaviour
         SetVisible(currentBoss != null);
     }
 
-    private void UpdateHealth(EnemyHealth _, int current, int maximum)
+    private void UpdateHealth(BaseEnemy _, int current, int maximum)
     {
         UpdateHealthVisuals(current, maximum);
     }
@@ -96,7 +102,7 @@ public class BossHealthHUD : MonoBehaviour
     private void RefreshVisuals()
     {
         if (currentBoss != null && bossNameText != null)
-            bossNameText.text = currentBoss.BossName;
+            bossNameText.text = currentBossName;
 
         if (currentHealth != null)
         {

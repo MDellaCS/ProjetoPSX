@@ -39,11 +39,19 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Velocidade, em graus por segundo, para curvar levemente o slide.")]
     [Min(0f)] public float slideSteeringSpeed = 50f;
 
+    [Header("Steep Slopes")]
+    [Tooltip("Aceleracao que puxa o player para baixo em inclinacoes acima do Slope Limit do CharacterController.")]
+    [Min(0f)] public float steepSlopeSlideAcceleration = 30f;
+    [Tooltip("Velocidade maxima ao escorregar automaticamente por uma inclinacao muito alta.")]
+    [Min(0f)] public float steepSlopeMaximumSlideSpeed = 10f;
+
     [Header("Gravity")]
     public float gravity = -60f;
+    [Tooltip("Velocidade maxima de queda, aplicada a gravidade, Launch Up e Dive.")]
+    [Min(2f)] public float terminalFallSpeed = 30f;
 
     [Header("Jump")]
-    [Min(0f)] public float jumpInitialSpeed = 13f;
+    [Min(0f)] public float jumpInitialSpeed = 15f;
     [Min(0f)] public float jumpHoldAcceleration = 40f;
     [Min(0f)] public float maxJumpHoldDuration = 0.15f;
 
@@ -102,7 +110,7 @@ public class PlayerMovement : MonoBehaviour
     private float aerialLightTimer;
     private float aerialGravityMultiplier = 1f;
     private float aerialDiveFallSpeed;
-    private float launchGravityMagnitude;
+    private float launchGravity;
     private int jumpsUsed;
     private bool hasUsedAirDash;
     private bool dashStartedGrounded;
@@ -392,14 +400,18 @@ public class PlayerMovement : MonoBehaviour
 
         if (isAerialDiving)
         {
-            verticalVelocity = -aerialDiveFallSpeed;
+            verticalVelocity = Mathf.Max(
+                -aerialDiveFallSpeed,
+                -terminalFallSpeed
+            );
             jumpHoldTimer = 0f;
             return;
         }
 
         if (isLaunched)
         {
-            verticalVelocity += -launchGravityMagnitude * Time.deltaTime;
+            verticalVelocity += launchGravity * Time.deltaTime;
+            ClampTerminalFallSpeed();
             return;
         }
 
@@ -415,6 +427,15 @@ public class PlayerMovement : MonoBehaviour
         UpdateAerialLightTimer();
         verticalVelocity += gravity * aerialGravityMultiplier *
             Time.deltaTime;
+        ClampTerminalFallSpeed();
+    }
+
+    private void ClampTerminalFallSpeed()
+    {
+        verticalVelocity = Mathf.Max(
+            verticalVelocity,
+            -terminalFallSpeed
+        );
     }
 
     private void UpdateAerialLightTimer()
@@ -511,6 +532,15 @@ public class PlayerMovement : MonoBehaviour
                 slideSteeringSpeed * Mathf.Deg2Rad * Time.deltaTime,
                 0f
             ).normalized;
+        }
+
+        // Em uma inclinacao acima do limite, o Slide manual continua
+        // permitido, mas a direcao e obrigatoriamente a da descida. Isso
+        // impede subir a rampa usando momentum e garante a descida.
+        if (TryGetSteepSlopeDownhillDirection(
+            out Vector3 steepDownhillDirection))
+        {
+            slideDirection = steepDownhillDirection;
         }
 
         float slideSpeed = horizontalVelocity.magnitude;
@@ -649,6 +679,12 @@ public class PlayerMovement : MonoBehaviour
             return CalculateAirVelocity();
         }
 
+        // O Slide manual tem prioridade em CalculateHorizontalVelocity. Aqui
+        // tratamos somente o movimento normal: acima do Slope Limit, o player
+        // nao consegue caminhar/subir e escorrega na direcao da descida.
+        if (TryGetSteepSlopeDownhillDirection(out Vector3 downhillDirection))
+            return CalculateSteepSlopeVelocity(downhillDirection);
+
         float currentSpeed = isCrouching
             ? speed * crouchSpeedMultiplier
             : speed;
@@ -664,6 +700,42 @@ public class PlayerMovement : MonoBehaviour
         );
 
         return GetGroundAlignedVelocity(walkVelocity);
+    }
+
+    private Vector3 CalculateSteepSlopeVelocity(Vector3 downhillDirection)
+    {
+        Vector3 targetVelocity = downhillDirection *
+            steepSlopeMaximumSlideSpeed;
+
+        return Vector3.MoveTowards(
+            horizontalVelocity,
+            targetVelocity,
+            steepSlopeSlideAcceleration * Time.deltaTime
+        );
+    }
+
+    private bool TryGetSteepSlopeDownhillDirection(
+        out Vector3 downhillDirection)
+    {
+        downhillDirection = Vector3.zero;
+
+        if (controller == null || !TryGetGroundNormal(out Vector3 groundNormal))
+            return false;
+
+        float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+        if (slopeAngle <= controller.slopeLimit)
+            return false;
+
+        downhillDirection = Vector3.ProjectOnPlane(
+            Vector3.down,
+            groundNormal
+        );
+
+        if (downhillDirection.sqrMagnitude <= 0.0001f)
+            return false;
+
+        downhillDirection.Normalize();
+        return true;
     }
 
     private Vector3 CalculateAirVelocity()
@@ -807,7 +879,7 @@ public class PlayerMovement : MonoBehaviour
         aerialGravityMultiplier = 1f;
     }
 
-    public void ApplySelfLaunchUp(float initialSpeed, float gravityMagnitude)
+    public void ApplySelfLaunchUp(float initialSpeed, float gravity)
     {
         // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
         // Launch Up e uma trajetoria vertical intencional: ele limpa qualquer momentum horizontal anterior antes de aplicar o impulso para cima.
@@ -820,7 +892,7 @@ public class PlayerMovement : MonoBehaviour
         aerialDiveFallSpeed = 0f;
         jumpHoldTimer = 0f;
         verticalVelocity = initialSpeed;
-        launchGravityMagnitude = Mathf.Max(0f, gravityMagnitude);
+        launchGravity = gravity;
         isLaunched = true;
     }
 }

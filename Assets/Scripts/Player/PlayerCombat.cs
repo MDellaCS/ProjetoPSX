@@ -14,7 +14,7 @@ public class PlayerCombat : MonoBehaviour
 
     private AttackPhase attackPhase = AttackPhase.None;
 
-    private HashSet<EnemyHealth> enemiesHit = new HashSet<EnemyHealth>();
+    private HashSet<BaseEnemy> enemiesHit = new HashSet<BaseEnemy>();
 
     private PlayerState playerState;
     private PlayerAttackData currentAttack;
@@ -39,19 +39,15 @@ public class PlayerCombat : MonoBehaviour
     [FormerlySerializedAs("windupRotationSpeed")]
     [SerializeField] private float attackingRotationSpeed = 300f;
 
-    [Header("Aerial Attack Movement")]
-    [Tooltip("Impulso vertical minimo aplicado por qualquer ataque leve aereo.")]
-    [Min(0f)] public float aerialLightLiftSpeed = 4f;
-    [Tooltip("Multiplicador global de gravidade durante leves aereos.")]
-    [Range(0f, 1f)] public float aerialLightGravityMultiplier = .3f;
+    [Header("Aerial Attack And Enemy Juggle Movement")]
+    [Tooltip("Impulso vertical compartilhado pelos leves aereos do player e pelo juggle de inimigos no ar.")]
+    [FormerlySerializedAs("aerialLightLiftSpeed")]
+    [Min(0f)] public float juggleLiftSpeed = 4f;
+    [Tooltip("Multiplicador de gravidade compartilhado pelos leves aereos do player e pelo juggle de inimigos no ar.")]
+    [FormerlySerializedAs("aerialLightGravityMultiplier")]
+    [Range(0f, 1f)] public float juggleGravityMultiplier = .3f;
     [Tooltip("Velocidade vertical da queda de qualquer pesado aereo.")]
     [Min(0f)] public float aerialDiveFallSpeed = 28f;
-
-    [Header("Launch Up")]
-    [Tooltip("Velocidade vertical inicial aplicada por qualquer ataque Launch Up.")]
-    [Min(0f)] public float launchUpInitialSpeed = 12f;
-    [Tooltip("Aceleracao descendente aplicada a inimigos lancados.")]
-    [Min(0f)] public float launchUpGravityMagnitude = 30f;
 
     [Header("Combat Status")]
     [Min(0f)]
@@ -105,7 +101,7 @@ public class PlayerCombat : MonoBehaviour
 
     private void UpdateCombatStatus()
     {
-        hasAggroedEnemies = EnemyCombat.IsAnyEnemyAggroedOn(transform);
+        hasAggroedEnemies = BaseEnemy.IsAnyEnemyAggroedOn(transform);
 
         if (hasAggroedEnemies ||
             EnemyEncounter.IsPlayerInActiveEncounter(transform))
@@ -357,8 +353,8 @@ public class PlayerCombat : MonoBehaviour
         }
 
         playerMovement.BeginAerialLight(
-            aerialLightLiftSpeed,
-            aerialLightGravityMultiplier,
+            juggleLiftSpeed,
+            juggleGravityMultiplier,
             attack.windupDuration + attack.activeDuration
         );
     }
@@ -443,7 +439,7 @@ public class PlayerCombat : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
-            EnemyHealth enemy = hit.GetComponentInParent<EnemyHealth>();
+            BaseEnemy enemy = hit.GetComponentInParent<BaseEnemy>();
 
             if (enemy != null && !enemiesHit.Contains(enemy))
             {
@@ -463,12 +459,12 @@ public class PlayerCombat : MonoBehaviour
                 if (currentAttack.isLaunchUp)
                 {
                     enemy.ApplyLaunchUp(
-                        launchUpInitialSpeed,
-                        launchUpGravityMagnitude
+                        GetLaunchUpInitialSpeed(),
+                        GetLaunchUpGravity()
                     );
                 }
 
-                ApplyAerialJuggle(enemy);
+                ApplyJuggleToAirborneEnemy(enemy);
 
                 RegisterDamageDealtToEnemy();
 
@@ -518,10 +514,24 @@ public class PlayerCombat : MonoBehaviour
         // Acontece depois da hitbox: o Dash H1 conecta no alvo no chao,
         // mas tambem lanca o player quando o golpe erra.
         playerMovement?.ApplySelfLaunchUp(
-            launchUpInitialSpeed,
-            launchUpGravityMagnitude
+            GetLaunchUpInitialSpeed(),
+            GetLaunchUpGravity()
         );
         hasLaunchedPlayer = true;
+    }
+
+    private float GetLaunchUpInitialSpeed()
+    {
+        return playerMovement != null
+            ? playerMovement.jumpInitialSpeed
+            : 18f;
+    }
+
+    private float GetLaunchUpGravity()
+    {
+        return playerMovement != null
+            ? playerMovement.gravity
+            : -60f;
     }
 
     public bool StartAttackSequence(
@@ -609,29 +619,36 @@ public class PlayerCombat : MonoBehaviour
         ChangeAttackPhase(AttackPhase.Windup, currentAttack.windupDuration);
     }
 
-    private void ApplyAerialJuggle(EnemyHealth enemy)
+    private void ApplyJuggleToAirborneEnemy(BaseEnemy enemy)
     {
-        if (enemy == null ||
-            currentAttack == null ||
-            !currentAttack.isAerial)
+        if (enemy == null || currentAttack == null)
         {
             return;
         }
 
-        if (currentAttack.isHeavy)
+        // O proprio golpe de Launch Up inicia a trajetoria usando os valores
+        // do pulo. Ele nao pode ser sobrescrito pelo impulso menor de juggle
+        // no mesmo acerto; juggle vale apenas para golpes seguintes.
+        if (currentAttack.isLaunchUp)
+            return;
+
+        // Juggle pertence ao estado do inimigo, nao ao estado do player:
+        // leves e pesados no chao podem manter no ar um alvo ja lancado.
+        // O pesado aereo e o unico caso especial: ele inicia o Dive.
+        if (currentAttack.isHeavy && currentAttack.isAerial)
         {
             enemy.ApplyAerialJuggleDive(aerialDiveFallSpeed);
             return;
         }
 
-        float gravityMagnitude = playerMovement != null
-            ? Mathf.Abs(playerMovement.gravity)
-            : 0f;
+        float launchGravity = playerMovement != null
+            ? playerMovement.gravity
+            : -60f;
 
         enemy.ApplyAerialJuggleLight(
-            aerialLightLiftSpeed,
-            gravityMagnitude,
-            aerialLightGravityMultiplier,
+            juggleLiftSpeed,
+            launchGravity,
+            juggleGravityMultiplier,
             currentAttack.windupDuration + currentAttack.activeDuration
         );
     }

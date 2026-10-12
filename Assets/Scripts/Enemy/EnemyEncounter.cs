@@ -25,7 +25,7 @@ public class EnemyEncounterWave
     [Tooltip("Maximo de inimigos vivos simultaneos. Usado apenas por Sustain.")]
     public int maxAlive = 4;
 
-    public EnemyHealth[] enemies;
+    public BaseEnemy[] enemies;
 }
 
 /// <summary>
@@ -56,8 +56,8 @@ public class EnemyEncounter : MonoBehaviour
     [SerializeField] private EncounterState currentState =
         EncounterState.Inactive;
 
-    private readonly HashSet<EnemyHealth> participants =
-        new HashSet<EnemyHealth>();
+    private readonly HashSet<BaseEnemy> participants =
+        new HashSet<BaseEnemy>();
 
     private int currentWaveIndex = -1;
     private int nextWaveIndex;
@@ -96,7 +96,7 @@ public class EnemyEncounter : MonoBehaviour
     {
         for (int waveIndex = 0; waveIndex < WaveCount; waveIndex++)
         {
-            foreach (EnemyHealth enemy in GetWaveEnemies(waveIndex))
+            foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
                 PrepareEnemyForEncounter(enemy);
         }
     }
@@ -104,13 +104,13 @@ public class EnemyEncounter : MonoBehaviour
     private void OnEnable()
     {
         activeEncounters.Add(this);
-        EnemyHealth.EnemyDied += HandleEnemyDied;
+        BaseEnemy.EnemyDied += HandleEnemyDied;
     }
 
     private void OnDisable()
     {
         activeEncounters.Remove(this);
-        EnemyHealth.EnemyDied -= HandleEnemyDied;
+        BaseEnemy.EnemyDied -= HandleEnemyDied;
     }
 
     private void Start()
@@ -150,7 +150,7 @@ public class EnemyEncounter : MonoBehaviour
         TryScheduleEligibleNextWave();
     }
 
-    private void HandleEnemyDied(EnemyHealth enemy)
+    private void HandleEnemyDied(BaseEnemy enemy)
     {
         if (currentState != EncounterState.Active ||
             enemy == null ||
@@ -184,12 +184,12 @@ public class EnemyEncounter : MonoBehaviour
         if (player == null)
             return;
 
-        foreach (EnemyHealth enemy in participants)
+        foreach (BaseEnemy enemy in participants)
         {
             if (enemy == null || !enemy.gameObject.activeInHierarchy)
                 continue;
 
-            enemy.GetComponent<EnemyCombat>()?.SetEncounterEngaged(player);
+            enemy.SetEncounterEngaged(player);
         }
     }
 
@@ -267,7 +267,7 @@ public class EnemyEncounter : MonoBehaviour
 
     private void ActivateAllEnemiesInWave(int waveIndex)
     {
-        foreach (EnemyHealth enemy in GetWaveEnemies(waveIndex))
+        foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
         {
             if (enemy != null && !enemy.IsDead)
                 enemy.gameObject.SetActive(true);
@@ -320,13 +320,13 @@ public class EnemyEncounter : MonoBehaviour
             return;
 
         EnemyEncounterWave wave = waves[maintainCapWaveIndex];
-        EnemyHealth[] waveEnemies = GetWaveEnemies(maintainCapWaveIndex);
+        BaseEnemy[] waveEnemies = GetWaveEnemies(maintainCapWaveIndex);
         int maxAlive = Mathf.Max(1, wave.maxAlive);
         int livingEnemies = CountLivingActiveEnemiesInWave(maintainCapWaveIndex);
 
         while (livingEnemies < maxAlive && nextCapEnemyIndex < waveEnemies.Length)
         {
-            EnemyHealth enemy = waveEnemies[nextCapEnemyIndex++];
+            BaseEnemy enemy = waveEnemies[nextCapEnemyIndex++];
             if (enemy == null || enemy.IsDead)
                 continue;
 
@@ -348,12 +348,12 @@ public class EnemyEncounter : MonoBehaviour
         maintainCapWaveIndex = -1;
     }
 
-    private bool IsEnemyInMaintainCapWave(EnemyHealth enemy)
+    private bool IsEnemyInMaintainCapWave(BaseEnemy enemy)
     {
         if (maintainCapWaveIndex < 0)
             return false;
 
-        foreach (EnemyHealth waveEnemy in GetWaveEnemies(maintainCapWaveIndex))
+        foreach (BaseEnemy waveEnemy in GetWaveEnemies(maintainCapWaveIndex))
         {
             if (waveEnemy == enemy)
                 return true;
@@ -368,12 +368,12 @@ public class EnemyEncounter : MonoBehaviour
             nextCapEnemyIndex < GetWaveEnemies(maintainCapWaveIndex).Length;
     }
 
-    private void PrepareEnemyForEncounter(EnemyHealth enemy)
+    private void PrepareEnemyForEncounter(BaseEnemy enemy)
     {
         if (enemy == null || !participants.Add(enemy))
             return;
 
-        enemy.GetComponent<EnemyCombat>()?.SetWaitingForEncounter();
+        enemy.SetWaitingForEncounter();
         enemy.gameObject.SetActive(false);
     }
 
@@ -391,7 +391,7 @@ public class EnemyEncounter : MonoBehaviour
     {
         int livingEnemies = 0;
 
-        foreach (EnemyHealth enemy in GetWaveEnemies(waveIndex))
+        foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
         {
             if (enemy != null &&
                 enemy.gameObject.activeInHierarchy &&
@@ -418,15 +418,15 @@ public class EnemyEncounter : MonoBehaviour
         CompleteEncounter();
     }
 
-    private EnemyHealth[] GetWaveEnemies(int waveIndex)
+    private BaseEnemy[] GetWaveEnemies(int waveIndex)
     {
         if (waves == null || waveIndex < 0 || waveIndex >= waves.Length)
-            return System.Array.Empty<EnemyHealth>();
+            return System.Array.Empty<BaseEnemy>();
 
         EnemyEncounterWave wave = waves[waveIndex];
         return wave != null && wave.enemies != null
             ? wave.enemies
-            : System.Array.Empty<EnemyHealth>();
+            : System.Array.Empty<BaseEnemy>();
     }
 
     private void ResolvePlayer()

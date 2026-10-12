@@ -30,9 +30,9 @@ public class CameraFollow : MonoBehaviour
 
     [Header("Combat Framing")]
     [Tooltip("Multiplica a distancia da camera durante combate. 1.2 equivale a 20% mais distante.")]
-    [Min(1f)] public float combatDistanceMultiplier = 1.5f;
+    [Min(1f)] public float combatDistanceMultiplier = 1.6f;
     [Tooltip("Altura efetiva da camera enquanto o player esta fora de combate.")]
-    public float outOfCombatOffsetY = 1f;
+    public float outOfCombatOffsetY = 3f;
     [Tooltip("Altura efetiva da camera enquanto o player esta em combate.")]
     public float combatOffsetY = 4.5f;
     [Min(0.01f)] public float combatFramingSmoothTime = 1.5f;
@@ -256,7 +256,7 @@ public class CameraFollow : MonoBehaviour
         {
             if (hit.collider.transform.IsChildOf(target) ||
                 target.IsChildOf(hit.collider.transform) ||
-                hit.collider.GetComponentInParent<EnemyHealth>() != null ||
+                hit.collider.GetComponentInParent<BaseEnemy>() != null ||
                 hit.collider.GetComponentInParent<EnemyProjectile>() != null)
             {
                 continue;

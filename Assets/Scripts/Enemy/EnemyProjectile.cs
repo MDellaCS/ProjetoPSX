@@ -1,53 +1,62 @@
 using UnityEngine;
 
 /// <summary>
-/// Projetil simples de inimigo. Move por codigo e usa SphereCast para acertar
-/// player e cenario sem depender de Rigidbody ou Collider no prefab visual.
+/// Projetil inimigo simples: segue em linha reta, sem gravidade ou curva.
+/// A colisao e feita por SphereCast para funcionar mesmo em alta velocidade.
 /// </summary>
 public class EnemyProjectile : MonoBehaviour
 {
-    [Header("Gizmo Fallback")]
-    [Min(0.01f)] [SerializeField] private float defaultHitRadius = 0.25f;
+    [Min(.01f)] [SerializeField] private float gizmoRadius = .18f;
 
     private Transform owner;
-    private Vector3 direction;
+    private Vector3 velocity;
     private int damage;
     private float knockbackForce;
     private float knockbackDuration;
-    private float speed;
     private float hitRadius;
-    private float lifetime;
+    private float remainingLifetime;
+    private bool launched;
 
     public void Launch(
         Transform projectileOwner,
-        Vector3 travelDirection,
+        Vector3 direction,
         int projectileDamage,
         float projectileKnockbackForce,
         float projectileKnockbackDuration,
-        float projectileSpeed,
-        float projectileHitRadius,
-        float projectileLifetime)
+        float speed,
+        float radius,
+        float lifetime)
     {
         owner = projectileOwner;
-        direction = travelDirection.normalized;
         damage = projectileDamage;
         knockbackForce = projectileKnockbackForce;
         knockbackDuration = projectileKnockbackDuration;
-        speed = Mathf.Max(0f, projectileSpeed);
-        hitRadius = Mathf.Max(0.01f, projectileHitRadius);
-        lifetime = Mathf.Max(0f, projectileLifetime);
+        hitRadius = Mathf.Max(.01f, radius);
+        remainingLifetime = Mathf.Max(.01f, lifetime);
+        velocity = direction.sqrMagnitude > .001f
+            ? direction.normalized * Mathf.Max(0f, speed)
+            : transform.forward * Mathf.Max(0f, speed);
+        launched = true;
     }
 
     private void Update()
     {
-        lifetime -= Time.deltaTime;
-        if (lifetime <= 0f)
-        {
-            Destroy(gameObject);
+        if (!launched)
             return;
-        }
 
-        float distance = speed * Time.deltaTime;
+        float distance = velocity.magnitude * Time.deltaTime;
+        if (distance > 0f && TryHit(distance))
+            return;
+
+        transform.position += velocity * Time.deltaTime;
+        remainingLifetime -= Time.deltaTime;
+        if (remainingLifetime <= 0f)
+            Destroy(gameObject);
+    }
+
+    private bool TryHit(float distance)
+    {
+        Vector3 direction = velocity.normalized;
         RaycastHit[] hits = Physics.SphereCastAll(
             transform.position,
             hitRadius,
@@ -57,80 +66,50 @@ public class EnemyProjectile : MonoBehaviour
             QueryTriggerInteraction.Ignore
         );
 
-        RaycastHit? firstValidHit = GetFirstValidHit(hits);
-        if (firstValidHit.HasValue)
-        {
-            Impact(firstValidHit.Value.collider);
-            return;
-        }
-
-        transform.position += direction * distance;
-    }
-
-    private RaycastHit? GetFirstValidHit(RaycastHit[] hits)
-    {
-        RaycastHit? firstHit = null;
-
         foreach (RaycastHit hit in hits)
         {
-            if (hit.collider == null || IsIgnored(hit.collider.transform))
+            if (ShouldIgnore(hit.collider))
                 continue;
 
-            if (!firstHit.HasValue || hit.distance < firstHit.Value.distance)
-                firstHit = hit;
+            transform.position = hit.point;
+            PlayerHealth playerHealth = hit.collider.GetComponentInParent<PlayerHealth>();
+            if (playerHealth != null)
+            {
+                playerHealth.TakeDamage(
+                    damage,
+                    owner != null ? owner.position : transform.position,
+                    knockbackForce,
+                    knockbackDuration,
+                    true
+                );
+            }
+
+            Destroy(gameObject);
+            return true;
         }
 
-        return firstHit;
+        return false;
     }
 
-    private bool IsIgnored(Transform other)
+    private bool ShouldIgnore(Collider hit)
     {
-        bool isOwner = owner != null &&
-            (other == owner || other.IsChildOf(owner));
-        bool isProjectile = other == transform || other.IsChildOf(transform);
+        if (hit == null)
+            return true;
 
-        return isOwner || isProjectile;
-    }
-
-    private void Impact(Collider hit)
-    {
-        PlayerHealth player = hit.GetComponentInParent<PlayerHealth>();
-        if (player != null)
-        {
-            Vector3 attackerPosition = owner != null
-                ? owner.position
-                : transform.position;
-            player.TakeDamage(
-                damage,
-                attackerPosition,
-                knockbackForce,
-                knockbackDuration,
-                true
-            );
-        }
-
-        Destroy(gameObject);
+        Transform hitTransform = hit.transform;
+        return hitTransform.IsChildOf(transform) ||
+            transform.IsChildOf(hitTransform) ||
+            hit.GetComponentInParent<BaseEnemy>() != null ||
+            (owner != null &&
+             (hitTransform.IsChildOf(owner) || owner.IsChildOf(hitTransform)));
     }
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible)
             return;
 
-        DrawHitRadiusGizmo();
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        if (Application.isPlaying)
-            return;
-
-        DrawHitRadiusGizmo();
-    }
-
-    private void DrawHitRadiusGizmo()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, defaultHitRadius);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, launched ? hitRadius : gizmoRadius);
     }
 }
