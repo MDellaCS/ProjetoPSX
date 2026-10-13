@@ -4,6 +4,8 @@ using UnityEngine;
 public class BaseEnemyAttack
 {
     public string attackName = "Attack";
+    [Tooltip("Quando ligado, o inimigo especifico executa este ataque como projetil em vez de hitbox corpo a corpo.")]
+    public bool isProjectileAttack;
     [Min(0)] public int damage = 10;
     [Min(0f)] public float maximumRange = 1.8f;
     [Min(0f)] public float windupDuration = 0.6f;

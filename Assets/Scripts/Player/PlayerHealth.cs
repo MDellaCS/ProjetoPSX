@@ -4,6 +4,10 @@ public class PlayerHealth : MonoBehaviour
 {
     public float staggerDuration = 0.8f;
 
+    [Header("Damage Numbers")]
+    [SerializeField] private Vector3 damageNumberOffset = new Vector3(0f, 2f, 0f);
+    [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
+
     private Renderer playerRenderer;
 
     private PlayerState playerState;
@@ -18,14 +22,17 @@ public class PlayerHealth : MonoBehaviour
 
     void Start()
     {
-        playerRenderer = GetComponent<Renderer>();
+        // O renderer pertence ao VisualRoot/filho, nao a raiz que concentra
+        // a simulacao. Esta referencia e apenas feedback visual opcional.
+        playerRenderer = GetComponentInChildren<Renderer>(true);
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
         comboController = PlayerComboController.GetOrAdd(gameObject);
         playerHeat = GetComponent<PlayerHeat>();
 
-        normalColor = playerRenderer.material.color;
+        if (playerRenderer != null)
+            normalColor = playerRenderer.material.color;
     }
 
     void Update()
@@ -49,8 +56,8 @@ public class PlayerHealth : MonoBehaviour
 
         staggerTimer = staggerDuration;
 
-        playerRenderer.material.color =
-            Color.yellow;
+        if (playerRenderer != null)
+            playerRenderer.material.color = Color.yellow;
 
         playerCombat.CancelAttack();
         comboController.CancelCombo();
@@ -63,8 +70,8 @@ public class PlayerHealth : MonoBehaviour
         if (playerState.IsDead())
             return;
 
-        playerRenderer.material.color =
-            normalColor;
+        if (playerRenderer != null)
+            playerRenderer.material.color = normalColor;
 
         playerState.ChangeState(
             PlayerState.State.Normal
@@ -88,21 +95,20 @@ public class PlayerHealth : MonoBehaviour
             playerCombat.RegisterDamageTakenFromEnemy();
         }
 
+        DamageNumber.Show(
+            transform,
+            damage,
+            damageNumberOffset,
+            incomingDamageNumberColor
+        );
+
         playerHeat.RemoveHeat(damage);
 
         // Se chegamos a -1000,
         // PlayerHeat já colocou o jogador
         // no estado Dead.
         if (playerState.IsDead())
-        {
-            Debug.Log(
-                "Dano recebido: " +
-                damage +
-                " Heat"
-            );
-
             return;
-        }
 
         // =========================
         // KNOCKBACK
@@ -120,17 +126,6 @@ public class PlayerHealth : MonoBehaviour
             knockbackDirection,
             knockbackForce,
             knockbackDuration
-        );
-
-        Debug.Log(
-            "Player perdeu " +
-            damage +
-            " Heat!"
-        );
-
-        Debug.Log(
-            "Heat atual: " +
-            playerHeat.CurrentHeat
         );
 
         // =========================

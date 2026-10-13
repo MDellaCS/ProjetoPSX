@@ -174,7 +174,7 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2
+  m_Height: 2.92
   m_Radius: 0.5
   m_SlopeLimit: 45
   m_StepOffset: 0.3
@@ -199,7 +199,7 @@ MonoBehaviour:
   poiseRecoveryDelay: 3
   poiseRecoveryPerSecond: 20
   movementSpeed: 2.2
-  gravity: 20
+  gravity: -20
   terminalFallSpeed: 30
   rotationSpeed: 240
   detectionRange: 8

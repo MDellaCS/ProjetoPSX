@@ -75,7 +75,7 @@ public class PlayerHeat : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool debugHeatInputEnabled = true;
-    [Min(1)] [SerializeField] private int debugHeatPerSecond = 1000;
+    [Min(1)] [SerializeField] private int debugHeatPerSecond = 3000;
 
     private int currentHeat = 0;
     private int currentSuperheat = 0;
@@ -187,11 +187,12 @@ public class PlayerHeat : MonoBehaviour
 
         int direction = 0;
 
+        // F4 esfria/remove Heat; F5 aquece/adiciona Heat.
         if (Keyboard.current.f4Key.isPressed)
-            direction++;
+            direction--;
 
         if (Keyboard.current.f5Key.isPressed)
-            direction--;
+            direction++;
 
         if (direction == 0)
         {
@@ -516,10 +517,6 @@ public class PlayerHeat : MonoBehaviour
 
     void Die(string cause)
     {
-        Debug.Log(
-            "Player morreu! Causa: " + cause
-        );
-
         playerState.ChangeState(
             PlayerState.State.Dead
         );

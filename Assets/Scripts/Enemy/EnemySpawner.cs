@@ -80,10 +80,6 @@ public class EnemySpawner : MonoBehaviour
     {
         if (!HasValidPrefab())
         {
-            Debug.LogWarning(
-                "EnemySpawner: configure ao menos um Enemy Prefab.",
-                this
-            );
             spawnRoutine = null;
             yield break;
         }

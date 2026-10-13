@@ -111,6 +111,11 @@ public class PlayerMovement : MonoBehaviour
     private float aerialGravityMultiplier = 1f;
     private float aerialDiveFallSpeed;
     private float launchGravity;
+    private float launchGravityMultiplier = 1f;
+    private float launchLowGravityMultiplier = 1f;
+    private float launchLowGravityTimer;
+    private float launchLowGravityDuration;
+    private bool launchLowGravityPending;
     private int jumpsUsed;
     private bool hasUsedAirDash;
     private bool dashStartedGrounded;
@@ -386,6 +391,7 @@ public class PlayerMovement : MonoBehaviour
             isLaunched = false;
             verticalVelocity = -2f;
             jumpHoldTimer = 0f;
+            ResetLaunchLowGravity();
         }
 
         if (playerState.IsDashing())
@@ -410,7 +416,9 @@ public class PlayerMovement : MonoBehaviour
 
         if (isLaunched)
         {
-            verticalVelocity += launchGravity * Time.deltaTime;
+            UpdateLaunchLowGravity();
+            verticalVelocity += launchGravity * launchGravityMultiplier *
+                Time.deltaTime;
             ClampTerminalFallSpeed();
             return;
         }
@@ -453,6 +461,43 @@ public class PlayerMovement : MonoBehaviour
 
         if (aerialLightTimer <= 0f)
             aerialGravityMultiplier = 1f;
+    }
+
+    private void UpdateLaunchLowGravity()
+    {
+        if (launchLowGravityPending)
+        {
+            // A sustentacao comeca somente quando a subida terminou.
+            if (verticalVelocity > 0f)
+                return;
+
+            launchLowGravityPending = false;
+            launchLowGravityTimer = launchLowGravityDuration;
+            launchGravityMultiplier = launchLowGravityMultiplier;
+        }
+
+        if (launchLowGravityTimer <= 0f)
+        {
+            launchGravityMultiplier = 1f;
+            return;
+        }
+
+        launchLowGravityTimer = Mathf.Max(
+            0f,
+            launchLowGravityTimer - Time.deltaTime
+        );
+
+        if (launchLowGravityTimer <= 0f)
+            launchGravityMultiplier = 1f;
+    }
+
+    private void ResetLaunchLowGravity()
+    {
+        launchLowGravityTimer = 0f;
+        launchLowGravityDuration = 0f;
+        launchLowGravityPending = false;
+        launchGravityMultiplier = 1f;
+        launchLowGravityMultiplier = 1f;
     }
 
     private void ApplyJumpHold()
@@ -849,6 +894,7 @@ public class PlayerMovement : MonoBehaviour
 
         isAerialDiving = false;
         isLaunched = false;
+        ResetLaunchLowGravity();
         // O leve aereo substitui o momentum vertical do pulo. Primeiro ele
         // interrompe a subida/queda atual e o hold do pulo; depois aplica
         // somente o lift configurado para o ataque.
@@ -867,6 +913,7 @@ public class PlayerMovement : MonoBehaviour
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
         isLaunched = false;
+        ResetLaunchLowGravity();
         aerialDiveFallSpeed = fallSpeed;
         isAerialDiving = true;
     }
@@ -879,7 +926,48 @@ public class PlayerMovement : MonoBehaviour
         aerialGravityMultiplier = 1f;
     }
 
-    public void ApplySelfLaunchUp(float initialSpeed, float gravity)
+    public float GetMaximumJumpLaunchSpeed()
+    {
+        float targetHeight = GetMaximumJumpHeight();
+        if (targetHeight <= 0f)
+            return 0f;
+
+        float gravityMagnitude = Mathf.Max(.001f, Mathf.Abs(gravity));
+        return Mathf.Sqrt(2f * gravityMagnitude * targetHeight);
+    }
+
+    private float GetMaximumJumpHeight()
+    {
+        if (jumpInitialSpeed <= 0f)
+            return 0f;
+
+        float holdDuration = Mathf.Max(0f, maxJumpHoldDuration);
+        float accelerationDuringHold = gravity + jumpHoldAcceleration;
+
+        // O hold so fornece impulso enquanto o player ainda sobe. Se a
+        // gravidade vencer antes do limite, usamos apenas esse trecho real.
+        if (accelerationDuringHold < 0f && jumpInitialSpeed > 0f)
+        {
+            holdDuration = Mathf.Min(
+                holdDuration,
+                jumpInitialSpeed / -accelerationDuringHold
+            );
+        }
+
+        float speedAfterHold = jumpInitialSpeed +
+            accelerationDuringHold * holdDuration;
+        float heightDuringHold = jumpInitialSpeed * holdDuration +
+            .5f * accelerationDuringHold * holdDuration * holdDuration;
+        float gravityMagnitude = Mathf.Max(.001f, Mathf.Abs(gravity));
+
+        float heightAfterHold = speedAfterHold > 0f
+            ? speedAfterHold * speedAfterHold / (2f * gravityMagnitude)
+            : 0f;
+        return Mathf.Max(0f, heightDuringHold + heightAfterHold);
+    }
+
+    public void ApplySelfLaunchUp(float initialSpeed, float gravity,
+        float lowGravityMultiplier, float lowGravityDuration)
     {
         // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
         // Launch Up e uma trajetoria vertical intencional: ele limpa qualquer momentum horizontal anterior antes de aplicar o impulso para cima.
@@ -893,6 +981,12 @@ public class PlayerMovement : MonoBehaviour
         jumpHoldTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravity = gravity;
+        launchGravityMultiplier = 1f;
+        launchLowGravityMultiplier = Mathf.Clamp01(lowGravityMultiplier);
+        launchLowGravityTimer = 0f;
+        launchLowGravityDuration = Mathf.Max(0f, lowGravityDuration);
+        launchLowGravityPending = launchLowGravityDuration > 0f &&
+            launchLowGravityMultiplier < 1f;
         isLaunched = true;
     }
 }

@@ -37,6 +37,10 @@ public class CameraFollow : MonoBehaviour
     public float combatOffsetY = 4.5f;
     [Min(0.01f)] public float combatFramingSmoothTime = 1.5f;
 
+    [Header("Lock On Framing")]
+    [Tooltip("Quanto o foco da mesma camera se desloca do player em direcao ao inimigo travado.")]
+    [Range(0f, 1f)] public float lockOnFocusWeight = .5f;
+
     [Header("Scene Collision")]
     public LayerMask collisionLayers = ~0;
     [Min(0.01f)] public float collisionRadius = 0.2f;
@@ -49,6 +53,7 @@ public class CameraFollow : MonoBehaviour
 
     private PlayerMovement playerMovement;
     private PlayerCombat playerCombat;
+    private PlayerLockOn playerLockOn;
     private Vector3 deadZoneAnchor;
     private Vector3 smoothedFocus;
     private Vector3 followVelocity;
@@ -73,6 +78,7 @@ public class CameraFollow : MonoBehaviour
 
         playerMovement = target.GetComponent<PlayerMovement>();
         playerCombat = target.GetComponent<PlayerCombat>();
+        playerLockOn = target.GetComponent<PlayerLockOn>();
         deadZoneAnchor = target.position;
         smoothedFocus = target.position + lookAtOffset;
         isInitialized = true;
@@ -92,8 +98,9 @@ public class CameraFollow : MonoBehaviour
         UpdateLookAhead();
         UpdateCombatFraming();
 
-        Vector3 desiredFocus = deadZoneAnchor + lookAtOffset +
+        Vector3 playerFocus = deadZoneAnchor + lookAtOffset +
             lookAheadOffset;
+        Vector3 desiredFocus = GetLockOnFocus(playerFocus);
         smoothedFocus = Vector3.SmoothDamp(
             smoothedFocus,
             desiredFocus,
@@ -121,6 +128,7 @@ public class CameraFollow : MonoBehaviour
 
         playerMovement = target.GetComponent<PlayerMovement>();
         playerCombat = target.GetComponent<PlayerCombat>();
+        playerLockOn = target.GetComponent<PlayerLockOn>();
         deadZoneAnchor = target.position;
         smoothedFocus = target.position + lookAtOffset;
         isInitialized = true;
@@ -158,7 +166,8 @@ public class CameraFollow : MonoBehaviour
 
     private void UpdateLookAhead()
     {
-        bool isOutOfCombat = playerCombat == null || playerCombat.IsOutOfCombat;
+        bool isOutOfCombat = (playerCombat == null || playerCombat.IsOutOfCombat) &&
+            (playerLockOn == null || !playerLockOn.IsLockedOn);
         Vector3 movementDirection = isOutOfCombat && playerMovement != null
             ? playerMovement.DesiredDirection
             : Vector3.zero;
@@ -226,6 +235,16 @@ public class CameraFollow : MonoBehaviour
             combatFraming
         );
         return Quaternion.Euler(0f, horizontalYaw, 0f) * effectiveOffset;
+    }
+
+    private Vector3 GetLockOnFocus(Vector3 playerFocus)
+    {
+        if (playerLockOn == null)
+            playerLockOn = target.GetComponent<PlayerLockOn>();
+
+        return playerLockOn != null && playerLockOn.IsLockedOn
+            ? Vector3.Lerp(playerFocus, playerLockOn.LockPoint, lockOnFocusWeight)
+            : playerFocus;
     }
 
     private static void LockCursor()

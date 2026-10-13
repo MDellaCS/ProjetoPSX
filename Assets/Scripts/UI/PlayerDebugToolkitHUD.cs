@@ -83,21 +83,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         debugPanel = rootVisualElement.Q<VisualElement>("debug-panel");
         debugText = rootVisualElement.Q<Label>("debug-text");
 
-        if (debugPanel == null)
-            Debug.LogWarning(
-                "PlayerDebugToolkitHUD: nao encontrei o elemento " +
-                "'debug-panel' no UXML.",
-                this
-            );
-
         SetVisible(isVisible);
-
-        if (debugText == null)
-            Debug.LogWarning(
-                "PlayerDebugToolkitHUD: nao encontrei o Label " +
-                "'debug-text' no UXML.",
-                this
-            );
     }
 
     private void ResolvePlayerComponents()

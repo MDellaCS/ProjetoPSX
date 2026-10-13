@@ -1,5 +1,4 @@
 using System;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -65,6 +64,18 @@ public class BaseEnemy : MonoBehaviour
     [Min(0f)] [SerializeField] private float outOfCameraAggressionLoss = 16f;
     [Tooltip("Margem, em unidades de mundo, adicionada ao enquadramento da camera antes de o inimigo ser considerado fora de vista.")]
     [Min(0f)] [SerializeField] private float cameraVisibilityPadding = 3f;
+    [Header("Aggression Combat Reactions")]
+    [Tooltip("Reducao imediata de agressividade quando este inimigo recebe dano.")]
+    [Min(0f)] [SerializeField] private float damageTakenAggressionReduction = 12f;
+    [Tooltip("Abaixo desta porcentagem de vida, o proximo Mood Change tende a reduzir agressividade.")]
+    [Range(0f, 1f)] [SerializeField] private float lowEnemyHealthPercent = .35f;
+    [Range(0f, 1f)] [SerializeField] private float lowEnemyHealthDecreaseChance = .75f;
+    [Tooltip("Abaixo desta porcentagem de vida do player, todos os inimigos ganham agressividade continuamente.")]
+    [Range(0f, 1f)] [SerializeField] private float lowPlayerHealthPercent = .3f;
+    [Min(0f)] [SerializeField] private float lowPlayerHealthAggressionGainPerSecond = 14f;
+    [Tooltip("Acima desta porcentagem de Heat/vida do player, os inimigos perdem agressividade continuamente.")]
+    [Range(0f, 1f)] [SerializeField] private float highPlayerHealthPercent = .75f;
+    [Min(0f)] [SerializeField] private float highPlayerHealthAggressionLossPerSecond = 10f;
     [Tooltip("Tempo entre decisoes de perseguir, atacar ou se reposicionar.")]
     [SerializeField] private EnemyFloatRange decisionInterval = new() { min = .3f, max = .7f };
     [Tooltip("Tempo que um reposicionamento aleatorio dura.")]
@@ -98,6 +109,7 @@ public class BaseEnemy : MonoBehaviour
     private Renderer enemyRenderer;
     private DamageNumberSpawner damageNumberSpawner;
     private Transform target;
+    private PlayerHeat playerHeat;
     private State currentState;
     private BaseEnemyAttack currentAttack;
     private int comboIndex;
@@ -114,11 +126,26 @@ public class BaseEnemy : MonoBehaviour
     private float knockbackTimer;
     private float verticalVelocity;
     private float launchGravity;
+    private float launchGravityMultiplier = 1f;
+    private float launchLowGravityMultiplier = 1f;
+    private float launchLowGravityTimer;
+    private float launchLowGravityDuration;
+    private bool launchLowGravityPending;
     private float juggleTimer;
     private float juggleGravityMultiplier = 1f;
     private float juggleDiveFallSpeed;
+    private float juggleBounceLiftSpeed;
+    private float juggleBounceGravity;
+    private Vector3 horizontalLaunchVelocity;
+    private float horizontalLaunchTimer;
+    private int horizontalLaunchWallSplatDamage;
+    private float horizontalLaunchWallSplatStunDuration;
+    private LayerMask horizontalLaunchWallLayers;
     private bool isLaunched;
     private bool isJuggleDiving;
+    private bool isJuggleBouncing;
+    private bool isHorizontallyLaunched;
+    private bool hitWallDuringLaunch;
     private bool hasDamagedDuringActive;
     private bool isEncounterEngaged;
     private bool isWaitingForEncounter;
@@ -136,6 +163,7 @@ public class BaseEnemy : MonoBehaviour
 
     public bool IsDead => hasDied;
     public bool IsLaunched => isLaunched;
+    public bool CanBeLockOnTarget => isActiveAndEnabled && !hasDied && !isWaitingForEncounter;
     public int CurrentHealth { get; private set; }
     public int MaxHealth => maxHealth;
     public State CurrentState => currentState;
@@ -152,9 +180,12 @@ public class BaseEnemy : MonoBehaviour
         controller = GetComponent<CharacterController>();
         enemyRenderer = GetComponentInChildren<Renderer>();
         damageNumberSpawner = GetComponent<DamageNumberSpawner>();
+        if (damageNumberSpawner == null)
+            damageNumberSpawner = gameObject.AddComponent<DamageNumberSpawner>();
         CurrentHealth = maxHealth;
         currentPoise = maxPoise;
         ValidateAggressionBounds();
+        ValidateAggressionReactionThresholds();
         initialAggression = Mathf.Clamp(
             initialAggressionPercent.RandomValue(),
             minimumAggressionPercent,
@@ -180,7 +211,7 @@ public class BaseEnemy : MonoBehaviour
         activeEnemies.Remove(this);
     }
 
-    private void OnValidate()
+    protected virtual void OnValidate()
     {
         // A convencao da base e igual a do player: gravidade e somada a
         // velocidade vertical, portanto queda precisa de valor negativo.
@@ -197,6 +228,7 @@ public class BaseEnemy : MonoBehaviour
             100f
         );
         ValidateAggressionBounds();
+        ValidateAggressionReactionThresholds();
     }
 
     private void Update()
@@ -209,7 +241,7 @@ public class BaseEnemy : MonoBehaviour
         UpdatePoise();
         UpdateVerticalMovement();
 
-        if (isLaunched)
+        if (isLaunched || isHorizontallyLaunched)
         {
             Move(Vector3.zero);
             return;
@@ -290,23 +322,28 @@ public class BaseEnemy : MonoBehaviour
     {
         decisionTimer = Mathf.Max(0.01f, decisionInterval.RandomValue());
         BaseEnemyAttack[] combo = AttackCombo;
-        BaseEnemyAttack firstAttack = combo != null && combo.Length > 0 ? combo[0] : null;
+        int attackIndex = SelectAttackIndex();
+        BaseEnemyAttack selectedAttack = combo != null &&
+            attackIndex >= 0 && attackIndex < combo.Length
+            ? combo[attackIndex]
+            : null;
         float aggression = currentAggressionPercent / 100f;
 
         // Fora do alcance, o inimigo sempre fecha a distancia. A agressividade
         // determina quao rapido ele faz isso; ela nao pode deixa-lo preso em
         // um reposicionamento lateral para sempre.
-        if (firstAttack != null && DistanceToTarget() > firstAttack.maximumRange)
+        if (selectedAttack != null &&
+            DistanceToTarget() > selectedAttack.maximumRange)
         {
             BeginChase(aggression);
             return;
         }
 
-        if (firstAttack != null &&
-            DistanceToTarget() <= firstAttack.maximumRange &&
+        if (selectedAttack != null &&
+            DistanceToTarget() <= selectedAttack.maximumRange &&
             UnityEngine.Random.value <= aggression)
         {
-            BeginAttack(0);
+            BeginAttack(attackIndex);
             return;
         }
 
@@ -326,6 +363,19 @@ public class BaseEnemy : MonoBehaviour
             : side;
         BeginReposition(randomDirection);
     }
+
+    /// <summary>
+    /// Escolhe qual ataque abre a proxima acao. Inimigos simples usam o
+    /// primeiro; tipos derivados podem escolher conforme a distancia.
+    /// </summary>
+    protected virtual int SelectAttackIndex() => 0;
+
+    /// <summary>
+    /// Determina se um ataque pode seguir para o proximo item do array como
+    /// combo. Tipos com ataques situacionais podem desativar isso.
+    /// </summary>
+    protected virtual bool CanContinueAttackCombo(int currentIndex, int nextIndex) =>
+        true;
 
     private void BeginReposition(Vector3 direction)
     {
@@ -393,6 +443,7 @@ public class BaseEnemy : MonoBehaviour
         bool canContinue = combo != null && nextIndex < combo.Length &&
             combo[nextIndex] != null && target != null &&
             DistanceToTarget() <= combo[nextIndex].maximumRange &&
+            CanContinueAttackCombo(comboIndex, nextIndex) &&
             UnityEngine.Random.value <= comboContinuationChance / 100f;
 
         if (canContinue)
@@ -464,21 +515,48 @@ public class BaseEnemy : MonoBehaviour
 
     private void Move(Vector3 horizontalVelocity)
     {
-        Vector3 velocity = knockbackTimer > 0f
-            ? knockbackVelocity
-            : horizontalVelocity;
+        Vector3 velocity = isHorizontallyLaunched
+            ? horizontalLaunchVelocity
+            : knockbackTimer > 0f
+                ? knockbackVelocity
+                : horizontalVelocity;
 
         if (knockbackTimer > 0f)
             knockbackTimer -= Time.deltaTime;
 
         velocity.y = verticalVelocity;
+        hitWallDuringLaunch = false;
         CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
+
+        if (isHorizontallyLaunched)
+        {
+            if (hitWallDuringLaunch)
+            {
+                ApplyWallSplat();
+                return;
+            }
+
+            horizontalLaunchTimer -= Time.deltaTime;
+            if (horizontalLaunchTimer <= 0f)
+                ResetHorizontalLaunch();
+        }
 
         if (isLaunched && verticalVelocity <= 0f &&
             (flags & CollisionFlags.Below) != 0)
         {
+            if (isJuggleBouncing)
+            {
+                float bounceLiftSpeed = juggleBounceLiftSpeed;
+                float bounceGravity = juggleBounceGravity;
+                ResetJuggleMovement();
+                verticalVelocity = bounceLiftSpeed;
+                launchGravity = bounceGravity;
+                return;
+            }
+
             isLaunched = false;
             verticalVelocity = -2f;
+            ResetLaunchLowGravity();
             ResetJuggleMovement();
             currentState = State.Combat;
             decisionTimer = 0f;
@@ -503,9 +581,14 @@ public class BaseEnemy : MonoBehaviour
                 juggleGravityMultiplier = 1f;
         }
 
+        UpdateLaunchLowGravity();
         float activeGravity = isLaunched ? launchGravity : gravity;
+        float activeGravityMultiplier = isLaunched
+            ? launchGravityMultiplier
+            : 1f;
         verticalVelocity = Mathf.Max(
-            verticalVelocity + activeGravity * juggleGravityMultiplier * Time.deltaTime,
+            verticalVelocity + activeGravity * activeGravityMultiplier *
+            juggleGravityMultiplier * Time.deltaTime,
             -terminalFallSpeed
         );
     }
@@ -624,7 +707,12 @@ public class BaseEnemy : MonoBehaviour
 
     private void SelectAggressionChange()
     {
-        aggressionChangeDirection = UnityEngine.Random.value < .5f ? -1f : 1f;
+        float decreaseChance = CurrentHealthPercent <= lowEnemyHealthPercent
+            ? lowEnemyHealthDecreaseChance
+            : .5f;
+        aggressionChangeDirection = UnityEngine.Random.value < decreaseChance
+            ? -1f
+            : 1f;
         aggressionChangeRate = Mathf.Max(
             0f,
             aggressionChangeRatePerSecond.RandomValue()
@@ -645,7 +733,29 @@ public class BaseEnemy : MonoBehaviour
         if (!IsInsideCameraVisibilityPadding())
             aggressionVelocity -= outOfCameraAggressionLoss;
 
+        float playerHealthPercent = GetPlayerHealthPercent();
+        if (playerHealthPercent <= lowPlayerHealthPercent)
+            aggressionVelocity += lowPlayerHealthAggressionGainPerSecond;
+        else if (playerHealthPercent >= highPlayerHealthPercent)
+            aggressionVelocity -= highPlayerHealthAggressionLossPerSecond;
+
         return aggressionVelocity;
+    }
+
+    private float CurrentHealthPercent => maxHealth > 0
+        ? Mathf.Clamp01((float)CurrentHealth / maxHealth)
+        : 0f;
+
+    private float GetPlayerHealthPercent()
+    {
+        if (playerHeat == null)
+            return .5f;
+
+        return Mathf.InverseLerp(
+            playerHeat.MinHeat,
+            playerHeat.MaxHeat,
+            playerHeat.CurrentHeat
+        );
     }
 
     private bool IsPlayerBackTurnedToEnemy()
@@ -701,6 +811,18 @@ public class BaseEnemy : MonoBehaviour
         );
     }
 
+    private void ValidateAggressionReactionThresholds()
+    {
+        lowEnemyHealthPercent = Mathf.Clamp01(lowEnemyHealthPercent);
+        lowEnemyHealthDecreaseChance = Mathf.Clamp01(lowEnemyHealthDecreaseChance);
+        lowPlayerHealthPercent = Mathf.Clamp01(lowPlayerHealthPercent);
+        highPlayerHealthPercent = Mathf.Clamp(
+            highPlayerHealthPercent,
+            lowPlayerHealthPercent,
+            1f
+        );
+    }
+
     public void TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage)
     {
         if (hasDied)
@@ -708,6 +830,10 @@ public class BaseEnemy : MonoBehaviour
 
         CurrentHealth -= damage;
         damageNumberSpawner?.ShowDamage(damage);
+        currentAggressionPercent = Mathf.Max(
+            minimumAggressionPercent,
+            currentAggressionPercent - damageTakenAggressionReduction
+        );
         FlashDamage();
         ApplyPoiseDamage(poiseDamage, attackerPosition);
 
@@ -760,7 +886,8 @@ public class BaseEnemy : MonoBehaviour
         currentState = State.Staggered;
     }
 
-    public void ApplyLaunchUp(float initialSpeed, float gravity)
+    public void ApplyLaunchUp(float initialSpeed, float gravity,
+        float lowGravityMultiplier, float lowGravityDuration)
     {
         if (!canBeLaunched || hasDied)
             return;
@@ -771,8 +898,37 @@ public class BaseEnemy : MonoBehaviour
         knockbackTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravity = gravity;
+        launchGravityMultiplier = 1f;
+        launchLowGravityMultiplier = Mathf.Clamp01(lowGravityMultiplier);
+        launchLowGravityTimer = 0f;
+        launchLowGravityDuration = Mathf.Max(0f, lowGravityDuration);
+        launchLowGravityPending = launchLowGravityDuration > 0f &&
+            launchLowGravityMultiplier < 1f;
         isLaunched = true;
         ResetJuggleMovement();
+    }
+
+    public void ApplyLaunch(Vector3 attackerPosition, float force, float duration,
+        int wallSplatDamage, float wallSplatStunDuration, LayerMask wallSplatLayers)
+    {
+        if (!canBeLaunched || hasDied || force <= 0f || duration <= 0f)
+            return;
+
+        Vector3 direction = transform.position - attackerPosition;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .001f)
+            direction = transform.forward;
+
+        currentAttack = null;
+        repositionTimer = 0f;
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+        horizontalLaunchVelocity = direction.normalized * force;
+        horizontalLaunchTimer = duration;
+        horizontalLaunchWallSplatDamage = Mathf.Max(0, wallSplatDamage);
+        horizontalLaunchWallSplatStunDuration = Mathf.Max(0f, wallSplatStunDuration);
+        horizontalLaunchWallLayers = wallSplatLayers;
+        isHorizontallyLaunched = true;
     }
 
     public void ApplyAerialJuggleLight(float liftSpeed, float gravity,
@@ -784,10 +940,36 @@ public class BaseEnemy : MonoBehaviour
         currentAttack = null;
         verticalVelocity = liftSpeed;
         launchGravity = gravity;
+        ResetLaunchLowGravity();
         juggleGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
         juggleTimer = Mathf.Max(juggleTimer, duration);
         juggleDiveFallSpeed = 0f;
         isJuggleDiving = false;
+        isJuggleBouncing = false;
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (!isHorizontallyLaunched || hit == null || hit.collider == null)
+            return;
+
+        // Chao e teto nao contam como parede. Uma parede possui normal quase
+        // horizontal; rampas muito inclinadas tambem ficam fora do Wall Splat.
+        if (Mathf.Abs(hit.normal.y) > .5f)
+            return;
+
+        Collider obstacle = hit.collider;
+        if (obstacle.GetComponentInParent<BaseEnemy>() != null ||
+            obstacle.GetComponentInParent<PlayerMovement>() != null)
+        {
+            return;
+        }
+
+        int obstacleLayer = obstacle.gameObject.layer;
+        if ((horizontalLaunchWallLayers.value & (1 << obstacleLayer)) == 0)
+            return;
+
+        hitWallDuringLaunch = true;
     }
 
     public void ApplyAerialJuggleDive(float fallSpeed)
@@ -797,9 +979,28 @@ public class BaseEnemy : MonoBehaviour
 
         currentAttack = null;
         juggleTimer = 0f;
+        ResetLaunchLowGravity();
         juggleGravityMultiplier = 1f;
         juggleDiveFallSpeed = fallSpeed;
         isJuggleDiving = true;
+        isJuggleBouncing = false;
+    }
+
+    public void ApplyAerialJuggleBounce(float fallSpeed, float bounceLiftSpeed,
+        float bounceGravity)
+    {
+        if (!canBeJuggled || !isLaunched || hasDied)
+            return;
+
+        currentAttack = null;
+        juggleTimer = 0f;
+        ResetLaunchLowGravity();
+        juggleGravityMultiplier = 1f;
+        juggleDiveFallSpeed = fallSpeed;
+        juggleBounceLiftSpeed = bounceLiftSpeed;
+        juggleBounceGravity = bounceGravity;
+        isJuggleDiving = true;
+        isJuggleBouncing = true;
     }
 
     public void SetEncounterEngaged(Transform encounterPlayer)
@@ -874,16 +1075,97 @@ public class BaseEnemy : MonoBehaviour
         juggleGravityMultiplier = 1f;
         juggleDiveFallSpeed = 0f;
         isJuggleDiving = false;
+        juggleBounceLiftSpeed = 0f;
+        juggleBounceGravity = 0f;
+        isJuggleBouncing = false;
+    }
+
+    private void UpdateLaunchLowGravity()
+    {
+        if (!isLaunched)
+        {
+            launchGravityMultiplier = 1f;
+            return;
+        }
+
+        if (launchLowGravityPending)
+        {
+            // A sustentacao comeca somente quando a subida terminou.
+            if (verticalVelocity > 0f)
+                return;
+
+            launchLowGravityPending = false;
+            launchLowGravityTimer = launchLowGravityDuration;
+            launchGravityMultiplier = launchLowGravityMultiplier;
+        }
+
+        if (launchLowGravityTimer <= 0f)
+        {
+            launchGravityMultiplier = 1f;
+            return;
+        }
+
+        launchLowGravityTimer = Mathf.Max(
+            0f,
+            launchLowGravityTimer - Time.deltaTime
+        );
+
+        if (launchLowGravityTimer <= 0f)
+            launchGravityMultiplier = 1f;
+    }
+
+    private void ResetLaunchLowGravity()
+    {
+        launchLowGravityTimer = 0f;
+        launchLowGravityDuration = 0f;
+        launchLowGravityPending = false;
+        launchGravityMultiplier = 1f;
+        launchLowGravityMultiplier = 1f;
+    }
+
+    private void ResetHorizontalLaunch()
+    {
+        horizontalLaunchVelocity = Vector3.zero;
+        horizontalLaunchTimer = 0f;
+        horizontalLaunchWallSplatDamage = 0;
+        horizontalLaunchWallSplatStunDuration = 0f;
+        isHorizontallyLaunched = false;
+        hitWallDuringLaunch = false;
+    }
+
+    private void ApplyWallSplat()
+    {
+        int damage = horizontalLaunchWallSplatDamage;
+        float stunDuration = horizontalLaunchWallSplatStunDuration;
+        ResetHorizontalLaunch();
+
+        if (damage > 0)
+            TakeDamage(damage, transform.position, 0);
+
+        if (hasDied)
+            return;
+
+        currentAttack = null;
+        repositionTimer = 0f;
+        stateTimer = stunDuration;
+        currentState = stunDuration > 0f ? State.Staggered : State.Combat;
     }
 
     private void ResolvePlayer()
     {
         if (target != null)
+        {
+            if (playerHeat == null)
+                playerHeat = target.GetComponent<PlayerHeat>();
             return;
+        }
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
+        {
             target = player.transform;
+            playerHeat = player.GetComponent<PlayerHeat>();
+        }
     }
 
     private void OnDrawGizmos()
@@ -929,7 +1211,9 @@ public class BaseEnemy : MonoBehaviour
                 " / " + currentAttack.recoveryDuration.ToString("0.00")
             : "W/A/R: -";
         string targetName = target != null ? target.name : "None";
-        string status = isJuggleDiving ? "DIVE" :
+        string status = isHorizontallyLaunched ? "LAUNCH" :
+            isJuggleBouncing ? "BOUNCE" :
+            isJuggleDiving ? "DIVE" :
             isLaunched ? "LAUNCHED" :
             IsSearchingLastKnownPosition ? "SEARCHING" : "GROUND";
         float aggressionVelocity = GetCurrentAggressionVelocity();

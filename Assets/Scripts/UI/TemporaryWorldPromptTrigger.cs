@@ -256,10 +256,6 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
                 capsule.height *= multiplier;
                 break;
             default:
-                Debug.LogWarning(
-                    "TemporaryWorldPromptTrigger: expansao disponivel para Box, Sphere ou Capsule Collider.",
-                    this
-                );
                 break;
         }
 

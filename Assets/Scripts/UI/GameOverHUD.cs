@@ -47,15 +47,6 @@ public class GameOverHUD : MonoBehaviour
         overlay = rootVisualElement.Q<VisualElement>("game-over-overlay");
         deathMessageText = rootVisualElement.Q<Label>("game-over-message");
 
-        if (overlay == null || deathMessageText == null)
-        {
-            Debug.LogWarning(
-                "GameOverHUD: UXML precisa de 'game-over-overlay' e " +
-                "'game-over-message'.",
-                this
-            );
-        }
-
         SetVisible(false);
     }
 

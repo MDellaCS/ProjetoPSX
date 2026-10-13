@@ -149,13 +149,6 @@ public class BossHealthHUD : MonoBehaviour
 
     private void ValidateElement(VisualElement element, string elementName)
     {
-        if (element == null)
-        {
-            Debug.LogWarning(
-                "BossHealthHUD: nao encontrei o elemento '" +
-                elementName + "' no UXML.",
-                this
-            );
-        }
+        // Elementos ausentes deixam apenas a parte correspondente do HUD inerte.
     }
 }

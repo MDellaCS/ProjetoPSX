@@ -137,14 +137,7 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         promptBody = rootVisualElement.Q<Label>("temporary-world-prompt-body");
 
         if (promptPanel == null || promptKeys == null || promptBody == null)
-        {
-            Debug.LogWarning(
-                "TemporaryWorldPromptHUD: UXML precisa de 'temporary-world-prompt', " +
-                "'temporary-world-prompt-keys' e 'temporary-world-prompt-body'.",
-                this
-            );
             return;
-        }
 
         if (currentPrompt != null)
             SetPromptContent(currentPrompt);

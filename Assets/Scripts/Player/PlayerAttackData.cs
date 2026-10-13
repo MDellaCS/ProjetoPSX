@@ -38,8 +38,12 @@ public class PlayerAttackData
     [Header("Attack Type")]
     public bool isHeavy = false;
     public bool isLaunchUp = false;
+    [Tooltip("Arremessa o inimigo horizontalmente, podendo causar Wall Splat ao bater no cenario.")]
+    public bool isLaunch = false;
     public bool launchesPlayer = false;
     public bool isAerial = false;
+    [Tooltip("Ao acertar um inimigo no ar, força uma queda rapida e um impulso ao tocar o chao.")]
+    public bool isAerialBounce = false;
     public bool isDashAttack = false;
 
     private static AnimationCurve CreateWindupEaseInCurve()

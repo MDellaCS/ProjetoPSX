@@ -58,7 +58,7 @@ public class PlayerComboController : MonoBehaviour
     [Header("4. Heavy Route: H1 - H2 / H1 - PAUSE - H2'")]
     public PlayerAttackData h1 = Heavy("H1", 35, .25f, .18f, .35f, 1.60f, 1.00f, 500, 35, .55f);
     public PlayerAttackData h2 = LaunchHeavy("H2", 55, .35f, .22f, .55f, 1.90f, 1.25f, 700, 55, .90f);
-    public PlayerAttackData h2Prime = Heavy("H2'", 70, .48f, .25f, .80f, 2.10f, 1.45f, 900, 70, 1.15f);
+    public PlayerAttackData h2Prime = HorizontalLaunchHeavy("H2'", 70, .48f, .25f, .80f, 2.10f, 1.45f, 900, 70, 1.15f);
 
     [Header("5. Mixed Routes: L1 - L2 - H1' / H1 - L1' - L2''")]
     public PlayerAttackData h1Prime = LaunchHeavy("H1'", 65, .30f, .23f, .60f, 2.00f, 1.35f, 800, 65, .95f);
@@ -73,7 +73,7 @@ public class PlayerComboController : MonoBehaviour
     public PlayerAttackData aerialL1 = AerialLight("Air L1", 18, .07f, .12f, .1f, 1.30f, .80f, 150, 8);
     public PlayerAttackData aerialL2 = AerialLight("Air L2", 24, .07f, .13f, .1f, 1.45f, .85f, 180, 12);
     public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 250, 18);
-    public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
+    public PlayerAttackData aerialL4 = AerialBounce("Air L4 Bounce", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
     public PlayerAttackData aerialH1 = AerialHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 350, 38);
 
     [Header("8. Dash Attacks")]
@@ -119,12 +119,20 @@ public class PlayerComboController : MonoBehaviour
     [SerializeField, HideInInspector]
     private int dashAttackDataVersion;
 
+    [SerializeField, HideInInspector]
+    private int aerialBounceDataVersion;
+
+    [SerializeField, HideInInspector]
+    private int horizontalLaunchDataVersion;
+
     #endregion
 
     private void Awake()
     {
         EnsureWindupMovementDefaults();
         EnsureDashAttackDefaults();
+        EnsureAerialBounceDefaults();
+        EnsureHorizontalLaunchDefaults();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
         playerState = GetComponent<PlayerState>();
@@ -136,6 +144,8 @@ public class PlayerComboController : MonoBehaviour
     {
         EnsureWindupMovementDefaults();
         EnsureDashAttackDefaults();
+        EnsureAerialBounceDefaults();
+        EnsureHorizontalLaunchDefaults();
     }
 
     private void EnsureWindupMovementDefaults()
@@ -169,6 +179,28 @@ public class PlayerComboController : MonoBehaviour
             dashLightSequence = DashLightSequence();
 
         dashAttackDataVersion = 1;
+    }
+
+    private void EnsureAerialBounceDefaults()
+    {
+        if (aerialBounceDataVersion >= 1)
+            return;
+
+        if (aerialL4 != null)
+            aerialL4.isAerialBounce = true;
+
+        aerialBounceDataVersion = 1;
+    }
+
+    private void EnsureHorizontalLaunchDefaults()
+    {
+        if (horizontalLaunchDataVersion >= 1)
+            return;
+
+        if (h2Prime != null)
+            h2Prime.isLaunch = true;
+
+        horizontalLaunchDataVersion = 1;
     }
 
     private static void SetWindupMovement(
@@ -385,7 +417,7 @@ public class PlayerComboController : MonoBehaviour
     private void Execute(ComboNode node)
     {
         PlayerAttackData attack = GetAttack(node);
-        if (attack == null) { Debug.LogWarning($"Moveset: ataque {node} nao configurado.", this); CancelCombo(); return; }
+        if (attack == null) { CancelCombo(); return; }
 
         currentNode = node;
         isAerialCombo = IsAerialNode(node);
@@ -428,10 +460,7 @@ public class PlayerComboController : MonoBehaviour
     private void ExecuteSequence(PlayerAttackSequence sequence)
     {
         if (sequence == null || !sequence.HasStrikes)
-        {
-            Debug.LogWarning("Moveset: sequencia de ataque nao configurada.", this);
             return;
-        }
 
         currentNode = ComboNode.None;
         isAerialCombo = false;
@@ -634,6 +663,13 @@ public class PlayerComboController : MonoBehaviour
         return attack;
     }
 
+    private static PlayerAttackData HorizontalLaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger, float windupMoveDistance)
+    {
+        PlayerAttackData attack = Heavy(name, damage, windup, active, recovery, distance, radius, generateHeat, stagger, windupMoveDistance);
+        attack.isLaunch = true;
+        return attack;
+    }
+
     private static PlayerAttackData AerialLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger)
     {
         return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatRemovedOnHit = coolHeat, staggerDamage = stagger, isHeavy = false, isAerial = true };
@@ -642,6 +678,13 @@ public class PlayerComboController : MonoBehaviour
     private static PlayerAttackData AerialHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger)
     {
         return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGenerated = generateHeat, staggerDamage = stagger, isHeavy = true, isAerial = true };
+    }
+
+    private static PlayerAttackData AerialBounce(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger)
+    {
+        PlayerAttackData attack = AerialLight(name, damage, windup, active, recovery, distance, radius, coolHeat, stagger);
+        attack.isAerialBounce = true;
+        return attack;
     }
 
     private static PlayerAttackData DashLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger, float windupMoveDistance)

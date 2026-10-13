@@ -48,6 +48,26 @@ public class PlayerCombat : MonoBehaviour
     [Range(0f, 1f)] public float juggleGravityMultiplier = .3f;
     [Tooltip("Velocidade vertical da queda de qualquer pesado aereo.")]
     [Min(0f)] public float aerialDiveFallSpeed = 28f;
+    [Tooltip("Velocidade da queda do Bounce. Limitada pela velocidade terminal do inimigo.")]
+    [Min(0f)] public float aerialBounceFallSpeed = 30f;
+    [Tooltip("Impulso vertical que o inimigo recebe ao tocar o chao durante um Bounce.")]
+    [Min(0f)] public float aerialBounceLiftSpeed = 14f;
+
+    [Header("Launch Up")]
+    [Tooltip("Gravidade aplicada apos o apice de Launch Up e Self Launch Up. Menor valor deixa a queda mais sustentada.")]
+    [Range(0f, 1f)] public float launchUpLowGravityMultiplier = .2f;
+    [Tooltip("Por quanto tempo a gravidade reduzida de Launch Up permanece ativa.")]
+    [Min(0f)] public float launchUpLowGravityDuration = .55f;
+
+    [Header("Launch And Wall Splat")]
+    [Tooltip("Velocidade horizontal aplicada por ataques marcados como Is Launch.")]
+    [Min(0f)] public float launchForce = 16f;
+    [Tooltip("Tempo maximo que o inimigo permanece sendo arremessado caso nao bata em uma parede.")]
+    [Min(0f)] public float launchDuration = .65f;
+    [Min(0)] public int wallSplatDamage = 20;
+    [Min(0f)] public float wallSplatStunDuration = 1f;
+    [Tooltip("Camadas do cenario que contam como parede para Wall Splat.")]
+    [SerializeField] private LayerMask wallSplatLayers = ~0;
 
     [Header("Combat Status")]
     [Min(0f)]
@@ -55,6 +75,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private float combatTimerDuration = 10f;
 
     private PlayerMovement playerMovement;
+    private PlayerLockOn playerLockOn;
     private Vector3 attackFacingDirection;
     private bool hasAggroedEnemies;
     private float combatTimer;
@@ -80,12 +101,15 @@ public class PlayerCombat : MonoBehaviour
         combatTimer = 0f;
         PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerComboController.GetOrAdd(gameObject);
+        playerLockOn = PlayerLockOn.GetOrAdd(gameObject);
     }
 
     void Start()
     {
         playerState = GetComponent<PlayerState>();
         playerMovement = GetComponent<PlayerMovement>();
+        if (playerLockOn == null)
+            playerLockOn = GetComponent<PlayerLockOn>();
         playerHeat = GetComponent<PlayerHeat>();
     }
 
@@ -172,11 +196,6 @@ public class PlayerCombat : MonoBehaviour
             attackRadius,
             isHeavy,
             generatedHeat
-        );
-
-        Debug.Log(
-            "Ataque iniciado: " +
-            currentAttack.attackName
         );
 
         return true;
@@ -460,7 +479,21 @@ public class PlayerCombat : MonoBehaviour
                 {
                     enemy.ApplyLaunchUp(
                         GetLaunchUpInitialSpeed(),
-                        GetLaunchUpGravity()
+                        GetLaunchUpGravity(),
+                        launchUpLowGravityMultiplier,
+                        launchUpLowGravityDuration
+                    );
+                }
+
+                if (currentAttack.isLaunch)
+                {
+                    enemy.ApplyLaunch(
+                        transform.position,
+                        launchForce,
+                        launchDuration,
+                        wallSplatDamage,
+                        wallSplatStunDuration,
+                        wallSplatLayers
                     );
                 }
 
@@ -515,7 +548,9 @@ public class PlayerCombat : MonoBehaviour
         // mas tambem lanca o player quando o golpe erra.
         playerMovement?.ApplySelfLaunchUp(
             GetLaunchUpInitialSpeed(),
-            GetLaunchUpGravity()
+            GetLaunchUpGravity(),
+            launchUpLowGravityMultiplier,
+            launchUpLowGravityDuration
         );
         hasLaunchedPlayer = true;
     }
@@ -523,7 +558,7 @@ public class PlayerCombat : MonoBehaviour
     private float GetLaunchUpInitialSpeed()
     {
         return playerMovement != null
-            ? playerMovement.jumpInitialSpeed
+            ? playerMovement.GetMaximumJumpLaunchSpeed()
             : 18f;
     }
 
@@ -609,8 +644,9 @@ public class PlayerCombat : MonoBehaviour
 
         ApplyAerialAttackMovement(attack);
 
-        attackFacingDirection = transform.forward;
-        if (playerMovement != null &&
+        attackFacingDirection = GetLockOnDirectionOrZero();
+        if (attackFacingDirection.sqrMagnitude <= 0.0001f &&
+            playerMovement != null &&
             playerMovement.DesiredDirection.sqrMagnitude > 0.0001f)
         {
             attackFacingDirection = playerMovement.DesiredDirection.normalized;
@@ -635,6 +671,16 @@ public class PlayerCombat : MonoBehaviour
         // Juggle pertence ao estado do inimigo, nao ao estado do player:
         // leves e pesados no chao podem manter no ar um alvo ja lancado.
         // O pesado aereo e o unico caso especial: ele inicia o Dive.
+        if (currentAttack.isAerialBounce)
+        {
+            enemy.ApplyAerialJuggleBounce(
+                aerialBounceFallSpeed,
+                aerialBounceLiftSpeed,
+                GetLaunchUpGravity()
+            );
+            return;
+        }
+
         if (currentAttack.isHeavy && currentAttack.isAerial)
         {
             enemy.ApplyAerialJuggleDive(aerialDiveFallSpeed);
@@ -671,7 +717,9 @@ public class PlayerCombat : MonoBehaviour
         if (playerMovement == null)
             return;
 
-        Vector3 direction = playerMovement.DesiredDirection;
+        Vector3 direction = GetLockOnDirectionOrZero();
+        if (direction.sqrMagnitude <= 0.0001f)
+            direction = playerMovement.DesiredDirection;
         direction.y = 0f;
 
         if (direction.sqrMagnitude > 0.0001f)
@@ -689,7 +737,9 @@ public class PlayerCombat : MonoBehaviour
             return;
         }
 
-        Vector3 direction = playerMovement.DesiredDirection;
+        Vector3 direction = GetLockOnDirectionOrZero();
+        if (direction.sqrMagnitude <= 0.0001f)
+            direction = playerMovement.DesiredDirection;
 
         if (direction.sqrMagnitude <= 0.0001f)
             return;
@@ -712,6 +762,16 @@ public class PlayerCombat : MonoBehaviour
             targetRotation,
             attackingRotationSpeed * Time.deltaTime
         );
+    }
+
+    private Vector3 GetLockOnDirectionOrZero()
+    {
+        if (playerLockOn == null)
+            playerLockOn = GetComponent<PlayerLockOn>();
+
+        return playerLockOn != null
+            ? playerLockOn.GetDirectionToLockedTarget()
+            : Vector3.zero;
     }
 
     void OnDrawGizmos()
