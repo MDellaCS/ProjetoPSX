@@ -25,6 +25,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerState playerState;
     private PlayerHeat playerHeat;
     private PlayerCombat playerCombat;
+    private PlayerInputBuffer playerInputBuffer;
 
     private VisualElement debugPanel;
     private Label debugText;
@@ -104,6 +105,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         playerState = playerTransform.GetComponent<PlayerState>();
         playerHeat = playerTransform.GetComponent<PlayerHeat>();
         playerCombat = playerTransform.GetComponent<PlayerCombat>();
+        playerInputBuffer = playerTransform.GetComponent<PlayerInputBuffer>();
     }
 
     private bool HasPlayerComponents()
@@ -111,7 +113,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         return playerMovement != null &&
                playerState != null &&
                playerHeat != null &&
-               playerCombat != null;
+               playerCombat != null &&
+               playerInputBuffer != null;
     }
 
     private void SetVisible(bool value)
@@ -182,6 +185,12 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(playerHeat.MaxSuperheat.ToString());
         textBuilder.Append("ATTACKING: ")
             .AppendLine(playerCombat.IsAttacking ? "YES" : "NO");
+        textBuilder.Append("MOUSE: ")
+            .AppendLine(playerInputBuffer.HasMouseDevice ? "READY" : "MISSING");
+        textBuilder.Append("CLICKS DETECTED: L ")
+            .Append(playerInputBuffer.LightPressesDetected)
+            .Append(" / H ")
+            .AppendLine(playerInputBuffer.HeavyPressesDetected.ToString());
 
         debugText.text = textBuilder.ToString();
     }

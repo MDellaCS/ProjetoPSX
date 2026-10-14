@@ -124,6 +124,8 @@ public class BaseEnemy : MonoBehaviour
     private bool hasLastKnownPlayerPosition;
     private Vector3 knockbackVelocity;
     private float knockbackTimer;
+    private Vector3 playerHeadPushVelocity;
+    private float playerHeadPushTimer;
     private float verticalVelocity;
     private float launchGravity;
     private float launchGravityMultiplier = 1f;
@@ -162,6 +164,7 @@ public class BaseEnemy : MonoBehaviour
     private static GUIStyle debugTextStyle;
 
     public bool IsDead => hasDied;
+    public bool CanBeLaunched => canBeLaunched && !hasDied;
     public bool IsLaunched => isLaunched;
     public bool CanBeLockOnTarget => isActiveAndEnabled && !hasDied && !isWaitingForEncounter;
     public int CurrentHealth { get; private set; }
@@ -517,9 +520,14 @@ public class BaseEnemy : MonoBehaviour
     {
         Vector3 velocity = isHorizontallyLaunched
             ? horizontalLaunchVelocity
+            : playerHeadPushTimer > 0f
+                ? playerHeadPushVelocity
             : knockbackTimer > 0f
                 ? knockbackVelocity
                 : horizontalVelocity;
+
+        if (playerHeadPushTimer > 0f)
+            playerHeadPushTimer -= Time.deltaTime;
 
         if (knockbackTimer > 0f)
             knockbackTimer -= Time.deltaTime;
@@ -950,7 +958,18 @@ public class BaseEnemy : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if (!isHorizontallyLaunched || hit == null || hit.collider == null)
+        if (hit == null || hit.collider == null)
+            return;
+
+        PlayerMovement hitPlayer =
+            hit.collider.GetComponentInParent<PlayerMovement>();
+        if (hitPlayer != null && IsLandingOnPlayerTop(hitPlayer))
+        {
+            PushOffPlayerHead(hitPlayer);
+            return;
+        }
+
+        if (!isHorizontallyLaunched)
             return;
 
         // Chao e teto nao contam como parede. Uma parede possui normal quase
@@ -970,6 +989,38 @@ public class BaseEnemy : MonoBehaviour
             return;
 
         hitWallDuringLaunch = true;
+    }
+
+    private bool IsLandingOnPlayerTop(PlayerMovement player)
+    {
+        if (controller == null || verticalVelocity > 0f)
+            return false;
+
+        CharacterController playerController =
+            player.GetComponent<CharacterController>();
+        if (playerController == null)
+            return false;
+
+        const float topContactTolerance = .15f;
+        float enemyBottom = controller.bounds.min.y;
+        float playerTop = playerController.bounds.max.y;
+        return enemyBottom >= playerTop - topContactTolerance;
+    }
+
+    private void PushOffPlayerHead(PlayerMovement player)
+    {
+        // O mesmo valor usado pelo Player ao cair num inimigo tambem impede
+        // que inimigos usem a cabeca do player como plataforma.
+        float pushSpeed = player.enemyHeadPushSpeed;
+        Vector3 pushDirection = transform.position - player.transform.position;
+        pushDirection.y = 0f;
+
+        if (pushDirection.sqrMagnitude <= .0001f)
+            pushDirection = transform.right;
+
+        playerHeadPushVelocity = pushDirection.normalized * pushSpeed;
+        playerHeadPushTimer = .1f;
+        verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
     public void ApplyAerialJuggleDive(float fallSpeed)

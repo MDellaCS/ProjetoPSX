@@ -39,7 +39,7 @@ public class CameraFollow : MonoBehaviour
 
     [Header("Lock On Framing")]
     [Tooltip("Quanto o foco da mesma camera se desloca do player em direcao ao inimigo travado.")]
-    [Range(0f, 1f)] public float lockOnFocusWeight = .5f;
+    [Range(0f, 1f)] public float lockOnFocusWeight = .22f;
 
     [Header("Scene Collision")]
     public LayerMask collisionLayers = ~0;

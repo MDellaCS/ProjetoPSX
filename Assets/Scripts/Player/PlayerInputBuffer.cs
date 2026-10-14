@@ -24,6 +24,10 @@ public class PlayerInputBuffer : MonoBehaviour
     private float expirationTime = -1f;
     private int lastCapturedFrame = -1;
 
+    public bool HasMouseDevice => Mouse.current != null;
+    public int LightPressesDetected { get; private set; }
+    public int HeavyPressesDetected { get; private set; }
+
     private void Update()
     {
         CaptureInputsForCurrentFrame();
@@ -50,9 +54,13 @@ public class PlayerInputBuffer : MonoBehaviour
         PlayerInputBuffer buffer =
             player.GetComponent<PlayerInputBuffer>();
 
-        return buffer != null
-            ? buffer
-            : player.AddComponent<PlayerInputBuffer>();
+        if (buffer == null)
+            return player.AddComponent<PlayerInputBuffer>();
+
+        if (!buffer.enabled)
+            buffer.enabled = true;
+
+        return buffer;
     }
 
     private void CaptureInputsForCurrentFrame()
@@ -66,10 +74,16 @@ public class PlayerInputBuffer : MonoBehaviour
         if (mouse != null)
         {
             if (mouse.leftButton.wasPressedThisFrame)
+            {
+                LightPressesDetected++;
                 Buffer(PlayerBufferedInput.LightAttack);
+            }
 
             if (mouse.rightButton.wasPressedThisFrame)
+            {
+                HeavyPressesDetected++;
                 Buffer(PlayerBufferedInput.HeavyAttack);
+            }
         }
 
         Keyboard keyboard = Keyboard.current;

@@ -270,11 +270,13 @@ public class PlayerComboController : MonoBehaviour
         PlayerBufferedInput bufferedAction,
         AttackInput input)
     {
-        if (!CanAcceptInput() ||
-            !inputBuffer.TryConsume(bufferedAction))
+        if (!CanAcceptInput())
         {
             return;
         }
+
+        if (!inputBuffer.TryConsume(bufferedAction))
+            return;
 
         HandleInput(input);
     }
@@ -417,7 +419,11 @@ public class PlayerComboController : MonoBehaviour
     private void Execute(ComboNode node)
     {
         PlayerAttackData attack = GetAttack(node);
-        if (attack == null) { CancelCombo(); return; }
+        if (attack == null)
+        {
+            CancelCombo();
+            return;
+        }
 
         currentNode = node;
         isAerialCombo = IsAerialNode(node);
@@ -443,7 +449,10 @@ public class PlayerComboController : MonoBehaviour
         );
 
         if (!started)
+        {
             CancelCombo();
+            return;
+        }
     }
 
     private void OnAttackHit(PlayerAttackData attack, int generatedHeat)
@@ -643,7 +652,16 @@ public class PlayerComboController : MonoBehaviour
     public static PlayerComboController GetOrAdd(GameObject player)
     {
         PlayerComboController combo = player.GetComponent<PlayerComboController>();
-        return combo != null ? combo : player.AddComponent<PlayerComboController>();
+        if (combo == null)
+            return player.AddComponent<PlayerComboController>();
+
+        // O combate depende deste leitor de input. Uma recompilacao ou uma
+        // instancia salva com o checkbox desligado nao pode deixar o player
+        // permanentemente sem ataques.
+        if (!combo.enabled)
+            combo.enabled = true;
+
+        return combo;
     }
 
     private static PlayerAttackData Light(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger, float windupMoveDistance)

@@ -12599,16 +12599,16 @@ MonoBehaviour:
   lookAtOffset: {x: 0, y: 2, z: 0}
   horizontalMouseSensitivity: 0.05
   lockCursorOnStart: 1
-  followSmoothTime: 0.07
+  followSmoothTime: 0.1
   deadZoneHorizontal: 0
   deadZoneForward: 0
-  lookAheadDistance: 2
-  lookAheadSmoothTime: 0.5
-  combatDistanceMultiplier: 1.15
+  lookAheadDistance: 0
+  lookAheadSmoothTime: 0.01
+  combatDistanceMultiplier: 1.2
   outOfCombatOffsetY: 1
-  combatOffsetY: 3
-  combatFramingSmoothTime: 1
-  lockOnFocusWeight: 0.5
+  combatOffsetY: 3.5
+  combatFramingSmoothTime: 0.75
+  lockOnFocusWeight: 0.22
   collisionLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -13053,6 +13053,7 @@ GameObject:
   - component: {fileID: 825647901}
   - component: {fileID: 825647902}
   - component: {fileID: 825647903}
+  - component: {fileID: 825647904}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -13088,30 +13089,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2789f22dd40e8a641af880bf88ccaae1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  speed: 7.5
+  speed: 8
   acceleration: 120
-  deceleration: 220
-  rotationSpeed: 10
-  attackMomentumDeceleration: 70
-  crouchSpeedMultiplier: 0.45
+  releaseDeceleration: 90
+  reverseDeceleration: 220
+  momentumDeceleration: 33
+  rotationSpeed: 17
+  attackMomentumDeceleration: 80
+  crouchSpeedMultiplier: 0.3
+  crouchingHeightMultiplier: 0.6
+  crouchingRadiusPercentOfHeight: 0.815
+  colliderResizeSpeed: 15
+  standingClearanceMask:
+    serializedVersion: 2
+    m_Bits: 51
+  standingClearancePadding: 0.05
   slideStartSpeedPercent: 1.1
-  slideEndSpeed: 0.2
-  slideFriction: 16
+  slideEndSpeed: 0.1
+  slideFriction: 14
   slideSlopeAcceleration: 24
-  slideSteeringSpeed: 50
+  steeringStrength: 40
   steepSlopeSlideAcceleration: 30
   steepSlopeMaximumSlideSpeed: 10
   gravity: -60
   terminalFallSpeed: 30
-  jumpInitialSpeed: 15
+  jumpInitialSpeed: 14
   jumpHoldAcceleration: 40
-  maxJumpHoldDuration: 0.15
-  airControl: 30
+  maxJumpHoldDuration: 0.25
+  airControl: 40
   airMaxSpeedMultiplier: 1
-  airDrag: 3
-  dashImpulseMultiplier: 1.5
-  dashDuration: 0.2
-  dashCooldown: 1
+  airDrag: 8
+  dashImpulseMultiplier: 1.6
+  dashDuration: 0.33
+  dashCooldown: 1.3
+  enemyHeadPushSpeed: 10
   cameraTransform: {fileID: 330585546}
   airMovementSettingsVersion: 1
 --- !u!143 &825647891
@@ -14304,6 +14315,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimationPresenter
   playbackRoot: {fileID: 0}
   moveSpeedThreshold: 0.1
+--- !u!114 &825647904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 825647885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7d13a395a7d4fb4ba55cf52f0dfac4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerSlideAttack
+  minimumSlideSpeed: 15
+  hitboxWidthMultiplier: 2
+  hitboxDepthMultiplier: 3
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

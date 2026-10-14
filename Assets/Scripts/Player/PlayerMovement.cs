@@ -14,30 +14,48 @@ public class PlayerMovement : MonoBehaviour
     private const int MaximumJumpCount = 2;
 
     [Header("Walking")]
-    [Min(0f)] public float speed = 7.5f;
+    [Min(0f)] public float speed = 8f;
     [Min(0f)] public float acceleration = 120f;
-    [Min(0f)] public float deceleration = 220f;
-    [Min(0f)] public float rotationSpeed = 15f;
+    [Tooltip("Desaceleracao ao soltar completamente o movimento.")]
+    [Min(0f)] public float releaseDeceleration = 90f;
+    [Tooltip("Desaceleracao ao segurar a direcao oposta ao movimento atual.")]
+    [Min(0f)] public float reverseDeceleration = 220f;
+    [Tooltip("Desaceleracao do momentum extra ao voltar para a Speed normal.")]
+    [Min(0f)] public float momentumDeceleration = 33f;
+    [Min(0f)] public float rotationSpeed = 17f;
 
     [Header("Attack Momentum")]
     [Tooltip("Quao rapido a velocidade de corrida restante desaparece ao iniciar um ataque.")]
-    [Min(0f)] public float attackMomentumDeceleration = 70f;
+    [Min(0f)] public float attackMomentumDeceleration = 80f;
 
     [Header("Crouch")]
     [Tooltip("Botao lateral voltar do mouse. Deve permanecer pressionado para agachar.")]
-    [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.45f;
+    [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.3f;
+    [Tooltip("Multiplicador da altura do CharacterController ao agachar ou deslizar.")]
+    [Range(0.2f, 1f)] public float crouchingHeightMultiplier = 0.6f;
+    [Tooltip("Largura da capsula agachada como porcentagem do maximo fisicamente possivel para sua altura. 1 = o mais largo permitido.")]
+    [Range(0.1f, 1f)] public float crouchingRadiusPercentOfHeight = 0.815f;
+    [Tooltip("Velocidade de transicao da colisao entre em pe e agachado.")]
+    [Min(0f)] public float colliderResizeSpeed = 15f;
+    [Tooltip("Camadas que bloqueiam o retorno para a altura em pe.")]
+    public LayerMask standingClearanceMask = Physics.DefaultRaycastLayers;
+    [Tooltip("Folga extra acima da cabeca exigida antes de voltar a ficar em pe, em unidades do mundo.")]
+    [Min(0f)] public float standingClearancePadding = 0.05f;
 
     [Header("Slide")]
     [Tooltip("Multiplicador da Speed necessario para iniciar um slide. 1.1 significa 110% da velocidade base.")]
     [Min(0f)] public float slideStartSpeedPercent = 1.1f;
     [Tooltip("Velocidade abaixo da qual o slide termina.")]
-    [Min(0f)] public float slideEndSpeed = 0.2f;
+    [Min(0f)] public float slideEndSpeed = 0.1f;
     [Tooltip("Quanto o slide perde de velocidade no chao plano.")]
-    [Min(0f)] public float slideFriction = 16f;
+    [Min(0f)] public float slideFriction = 14f;
     [Tooltip("Aceleracao adicional ao deslizar em uma descida.")]
     [Min(0f)] public float slideSlopeAcceleration = 24f;
-    [Tooltip("Velocidade, em graus por segundo, para curvar levemente o slide.")]
-    [Min(0f)] public float slideSteeringSpeed = 50f;
+
+    [Header("Steering")]
+    [FormerlySerializedAs("slideSteeringSpeed")]
+    [Tooltip("Velocidade, em graus por segundo, para curvar Slide, Dash e Dash Jump.")]
+    [Min(0f)] public float steeringStrength = 40f;
 
     [Header("Steep Slopes")]
     [Tooltip("Aceleracao que puxa o player para baixo em inclinacoes acima do Slope Limit do CharacterController.")]
@@ -51,25 +69,29 @@ public class PlayerMovement : MonoBehaviour
     [Min(2f)] public float terminalFallSpeed = 30f;
 
     [Header("Jump")]
-    [Min(0f)] public float jumpInitialSpeed = 15f;
+    [Min(0f)] public float jumpInitialSpeed = 14f;
     [Min(0f)] public float jumpHoldAcceleration = 40f;
-    [Min(0f)] public float maxJumpHoldDuration = 0.15f;
+    [Min(0f)] public float maxJumpHoldDuration = 0.25f;
 
     [Header("Air Movement")]
     [FormerlySerializedAs("airControlMultiplier")]
     [Tooltip("Aceleracao usada para mudar direcao e velocidade enquanto existe input no ar.")]
-    [Min(0f)] public float airControl = 30f;
+    [Min(0f)] public float airControl = 40f;
     [Tooltip("Multiplicador da Speed no chao que limita a velocidade no ar.")]
     [Min(0f)] public float airMaxSpeedMultiplier = 1f;
     [Tooltip("Desaceleracao passiva do momentum no ar quando nao existe input.")]
-    [Min(0f)] public float airDrag = 3f;
+    [Min(0f)] public float airDrag = 8f;
 
     [Header("Dash")]
     [FormerlySerializedAs("dashSpeedMultiplier")]
     [Tooltip("Impulso unico do Dash, calculado a partir da Speed base do jogador.")]
-    [Min(0f)] public float dashImpulseMultiplier = 1.5f;
-    [Min(0f)] public float dashDuration = 0.2f;
-    [Min(0f)] public float dashCooldown = 1f;
+    [Min(0f)] public float dashImpulseMultiplier = 1.6f;
+    [Min(0f)] public float dashDuration = 0.33f;
+    [Min(0f)] public float dashCooldown = 1.3f;
+
+    [Header("Enemy Body Interaction")]
+    [Tooltip("Impulso horizontal que tira o player de cima de um inimigo.")]
+    [Min(0f)] public float enemyHeadPushSpeed = 10f;
 
     [Header("References")]
     public Transform cameraTransform;
@@ -77,7 +99,8 @@ public class PlayerMovement : MonoBehaviour
     public Vector3 DesiredDirection { get; private set; }
     public float HorizontalSpeed => horizontalVelocity.magnitude;
     public float VerticalSpeed => verticalVelocity;
-    public bool IsGrounded => controller != null && controller.isGrounded;
+    public bool IsGrounded => controller != null && controller.isGrounded &&
+        !IsStandingOnEnemy;
     public float DashCooldownRemaining => dashCooldownTimer;
     public bool IsDashReady =>
         dashCooldownTimer <= 0f &&
@@ -115,6 +138,7 @@ public class PlayerMovement : MonoBehaviour
     private float launchLowGravityMultiplier = 1f;
     private float launchLowGravityTimer;
     private float launchLowGravityDuration;
+    private float enemyGroundContactTimer;
     private bool launchLowGravityPending;
     private int jumpsUsed;
     private bool hasUsedAirDash;
@@ -122,7 +146,15 @@ public class PlayerMovement : MonoBehaviour
     private bool isCrouching;
     private bool isAerialDiving;
     private bool isLaunched;
+    private bool isDashJump;
     private RecoveryCancelAction queuedRecoveryCancelAction;
+
+    private float standingControllerHeight;
+    private float standingControllerRadius;
+    private Vector3 standingControllerCenter;
+    private bool hasCachedStandingControllerShape;
+
+    private bool IsStandingOnEnemy => enemyGroundContactTimer > 0f;
 
     [SerializeField, HideInInspector]
     private int airMovementSettingsVersion;
@@ -131,10 +163,12 @@ public class PlayerMovement : MonoBehaviour
     {
         EnsureAirMovementDefaults();
         controller = GetComponent<CharacterController>();
+        CacheStandingControllerShape();
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
         comboController = PlayerComboController.GetOrAdd(gameObject);
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
+        PlayerSlideAttack.GetOrAdd(gameObject);
 
     }
 
@@ -158,14 +192,21 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        enemyGroundContactTimer = Mathf.Max(
+            0f,
+            enemyGroundContactTimer - Time.deltaTime
+        );
+
         DesiredDirection = ReadMovementDirection();
 
+        TryCancelGroundDashWithCrouch();
         UpdateCrouchState();
         ResetAirActionsWhenGrounded();
         UpdateDashCooldown();
         TryStartSlide();
         TryStartDash();
         TryStartJump();
+        UpdateCharacterControllerShape();
         UpdateVerticalVelocity();
 
         horizontalVelocity = CalculateHorizontalVelocity();
@@ -249,8 +290,12 @@ public class PlayerMovement : MonoBehaviour
         if (!dashStartedGrounded)
             hasUsedAirDash = true;
 
+        isDashJump = false;
+        BreakMomentumIfDashingOpposite();
+
         // O Dash soma um impulso ao momentum atual. Consequentemente, dar
-        // Dash na mesma direcao acelera o player; no sentido oposto, freia.
+        // Dash na mesma direcao acelera o player; no sentido oposto, elimina
+        // o momentum anterior antes de aplicar o novo impulso.
         horizontalVelocity += DesiredDirection * GetDashImpulse();
     }
 
@@ -285,7 +330,10 @@ public class PlayerMovement : MonoBehaviour
         bool isQueuedJump = queuedRecoveryCancelAction ==
             RecoveryCancelAction.Jump;
 
-        bool canStartJump = playerState.IsNormal() || playerState.IsSliding();
+        bool wasDashing = playerState.IsDashing();
+        bool canStartJump = (playerState.IsNormal() || playerState.IsSliding() ||
+            wasDashing) &&
+            !IsStandingOnEnemy;
 
         if ((keyboard == null && !isQueuedJump) || !canStartJump ||
             jumpsUsed >= MaximumJumpCount)
@@ -301,6 +349,23 @@ public class PlayerMovement : MonoBehaviour
         // Pular e deslizar sao acoes mutuamente exclusivas. O pulo encerra o slide antes de aplicar o impulso vertical.
         EndSlide();
         SetCrouching(false);
+
+        if (wasDashing)
+        {
+            // Dash Jump encerra o Dash mais cedo, mas conserva seu impulso
+            // inteiro ate o player realizar outra acao relevante.
+            playerState.ChangeState(PlayerState.State.Normal);
+            dashTimer = 0f;
+            dashStartedGrounded = false;
+            isDashJump = true;
+        }
+        else if (!IsGrounded)
+        {
+            // O pulo aereo comum e uma ferramenta precisa: ele zera a
+            // velocidade horizontal, ao contrario do Dash Jump.
+            horizontalVelocity = Vector3.zero;
+            isDashJump = false;
+        }
 
         verticalVelocity = jumpInitialSpeed;
         jumpHoldTimer = maxJumpHoldDuration;
@@ -344,16 +409,30 @@ public class PlayerMovement : MonoBehaviour
 
         jumpsUsed = 0;
         hasUsedAirDash = false;
+        isDashJump = false;
     }
 
     private void UpdateCrouchState()
     {
         Mouse mouse = Mouse.current;
         bool wantsToCrouch = mouse != null && mouse.backButton.isPressed;
+
         bool canCrouch = IsGrounded &&
             (playerState.IsNormal() || playerState.IsSliding());
 
         SetCrouching(wantsToCrouch && canCrouch);
+    }
+
+    private void TryCancelGroundDashWithCrouch()
+    {
+        if (!IsGroundDash || !IsCrouchHeld())
+            return;
+
+        // O cancelamento acontece antes de atualizar crouch/slide no mesmo
+        // frame, permitindo converter o impulso do Dash em um Slide.
+        playerState.ChangeState(PlayerState.State.Normal);
+        dashTimer = 0f;
+        dashStartedGrounded = false;
     }
 
     private void TryStartSlide()
@@ -378,10 +457,113 @@ public class PlayerMovement : MonoBehaviour
 
     private void SetCrouching(bool value)
     {
+        if (!value && !CanStandUp())
+            return;
+
         if (isCrouching == value)
             return;
 
         isCrouching = value;
+    }
+
+    private void CacheStandingControllerShape()
+    {
+        if (controller == null || hasCachedStandingControllerShape)
+            return;
+
+        standingControllerHeight = controller.height;
+        standingControllerRadius = controller.radius;
+        standingControllerCenter = controller.center;
+        hasCachedStandingControllerShape = true;
+    }
+
+    private void UpdateCharacterControllerShape()
+    {
+        CacheStandingControllerShape();
+        if (!hasCachedStandingControllerShape)
+            return;
+
+        bool lowProfile = isCrouching || playerState.IsSliding();
+        float targetHeight = lowProfile
+            ? standingControllerHeight * crouchingHeightMultiplier
+            : standingControllerHeight;
+        // CharacterController exige raio <= metade da altura. Em vez de
+        // multiplicar o raio original e bater nesse limite silenciosamente,
+        // configuramos diretamente uma porcentagem do maximo permitido.
+        float maximumRadius = targetHeight * .5f;
+        float targetRadius = lowProfile
+            ? maximumRadius * crouchingRadiusPercentOfHeight
+            : standingControllerRadius;
+
+        // Mantem a base da capsula no mesmo Y local. Com o setup atual
+        // (Height 2.5, Center Y 1.25), ela continua exatamente no chao.
+        // O Center nao pode ter uma interpolacao independente: para cada
+        // mudanca de Height ele precisa acompanhar exatamente metade dela,
+        // ou a capsula flutua/perde o chao durante a transicao.
+        float standingBottom = standingControllerCenter.y -
+            standingControllerHeight * .5f;
+
+        float resizeDelta = colliderResizeSpeed * Time.deltaTime;
+        float resizedHeight = Mathf.MoveTowards(
+            controller.height,
+            targetHeight,
+            resizeDelta
+        );
+        controller.height = resizedHeight;
+        controller.radius = Mathf.MoveTowards(
+            controller.radius,
+            targetRadius,
+            resizeDelta
+        );
+        controller.center = new Vector3(
+            standingControllerCenter.x,
+            standingBottom + resizedHeight * .5f,
+            standingControllerCenter.z
+        );
+    }
+
+    private bool CanStandUp()
+    {
+        CacheStandingControllerShape();
+        if (!hasCachedStandingControllerShape || controller == null)
+            return true;
+
+        float radius = Mathf.Min(
+            standingControllerRadius,
+            standingControllerHeight * .5f
+        );
+        float halfStraightSection = Mathf.Max(
+            0f,
+            standingControllerHeight * .5f - radius
+        );
+        Vector3 worldCenter = transform.TransformPoint(standingControllerCenter);
+        Vector3 worldUp = transform.up;
+        Vector3 bottom = worldCenter - worldUp * halfStraightSection;
+        // A margem e aplicada somente acima da cabeca. Isso exige alguns
+        // centimetros extras livres sem tornar paredes laterais mais largas.
+        Vector3 top = worldCenter + worldUp *
+            (halfStraightSection + standingClearancePadding);
+
+        Collider[] overlaps = Physics.OverlapCapsule(
+            bottom,
+            top,
+            radius,
+            standingClearanceMask,
+            QueryTriggerInteraction.Ignore
+        );
+
+        foreach (Collider overlap in overlaps)
+        {
+            if (overlap == null || overlap == controller ||
+                overlap.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     private void UpdateVerticalVelocity()
@@ -531,6 +713,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (playerState.IsAttacking())
         {
+            isDashJump = false;
             // O avanco proprio do ataque e aplicado por PlayerCombat. Aqui desaceleramos o movimento que ja existia para evitar um corte brusco de velocidade ao atacar enquanto corre.
             return Vector3.MoveTowards(
                 horizontalVelocity,
@@ -546,9 +729,12 @@ public class PlayerMovement : MonoBehaviour
                 // A duracao controla somente o state/altura do Dash. O
                 // impulso foi aplicado uma vez ao iniciar e agora preserva
                 // o momentum acumulado.
-                return horizontalVelocity;
+                return SteerHorizontalVelocity(horizontalVelocity);
             }
         }
+
+        if (isDashJump)
+            return SteerHorizontalVelocity(horizontalVelocity);
 
         if (playerState.IsSliding())
             return CalculateSlideVelocity();
@@ -574,7 +760,7 @@ public class PlayerMovement : MonoBehaviour
             slideDirection = Vector3.RotateTowards(
                 slideDirection,
                 DesiredDirection,
-                slideSteeringSpeed * Mathf.Deg2Rad * Time.deltaTime,
+                steeringStrength * Mathf.Deg2Rad * Time.deltaTime,
                 0f
             ).normalized;
         }
@@ -603,6 +789,25 @@ public class PlayerMovement : MonoBehaviour
         }
 
         return GetGroundAlignedVelocity(slideDirection * slideSpeed);
+    }
+
+    private Vector3 SteerHorizontalVelocity(Vector3 velocity)
+    {
+        if (velocity.sqrMagnitude <= 0.0001f ||
+            DesiredDirection.sqrMagnitude <= 0.0001f)
+        {
+            return velocity;
+        }
+
+        float speedMagnitude = velocity.magnitude;
+        Vector3 steeredDirection = Vector3.RotateTowards(
+            velocity.normalized,
+            DesiredDirection.normalized,
+            steeringStrength * Mathf.Deg2Rad * Time.deltaTime,
+            0f
+        );
+
+        return steeredDirection.normalized * speedMagnitude;
     }
 
     private float GetDownhillSlideAcceleration(Vector3 direction)
@@ -734,9 +939,7 @@ public class PlayerMovement : MonoBehaviour
             ? speed * crouchSpeedMultiplier
             : speed;
         Vector3 targetVelocity = DesiredDirection * currentSpeed;
-        float rate = DesiredDirection.sqrMagnitude > 0.0001f
-            ? acceleration
-            : deceleration;
+        float rate = GetGroundMovementRate(targetVelocity);
 
         Vector3 walkVelocity = Vector3.MoveTowards(
             horizontalVelocity,
@@ -745,6 +948,45 @@ public class PlayerMovement : MonoBehaviour
         );
 
         return GetGroundAlignedVelocity(walkVelocity);
+    }
+
+    private float GetGroundMovementRate(Vector3 targetVelocity)
+    {
+        if (targetVelocity.sqrMagnitude <= 0.0001f)
+            return releaseDeceleration;
+
+        if (horizontalVelocity.sqrMagnitude <= 0.0001f)
+            return acceleration;
+
+        float directionDot = Vector3.Dot(
+            horizontalVelocity.normalized,
+            targetVelocity.normalized
+        );
+
+        if (directionDot < 0f)
+            return reverseDeceleration;
+
+        // Continua na mesma direcao, mas acima da Speed normal: perde apenas
+        // o momentum excedente, sem parecer uma freada brusca.
+        if (horizontalVelocity.magnitude > targetVelocity.magnitude)
+            return momentumDeceleration;
+
+        return acceleration;
+    }
+
+    private void BreakMomentumIfDashingOpposite()
+    {
+        if (horizontalVelocity.sqrMagnitude <= 0.0001f ||
+            DesiredDirection.sqrMagnitude <= 0.0001f)
+        {
+            return;
+        }
+
+        if (Vector3.Dot(horizontalVelocity.normalized,
+            DesiredDirection.normalized) < 0f)
+        {
+            horizontalVelocity = Vector3.zero;
+        }
     }
 
     private Vector3 CalculateSteepSlopeVelocity(Vector3 downhillDirection)
@@ -862,6 +1104,50 @@ public class PlayerMovement : MonoBehaviour
         {
             StopAerialAttackMovement();
         }
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit == null)
+            return;
+
+        BaseEnemy enemy = hit.collider.GetComponentInParent<BaseEnemy>();
+        if (enemy == null || enemy.IsDead || !IsLandingOnEnemyTop(enemy))
+            return;
+
+        // Um inimigo nunca conta como chao: nao reseta pulos e nao permite
+        // iniciar um novo pulo. O impulso lateral tambem tira o player do
+        // topo, em vez de deixa-lo equilibrado na cabeca do inimigo.
+        enemyGroundContactTimer = .1f;
+        verticalVelocity = Mathf.Min(verticalVelocity, -2f);
+
+        Vector3 pushDirection = transform.position - enemy.transform.position;
+        pushDirection.y = 0f;
+
+        if (pushDirection.sqrMagnitude <= .0001f)
+            pushDirection = transform.right;
+
+        horizontalVelocity = pushDirection.normalized * enemyHeadPushSpeed;
+    }
+
+    private bool IsLandingOnEnemyTop(BaseEnemy enemy)
+    {
+        // Colisoes laterais e por baixo tambem chamam
+        // OnControllerColliderHit. So tratamos o inimigo como "chao invalido"
+        // quando a base do player chegou ao topo dele enquanto estava caindo.
+        if (controller == null || verticalVelocity > 0f)
+            return false;
+
+        CharacterController enemyController =
+            enemy.GetComponent<CharacterController>();
+        if (enemyController == null)
+            return false;
+
+        const float topContactTolerance = .15f;
+        float playerBottom = controller.bounds.min.y;
+        float enemyTop = enemyController.bounds.max.y;
+
+        return playerBottom >= enemyTop - topContactTolerance;
     }
 
     public void ApplyKnockback(

@@ -84,6 +84,7 @@ public class PlayerCombat : MonoBehaviour
 
     private PlayerMovement playerMovement;
     private PlayerLockOn playerLockOn;
+    private CharacterController characterController;
     private Vector3 attackFacingDirection;
     private bool hasAggroedEnemies;
     private float combatTimer;
@@ -97,7 +98,11 @@ public class PlayerCombat : MonoBehaviour
         }
     }
 
-    public bool IsExecutingAttackSequence => currentSequence != null;
+    // Uma sequencia sem AttackPhase e estado residual, nao uma sequencia em
+    // execucao. Isso pode acontecer ao interromper/recompilar durante um
+    // dash attack e nunca deve bloquear os inputs seguintes.
+    public bool IsExecutingAttackSequence =>
+        currentSequence != null && IsAttacking;
     public string CurrentAttackId => currentAttack != null
         ? currentAttack.attackName
         : string.Empty;
@@ -148,6 +153,7 @@ public class PlayerCombat : MonoBehaviour
     {
         playerState = GetComponent<PlayerState>();
         playerMovement = GetComponent<PlayerMovement>();
+        characterController = GetComponent<CharacterController>();
         if (playerLockOn == null)
             playerLockOn = GetComponent<PlayerLockOn>();
         playerHeat = GetComponent<PlayerHeat>();
@@ -504,7 +510,7 @@ public class PlayerCombat : MonoBehaviour
             return;
 
         Vector3 attackPosition =
-            transform.position +
+            GetAttackOrigin() +
             transform.forward *
             currentAttack.attackDistance;
 
@@ -567,7 +573,7 @@ public class PlayerCombat : MonoBehaviour
 
     public void CancelAttack()
     {
-        if (!IsAttacking)
+        if (!IsAttacking && currentSequence == null)
             return;
 
         ResetAttack();
@@ -756,6 +762,27 @@ public class PlayerCombat : MonoBehaviour
         );
     }
 
+    /// <summary>
+    /// Aplica o Launch Up global do player sem causar dano, Heat ou Poise.
+    /// Usado por mecanicas de movimento, como o impacto do Slide.
+    /// </summary>
+    public void ApplyNonDamagingLaunchUp(BaseEnemy enemy)
+    {
+        if (enemy == null || !enemy.CanBeLaunched)
+            return;
+
+        enemy.ApplyLaunchUp(
+            GetLaunchUpInitialSpeed(),
+            GetLaunchUpGravity(),
+            launchUpLowGravityMultiplier,
+            launchUpLowGravityDuration
+        );
+
+        // Mesmo sem dano, acertar um inimigo com o Slide e uma interacao de
+        // combate explicita e deve manter o player em combate.
+        RegisterDamageDealtToEnemy();
+    }
+
     public bool QueueRecoveryCancel()
     {
         if (!IsAttacking ||
@@ -831,6 +858,19 @@ public class PlayerCombat : MonoBehaviour
             : Vector3.zero;
     }
 
+    private Vector3 GetAttackOrigin()
+    {
+        if (characterController == null)
+            characterController = GetComponent<CharacterController>();
+
+        // O Transform do Player fica no chao. A origem deve acompanhar o
+        // Center atual da capsula, inclusive em crouch/slide, para que a
+        // hitbox corresponda ao corpo/arma visual do personagem.
+        return characterController != null
+            ? transform.TransformPoint(characterController.center)
+            : transform.position;
+    }
+
     void OnDrawGizmos()
     {
         if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
@@ -843,7 +883,7 @@ public class PlayerCombat : MonoBehaviour
             return;
 
         Vector3 attackPosition =
-            transform.position +
+            GetAttackOrigin() +
             transform.forward *
             currentAttack.attackDistance;
 

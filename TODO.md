@@ -52,6 +52,10 @@
 
 ## Outros itens existentes
 
+- Programacao (Pending): refatorar `PlayerMovement` sem mudar gameplay. Manter `PlayerMovement` como fachada/orquestrador e unico dono de `CharacterController.Move`; extrair responsabilidades para `PlayerMovementMotor`, `PlayerGrounding`, `PlayerLocomotion`, `PlayerDash`, `PlayerJump` e `PlayerCrouchSlide`. Migrar em etapas, preservando a API publica usada por combate e outros sistemas.
+- Combate (Pending): avaliar pisao/bounce na cabeca do inimigo, inspirado em Super Mario e Crash. Deve devolver o player para cima, causar muito Poise e pouco dano.
+- Combate (Pending): avaliar inimigos com ataque de grab anti-pisao, que prende o player pelo pe quando ele tenta cair sobre eles.
+
 - Pending: revisar a reformulação de Heat/Cold/Superheat para uma barra de vida comum em que Heat alto aumenta dano causado e recebido.
 - Pending: reduzir levemente o bônus de poise damage concedido por Heat alto.
 - Pending: melhorias da câmera — revisar suavização de retorno após colisão e comportamento de rotação.
