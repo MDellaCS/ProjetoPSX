@@ -15,16 +15,16 @@
 - Status: Completed
 - Dependências: Iteração 1 e um VisualRoot/Animator opcional.
 - Objetivo: conectar a intenção visual ao Unity Animator de forma opcional.
-- Entregue: `PlayerAnimatorPlayback`, bindings configuráveis por estado, transição visual sem reiniciar o estado atual e root motion desabilitado por padrão.
+- Entregue: `PlayerAnimatorPlayback`, bindings configuráveis por estado, transição visual sem reiniciar o estado atual, velocidade do clip Move derivada da velocidade real do player e root motion desabilitado por padrão.
 - Critérios verificados: Animator ausente/inativo ou estados não configurados não geram exceção nem afetam o player; playback pode ficar no VisualRoot; troca de clip ou caminho de estado não exige alteração de gameplay.
 
 ### Iteração 3 — Animações de combate
 
-- Status: Pending
+- Status: Completed
 - Dependências: Iteração 2 e identificação visual estável dos ataques.
 - Objetivo: representar ataques terrestres, aéreos, dash attacks e suas fases reais.
-- Tarefas: expor ataque/fase/progresso reais; associar dados visuais aos ataques; sincronizar clips com windup, active e recovery sem Animation Events; suportar cancelamentos e combos.
-- Critérios de aceitação: alterar timings não muda gameplay nem quebra sincronização visual; hitboxes e dano permanecem independentes.
+- Entregue: `PlayerCombat` expõe ID, fase e progresso de ataque somente para leitura; `PlayerAnimatorPlayback` possui mapeamento visual por Attack Name e regiões de Windup/Active/Recovery no clip.
+- Critérios verificados: o tempo real do combate seleciona a pose normalizada; sequências, combos e cancelamentos são observados sem Animation Events; hitboxes e dano permanecem independentes. Novos ataques exigem apenas um binding visual opcional.
 
 ### Iteração 4 — Reações e interrupções
 

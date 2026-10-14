@@ -8,7 +8,8 @@ using UnityEngine;
 /// definem movimento, combate ou transicoes de gameplay.
 /// </summary>
 [DisallowMultipleComponent]
-public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
+public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
+    IPlayerAttackAnimationPlayback, IPlayerMovementAnimationPlayback
 {
     [Serializable]
     public struct StateBinding
@@ -19,12 +20,68 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
         public string animatorStatePath;
     }
 
+    [Serializable]
+    public struct AttackBinding
+    {
+        [Tooltip("Deve ser igual ao Attack Name configurado no moveset. Ex.: L1")]
+        public string attackId;
+
+        [Tooltip("Caminho completo do estado no Animator. Ex.: Base Layer.L1")]
+        public string animatorStatePath;
+
+        [Header("Regioes normalizadas do clip")]
+        [Range(0f, 1f)] public float windupStart;
+        [Range(0f, 1f)] public float windupEnd;
+        [Range(0f, 1f)] public float activeStart;
+        [Range(0f, 1f)] public float activeEnd;
+        [Range(0f, 1f)] public float recoveryStart;
+        [Range(0f, 1f)] public float recoveryEnd;
+
+        public float GetClipProgress(PlayerCombat.AttackPhase phase,
+            float phaseProgress)
+        {
+            float start;
+            float end;
+
+            switch (phase)
+            {
+                case PlayerCombat.AttackPhase.Windup:
+                    start = windupStart;
+                    end = windupEnd;
+                    break;
+                case PlayerCombat.AttackPhase.Active:
+                    start = activeStart;
+                    end = activeEnd;
+                    break;
+                case PlayerCombat.AttackPhase.Recovery:
+                    start = recoveryStart;
+                    end = recoveryEnd;
+                    break;
+                default:
+                    return 0f;
+            }
+
+            return Mathf.Lerp(
+                Mathf.Clamp01(start),
+                Mathf.Clamp01(end),
+                Mathf.Clamp01(phaseProgress)
+            );
+        }
+    }
+
     [Header("Optional Animator")]
     [SerializeField] private Animator animator;
     [Min(0)] [SerializeField] private int layerIndex;
     [Min(0f)] [SerializeField] private float transitionDuration = .08f;
     [Tooltip("Mantem a simulacao como autoridade sobre a posicao e rotacao.")]
     [SerializeField] private bool disableRootMotion = true;
+
+    [Header("Move Playback Speed")]
+    [Tooltip("Velocidade real do player que reproduz o clip Move em 1x.")]
+    [Min(.01f)] [SerializeField] private float moveSpeedReference = 7.5f;
+    [Tooltip("Evita que o clip pare quase por completo durante pequenas variacoes de velocidade.")]
+    [Min(0f)] [SerializeField] private float minimumMoveAnimationSpeed = .2f;
+    [Min(.01f)] [SerializeField] private float maximumMoveAnimationSpeed = 2f;
 
     [Header("Visual State Bindings")]
     [SerializeField] private StateBinding[] stateBindings =
@@ -41,7 +98,18 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
         new StateBinding { visualState = PlayerVisualState.Dead, animatorStatePath = "Base Layer.Dead" }
     };
 
+    [Header("Attack Bindings")]
+    [Tooltip("Dados puramente visuais. Adicione uma entrada para cada Attack Name que possuir clip proprio.")]
+    [SerializeField] private AttackBinding[] attackBindings =
+    {
+        CreateDefaultAttackBinding("L1"),
+        CreateDefaultAttackBinding("L2"),
+        CreateDefaultAttackBinding("L3")
+    };
+
     private readonly Dictionary<PlayerVisualState, int> stateHashes = new();
+    private readonly Dictionary<string, AttackBinding> attackBindingMap =
+        new(StringComparer.Ordinal);
     private bool hasPresentedState;
     private PlayerVisualState lastPresentedState;
 
@@ -71,6 +139,12 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
         Present(currentState);
     }
 
+    private void OnDisable()
+    {
+        if (animator != null)
+            animator.speed = 1f;
+    }
+
     public void Present(PlayerVisualState visualState)
     {
         if (hasPresentedState && lastPresentedState == visualState)
@@ -93,6 +167,50 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
         );
     }
 
+    public void PresentAttack(string attackId, PlayerCombat.AttackPhase phase,
+        float phaseProgress)
+    {
+        if (string.IsNullOrEmpty(attackId) || animator == null ||
+            !animator.isActiveAndEnabled ||
+            !attackBindingMap.TryGetValue(attackId, out AttackBinding binding))
+        {
+            return;
+        }
+
+        int stateHash = Animator.StringToHash(binding.animatorStatePath);
+        if (!animator.HasState(layerIndex, stateHash))
+            return;
+
+        // O tempo do PlayerCombat escolhe exatamente a pose do clip. Assim,
+        // alterar Windup/Active/Recovery jamais devolve autoridade ao Animator.
+        animator.Play(
+            stateHash,
+            layerIndex,
+            binding.GetClipProgress(phase, phaseProgress)
+        );
+    }
+
+    public void PresentMovement(float horizontalSpeed, bool isMoving)
+    {
+        if (animator == null || !animator.isActiveAndEnabled)
+            return;
+
+        if (!isMoving)
+        {
+            animator.speed = 1f;
+            return;
+        }
+
+        float reference = Mathf.Max(.01f, moveSpeedReference);
+        float maximum = Mathf.Max(minimumMoveAnimationSpeed,
+            maximumMoveAnimationSpeed);
+        animator.speed = Mathf.Clamp(
+            Mathf.Max(0f, horizontalSpeed) / reference,
+            minimumMoveAnimationSpeed,
+            maximum
+        );
+    }
+
     /// <summary>
     /// Reconstroi o mapa apos editar os bindings no Inspector. Seguro chamar
     /// mesmo sem Animator ou sem Animation Controller.
@@ -100,18 +218,33 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
     public void RebuildBindings()
     {
         stateHashes.Clear();
+        attackBindingMap.Clear();
 
-        if (stateBindings == null)
+        if (stateBindings != null)
+        {
+            foreach (StateBinding binding in stateBindings)
+            {
+                if (string.IsNullOrWhiteSpace(binding.animatorStatePath))
+                    continue;
+
+                stateHashes[binding.visualState] = Animator.StringToHash(
+                    binding.animatorStatePath
+                );
+            }
+        }
+
+        if (attackBindings == null)
             return;
 
-        foreach (StateBinding binding in stateBindings)
+        foreach (AttackBinding binding in attackBindings)
         {
-            if (string.IsNullOrWhiteSpace(binding.animatorStatePath))
+            if (string.IsNullOrWhiteSpace(binding.attackId) ||
+                string.IsNullOrWhiteSpace(binding.animatorStatePath))
+            {
                 continue;
+            }
 
-            stateHashes[binding.visualState] = Animator.StringToHash(
-                binding.animatorStatePath
-            );
+            attackBindingMap[binding.attackId] = binding;
         }
     }
 
@@ -126,4 +259,17 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback
         if (animator != null && disableRootMotion)
             animator.applyRootMotion = false;
     }
+
+    private static AttackBinding CreateDefaultAttackBinding(string attackId) =>
+        new()
+        {
+            attackId = attackId,
+            animatorStatePath = "Base Layer." + attackId,
+            windupStart = 0f,
+            windupEnd = .35f,
+            activeStart = .35f,
+            activeEnd = .6f,
+            recoveryStart = .6f,
+            recoveryEnd = 1f
+        };
 }

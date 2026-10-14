@@ -143,6 +143,17 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(playerCombat.IsOutOfCombat
                 ? "OUT OF COMBAT"
                 : "IN COMBAT");
+        if (playerCombat.IsCombatStateForced)
+        {
+            textBuilder.Append("COMBAT OVERRIDE: ")
+                .AppendLine(playerCombat.IsForcedInCombat
+                    ? "FORCED IN"
+                    : "FORCED OUT");
+        }
+        else
+        {
+            textBuilder.AppendLine("COMBAT OVERRIDE: NEUTRAL");
+        }
         textBuilder.Append("ENEMY AGGRO: ")
             .AppendLine(playerCombat.HasAggroedEnemies ? "YES" : "NO");
         textBuilder.Append("COMBAT TIMER: ")

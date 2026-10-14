@@ -49,6 +49,8 @@ public class PlayerAnimationPresenter : MonoBehaviour
     {
         ResolveGameplaySources();
         SetVisualState(ResolveVisualState());
+        PresentCurrentMovement();
+        PresentCurrentAttack();
     }
 
     /// <summary>
@@ -136,5 +138,40 @@ public class PlayerAnimationPresenter : MonoBehaviour
     {
         foreach (IPlayerAnimationPlayback playback in playbackTargets)
             playback.Present(CurrentVisualState);
+    }
+
+    private void PresentCurrentAttack()
+    {
+        if (playerCombat == null || !playerCombat.IsAttacking ||
+            string.IsNullOrEmpty(playerCombat.CurrentAttackId))
+        {
+            return;
+        }
+
+        foreach (IPlayerAnimationPlayback playback in playbackTargets)
+        {
+            if (playback is IPlayerAttackAnimationPlayback attackPlayback)
+            {
+                attackPlayback.PresentAttack(
+                    playerCombat.CurrentAttackId,
+                    playerCombat.CurrentAttackPhase,
+                    playerCombat.CurrentAttackPhaseProgress
+                );
+            }
+        }
+    }
+
+    private void PresentCurrentMovement()
+    {
+        float horizontalSpeed = playerMovement != null
+            ? playerMovement.HorizontalSpeed
+            : 0f;
+        bool isMoving = CurrentVisualState == PlayerVisualState.Move;
+
+        foreach (IPlayerAnimationPlayback playback in playbackTargets)
+        {
+            if (playback is IPlayerMovementAnimationPlayback movementPlayback)
+                movementPlayback.PresentMovement(horizontalSpeed, isMoving);
+        }
     }
 }

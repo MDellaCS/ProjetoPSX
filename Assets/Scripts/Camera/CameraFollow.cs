@@ -19,23 +19,23 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] private bool lockCursorOnStart = true;
 
     [Header("Follow Smoothing")]
-    [Min(0.01f)] public float followSmoothTime = 0.07f;
+    [Min(0.01f)] public float followSmoothTime = 0.1f;
     [Tooltip("Area horizontal em que o player pode se mover antes de arrastar a camera.")]
     [Min(0f)] public float deadZoneHorizontal = 0f;
     [Min(0f)] public float deadZoneForward = 0f;
 
     [Header("Look Ahead")]
-    [Min(0f)] public float lookAheadDistance = 2f;
-    [Min(0.01f)] public float lookAheadSmoothTime = 0.5f;
+    [Min(0f)] public float lookAheadDistance = 0f;
+    [Min(0.01f)] public float lookAheadSmoothTime = 0.01f;
 
     [Header("Combat Framing")]
     [Tooltip("Multiplica a distancia da camera durante combate. 1.2 equivale a 20% mais distante.")]
-    [Min(1f)] public float combatDistanceMultiplier = 1.6f;
+    [Min(1f)] public float combatDistanceMultiplier = 1.2f;
     [Tooltip("Altura efetiva da camera enquanto o player esta fora de combate.")]
-    public float outOfCombatOffsetY = 3f;
+    public float outOfCombatOffsetY = 1f;
     [Tooltip("Altura efetiva da camera enquanto o player esta em combate.")]
-    public float combatOffsetY = 4.5f;
-    [Min(0.01f)] public float combatFramingSmoothTime = 1.5f;
+    public float combatOffsetY = 3.5f;
+    [Min(0.01f)] public float combatFramingSmoothTime = 0.75f;
 
     [Header("Lock On Framing")]
     [Tooltip("Quanto o foco da mesma camera se desloca do player em direcao ao inimigo travado.")]

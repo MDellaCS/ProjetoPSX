@@ -1,10 +1,18 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using UnityEngine.Serialization;
 
 public class PlayerCombat : MonoBehaviour
 {
-    private enum AttackPhase
+    private enum DebugCombatOverride
+    {
+        Neutral,
+        ForceInCombat,
+        ForceOutOfCombat
+    }
+
+    public enum AttackPhase
     {
         None,
         Windup,
@@ -79,6 +87,7 @@ public class PlayerCombat : MonoBehaviour
     private Vector3 attackFacingDirection;
     private bool hasAggroedEnemies;
     private float combatTimer;
+    private DebugCombatOverride debugCombatOverride;
 
     public bool IsAttacking
     {
@@ -89,11 +98,42 @@ public class PlayerCombat : MonoBehaviour
     }
 
     public bool IsExecutingAttackSequence => currentSequence != null;
+    public string CurrentAttackId => currentAttack != null
+        ? currentAttack.attackName
+        : string.Empty;
+    public AttackPhase CurrentAttackPhase => attackPhase;
+    public float CurrentAttackPhaseProgress => GetCurrentAttackPhaseProgress();
     public bool HasAggroedEnemies => hasAggroedEnemies;
     public bool IsOutOfCombat =>
-        !hasAggroedEnemies &&
-        combatTimer <= 0f;
+        debugCombatOverride switch
+        {
+            DebugCombatOverride.ForceInCombat => false,
+            DebugCombatOverride.ForceOutOfCombat => true,
+            _ => !hasAggroedEnemies && combatTimer <= 0f
+        };
     public float CombatTimer => combatTimer;
+    public bool IsCombatStateForced =>
+        debugCombatOverride != DebugCombatOverride.Neutral;
+    public bool IsForcedInCombat =>
+        debugCombatOverride == DebugCombatOverride.ForceInCombat;
+
+    private float GetCurrentAttackPhaseProgress()
+    {
+        if (currentAttack == null || attackPhase == AttackPhase.None)
+            return 0f;
+
+        float duration = attackPhase switch
+        {
+            AttackPhase.Windup => currentAttack.windupDuration,
+            AttackPhase.Active => currentAttack.activeDuration,
+            AttackPhase.Recovery => currentAttack.recoveryDuration,
+            _ => 0f
+        };
+
+        return duration <= 0f
+            ? 1f
+            : Mathf.Clamp01(1f - attackTimer / duration);
+    }
 
     void Awake()
     {
@@ -115,12 +155,29 @@ public class PlayerCombat : MonoBehaviour
 
     void Update()
     {
+        UpdateDebugCombatOverride();
         UpdateCombatStatus();
 
         if (IsAttacking)
         {
             UpdateAttack();
         }
+    }
+
+    private void UpdateDebugCombatOverride()
+    {
+        if (Keyboard.current == null ||
+            !Keyboard.current.f6Key.wasPressedThisFrame)
+        {
+            return;
+        }
+
+        debugCombatOverride = debugCombatOverride switch
+        {
+            DebugCombatOverride.Neutral => DebugCombatOverride.ForceInCombat,
+            DebugCombatOverride.ForceInCombat => DebugCombatOverride.ForceOutOfCombat,
+            _ => DebugCombatOverride.Neutral
+        };
     }
 
     private void UpdateCombatStatus()
