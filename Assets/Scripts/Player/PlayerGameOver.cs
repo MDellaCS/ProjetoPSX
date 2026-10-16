@@ -66,9 +66,6 @@ public class PlayerGameOver : MonoBehaviour
         if (playerHeat.CurrentHeat <= playerHeat.MinHeat)
             return "VOCE SUCUMBIU AO FRIO EXTREMO";
 
-        if (playerHeat.CurrentSuperheat >= playerHeat.MaxSuperheat)
-            return "VOCE FOI CONSUMIDO PELO CALOR";
-
         return "VOCE MORREU";
     }
 

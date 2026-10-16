@@ -83,7 +83,8 @@ public class PlayerHealth : MonoBehaviour
         Vector3 attackerPosition,
         float knockbackForce,
         float knockbackDuration,
-        bool causedByEnemy = false
+        bool causedByEnemy = false,
+        Transform attacker = null
     )
     {
         if (playerState.IsDead())
@@ -104,10 +105,29 @@ public class PlayerHealth : MonoBehaviour
 
         playerHeat.RemoveHeat(damage);
 
+        // O impacto pertence ao dano confirmado, inclusive se ele levar o
+        // player a Cold extremo ou ocorrer durante Burning. Knockback e
+        // Stagger continuam sendo regras separadas abaixo.
+        if (causedByEnemy)
+        {
+            CombatImpactSystem.ReportEnemyAttackImpact(
+                attacker,
+                transform,
+                attackerPosition,
+                damage
+            );
+        }
+
         // Se chegamos a -1000,
         // PlayerHeat já colocou o jogador
         // no estado Dead.
         if (playerState.IsDead())
+            return;
+
+        // Burn continua vulneravel a dano, mas nao pode ser substituido por
+        // knockback/stagger: durante Burning o unico movimento permitido e
+        // a caminhada lenta controlada por PlayerHeat.
+        if (playerState.IsBurnStunned() || playerState.IsBurning())
             return;
 
         // =========================
@@ -127,17 +147,6 @@ public class PlayerHealth : MonoBehaviour
             knockbackForce,
             knockbackDuration
         );
-
-        // =========================
-        // IMPACTO
-        // =========================
-
-        if (CameraFollow.Instance != null)
-        {
-            CameraFollow.Instance.ImpactShake(
-                knockbackDirection
-            );
-        }
 
         // =========================
         // STAGGER

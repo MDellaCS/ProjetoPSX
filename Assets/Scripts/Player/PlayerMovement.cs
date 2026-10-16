@@ -65,7 +65,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Gravity")]
     public float gravity = -60f;
-    [Tooltip("Velocidade maxima de queda, aplicada a gravidade, Launch Up e Dive.")]
+    [Tooltip("Velocidade maxima de queda, aplicada a gravidade e Launch Up.")]
     [Min(2f)] public float terminalFallSpeed = 30f;
 
     [Header("Jump")]
@@ -107,8 +107,8 @@ public class PlayerMovement : MonoBehaviour
         playerState != null &&
         playerState.IsNormal();
     public bool IsCrouching => isCrouching;
-    public bool IsAerialDiving => isAerialDiving;
     public bool IsLaunched => isLaunched;
+    public bool IsAerialDiving => isAerialDiving;
     public bool IsGroundDash =>
         playerState != null &&
         playerState.IsDashing() &&
@@ -117,6 +117,7 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController controller;
     private PlayerState playerState;
     private PlayerCombat playerCombat;
+    private PlayerHeat playerHeat;
     private PlayerComboController comboController;
     private PlayerInputBuffer inputBuffer;
 
@@ -144,8 +145,8 @@ public class PlayerMovement : MonoBehaviour
     private bool hasUsedAirDash;
     private bool dashStartedGrounded;
     private bool isCrouching;
-    private bool isAerialDiving;
     private bool isLaunched;
+    private bool isAerialDiving;
     private bool isDashJump;
     private RecoveryCancelAction queuedRecoveryCancelAction;
 
@@ -166,6 +167,7 @@ public class PlayerMovement : MonoBehaviour
         CacheStandingControllerShape();
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
+        playerHeat = GetComponent<PlayerHeat>();
         comboController = PlayerComboController.GetOrAdd(gameObject);
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
@@ -586,22 +588,29 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (isAerialDiving)
-        {
-            verticalVelocity = Mathf.Max(
-                -aerialDiveFallSpeed,
-                -terminalFallSpeed
-            );
-            jumpHoldTimer = 0f;
-            return;
-        }
-
         if (isLaunched)
         {
             UpdateLaunchLowGravity();
             verticalVelocity += launchGravity * launchGravityMultiplier *
                 Time.deltaTime;
             ClampTerminalFallSpeed();
+            return;
+        }
+
+        if (isAerialDiving)
+        {
+            // O Dive controla a queda diretamente ate o CharacterController
+            // confirmar o contato com o chao.
+            if (controller.isGrounded)
+            {
+                isAerialDiving = false;
+                aerialDiveFallSpeed = 0f;
+                verticalVelocity = -2f;
+                return;
+            }
+
+            verticalVelocity = -aerialDiveFallSpeed;
+            jumpHoldTimer = 0f;
             return;
         }
 
@@ -711,6 +720,12 @@ public class PlayerMovement : MonoBehaviour
             return Vector3.zero;
         }
 
+        if (playerState.IsBurnStunned())
+            return Vector3.zero;
+
+        if (playerState.IsBurning())
+            return CalculateBurnWalkVelocity();
+
         if (playerState.IsAttacking())
         {
             isDashJump = false;
@@ -745,6 +760,20 @@ public class PlayerMovement : MonoBehaviour
         }
 
         return CalculateWalkVelocity();
+    }
+
+    private Vector3 CalculateBurnWalkVelocity()
+    {
+        float multiplier = playerHeat != null
+            ? playerHeat.BurnMovementSpeedMultiplier
+            : 0f;
+        Vector3 targetVelocity = DesiredDirection * speed * multiplier;
+
+        return Vector3.MoveTowards(
+            horizontalVelocity,
+            targetVelocity,
+            acceleration * Time.deltaTime
+        );
     }
 
     private Vector3 CalculateSlideVelocity()
@@ -1099,11 +1128,6 @@ public class PlayerMovement : MonoBehaviour
             EndSlide();
         }
 
-        if (isAerialDiving &&
-            (collisionFlags & CollisionFlags.Below) != 0)
-        {
-            StopAerialAttackMovement();
-        }
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
@@ -1160,6 +1184,21 @@ public class PlayerMovement : MonoBehaviour
         knockbackTimer = duration;
     }
 
+    /// <summary>Interrompe traversal ao iniciar Burn, sem alterar o estado.</summary>
+    public void InterruptForBurn()
+    {
+        dashTimer = 0f;
+        dashStartedGrounded = false;
+        isDashJump = false;
+        isCrouching = false;
+        aerialLightTimer = 0f;
+        aerialGravityMultiplier = 1f;
+        jumpHoldTimer = 0f;
+        horizontalVelocity = Vector3.zero;
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+    }
+
     public void ApplyAttackMovement(Vector3 displacement)
     {
         if (controller == null || displacement.sqrMagnitude <= 0.000001f)
@@ -1178,7 +1217,6 @@ public class PlayerMovement : MonoBehaviour
         if (IsGrounded)
             return;
 
-        isAerialDiving = false;
         isLaunched = false;
         ResetLaunchLowGravity();
         // O leve aereo substitui o momentum vertical do pulo. Primeiro ele
@@ -1191,16 +1229,22 @@ public class PlayerMovement : MonoBehaviour
         aerialLightTimer = Mathf.Max(aerialLightTimer, duration);
     }
 
+    /// <summary>
+    /// Inicia uma queda controlada para um ataque Dive. O movimento termina
+    /// somente ao tocar o chao ou quando o ataque for cancelado.
+    /// </summary>
     public void BeginAerialDive(float fallSpeed)
     {
         if (IsGrounded)
             return;
 
-        aerialLightTimer = 0f;
-        aerialGravityMultiplier = 1f;
         isLaunched = false;
         ResetLaunchLowGravity();
-        aerialDiveFallSpeed = fallSpeed;
+        aerialLightTimer = 0f;
+        aerialGravityMultiplier = 1f;
+        aerialDiveFallSpeed = Mathf.Max(0f, fallSpeed);
+        verticalVelocity = -aerialDiveFallSpeed;
+        jumpHoldTimer = 0f;
         isAerialDiving = true;
     }
 
@@ -1260,10 +1304,8 @@ public class PlayerMovement : MonoBehaviour
         horizontalVelocity = Vector3.zero;
         knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
-        isAerialDiving = false;
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
-        aerialDiveFallSpeed = 0f;
         jumpHoldTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravity = gravity;

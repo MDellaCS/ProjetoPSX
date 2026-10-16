@@ -3,522 +3,388 @@ using UnityEngine.InputSystem;
 
 public class PlayerHeat : MonoBehaviour
 {
-    [Header("Heat")]
-    public int maxHeat = 10000;
-    public int minHeat = -10000;
+    private const float HeatPerNotch = 10f;
 
-    [Header("Superheat")]
-    public int maxSuperheat = 10000;
+    /// <summary>Snapshot da carga usada por um pesado especifico.</summary>
+    public readonly struct HeavyAttackCharge
+    {
+        public readonly float HeatConsumed;
+        public readonly float DamageMultiplier;
+        public readonly float PoiseMultiplier;
 
-    [Min(0f)]
-    public float excessHeatToSuperheatMultiplier = 0.75f;
+        public HeavyAttackCharge(float heatConsumed, float damageMultiplier, float poiseMultiplier)
+        {
+            HeatConsumed = heatConsumed;
+            DamageMultiplier = damageMultiplier;
+            PoiseMultiplier = poiseMultiplier;
+        }
+    }
 
-    // Valor fixo, independente de maxHeat.
-    public int superheatThreshold = 8500;
+    private enum BurnPhase { None, InitialStun, Burning, FinalStun }
+
+    [Header("Heat Notches")]
+    [Min(1f)] public float maxHeat = 100f;
+    [Min(1f)] public float minHeatMagnitude = 100f;
+
+    [Header("Superheat Notches")]
+    [Min(1f)] public float maxSuperheat = 50f;
+    [Tooltip("Parte do Heat que excede 100 convertida em Superheat.")]
+    [Min(0f)] public float excessHeatToSuperheatMultiplier = .5f;
+
+    [Header("Light Heat Conversion")]
+    [Tooltip("Converte o Heat gerado por leves. 0.01 transforma 300 em 3.")]
+    [Min(0f)] public float attackHeatValueScale = .01f;
+    [Tooltip("Multiplicador aplicado ao dano recebido antes de removê-lo do Heat.")]
+    [Min(0f)] public float incomingDamageToHeatMultiplier = 1f;
 
     [Header("Passive Heat Cooling")]
-    public int passiveHeatCoolingPerSecond = 200;
+    [Min(0f)] public float passiveHeatCoolingStartDelay = 5f;
+    [Min(0f)] public float initialPassiveHeatCoolingPerSecond = .2f;
+    [Min(0f)] public float finalPassiveHeatCoolingPerSecond = 15f;
+    [Min(0f)] public float passiveHeatCoolingRampDuration = 16f;
+    [Min(.01f)] public float passiveHeatCoolingRampExponent = 1.4f;
 
     [Header("Passive Cold Recovery")]
-    [Min(0)] public int passiveColdRecoveryPerSecond = 200;
-    [Range(0f, 1f)] public float coldRecoveryLimitPercent = 0.75f;
-
-    [Header("Passive Superheat Generation")]
-
-    // Taxa de referência em Heat = 10000. Acima de 10000, a geração pode ultrapassar este valor.
-    public int maxPassiveSuperheatPerSecond = 300;
-
-    [Header("Superheat Scaling Reference")]
-    [Min(1f)]
-    public float superheatFullRateReference = 10000f;
+    [Min(0f)] public float passiveColdRecoveryPerSecond = 2f;
+    [Range(0f, 1f)] public float coldRecoveryLimitPercent = .9f;
 
     [Header("Passive Superheat Cooling")]
-    public int passiveSuperheatCoolingPerSecond = 100;
-    public int coldSuperheatCoolingPerSecond = 400;
+    [Min(0f)] public float passiveSuperheatCoolingPerSecond = 1f;
+    [Min(0f)] public float coldSuperheatCoolingPerSecond = 4f;
 
-    [Header("Cold Heavy Penalty")]
-    [Range(0f, 1f)]
-    public float minimumHeavyHeatGeneration = 0.2f;
-
-    [Header("Heavy Power Scaling")]
-    [Range(0f, 1f)]
-    public float minimumHeavyDamageMultiplier = 0.2f;
-
-    public float maximumHeavyDamageMultiplier = 5f;
-
-    [Header("Heavy Additive Damage")]
-    [Min(0)]
-    public int maximumHeavyBonusDamage = 150;
-
-    [Header("Heavy Additive Poise")]
-    [Min(0)]
-    public int maximumHeavyBonusPoise = 60;
-
-    [Header("Heat Power Curve")]
-
-    // Referência de balanceamento, NÃO limite de Heat.
-    [Min(1f)]
-    public float heatPowerReference = 10000f;
-
-    // Controla a agressividade da curva exponencial.
-    [Min(0.01f)]
-    public float heatPowerExponent = 1.5f;
-
-    [Header("Heavy Heat Generation Limits")]
-    [Range(0f, 1f)]
-    [SerializeField]
-    private float minimumHeatPerHitPercent = 0.02f;
-
-    [Range(0f, 1f)]
-    [SerializeField]
-    private float maximumHeatPerHitPercent = 0.20f;
+    [Header("Burn")]
+    [Min(0f)] public float burnInitialStunDuration = 1.25f;
+    [Min(0f)] public float burningDuration = 4f;
+    [Min(0f)] public float burnFinalStunDuration = 1.25f;
+    [Range(0f, 1f)] public float burnMovementSpeedMultiplier = .3f;
+    [Range(-100f, 0f)] public float burnFinalHeat = -90f;
 
     [Header("Debug")]
     [SerializeField] private bool debugHeatInputEnabled = true;
-    [Min(1)] [SerializeField] private int debugHeatPerSecond = 3000;
+    [Min(0f)] [SerializeField] private float debugHeatPerSecond = 30f;
+    [SerializeField, HideInInspector] private int heatReworkVersion;
 
-    private int currentHeat = 0;
-    private int currentSuperheat = 0;
-
-    // Guardam frações de tempo para trabalhar com inteiros.
-    private float heatCoolingAccumulator;
-    private float superheatAccumulator;
+    private float currentHeat;
+    private float currentSuperheat;
+    private float heatCoolingOutOfCombatElapsed;
+    private float heatCoolingElapsed;
     private float debugHeatAccumulator;
+    private BurnPhase burnPhase;
+    private float burnPhaseTimer;
+    private float burnElapsed;
+    private float burnTotalDuration;
+    private float burnStartHeat;
+    private float burnStartSuperheat;
 
     private PlayerState playerState;
     private PlayerCombat playerCombat;
+    private PlayerMovement playerMovement;
 
-    public int CurrentHeat => currentHeat;
-    public int CurrentSuperheat => currentSuperheat;
-    public int MaxHeat => maxHeat;
-    public int MinHeat => minHeat;
-    public int MaxSuperheat => maxSuperheat;
+    public float CurrentHeat => currentHeat;
+    public float CurrentSuperheat => currentSuperheat;
+    public float MaxHeat => maxHeat;
+    public float MinHeat => -minHeatMagnitude;
+    public float MaxSuperheat => maxSuperheat;
+    // A pequena tolerancia evita que 100 armazenado como 99.99999 por
+    // operacoes de ponto flutuante deixe o ultimo quadrado apagado.
+    public int CurrentHeatNotch => GetSignedNotch(currentHeat, maxHeat, minHeatMagnitude);
+    public int CurrentSuperheatNotch => GetPositiveNotch(currentSuperheat, maxSuperheat, 5);
+    public bool IsBurning => burnPhase != BurnPhase.None;
+    public float BurnMovementSpeedMultiplier => burnMovementSpeedMultiplier;
+    public float HeavyDamageMultiplier => GetHeavyDamageMultiplier();
+    public float HeavyPoiseMultiplier => GetHeavyPoiseMultiplier();
 
-    void Start()
+    private void Awake() => ApplyHeatReworkDefaults();
+    private void OnValidate() => ApplyHeatReworkDefaults();
+
+    private void Start()
     {
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
+        playerMovement = GetComponent<PlayerMovement>();
     }
 
-    void Update()
+    private void Update()
     {
-        if (playerState.IsDead())
-            return;
-
+        if (playerState == null || playerState.IsDead()) return;
         UpdateDebugHeatInput();
+
+        if (IsBurning)
+        {
+            UpdateBurn();
+            CheckColdDeath();
+            return;
+        }
+
         UpdatePassiveHeat();
         UpdatePassiveSuperheat();
-
-        CheckDeath();
+        CheckColdDeath();
     }
 
-    void UpdatePassiveHeat()
+    private void ApplyHeatReworkDefaults()
+    {
+        if (heatReworkVersion >= 1) return;
+        maxHeat = 100f;
+        minHeatMagnitude = 100f;
+        maxSuperheat = 50f;
+        excessHeatToSuperheatMultiplier = .5f;
+        attackHeatValueScale = .01f;
+        incomingDamageToHeatMultiplier = 1f;
+        passiveHeatCoolingStartDelay = 5f;
+        initialPassiveHeatCoolingPerSecond = .2f;
+        finalPassiveHeatCoolingPerSecond = 15f;
+        passiveHeatCoolingRampDuration = 16f;
+        passiveHeatCoolingRampExponent = 1.4f;
+        passiveColdRecoveryPerSecond = 2f;
+        coldRecoveryLimitPercent = .9f;
+        passiveSuperheatCoolingPerSecond = 1f;
+        coldSuperheatCoolingPerSecond = 4f;
+        debugHeatPerSecond = 30f;
+        heatReworkVersion = 1;
+    }
+
+    private void UpdatePassiveHeat()
     {
         if (playerCombat == null || !playerCombat.IsOutOfCombat)
         {
-            heatCoolingAccumulator = 0f;
+            ResetHeatCoolingRamp();
             return;
         }
-
-        // Cold só se recupera fora de combate.
-        if (currentHeat < 0)
+        if (currentHeat < 0f)
         {
+            ResetHeatCoolingRamp();
             RecoverColdOutOfCombat();
             return;
         }
-
-        if (currentHeat == 0)
+        if (currentHeat <= 0f)
         {
-            heatCoolingAccumulator = 0f;
+            ResetHeatCoolingRamp();
             return;
         }
 
-        heatCoolingAccumulator +=
-            passiveHeatCoolingPerSecond * Time.deltaTime;
-
-        int amount = Mathf.FloorToInt(heatCoolingAccumulator);
-
-        if (amount <= 0)
-            return;
-
-        currentHeat -= amount;
-
-        // Heat passivo nunca atravessa zero.
-        if (currentHeat < 0)
-            currentHeat = 0;
-
-        heatCoolingAccumulator -= amount;
+        heatCoolingOutOfCombatElapsed += Time.deltaTime;
+        if (heatCoolingOutOfCombatElapsed < passiveHeatCoolingStartDelay) return;
+        heatCoolingElapsed += Time.deltaTime;
+        currentHeat = Mathf.Max(0f, currentHeat - GetPassiveHeatCoolingPerSecond() * Time.deltaTime);
     }
 
-    void RecoverColdOutOfCombat()
+    private void ResetHeatCoolingRamp()
     {
-        int recoveryLimit = Mathf.Clamp(
-            Mathf.RoundToInt(minHeat * coldRecoveryLimitPercent),
-            minHeat,
-            0
-        );
-
-        if (currentHeat >= recoveryLimit)
-        {
-            heatCoolingAccumulator = 0f;
-            return;
-        }
-
-        heatCoolingAccumulator +=
-            passiveColdRecoveryPerSecond * Time.deltaTime;
-
-        int amount = Mathf.FloorToInt(heatCoolingAccumulator);
-
-        if (amount <= 0)
-            return;
-
-        currentHeat = Mathf.Min(
-            recoveryLimit,
-            currentHeat + amount
-        );
-
-        heatCoolingAccumulator -= amount;
+        heatCoolingOutOfCombatElapsed = 0f;
+        heatCoolingElapsed = 0f;
     }
 
-    void UpdateDebugHeatInput()
+    private float GetPassiveHeatCoolingPerSecond()
     {
-        if (!debugHeatInputEnabled || Keyboard.current == null)
-            return;
-
-        int direction = 0;
-
-        // F4 esfria/remove Heat; F5 aquece/adiciona Heat.
-        if (Keyboard.current.f4Key.isPressed)
-            direction--;
-
-        if (Keyboard.current.f5Key.isPressed)
-            direction++;
-
-        if (direction == 0)
-        {
-            debugHeatAccumulator = 0f;
-            return;
-        }
-
-        debugHeatAccumulator +=
-            debugHeatPerSecond * Time.deltaTime;
-
-        int amount = Mathf.FloorToInt(debugHeatAccumulator);
-
-        if (amount <= 0)
-            return;
-
-        if (direction > 0)
-        {
-            AddHeat(amount);
-        }
-        else
-        {
-            RemoveHeat(amount);
-        }
-
-        debugHeatAccumulator -= amount;
+        float initialRate = Mathf.Max(0f, initialPassiveHeatCoolingPerSecond);
+        float finalRate = Mathf.Max(initialRate, finalPassiveHeatCoolingPerSecond);
+        if (passiveHeatCoolingRampDuration <= 0f) return finalRate;
+        float progress = Mathf.Clamp01(heatCoolingElapsed / passiveHeatCoolingRampDuration);
+        float exponent = Mathf.Max(.01f, passiveHeatCoolingRampExponent);
+        float exponentialProgress = (Mathf.Exp(exponent * progress) - 1f) / (Mathf.Exp(exponent) - 1f);
+        return Mathf.Lerp(initialRate, finalRate, exponentialProgress);
     }
 
-    void UpdatePassiveSuperheat()
+    private void RecoverColdOutOfCombat()
     {
-        // ====================================
-        // ZONA QUENTE
-        // ====================================
-
-        if (currentHeat > superheatThreshold)
-        {
-            // A referência é fixa e independente de maxHeat.
-            // Em 10000 Heat, a taxa é a configurada.
-            // Acima de 10000 Heat, a taxa será maior.
-            float referenceRange = Mathf.Max(
-                1f,
-                superheatFullRateReference - superheatThreshold
-            );
-
-            float heatAboveThreshold =
-                currentHeat - superheatThreshold;
-
-            float heatIntensity =
-                heatAboveThreshold / referenceRange;
-
-            float generationPerSecond =
-                maxPassiveSuperheatPerSecond * heatIntensity;
-
-            superheatAccumulator +=
-                generationPerSecond * Time.deltaTime;
-
-            int amount = Mathf.FloorToInt(
-                superheatAccumulator
-            );
-
-            if (amount > 0)
-            {
-                AddSuperheat(amount);
-                superheatAccumulator -= amount;
-            }
-
-            return;
-        }
-
-        int coolingPerSecond = 0;
-
-        if (playerCombat != null && playerCombat.IsOutOfCombat)
-        {
-            coolingPerSecond +=
-                passiveSuperheatCoolingPerSecond;
-        }
-
-        if (currentHeat < 0)
-        {
-            coolingPerSecond +=
-                coldSuperheatCoolingPerSecond;
-        }
-
-        if (coolingPerSecond <= 0)
-        {
-            superheatAccumulator = 0f;
-            return;
-        }
-
-        superheatAccumulator +=
-            coolingPerSecond * Time.deltaTime;
-
-        int coolingAmount = Mathf.FloorToInt(
-            superheatAccumulator
-        );
-
-        if (coolingAmount <= 0)
-            return;
-
-        RemoveSuperheat(coolingAmount);
-
-        superheatAccumulator -= coolingAmount;
+        float recoveryLimit = Mathf.Clamp(MinHeat * coldRecoveryLimitPercent, MinHeat, 0f);
+        currentHeat = Mathf.Min(recoveryLimit, currentHeat + passiveColdRecoveryPerSecond * Time.deltaTime);
     }
 
-    public void AddHeat(int amount)
+    private void UpdatePassiveSuperheat()
     {
-        if (amount <= 0)
-            return;
+        // Superheat so nasce do Heat que excede o maximo. Permanecer com
+        // Heat alto nao o gera passivamente.
+        float cooling = 0f;
+        if (playerCombat != null && playerCombat.IsOutOfCombat) cooling += passiveSuperheatCoolingPerSecond;
+        if (currentHeat < 0f) cooling += coldSuperheatCoolingPerSecond;
+        RemoveSuperheat(cooling * Time.deltaTime);
+    }
 
-        // Heat negativo também recebe Heat normalmente.
-        int availableHeat = maxHeat - currentHeat;
-
+    public void AddHeat(float amount)
+    {
+        if (amount <= 0f || IsBurning) return;
+        float availableHeat = maxHeat - currentHeat;
         if (amount <= availableHeat)
         {
             currentHeat += amount;
             return;
         }
-
-        // Preenche até o maxHeat atual.
         currentHeat = maxHeat;
-
-        int excessHeat = amount - availableHeat;
-
-        int convertedSuperheat = Mathf.FloorToInt(
-            excessHeat * excessHeatToSuperheatMultiplier
-        );
-
-        AddSuperheat(convertedSuperheat);
+        AddSuperheat((amount - availableHeat) * excessHeatToSuperheatMultiplier);
     }
 
-    public void RemoveHeat(int amount)
+    public void RemoveHeat(float amount)
     {
-        if (amount <= 0)
+        if (amount <= 0f) return;
+        currentHeat = Mathf.Max(MinHeat, currentHeat - amount * incomingDamageToHeatMultiplier);
+        CheckColdDeath();
+    }
+
+    public void AddSuperheat(float amount)
+    {
+        if (amount <= 0f || IsBurning) return;
+        currentSuperheat = Mathf.Min(maxSuperheat, currentSuperheat + amount);
+        if (currentSuperheat >= maxSuperheat) BeginBurn();
+    }
+
+    public void RemoveSuperheat(float amount)
+    {
+        if (amount > 0f) currentSuperheat = Mathf.Max(0f, currentSuperheat - amount);
+    }
+
+    public float CalculateLightHeatGeneration(int legacyAttackHeatValue)
+    {
+        return legacyAttackHeatValue <= 0
+            ? 0f
+            : legacyAttackHeatValue * attackHeatValueScale;
+    }
+
+    /// <summary>
+    /// Captura a carga do pesado e a gasta imediatamente. O snapshot e usado
+    /// pelo golpe mesmo se ele errar ou se o Heat mudar durante a animacao.
+    /// </summary>
+    public HeavyAttackCharge ConsumeHeatForHeavyAttack()
+    {
+        float heatConsumed = Mathf.Max(0f, currentHeat);
+        int consumedNotch = GetSignedNotch(heatConsumed, maxHeat, minHeatMagnitude);
+        float damageMultiplier = GetHeavyDamageMultiplier(consumedNotch);
+        float poiseMultiplier = GetHeavyPoiseMultiplier(consumedNotch);
+
+        if (heatConsumed <= 0f)
+            return new HeavyAttackCharge(0f, damageMultiplier, poiseMultiplier);
+
+        currentHeat = 0f;
+        RefillHeatFromSuperheat();
+        return new HeavyAttackCharge(heatConsumed, damageMultiplier, poiseMultiplier);
+    }
+
+    private void RefillHeatFromSuperheat()
+    {
+        float refill = Mathf.Min(currentSuperheat, maxHeat - currentHeat);
+        if (refill <= 0f)
             return;
 
-        currentHeat -= amount;
-
-        if (currentHeat < minHeat)
-            currentHeat = minHeat;
-
-        CheckDeath();
+        currentSuperheat -= refill;
+        currentHeat += refill;
     }
 
-    public void AddSuperheat(int amount)
+    public int CalculateHeavyDamage(int baseDamage, float damageMultiplier)
     {
-        if (amount <= 0)
-            return;
-
-        currentSuperheat += amount;
-
-        if (currentSuperheat > maxSuperheat)
-            currentSuperheat = maxSuperheat;
-
-        CheckDeath();
+        return baseDamage <= 0 ? 0 : Mathf.RoundToInt(baseDamage * damageMultiplier);
     }
 
-    public void RemoveSuperheat(int amount)
+    public int CalculateHeavyPoiseDamage(int basePoiseDamage, float poiseMultiplier)
     {
-        if (amount <= 0)
-            return;
-
-        currentSuperheat -= amount;
-
-        if (currentSuperheat < 0)
-            currentSuperheat = 0;
+        return basePoiseDamage <= 0 ? 0 : Mathf.RoundToInt(basePoiseDamage * poiseMultiplier);
     }
 
-    public int CalculateHeavyHeatGeneration(
-        int baseHeatGeneration
-    )
+    private float GetHeavyDamageMultiplier()
     {
-        if (baseHeatGeneration <= 0 || maxHeat <= 0)
-            return 0;
+        return GetHeavyDamageMultiplier(CurrentHeatNotch);
+    }
 
-        float generationMultiplier = 1f;
+    private static float GetHeavyDamageMultiplier(int notch)
+    {
+        return notch >= 0 ? 1f + notch : Mathf.Max(0f, 1f + notch * .1f);
+    }
 
-        // Penalidade linear de geração no frio.
-        if (currentHeat < 0 && minHeat < 0)
+    private float GetHeavyPoiseMultiplier()
+    {
+        return GetHeavyPoiseMultiplier(CurrentHeatNotch);
+    }
+
+    private static float GetHeavyPoiseMultiplier(int notch)
+    {
+        return notch >= 0 ? 1f + notch * .5f : Mathf.Max(0f, 1f + notch * .05f);
+    }
+
+    private static int GetSignedNotch(float value, float positiveMaximum, float negativeMagnitude)
+    {
+        const float fullNotchTolerance = .01f;
+
+        if (value >= positiveMaximum - fullNotchTolerance)
+            return 10;
+        if (value <= -negativeMagnitude + fullNotchTolerance)
+            return -10;
+
+        return value > 0f
+            ? Mathf.FloorToInt(value / HeatPerNotch)
+            : Mathf.CeilToInt(value / HeatPerNotch);
+    }
+
+    private static int GetPositiveNotch(float value, float maximum, int notchCount)
+    {
+        const float fullNotchTolerance = .01f;
+        if (value >= maximum - fullNotchTolerance)
+            return notchCount;
+
+        return Mathf.Clamp(Mathf.FloorToInt(value / HeatPerNotch), 0, notchCount);
+    }
+
+    private void BeginBurn()
+    {
+        burnPhase = BurnPhase.InitialStun;
+        burnPhaseTimer = burnInitialStunDuration;
+        burnElapsed = 0f;
+        burnTotalDuration = burnInitialStunDuration + burningDuration + burnFinalStunDuration;
+        burnStartHeat = currentHeat;
+        burnStartSuperheat = currentSuperheat;
+        playerCombat?.CancelAttack();
+        playerMovement?.InterruptForBurn();
+        playerState?.ChangeState(PlayerState.State.BurnStunned);
+    }
+
+    private void UpdateBurn()
+    {
+        burnElapsed += Time.deltaTime;
+        float progress = burnTotalDuration <= 0f ? 1f : Mathf.Clamp01(burnElapsed / burnTotalDuration);
+        currentHeat = Mathf.Lerp(burnStartHeat, burnFinalHeat, progress);
+        currentSuperheat = Mathf.Lerp(burnStartSuperheat, 0f, progress);
+        burnPhaseTimer -= Time.deltaTime;
+        if (burnPhaseTimer > 0f) return;
+
+        switch (burnPhase)
         {
-            float coldAmount = Mathf.Clamp01(
-                (float)currentHeat / minHeat
-            );
-
-            generationMultiplier = Mathf.Lerp(
-                1f,
-                minimumHeavyHeatGeneration,
-                coldAmount
-            );
+            case BurnPhase.InitialStun:
+                burnPhase = BurnPhase.Burning;
+                burnPhaseTimer = burningDuration;
+                playerState.ChangeState(PlayerState.State.Burning);
+                break;
+            case BurnPhase.Burning:
+                burnPhase = BurnPhase.FinalStun;
+                burnPhaseTimer = burnFinalStunDuration;
+                playerState.ChangeState(PlayerState.State.BurnStunned);
+                break;
+            case BurnPhase.FinalStun:
+                currentHeat = burnFinalHeat;
+                currentSuperheat = 0f;
+                burnPhase = BurnPhase.None;
+                playerState.ChangeState(PlayerState.State.Normal);
+                break;
         }
-
-        float generatedHeat =
-            baseHeatGeneration * generationMultiplier;
-
-        // Limites relativos ao maxHeat atual.
-        int minimum = Mathf.CeilToInt(
-            maxHeat * minimumHeatPerHitPercent
-        );
-
-        int maximum = Mathf.FloorToInt(
-            maxHeat * maximumHeatPerHitPercent
-        );
-
-        maximum = Mathf.Max(minimum, maximum);
-
-        return Mathf.Clamp(
-            Mathf.RoundToInt(generatedHeat),
-            minimum,
-            maximum
-        );
     }
 
-    public int CalculateHeavyDamage(int baseDamage)
+    private void UpdateDebugHeatInput()
     {
-        if (baseDamage <= 0)
-            return 0;
-
-        // Mantém a penalidade linear no frio.
-        float multiplier = CalculateHeavyDamageMultiplier();
-
-        // O bônus aditivo só existe com Heat positivo.
-        float bonusDamage = 0f;
-
-        if (currentHeat > 0)
+        if (!debugHeatInputEnabled || Keyboard.current == null || IsBurning) return;
+        float direction = 0f;
+        if (Keyboard.current.f4Key.isPressed) direction -= 1f;
+        if (Keyboard.current.f5Key.isPressed) direction += 1f;
+        if (Mathf.Approximately(direction, 0f))
         {
-            bonusDamage = maximumHeavyBonusDamage * GetPositiveHeatPower();
-        }
-
-        float finalDamage = (baseDamage * multiplier) + bonusDamage;
-
-        return Mathf.RoundToInt(finalDamage);
-    }
-
-    float CalculateHeavyDamageMultiplier()
-    {
-        // ====================================
-        // HEAT NEGATIVO — LINEAR
-        // ====================================
-
-        if (currentHeat < 0)
-        {
-            float coldAmount =
-                (float)currentHeat / minHeat;
-
-            coldAmount = Mathf.Clamp01(coldAmount);
-
-            return Mathf.Lerp(
-                1f,
-                minimumHeavyDamageMultiplier,
-                coldAmount
-            );
-        }
-
-        // ====================================
-        // HEAT POSITIVO — EXPONENCIAL
-        // ====================================
-
-        return 1f +
-            (maximumHeavyDamageMultiplier - 1f) *
-            GetPositiveHeatPower();
-    }
-
-    public int CalculateHeavyPoiseDamage(int basePoiseDamage)
-    {
-        if (basePoiseDamage <= 0)
-            return 0;
-
-        if (currentHeat <= 0)
-            return basePoiseDamage;
-
-        float bonusPoise =
-            maximumHeavyBonusPoise * GetPositiveHeatPower();
-
-        return basePoiseDamage + Mathf.RoundToInt(bonusPoise);
-    }
-
-    public void CoolFromLight(int heatAmount)
-    {
-        // ====================================
-        // HEAT
-        // ====================================
-
-        // Light só reduz Heat acima de zero.
-        if (currentHeat > 0)
-        {
-            currentHeat -= heatAmount;
-
-            // Light nunca empurra Heat para valores negativos.
-            if (currentHeat < 0)
-                currentHeat = 0;
-        }
-
-    }
-
-    private float GetPositiveHeatPower()
-    {
-        if (currentHeat <= 0)
-            return 0f;
-
-        float reference = Mathf.Max(1f, heatPowerReference);
-        float exponent = Mathf.Max(0.01f, heatPowerExponent);
-        float t = currentHeat / reference;
-
-        return (Mathf.Exp(exponent * t) - 1f) /
-            (Mathf.Exp(exponent) - 1f);
-    }
-
-    void CheckDeath()
-    {
-        if (playerState.IsDead())
-            return;
-
-        if (currentHeat <= minHeat)
-        {
-            Die("Frio extremo");
+            debugHeatAccumulator = 0f;
             return;
         }
-
-        if (currentSuperheat >= maxSuperheat)
-        {
-            Die("Superaquecimento");
-        }
+        debugHeatAccumulator += debugHeatPerSecond * Time.deltaTime;
+        float amount = debugHeatAccumulator;
+        debugHeatAccumulator = 0f;
+        if (direction > 0f) AddHeat(amount); else RemoveHeat(amount);
     }
 
-    void Die(string cause)
+    private void CheckColdDeath()
     {
-        playerState.ChangeState(
-            PlayerState.State.Dead
-        );
+        if (playerState != null && !playerState.IsDead() && currentHeat <= MinHeat)
+            playerState.ChangeState(PlayerState.State.Dead);
     }
 }

@@ -11,7 +11,9 @@ public class PlayerState : MonoBehaviour
         Stagger = 3,
         Dead = 4,
         // Mantem o valor serializado do slide apos remover os estados defensivos.
-        Sliding = 7
+        Sliding = 7,
+        BurnStunned = 8,
+        Burning = 9
     }
 
     [Header("Debug - State Colors")]
@@ -23,6 +25,8 @@ public class PlayerState : MonoBehaviour
     [SerializeField] private Color dashingColor = Color.cyan;
     [SerializeField] private Color slidingColor = new Color(1f, 0.5f, 0f);
     [SerializeField] private Color staggerColor = new Color(1f, 0.5f, 0f);
+    [SerializeField] private Color burnStunnedColor = new Color(1f, 0.15f, 0f);
+    [SerializeField] private Color burningColor = new Color(0.85f, 0.08f, 0f);
     [SerializeField] private Color deadColor = Color.gray;
 
     private Material debugMaterial;
@@ -37,6 +41,8 @@ public class PlayerState : MonoBehaviour
     public bool IsDashing() => currentState == State.Dashing;
     public bool IsSliding() => currentState == State.Sliding;
     public bool IsStaggered() => currentState == State.Stagger;
+    public bool IsBurnStunned() => currentState == State.BurnStunned;
+    public bool IsBurning() => currentState == State.Burning;
     public bool IsDead() => currentState == State.Dead;
 
     public void ChangeState(State newState)
@@ -84,6 +90,14 @@ public class PlayerState : MonoBehaviour
 
             case State.Stagger:
                 debugMaterial.color = staggerColor;
+                break;
+
+            case State.BurnStunned:
+                debugMaterial.color = burnStunnedColor;
+                break;
+
+            case State.Burning:
+                debugMaterial.color = burningColor;
                 break;
 
             case State.Dead:

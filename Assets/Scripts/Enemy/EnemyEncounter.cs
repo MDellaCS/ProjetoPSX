@@ -13,7 +13,14 @@ public class EnemyEncounterWave
 {
     public string waveName = "Wave";
 
-    [Tooltip("Define quando esta onda pode nascer.")]
+    [Tooltip("Pai cujos filhos diretos sao os inimigos desta onda. Tem prioridade sobre Enemies e respeita a ordem na Hierarchy.")]
+    public Transform enemiesParent;
+
+    [Tooltip(
+        "Sequential: nasce somente quando todas as ondas anteriores forem derrotadas.\n" +
+        "Overlap: nasce apos Spawn Delay mesmo com inimigos de ondas anteriores vivos.\n" +
+        "Sustain: nasce ate Max Alive inimigos; cada morte repoe um apos Spawn Delay, ate acabar a lista."
+    )]
     public EnemyEncounterWaveSpawnMode spawnMode =
         EnemyEncounterWaveSpawnMode.Sequential;
 
@@ -25,6 +32,7 @@ public class EnemyEncounterWave
     [Tooltip("Maximo de inimigos vivos simultaneos. Usado apenas por Sustain.")]
     public int maxAlive = 4;
 
+    [Tooltip("Lista manual usada apenas quando Enemies Parent estiver vazio.")]
     public BaseEnemy[] enemies;
 }
 
@@ -58,6 +66,8 @@ public class EnemyEncounter : MonoBehaviour
 
     private readonly HashSet<BaseEnemy> participants =
         new HashSet<BaseEnemy>();
+    private readonly Dictionary<EnemyEncounterWave, BaseEnemy[]> waveEnemyCache =
+        new Dictionary<EnemyEncounterWave, BaseEnemy[]>();
 
     private int currentWaveIndex = -1;
     private int nextWaveIndex;
@@ -94,6 +104,8 @@ public class EnemyEncounter : MonoBehaviour
 
     private void Awake()
     {
+        CacheWaveEnemies();
+
         for (int waveIndex = 0; waveIndex < WaveCount; waveIndex++)
         {
             foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
@@ -424,9 +436,49 @@ public class EnemyEncounter : MonoBehaviour
             return System.Array.Empty<BaseEnemy>();
 
         EnemyEncounterWave wave = waves[waveIndex];
-        return wave != null && wave.enemies != null
-            ? wave.enemies
-            : System.Array.Empty<BaseEnemy>();
+        if (wave == null)
+            return System.Array.Empty<BaseEnemy>();
+
+        if (waveEnemyCache.TryGetValue(wave, out BaseEnemy[] cachedEnemies))
+            return cachedEnemies;
+
+        return GetConfiguredWaveEnemies(wave);
+    }
+
+    private void CacheWaveEnemies()
+    {
+        waveEnemyCache.Clear();
+
+        if (waves == null)
+            return;
+
+        foreach (EnemyEncounterWave wave in waves)
+        {
+            if (wave != null)
+                waveEnemyCache[wave] = GetConfiguredWaveEnemies(wave);
+        }
+    }
+
+    private static BaseEnemy[] GetConfiguredWaveEnemies(EnemyEncounterWave wave)
+    {
+        if (wave.enemiesParent == null)
+            return wave.enemies ?? System.Array.Empty<BaseEnemy>();
+
+        // GetChild segue exatamente a ordem visivel da Hierarchy. Buscamos
+        // apenas filhos diretos para um pai de onda nao absorver inimigos de
+        // subgrupos/ondas vizinhas por acidente.
+        List<BaseEnemy> enemiesFromParent = new List<BaseEnemy>();
+        for (int childIndex = 0;
+             childIndex < wave.enemiesParent.childCount;
+             childIndex++)
+        {
+            Transform child = wave.enemiesParent.GetChild(childIndex);
+            BaseEnemy enemy = child.GetComponent<BaseEnemy>();
+            if (enemy != null)
+                enemiesFromParent.Add(enemy);
+        }
+
+        return enemiesFromParent.ToArray();
     }
 
     private void ResolvePlayer()

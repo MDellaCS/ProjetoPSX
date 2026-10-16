@@ -1,170 +1,116 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-/// <summary>
-/// HUD jogavel em UI Toolkit. Representa os recursos atuais do player:
-/// Heat, Superheat e disponibilidade de Dash.
-/// </summary>
 [RequireComponent(typeof(PanelRenderer))]
 public class PlayerHUDToolkit : MonoBehaviour
 {
-    [Header("References")]
     [SerializeField] private PanelRenderer panelRenderer;
     [SerializeField] private Transform playerTransform;
 
+    private readonly List<VisualElement> coldNotches = new();
+    private readonly List<VisualElement> hotNotches = new();
+    private readonly List<VisualElement> superheatNotches = new();
     private PlayerHeat playerHeat;
     private PlayerMovement playerMovement;
-
-    private VisualElement heatColdFill;
-    private VisualElement heatHotFill;
     private Label heatValueText;
-    private VisualElement superheatFill;
+    private Label heatPowerText;
     private Label superheatValueText;
     private VisualElement dashIndicator;
     private Label dashText;
 
     private void Awake()
     {
-        if (panelRenderer == null)
-            panelRenderer = GetComponent<PanelRenderer>();
-
-        if (panelRenderer != null)
-            panelRenderer.RegisterUIReloadCallback(HandleUIReload);
-
+        if (panelRenderer == null) panelRenderer = GetComponent<PanelRenderer>();
+        if (panelRenderer != null) panelRenderer.RegisterUIReloadCallback(HandleUIReload);
         ResolvePlayerComponents();
     }
 
     private void OnDestroy()
     {
-        if (panelRenderer != null)
-            panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+        if (panelRenderer != null) panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
     }
 
     private void Update()
     {
-        if (playerHeat == null || playerMovement == null)
-            ResolvePlayerComponents();
-
-        if (playerHeat == null || playerMovement == null)
-            return;
-
-        UpdateHeat();
-        UpdateSuperheat();
+        if (playerHeat == null || playerMovement == null) ResolvePlayerComponents();
+        if (playerHeat == null || playerMovement == null) return;
+        UpdateHeatNotches();
         UpdateDash();
     }
 
-    private void HandleUIReload(
-        PanelRenderer _,
-        VisualElement rootVisualElement,
-        int __)
+    private void HandleUIReload(PanelRenderer _, VisualElement root, int __)
     {
-        if (rootVisualElement == null)
-            return;
+        if (root == null) return;
+        heatValueText = root.Q<Label>("heat-value");
+        heatPowerText = root.Q<Label>("heat-power-value");
+        superheatValueText = root.Q<Label>("superheat-value");
+        dashIndicator = root.Q<VisualElement>("dash-indicator");
+        dashText = root.Q<Label>("dash-text");
+        BuildNotches(root.Q<VisualElement>("heat-cold-notches"), coldNotches, 10, "heat-notch");
+        BuildNotches(root.Q<VisualElement>("heat-hot-notches"), hotNotches, 10, "heat-notch");
+        BuildNotches(root.Q<VisualElement>("superheat-notches"), superheatNotches, 5, "superheat-notch");
+    }
 
-        heatColdFill = rootVisualElement.Q<VisualElement>("heat-cold-fill");
-        heatHotFill = rootVisualElement.Q<VisualElement>("heat-hot-fill");
-        heatValueText = rootVisualElement.Q<Label>("heat-value");
-        superheatFill = rootVisualElement.Q<VisualElement>("superheat-fill");
-        superheatValueText = rootVisualElement.Q<Label>("superheat-value");
-        dashIndicator = rootVisualElement.Q<VisualElement>("dash-indicator");
-        dashText = rootVisualElement.Q<Label>("dash-text");
-
-        ValidateElement(heatColdFill, "heat-cold-fill");
-        ValidateElement(heatHotFill, "heat-hot-fill");
-        ValidateElement(heatValueText, "heat-value");
-        ValidateElement(superheatFill, "superheat-fill");
-        ValidateElement(superheatValueText, "superheat-value");
-        ValidateElement(dashIndicator, "dash-indicator");
-        ValidateElement(dashText, "dash-text");
+    private static void BuildNotches(VisualElement parent, List<VisualElement> output, int count, string className)
+    {
+        output.Clear();
+        if (parent == null) return;
+        parent.Clear();
+        for (int index = 0; index < count; index++)
+        {
+            VisualElement notch = new VisualElement();
+            notch.AddToClassList(className);
+            parent.Add(notch);
+            output.Add(notch);
+        }
     }
 
     private void ResolvePlayerComponents()
     {
         if (playerTransform == null)
         {
-            GameObject playerObject =
-                GameObject.FindGameObjectWithTag("Player");
-
-            if (playerObject != null)
-                playerTransform = playerObject.transform;
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null) playerTransform = player.transform;
         }
-
-        if (playerTransform == null)
-            return;
-
+        if (playerTransform == null) return;
         playerHeat = playerTransform.GetComponent<PlayerHeat>();
         playerMovement = playerTransform.GetComponent<PlayerMovement>();
     }
 
-    private void UpdateHeat()
+    private void UpdateHeatNotches()
     {
-        int heat = playerHeat.CurrentHeat;
-        float coldAmount = heat < 0 && playerHeat.MinHeat < 0
-            ? Mathf.Clamp01((float)heat / playerHeat.MinHeat)
-            : 0f;
-        float hotAmount = heat > 0 && playerHeat.MaxHeat > 0
-            ? Mathf.Clamp01((float)heat / playerHeat.MaxHeat)
-            : 0f;
+        int heatNotch = playerHeat.CurrentHeatNotch;
+        int coldCount = Mathf.Clamp(-heatNotch, 0, 10);
+        int hotCount = Mathf.Clamp(heatNotch, 0, 10);
+        int superheatCount = playerHeat.CurrentSuperheatNotch;
 
-        // Cada lado ocupa no maximo metade da barra, a partir do zero central.
-        SetPercentWidth(heatColdFill, coldAmount * 50f);
-        SetPercentWidth(heatHotFill, hotAmount * 50f);
+        for (int index = 0; index < coldNotches.Count; index++)
+            SetNotchColor(coldNotches[index], ColdColor(index / 9f), index >= coldNotches.Count - coldCount);
+        for (int index = 0; index < hotNotches.Count; index++)
+            SetNotchColor(hotNotches[index], HotColor(index / 9f), index < hotCount);
+        for (int index = 0; index < superheatNotches.Count; index++)
+            SetNotchColor(superheatNotches[index], SuperheatColor(index / 4f), index < superheatCount);
 
-        if (heatValueText != null)
-        {
-            string sign = heat > 0 ? "+" : string.Empty;
-            heatValueText.text = "HEAT  " + sign + heat + " / " +
-                playerHeat.MaxHeat;
-        }
-    }
-
-    private void UpdateSuperheat()
-    {
-        float amount = playerHeat.MaxSuperheat > 0
-            ? Mathf.Clamp01((float)playerHeat.CurrentSuperheat /
-                playerHeat.MaxSuperheat)
-            : 0f;
-
-        SetPercentWidth(superheatFill, amount * 100f);
-
-        if (superheatValueText != null)
-        {
-            superheatValueText.text = "SUPERHEAT  " +
-                playerHeat.CurrentSuperheat + " / " +
-                playerHeat.MaxSuperheat;
-        }
+        if (heatValueText != null) heatValueText.text = "HEAT " + FormatSigned(playerHeat.CurrentHeat) + " / " + playerHeat.MaxHeat.ToString("0");
+        if (heatPowerText != null) heatPowerText.text = playerHeat.HeavyDamageMultiplier.ToString("0.#") + "x";
+        if (superheatValueText != null) superheatValueText.text = "SUPERHEAT " + playerHeat.CurrentSuperheat.ToString("0.0") + " / " + playerHeat.MaxSuperheat.ToString("0");
     }
 
     private void UpdateDash()
     {
         bool ready = playerMovement.IsDashReady;
-
-        if (dashIndicator != null)
-        {
-            dashIndicator.style.backgroundColor = ready
-                ? new Color(0.9f, 0.96f, 1f, 1f)
-                : new Color(0.2f, 0.26f, 0.32f, 1f);
-        }
-
-        if (dashText != null)
-        {
-            dashText.text = ready
-                ? "DASH READY"
-                : "DASH " + playerMovement.DashCooldownRemaining.ToString("F1") + "s";
-        }
+        if (dashIndicator != null) dashIndicator.style.backgroundColor = ready ? new Color(.9f, .96f, 1f) : new Color(.2f, .26f, .32f);
+        if (dashText != null) dashText.text = ready ? "DASH READY" : "DASH " + playerMovement.DashCooldownRemaining.ToString("F1") + "s";
     }
 
-    private static void SetPercentWidth(VisualElement element, float percent)
+    private static void SetNotchColor(VisualElement notch, Color color, bool active)
     {
-        if (element != null)
-            element.style.width = new Length(
-                Mathf.Clamp(percent, 0f, 100f),
-                LengthUnit.Percent
-            );
+        if (notch != null) notch.style.backgroundColor = active ? color : new Color(.12f, .14f, .17f, 1f);
     }
 
-    private void ValidateElement(VisualElement element, string elementName)
-    {
-        // Elementos ausentes deixam apenas a parte correspondente do HUD inerte.
-    }
+    private static Color ColdColor(float amount) => Color.Lerp(new Color(.04f, .13f, .35f), new Color(.2f, .85f, 1f), amount);
+    private static Color HotColor(float amount) => Color.Lerp(new Color(1f, .75f, .08f), new Color(1f, .18f, .02f), amount);
+    private static Color SuperheatColor(float amount) => Color.Lerp(new Color(.45f, 0f, .02f), new Color(1f, .08f, .02f), amount);
+    private static string FormatSigned(float value) => (value > 0f ? "+" : string.Empty) + value.ToString("0.0");
 }

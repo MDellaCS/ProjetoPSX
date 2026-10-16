@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [System.Serializable]
 public class PlayerAttackData
@@ -28,8 +29,10 @@ public class PlayerAttackData
     [Tooltip("Distribuicao do avanco dentro da janela de movimento.")]
     public AnimationCurve windupMoveCurve = CreateWindupEaseInCurve();
 
-    public int heatGenerated = 0;
-    public int heatRemovedOnHit = 0;
+    [Header("Heat")]
+    [Tooltip("Valor legado convertido pela escala global de Heat quando este ataque leve acerta.")]
+    [FormerlySerializedAs("heatRemovedOnHit")]
+    public int heatGeneratedOnHit = 0;
 
     [Header("Stagger")]
     [Min(0)]
@@ -42,8 +45,9 @@ public class PlayerAttackData
     public bool isLaunch = false;
     public bool launchesPlayer = false;
     public bool isAerial = false;
-    [Tooltip("Ao acertar um inimigo no ar, força uma queda rapida e um impulso ao tocar o chao.")]
-    public bool isAerialBounce = false;
+    [Tooltip("Queda aerea: mantem a hitbox ativa ate o player tocar o chao.")]
+    public bool isDive = false;
+    [Tooltip("Permite iniciar este ataque exclusivamente durante um Dash terrestre.")]
     public bool isDashAttack = false;
 
     private static AnimationCurve CreateWindupEaseInCurve()
@@ -54,18 +58,4 @@ public class PlayerAttackData
             new Keyframe(1f, 1f, 2f, 2f)
         );
     }
-}
-
-/// <summary>
-/// Uma unica entrada que executa varios ataques em ordem, sem exigir inputs
-/// adicionais. Cada golpe preserva seus proprios dados de dano, hitbox e movimento.
-/// </summary>
-[System.Serializable]
-public class PlayerAttackSequence
-{
-    public string sequenceName;
-    public bool isDashAttack;
-    public PlayerAttackData[] strikes;
-
-    public bool HasStrikes => strikes != null && strikes.Length > 0;
 }

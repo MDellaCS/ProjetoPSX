@@ -112,6 +112,8 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         new(StringComparer.Ordinal);
     private bool hasPresentedState;
     private PlayerVisualState lastPresentedState;
+    private bool hasPendingStateAfterHitstop;
+    private PlayerVisualState pendingStateAfterHitstop;
 
     private void Awake()
     {
@@ -139,6 +141,19 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         Present(currentState);
     }
 
+    private void Update()
+    {
+        if (!hasPendingStateAfterHitstop ||
+            CombatImpactSystem.IsPresentationFrozen(animator))
+        {
+            return;
+        }
+
+        PlayerVisualState pendingState = pendingStateAfterHitstop;
+        hasPendingStateAfterHitstop = false;
+        Present(pendingState);
+    }
+
     private void OnDisable()
     {
         if (animator != null)
@@ -147,6 +162,13 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
 
     public void Present(PlayerVisualState visualState)
     {
+        if (CombatImpactSystem.IsPresentationFrozen(animator))
+        {
+            pendingStateAfterHitstop = visualState;
+            hasPendingStateAfterHitstop = true;
+            return;
+        }
+
         if (hasPresentedState && lastPresentedState == visualState)
             return;
 
@@ -172,6 +194,7 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
     {
         if (string.IsNullOrEmpty(attackId) || animator == null ||
             !animator.isActiveAndEnabled ||
+            CombatImpactSystem.IsPresentationFrozen(animator) ||
             !attackBindingMap.TryGetValue(attackId, out AttackBinding binding))
         {
             return;
@@ -193,6 +216,9 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
     public void PresentMovement(float horizontalSpeed, bool isMoving)
     {
         if (animator == null || !animator.isActiveAndEnabled)
+            return;
+
+        if (CombatImpactSystem.IsPresentationFrozen(animator))
             return;
 
         if (!isMoving)

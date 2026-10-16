@@ -99,6 +99,13 @@ public class BaseEnemy : MonoBehaviour
     [SerializeField] private bool canBeLaunched = true;
     [SerializeField] private bool canBeJuggled = true;
 
+    [Header("Wall Splat")]
+    [Tooltip("Velocidade horizontal minima ao colidir com uma parede para aplicar Wall Splat.")]
+    [Min(0f)] [SerializeField] private float wallSplatMinimumSpeed = 10f;
+    [Min(0f)] [SerializeField] private float wallSplatStunDuration = 1f;
+    [Tooltip("Camadas do cenario que contam como parede para Wall Splat.")]
+    [SerializeField] private LayerMask wallSplatLayers = ~0;
+
     [Header("Visual Feedback")]
     [Min(0f)] [SerializeField] private float damageFlashDuration = .15f;
 
@@ -124,6 +131,8 @@ public class BaseEnemy : MonoBehaviour
     private bool hasLastKnownPlayerPosition;
     private Vector3 knockbackVelocity;
     private float knockbackTimer;
+    private Vector3 slideLaunchHorizontalVelocity;
+    private bool hasSlideLaunchHorizontalImpulse;
     private Vector3 playerHeadPushVelocity;
     private float playerHeadPushTimer;
     private float verticalVelocity;
@@ -135,19 +144,11 @@ public class BaseEnemy : MonoBehaviour
     private bool launchLowGravityPending;
     private float juggleTimer;
     private float juggleGravityMultiplier = 1f;
-    private float juggleDiveFallSpeed;
-    private float juggleBounceLiftSpeed;
-    private float juggleBounceGravity;
     private Vector3 horizontalLaunchVelocity;
     private float horizontalLaunchTimer;
-    private int horizontalLaunchWallSplatDamage;
-    private float horizontalLaunchWallSplatStunDuration;
-    private LayerMask horizontalLaunchWallLayers;
+    private Vector3 lastMoveVelocity;
     private bool isLaunched;
-    private bool isJuggleDiving;
-    private bool isJuggleBouncing;
     private bool isHorizontallyLaunched;
-    private bool hitWallDuringLaunch;
     private bool hasDamagedDuringActive;
     private bool isEncounterEngaged;
     private bool isWaitingForEncounter;
@@ -508,7 +509,8 @@ public class BaseEnemy : MonoBehaviour
                 transform.position,
                 attack.knockbackForce,
                 attack.knockbackDuration,
-                true
+                true,
+                transform
             );
             return true;
         }
@@ -522,6 +524,8 @@ public class BaseEnemy : MonoBehaviour
             ? horizontalLaunchVelocity
             : playerHeadPushTimer > 0f
                 ? playerHeadPushVelocity
+            : hasSlideLaunchHorizontalImpulse
+                ? slideLaunchHorizontalVelocity
             : knockbackTimer > 0f
                 ? knockbackVelocity
                 : horizontalVelocity;
@@ -533,17 +537,11 @@ public class BaseEnemy : MonoBehaviour
             knockbackTimer -= Time.deltaTime;
 
         velocity.y = verticalVelocity;
-        hitWallDuringLaunch = false;
+        lastMoveVelocity = velocity;
         CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
 
         if (isHorizontallyLaunched)
         {
-            if (hitWallDuringLaunch)
-            {
-                ApplyWallSplat();
-                return;
-            }
-
             horizontalLaunchTimer -= Time.deltaTime;
             if (horizontalLaunchTimer <= 0f)
                 ResetHorizontalLaunch();
@@ -552,20 +550,11 @@ public class BaseEnemy : MonoBehaviour
         if (isLaunched && verticalVelocity <= 0f &&
             (flags & CollisionFlags.Below) != 0)
         {
-            if (isJuggleBouncing)
-            {
-                float bounceLiftSpeed = juggleBounceLiftSpeed;
-                float bounceGravity = juggleBounceGravity;
-                ResetJuggleMovement();
-                verticalVelocity = bounceLiftSpeed;
-                launchGravity = bounceGravity;
-                return;
-            }
-
             isLaunched = false;
             verticalVelocity = -2f;
             ResetLaunchLowGravity();
             ResetJuggleMovement();
+            CancelSlideLaunchHorizontalImpulse();
             currentState = State.Combat;
             decisionTimer = 0f;
         }
@@ -575,12 +564,6 @@ public class BaseEnemy : MonoBehaviour
     {
         if (!isLaunched && controller.isGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
-
-        if (isJuggleDiving)
-        {
-            verticalVelocity = Mathf.Max(-juggleDiveFallSpeed, -terminalFallSpeed);
-            return;
-        }
 
         if (juggleTimer > 0f)
         {
@@ -831,10 +814,17 @@ public class BaseEnemy : MonoBehaviour
         );
     }
 
-    public void TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage)
+    public void TakeDamage(
+        int damage,
+        Vector3 attackerPosition,
+        int poiseDamage,
+        bool fromPlayerAttack = false)
     {
         if (hasDied)
             return;
+
+        if (fromPlayerAttack)
+            CancelSlideLaunchHorizontalImpulse();
 
         CurrentHealth -= damage;
         damageNumberSpawner?.ShowDamage(damage);
@@ -914,10 +904,35 @@ public class BaseEnemy : MonoBehaviour
             launchLowGravityMultiplier < 1f;
         isLaunched = true;
         ResetJuggleMovement();
+        CancelSlideLaunchHorizontalImpulse();
     }
 
-    public void ApplyLaunch(Vector3 attackerPosition, float force, float duration,
-        int wallSplatDamage, float wallSplatStunDuration, LayerMask wallSplatLayers)
+    /// <summary>
+    /// Complementa um Launch Up com um impulso horizontal que persiste ate o
+    /// inimigo tocar o chao ou receber dano do player.
+    /// </summary>
+    public void ApplyLaunchUpHorizontalImpulse(
+        Vector3 direction,
+        float speed)
+    {
+        if (!isLaunched || hasDied || speed <= 0f)
+            return;
+
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .0001f)
+            return;
+
+        slideLaunchHorizontalVelocity = direction.normalized * speed;
+        hasSlideLaunchHorizontalImpulse = true;
+    }
+
+    public void CancelSlideLaunchHorizontalImpulse()
+    {
+        slideLaunchHorizontalVelocity = Vector3.zero;
+        hasSlideLaunchHorizontalImpulse = false;
+    }
+
+    public void ApplyLaunch(Vector3 attackerPosition, float force, float duration)
     {
         if (!canBeLaunched || hasDied || force <= 0f || duration <= 0f)
             return;
@@ -933,10 +948,8 @@ public class BaseEnemy : MonoBehaviour
         knockbackTimer = 0f;
         horizontalLaunchVelocity = direction.normalized * force;
         horizontalLaunchTimer = duration;
-        horizontalLaunchWallSplatDamage = Mathf.Max(0, wallSplatDamage);
-        horizontalLaunchWallSplatStunDuration = Mathf.Max(0f, wallSplatStunDuration);
-        horizontalLaunchWallLayers = wallSplatLayers;
         isHorizontallyLaunched = true;
+        CancelSlideLaunchHorizontalImpulse();
     }
 
     public void ApplyAerialJuggleLight(float liftSpeed, float gravity,
@@ -951,9 +964,21 @@ public class BaseEnemy : MonoBehaviour
         ResetLaunchLowGravity();
         juggleGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
         juggleTimer = Mathf.Max(juggleTimer, duration);
-        juggleDiveFallSpeed = 0f;
-        isJuggleDiving = false;
-        isJuggleBouncing = false;
+    }
+
+    /// <summary>
+    /// Faz um inimigo ja lancado acompanhar a queda de um Dive. Nao altera
+    /// inimigos no chao: Dive nao e uma fonte de Launch Up.
+    /// </summary>
+    public void ApplyAerialDive(float fallSpeed)
+    {
+        if (!canBeJuggled || !isLaunched || hasDied)
+            return;
+
+        currentAttack = null;
+        verticalVelocity = -Mathf.Max(0f, fallSpeed);
+        ResetLaunchLowGravity();
+        ResetJuggleMovement();
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
@@ -969,9 +994,6 @@ public class BaseEnemy : MonoBehaviour
             return;
         }
 
-        if (!isHorizontallyLaunched)
-            return;
-
         // Chao e teto nao contam como parede. Uma parede possui normal quase
         // horizontal; rampas muito inclinadas tambem ficam fora do Wall Splat.
         if (Mathf.Abs(hit.normal.y) > .5f)
@@ -985,10 +1007,15 @@ public class BaseEnemy : MonoBehaviour
         }
 
         int obstacleLayer = obstacle.gameObject.layer;
-        if ((horizontalLaunchWallLayers.value & (1 << obstacleLayer)) == 0)
+        if ((wallSplatLayers.value & (1 << obstacleLayer)) == 0)
             return;
 
-        hitWallDuringLaunch = true;
+        Vector3 horizontalVelocity = lastMoveVelocity;
+        horizontalVelocity.y = 0f;
+        if (horizontalVelocity.magnitude < wallSplatMinimumSpeed)
+            return;
+
+        ApplyWallSplat();
     }
 
     private bool IsLandingOnPlayerTop(PlayerMovement player)
@@ -1021,37 +1048,6 @@ public class BaseEnemy : MonoBehaviour
         playerHeadPushVelocity = pushDirection.normalized * pushSpeed;
         playerHeadPushTimer = .1f;
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
-    }
-
-    public void ApplyAerialJuggleDive(float fallSpeed)
-    {
-        if (!canBeJuggled || !isLaunched || hasDied)
-            return;
-
-        currentAttack = null;
-        juggleTimer = 0f;
-        ResetLaunchLowGravity();
-        juggleGravityMultiplier = 1f;
-        juggleDiveFallSpeed = fallSpeed;
-        isJuggleDiving = true;
-        isJuggleBouncing = false;
-    }
-
-    public void ApplyAerialJuggleBounce(float fallSpeed, float bounceLiftSpeed,
-        float bounceGravity)
-    {
-        if (!canBeJuggled || !isLaunched || hasDied)
-            return;
-
-        currentAttack = null;
-        juggleTimer = 0f;
-        ResetLaunchLowGravity();
-        juggleGravityMultiplier = 1f;
-        juggleDiveFallSpeed = fallSpeed;
-        juggleBounceLiftSpeed = bounceLiftSpeed;
-        juggleBounceGravity = bounceGravity;
-        isJuggleDiving = true;
-        isJuggleBouncing = true;
     }
 
     public void SetEncounterEngaged(Transform encounterPlayer)
@@ -1124,11 +1120,6 @@ public class BaseEnemy : MonoBehaviour
     {
         juggleTimer = 0f;
         juggleGravityMultiplier = 1f;
-        juggleDiveFallSpeed = 0f;
-        isJuggleDiving = false;
-        juggleBounceLiftSpeed = 0f;
-        juggleBounceGravity = 0f;
-        isJuggleBouncing = false;
     }
 
     private void UpdateLaunchLowGravity()
@@ -1178,28 +1169,20 @@ public class BaseEnemy : MonoBehaviour
     {
         horizontalLaunchVelocity = Vector3.zero;
         horizontalLaunchTimer = 0f;
-        horizontalLaunchWallSplatDamage = 0;
-        horizontalLaunchWallSplatStunDuration = 0f;
         isHorizontallyLaunched = false;
-        hitWallDuringLaunch = false;
     }
 
     private void ApplyWallSplat()
     {
-        int damage = horizontalLaunchWallSplatDamage;
-        float stunDuration = horizontalLaunchWallSplatStunDuration;
         ResetHorizontalLaunch();
-
-        if (damage > 0)
-            TakeDamage(damage, transform.position, 0);
-
-        if (hasDied)
-            return;
+        CancelSlideLaunchHorizontalImpulse();
 
         currentAttack = null;
         repositionTimer = 0f;
-        stateTimer = stunDuration;
-        currentState = stunDuration > 0f ? State.Staggered : State.Combat;
+        stateTimer = wallSplatStunDuration;
+        currentState = wallSplatStunDuration > 0f
+            ? State.Staggered
+            : State.Combat;
     }
 
     private void ResolvePlayer()
@@ -1263,8 +1246,6 @@ public class BaseEnemy : MonoBehaviour
             : "W/A/R: -";
         string targetName = target != null ? target.name : "None";
         string status = isHorizontallyLaunched ? "LAUNCH" :
-            isJuggleBouncing ? "BOUNCE" :
-            isJuggleDiving ? "DIVE" :
             isLaunched ? "LAUNCHED" :
             IsSearchingLastKnownPosition ? "SEARCHING" : "GROUND";
         float aggressionVelocity = GetCurrentAggressionVelocity();

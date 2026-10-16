@@ -47,10 +47,6 @@ public class CameraFollow : MonoBehaviour
     [Min(0f)] public float collisionPadding = 0.1f;
     [Min(0f)] public float minimumDistanceFromFocus = 0.8f;
 
-    [Header("Impact Shake")]
-    public float impactShakeDistance = 0.3f;
-    public float impactShakeDuration = 0.08f;
-
     private PlayerMovement playerMovement;
     private PlayerCombat playerCombat;
     private PlayerLockOn playerLockOn;
@@ -64,6 +60,9 @@ public class CameraFollow : MonoBehaviour
     private float horizontalYaw;
     private Vector3 shakeDirection;
     private float shakeTimer;
+    private float shakeDistance;
+    private float shakeDuration;
+    private AnimationCurve shakeIntensityCurve;
     private bool isInitialized;
 
     private void Awake()
@@ -117,8 +116,11 @@ public class CameraFollow : MonoBehaviour
             )
         );
 
-        transform.position = desiredPosition + GetShakeOffset();
-        transform.LookAt(smoothedFocus);
+        // Shake e um desvio temporario do Look At. A posicao calculada por
+        // Follow, colisao e Offset permanece intacta.
+        Vector3 shakenLookAt = smoothedFocus + GetShakeOffset();
+        transform.position = desiredPosition;
+        transform.LookAt(shakenLookAt);
     }
 
     private void EnsureInitialized()
@@ -297,21 +299,43 @@ public class CameraFollow : MonoBehaviour
 
     private Vector3 GetShakeOffset()
     {
-        if (shakeTimer <= 0f || impactShakeDuration <= 0f)
+        if (shakeTimer <= 0f || shakeDuration <= 0f)
             return Vector3.zero;
 
-        float shakeStrength = shakeTimer / impactShakeDuration;
+        float elapsedNormalized = 1f - shakeTimer / shakeDuration;
+        float shakeStrength = shakeIntensityCurve != null
+            ? Mathf.Max(0f, shakeIntensityCurve.Evaluate(elapsedNormalized))
+            : 1f - elapsedNormalized;
         shakeTimer = Mathf.Max(0f, shakeTimer - Time.unscaledDeltaTime);
-        return shakeDirection * impactShakeDistance * shakeStrength;
+        return shakeDirection * shakeDistance * shakeStrength;
     }
 
-    public void ImpactShake(Vector3 attackDirection)
+    /// <summary>Recebe impulsos visuais do CombatImpactSystem.</summary>
+    public void RequestImpactShake(
+        Vector3 attackDirection,
+        float distance,
+        float duration,
+        AnimationCurve intensityCurve)
     {
         attackDirection.y = 0f;
-        if (attackDirection.sqrMagnitude <= 0.0001f)
+        if (attackDirection.sqrMagnitude <= 0.0001f ||
+            distance <= 0f || duration <= 0f)
             return;
 
-        shakeDirection = -attackDirection.normalized;
-        shakeTimer = impactShakeDuration;
+        // O impulso acompanha a direcao fisica do golpe: atacante -> alvo.
+        shakeDirection = attackDirection.normalized;
+        if (shakeTimer <= 0f)
+        {
+            shakeDistance = distance;
+            shakeDuration = duration;
+            shakeTimer = duration;
+            shakeIntensityCurve = intensityCurve;
+            return;
+        }
+
+        shakeDistance = Mathf.Max(shakeDistance, distance);
+        shakeDuration = Mathf.Max(shakeDuration, duration);
+        shakeTimer = Mathf.Max(shakeTimer, duration);
+        shakeIntensityCurve = intensityCurve;
     }
 }

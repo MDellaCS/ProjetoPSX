@@ -80,7 +80,8 @@ public class EnemyProjectile : MonoBehaviour
                     owner != null ? owner.position : transform.position,
                     knockbackForce,
                     knockbackDuration,
-                    true
+                    true,
+                    owner
                 );
             }
 

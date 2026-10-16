@@ -15,7 +15,13 @@
     border-bottom-color: rgb(205, 212, 225);
 }
 
+#heat-header {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
 #heat-value,
+#heat-power-value,
 #superheat-value,
 #dash-text {
     color: rgb(235, 238, 244);
@@ -23,37 +29,39 @@
     margin-bottom: 4px;
 }
 
-.meter-track {
+#heat-power-value {
+    color: rgb(255, 210, 92);
+}
+
+#heat-notch-row {
     height: 16px;
+    flex-direction: row;
+    align-items: center;
     margin-bottom: 10px;
-    background-color: rgb(33, 38, 48);
 }
 
-#heat-cold-fill {
-    position: absolute;
-    right: 50%;
-    height: 100%;
-    background-color: rgb(52, 177, 235);
+.notch-group {
+    flex-direction: row;
 }
 
-#heat-hot-fill {
-    position: absolute;
-    left: 50%;
-    height: 100%;
-    background-color: rgb(238, 106, 38);
+.heat-notch,
+.superheat-notch {
+    width: 12px;
+    height: 16px;
+    margin-right: 2px;
+    background-color: rgb(34, 39, 49);
 }
 
-#heat-zero-marker {
-    position: absolute;
-    left: 50%;
-    width: 2px;
-    height: 100%;
+#heat-zero-notch {
+    width: 4px;
+    height: 16px;
+    margin-left: 3px;
+    margin-right: 5px;
     background-color: rgb(245, 245, 245);
 }
 
-#superheat-fill {
-    height: 100%;
-    background-color: rgb(221, 55, 74);
+.superheat-notch-group {
+    margin-left: 12px;
 }
 
 #dash-row {

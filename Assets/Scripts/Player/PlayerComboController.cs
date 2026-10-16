@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Moveset unico do jogador. Cada no define qual botao pode continua-lo e se a
@@ -16,19 +16,13 @@ public class PlayerComboController : MonoBehaviour
         L2Prime,
         L3Prime,
         H1,
-        H2,
-        H2Prime,
-        H1Prime,
-        L1Prime,
-        L2DoublePrime,
-        LightRepeat,
-        HeavyRepeat,
         AerialL1,
         AerialL2,
         AerialL3,
         AerialL4,
+        AerialL5,
         AerialH1,
-        DashH1
+        DashL1
     }
 
     private enum AttackInput
@@ -43,9 +37,6 @@ public class PlayerComboController : MonoBehaviour
     [Tooltip("Tempo total disponivel depois de um golpe para continuar o combo.")]
     [Min(0.01f)] public float continuationWindow = 0.55f;
 
-    [Tooltip("Tempo que L ou H precisa ficar pressionado para entrar no ataque repetido.")]
-    [Min(0f)] public float holdToRepeatDelay = 0.3f;
-
     [Header("2. Light Route: L1 - L2 - L3")]
     public PlayerAttackData l1 = Light("L1", 20, .10f, .12f, .20f, 1.45f, .85f, 250, 10, .35f);
     public PlayerAttackData l2 = Light("L2", 28, .12f, .13f, .22f, 1.55f, .90f, 300, 14, .45f);
@@ -55,30 +46,20 @@ public class PlayerComboController : MonoBehaviour
     public PlayerAttackData l2Prime = Light("L2'", 35, .17f, .16f, .30f, 1.65f, 1.00f, 350, 18, .50f);
     public PlayerAttackData l3Prime = Light("L3'", 55, .25f, .20f, .48f, 1.95f, 1.20f, 550, 30, .85f);
 
-    [Header("4. Heavy Route: H1 - H2 / H1 - PAUSE - H2'")]
-    public PlayerAttackData h1 = Heavy("H1", 35, .25f, .18f, .35f, 1.60f, 1.00f, 500, 35, .55f);
-    public PlayerAttackData h2 = LaunchHeavy("H2", 55, .35f, .22f, .55f, 1.90f, 1.25f, 700, 55, .90f);
-    public PlayerAttackData h2Prime = HorizontalLaunchHeavy("H2'", 70, .48f, .25f, .80f, 2.10f, 1.45f, 900, 70, 1.15f);
+    [Header("4. Heavy Attack")]
+    public PlayerAttackData h1 = Heavy("H1", 35, .25f, .18f, .35f, 1.60f, 1.00f, 35, .55f);
 
-    [Header("5. Mixed Routes: L1 - L2 - H1' / H1 - L1' - L2''")]
-    public PlayerAttackData h1Prime = LaunchHeavy("H1'", 65, .30f, .23f, .60f, 2.00f, 1.35f, 800, 65, .95f);
-    public PlayerAttackData l1Prime = Light("L1'", 30, .13f, .14f, .25f, 1.55f, .90f, 300, 15, .40f);
-    public PlayerAttackData l2DoublePrime = Light("L2''", 60, .25f, .20f, .50f, 1.90f, 1.25f, 550, 32, .75f);
-
-    [Header("6. Hold To Repeat Attacks")]
-    public PlayerAttackData lightRepeat = Light("L Repeat", 7, .03f, .08f, .07f, 1.25f, .65f, 30, 2, .08f);
-    public PlayerAttackData heavyRepeat = Heavy("H Repeat", 20, .16f, .14f, .24f, 1.50f, .95f, 500, 20, .30f);
-
-    [Header("7. Aerial Route: L1 - L2 - L3 - L4 / H1")]
+    [Header("5. Aerial Route: L1 - L2 - L3 - L4 - L5 (Dive) / H1")]
     public PlayerAttackData aerialL1 = AerialLight("Air L1", 18, .07f, .12f, .1f, 1.30f, .80f, 150, 8);
     public PlayerAttackData aerialL2 = AerialLight("Air L2", 24, .07f, .13f, .1f, 1.45f, .85f, 180, 12);
     public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 250, 18);
-    public PlayerAttackData aerialL4 = AerialBounce("Air L4 Bounce", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
-    public PlayerAttackData aerialH1 = AerialHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 350, 38);
+    public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
+    public PlayerAttackData aerialL5 = AerialDive("Air L5 (Dive)", 65, .08f, .20f, .45f, 1.95f, 1.20f, 400, 35);
+    public PlayerAttackData aerialH1 = AerialLaunchHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 38);
 
-    [Header("8. Dash Attacks")]
-    public PlayerAttackSequence dashLightSequence = DashLightSequence();
-    public PlayerAttackData dashH1 = DashLaunchHeavy("Dash H1", 35, .10f, .18f, .05f, 1.70f, 1.15f, 380, 52, .45f);
+    [Header("6. Dash Attack")]
+    [FormerlySerializedAs("dashH1")]
+    public PlayerAttackData dashL1 = DashLaunchLight("Dash L1", 35, .10f, .18f, .05f, 1.70f, 1.15f, 380, 52, .45f);
 
 
     #region Runtime References
@@ -102,37 +83,20 @@ public class PlayerComboController : MonoBehaviour
 
     #endregion
 
-    #region Hold State
-
-    private float lightHoldTimer;
-    private float heavyHoldTimer;
-    private bool ignoreLightHoldUntilRelease;
-    private bool ignoreHeavyHoldUntilRelease;
-
-    #endregion
-
     #region Serialized Migration
 
     [SerializeField, HideInInspector]
     private int windupMovementDataVersion;
 
     [SerializeField, HideInInspector]
-    private int dashAttackDataVersion;
-
-    [SerializeField, HideInInspector]
-    private int aerialBounceDataVersion;
-
-    [SerializeField, HideInInspector]
-    private int horizontalLaunchDataVersion;
+    private int simplifiedMovesetVersion;
 
     #endregion
 
     private void Awake()
     {
         EnsureWindupMovementDefaults();
-        EnsureDashAttackDefaults();
-        EnsureAerialBounceDefaults();
-        EnsureHorizontalLaunchDefaults();
+        EnsureSimplifiedMovesetDefaults();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
         playerState = GetComponent<PlayerState>();
@@ -143,9 +107,7 @@ public class PlayerComboController : MonoBehaviour
     private void OnValidate()
     {
         EnsureWindupMovementDefaults();
-        EnsureDashAttackDefaults();
-        EnsureAerialBounceDefaults();
-        EnsureHorizontalLaunchDefaults();
+        EnsureSimplifiedMovesetDefaults();
     }
 
     private void EnsureWindupMovementDefaults()
@@ -159,49 +121,48 @@ public class PlayerComboController : MonoBehaviour
         SetWindupMovement(l2Prime, .50f);
         SetWindupMovement(l3Prime, .85f);
         SetWindupMovement(h1, .55f);
-        SetWindupMovement(h2, .90f);
-        SetWindupMovement(h2Prime, 1.15f);
-        SetWindupMovement(h1Prime, .95f);
-        SetWindupMovement(l1Prime, .40f);
-        SetWindupMovement(l2DoublePrime, .75f);
-        SetWindupMovement(lightRepeat, .08f);
-        SetWindupMovement(heavyRepeat, .30f);
 
         windupMovementDataVersion = 1;
     }
 
-    private void EnsureDashAttackDefaults()
+    private void EnsureSimplifiedMovesetDefaults()
     {
-        if (dashAttackDataVersion >= 1)
-            return;
-
-        if (dashLightSequence == null || !dashLightSequence.HasStrikes)
-            dashLightSequence = DashLightSequence();
-
-        dashAttackDataVersion = 1;
-    }
-
-    private void EnsureAerialBounceDefaults()
-    {
-        if (aerialBounceDataVersion >= 1)
+        if (simplifiedMovesetVersion >= 3)
             return;
 
         if (aerialL4 != null)
-            aerialL4.isAerialBounce = true;
+            aerialL4.attackName = "Air L4";
 
-        aerialBounceDataVersion = 1;
+        if (aerialL5 != null)
+        {
+            aerialL5.attackName = "Air L5 (Dive)";
+            aerialL5.isHeavy = false;
+            aerialL5.isAerial = true;
+            aerialL5.isDive = true;
+        }
+
+        if (aerialH1 != null)
+        {
+            aerialH1.attackName = "Air H1";
+            aerialH1.isHeavy = true;
+            aerialH1.isAerial = true;
+            aerialH1.isLaunch = true;
+            aerialH1.launchesPlayer = false;
+        }
+
+        if (dashL1 != null)
+        {
+            dashL1.attackName = "Dash L1";
+            dashL1.isHeavy = false;
+            dashL1.isDashAttack = true;
+            dashL1.isLaunchUp = true;
+            dashL1.launchesPlayer = true;
+            dashL1.heatGeneratedOnHit = 380;
+        }
+
+        simplifiedMovesetVersion = 3;
     }
 
-    private void EnsureHorizontalLaunchDefaults()
-    {
-        if (horizontalLaunchDataVersion >= 1)
-            return;
-
-        if (h2Prime != null)
-            h2Prime.isLaunch = true;
-
-        horizontalLaunchDataVersion = 1;
-    }
 
     private static void SetWindupMovement(
         PlayerAttackData attack,
@@ -215,47 +176,12 @@ public class PlayerComboController : MonoBehaviour
 
     private void Update()
     {
-        UpdateHoldTimers();
         ReadInput();
         UpdateContinuationWindow();
     }
 
-    private void UpdateHoldTimers()
-    {
-        if (Mouse.current == null)
-        {
-            lightHoldTimer = 0f;
-            heavyHoldTimer = 0f;
-            ignoreLightHoldUntilRelease = false;
-            ignoreHeavyHoldUntilRelease = false;
-            return;
-        }
-
-        if (!Mouse.current.leftButton.isPressed)
-            ignoreLightHoldUntilRelease = false;
-
-        if (!Mouse.current.rightButton.isPressed)
-            ignoreHeavyHoldUntilRelease = false;
-
-        lightHoldTimer = Mouse.current.leftButton.isPressed
-            ? lightHoldTimer + Time.deltaTime
-            : 0f;
-        heavyHoldTimer = Mouse.current.rightButton.isPressed
-            ? heavyHoldTimer + Time.deltaTime
-            : 0f;
-    }
-
     private void ReadInput()
     {
-        // Sequencias sao um unico comando. Inputs extras durante a execucao
-        // nao viram continuidade nem vazam para um ataque terrestre depois.
-        if (playerCombat != null && playerCombat.IsExecutingAttackSequence)
-        {
-            inputBuffer.TryConsume(PlayerBufferedInput.LightAttack);
-            inputBuffer.TryConsume(PlayerBufferedInput.HeavyAttack);
-            return;
-        }
-
         TryHandleBufferedInput(
             PlayerBufferedInput.LightAttack,
             AttackInput.Light
@@ -311,7 +237,7 @@ public class PlayerComboController : MonoBehaviour
             {
                 hasBufferedInput = true;
                 bufferedInput = input;
-                playerCombat.QueueAerialLightDiveCancel();
+                playerCombat.QueueAerialLightHeavyCancel();
                 return;
             }
 
@@ -330,9 +256,7 @@ public class PlayerComboController : MonoBehaviour
 
             CancelCombo();
             if (input == AttackInput.Light)
-                ExecuteSequence(dashLightSequence);
-            else
-                Execute(ComboNode.DashH1);
+                Execute(ComboNode.DashL1);
             return;
         }
 
@@ -405,13 +329,13 @@ public class PlayerComboController : MonoBehaviour
         switch (node)
         {
             case ComboNode.L1: return input == AttackInput.Light ? (paused ? ComboNode.L2Prime : ComboNode.L2) : ComboNode.None;
-            case ComboNode.L2: return input == AttackInput.Light ? ComboNode.L3 : ComboNode.H1Prime;
+            case ComboNode.L2: return input == AttackInput.Light ? ComboNode.L3 : ComboNode.None;
             case ComboNode.L2Prime: return input == AttackInput.Light ? ComboNode.L3Prime : ComboNode.None;
-            case ComboNode.H1: return input == AttackInput.Heavy ? (paused ? ComboNode.H2Prime : ComboNode.H2) : ComboNode.L1Prime;
-            case ComboNode.L1Prime: return input == AttackInput.Light ? ComboNode.L2DoublePrime : ComboNode.None;
+            case ComboNode.H1: return ComboNode.None;
             case ComboNode.AerialL1: return input == AttackInput.Light ? ComboNode.AerialL2 : ComboNode.None;
             case ComboNode.AerialL2: return input == AttackInput.Light ? ComboNode.AerialL3 : ComboNode.None;
             case ComboNode.AerialL3: return input == AttackInput.Light ? ComboNode.AerialL4 : ComboNode.None;
+            case ComboNode.AerialL4: return input == AttackInput.Light ? ComboNode.AerialL5 : ComboNode.None;
             default: return ComboNode.None;
         }
     }
@@ -431,21 +355,13 @@ public class PlayerComboController : MonoBehaviour
         hasBufferedInput = false;
         waitTimer = 0f;
 
-        int damage = attack.isHeavy && playerHeat != null
-            ? playerHeat.CalculateHeavyDamage(attack.damage)
-            : attack.damage;
-        int generatedHeat = attack.isHeavy && playerHeat != null
-            ? playerHeat.CalculateHeavyHeatGeneration(attack.heatGenerated)
-            : 0;
-
         bool started = playerCombat.StartAttack(
             attack,
             OnAttackFinished,
-            (_, _) => OnAttackHit(attack, generatedHeat),
-            damage,
+            _ => OnAttackHit(attack),
+            attack.damage,
             attack.attackRadius,
-            attack.isHeavy,
-            generatedHeat
+            attack.isHeavy
         );
 
         if (!started)
@@ -455,36 +371,18 @@ public class PlayerComboController : MonoBehaviour
         }
     }
 
-    private void OnAttackHit(PlayerAttackData attack, int generatedHeat)
+    private void OnAttackHit(PlayerAttackData attack)
     {
         if (playerHeat == null)
             return;
 
-        if (attack.isHeavy)
-            playerHeat.AddHeat(generatedHeat);
-        else
-            playerHeat.CoolFromLight(attack.heatRemovedOnHit);
-    }
-
-    private void ExecuteSequence(PlayerAttackSequence sequence)
-    {
-        if (sequence == null || !sequence.HasStrikes)
-            return;
-
-        currentNode = ComboNode.None;
-        isAerialCombo = false;
-        waitingForContinuation = false;
-        hasBufferedInput = false;
-        waitTimer = 0f;
-
-        bool started = playerCombat.StartAttackSequence(
-            sequence,
-            OnAttackFinished,
-            OnAttackHit
-        );
-
-        if (!started)
-            CancelCombo();
+        if (!attack.isHeavy)
+        {
+            float heatGenerated = playerHeat.CalculateLightHeatGeneration(
+                attack.heatGeneratedOnHit
+            );
+            playerHeat.AddHeat(heatGenerated);
+        }
     }
 
     private void OnAttackFinished()
@@ -496,19 +394,6 @@ public class PlayerComboController : MonoBehaviour
         {
             hasBufferedInput = false;
             Execute(ComboNode.AerialH1);
-            return;
-        }
-
-        if (TryStartBufferedAttackAfterHold())
-            return;
-
-        // Segurar um botao por tempo suficiente transforma qualquer no atual
-        // em Hold, inclusive depois de L2, H2 ou rotas mistas.
-        if (!isAerialCombo &&
-            !IsDashNode(currentNode) &&
-            TryGetHeldRepeatNode(out ComboNode repeatNode))
-        {
-            Execute(repeatNode);
             return;
         }
 
@@ -530,66 +415,12 @@ public class PlayerComboController : MonoBehaviour
         else CancelCombo();
     }
 
-    private bool TryStartBufferedAttackAfterHold()
-    {
-        if (!hasBufferedInput)
-            return false;
-
-        if (currentNode == ComboNode.LightRepeat &&
-            bufferedInput == AttackInput.Heavy)
-        {
-            ignoreLightHoldUntilRelease = true;
-            Execute(ComboNode.H1);
-            return true;
-        }
-
-        if (currentNode == ComboNode.HeavyRepeat &&
-            bufferedInput == AttackInput.Light)
-        {
-            ignoreHeavyHoldUntilRelease = true;
-            Execute(ComboNode.L1);
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool TryGetHeldRepeatNode(out ComboNode repeatNode)
-    {
-        repeatNode = ComboNode.None;
-
-        if (!ignoreLightHoldUntilRelease &&
-            CanRepeatLight() &&
-            lightHoldTimer >= holdToRepeatDelay)
-        {
-            repeatNode = ComboNode.LightRepeat;
-            return true;
-        }
-
-        if (!ignoreHeavyHoldUntilRelease &&
-            CanRepeatHeavy() &&
-            heavyHoldTimer >= holdToRepeatDelay)
-        {
-            repeatNode = ComboNode.HeavyRepeat;
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool CanRepeatLight()
-    {
-        return currentNode != ComboNode.None;
-    }
-
-    private bool CanRepeatHeavy()
-    {
-        return currentNode != ComboNode.None;
-    }
-
     private static bool CanContinue(ComboNode node)
     {
-        return node == ComboNode.L1 || node == ComboNode.L2 || node == ComboNode.L2Prime || node == ComboNode.H1 || node == ComboNode.L1Prime || node == ComboNode.AerialL1 || node == ComboNode.AerialL2 || node == ComboNode.AerialL3;
+        return node == ComboNode.L1 || node == ComboNode.L2 ||
+            node == ComboNode.L2Prime || node == ComboNode.AerialL1 ||
+            node == ComboNode.AerialL2 || node == ComboNode.AerialL3 ||
+            node == ComboNode.AerialL4;
     }
 
     private PlayerAttackData GetAttack(ComboNode node)
@@ -598,17 +429,14 @@ public class PlayerComboController : MonoBehaviour
         {
             case ComboNode.L1: return l1; case ComboNode.L2: return l2; case ComboNode.L3: return l3;
             case ComboNode.L2Prime: return l2Prime; case ComboNode.L3Prime: return l3Prime;
-            case ComboNode.H1: return h1; case ComboNode.H2: return h2; case ComboNode.H2Prime: return h2Prime;
-            case ComboNode.H1Prime: return h1Prime; case ComboNode.L1Prime: return l1Prime;
-            case ComboNode.L2DoublePrime: return l2DoublePrime;
-            case ComboNode.LightRepeat: return lightRepeat;
-            case ComboNode.HeavyRepeat: return heavyRepeat;
+            case ComboNode.H1: return h1;
             case ComboNode.AerialL1: return aerialL1;
             case ComboNode.AerialL2: return aerialL2;
             case ComboNode.AerialL3: return aerialL3;
             case ComboNode.AerialL4: return aerialL4;
+            case ComboNode.AerialL5: return aerialL5;
             case ComboNode.AerialH1: return aerialH1;
-            case ComboNode.DashH1: return dashH1;
+            case ComboNode.DashL1: return dashL1;
             default: return null;
         }
     }
@@ -633,6 +461,7 @@ public class PlayerComboController : MonoBehaviour
             node == ComboNode.AerialL2 ||
             node == ComboNode.AerialL3 ||
             node == ComboNode.AerialL4 ||
+            node == ComboNode.AerialL5 ||
             node == ComboNode.AerialH1;
     }
 
@@ -642,11 +471,6 @@ public class PlayerComboController : MonoBehaviour
             node == ComboNode.AerialL2 ||
             node == ComboNode.AerialL3 ||
             node == ComboNode.AerialL4;
-    }
-
-    private static bool IsDashNode(ComboNode node)
-    {
-        return node == ComboNode.DashH1;
     }
 
     public static PlayerComboController GetOrAdd(GameObject player)
@@ -664,73 +488,38 @@ public class PlayerComboController : MonoBehaviour
         return combo;
     }
 
-    private static PlayerAttackData Light(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger, float windupMoveDistance)
+    private static PlayerAttackData Light(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generatedHeat, int stagger, float windupMoveDistance)
     {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatRemovedOnHit = coolHeat, staggerDamage = stagger, isHeavy = false, windupMoveDistance = windupMoveDistance };
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGeneratedOnHit = generatedHeat, staggerDamage = stagger, isHeavy = false, windupMoveDistance = windupMoveDistance };
     }
 
-    private static PlayerAttackData Heavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger, float windupMoveDistance)
+    private static PlayerAttackData Heavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger, float windupMoveDistance)
     {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGenerated = generateHeat, staggerDamage = stagger, isHeavy = true, windupMoveDistance = windupMoveDistance };
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = true, windupMoveDistance = windupMoveDistance };
     }
 
-    private static PlayerAttackData LaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger, float windupMoveDistance)
+    private static PlayerAttackData AerialLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generatedHeat, int stagger)
     {
-        PlayerAttackData attack = Heavy(name, damage, windup, active, recovery, distance, radius, generateHeat, stagger, windupMoveDistance);
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGeneratedOnHit = generatedHeat, staggerDamage = stagger, isHeavy = false, isAerial = true };
+    }
+
+    private static PlayerAttackData AerialLaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger)
+    {
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = true, isAerial = true, isLaunch = true };
+    }
+
+    private static PlayerAttackData AerialDive(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generatedHeat, int stagger)
+    {
+        PlayerAttackData attack = AerialLight(name, damage, windup, active, recovery, distance, radius, generatedHeat, stagger);
+        attack.isDive = true;
+        return attack;
+    }
+
+    private static PlayerAttackData DashLaunchLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generatedHeat, int stagger, float windupMoveDistance)
+    {
+        PlayerAttackData attack = Light(name, damage, windup, active, recovery, distance, radius, generatedHeat, stagger, windupMoveDistance);
+        attack.isDashAttack = true;
         attack.isLaunchUp = true;
-        return attack;
-    }
-
-    private static PlayerAttackData HorizontalLaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger, float windupMoveDistance)
-    {
-        PlayerAttackData attack = Heavy(name, damage, windup, active, recovery, distance, radius, generateHeat, stagger, windupMoveDistance);
-        attack.isLaunch = true;
-        return attack;
-    }
-
-    private static PlayerAttackData AerialLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger)
-    {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatRemovedOnHit = coolHeat, staggerDamage = stagger, isHeavy = false, isAerial = true };
-    }
-
-    private static PlayerAttackData AerialHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger)
-    {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGenerated = generateHeat, staggerDamage = stagger, isHeavy = true, isAerial = true };
-    }
-
-    private static PlayerAttackData AerialBounce(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger)
-    {
-        PlayerAttackData attack = AerialLight(name, damage, windup, active, recovery, distance, radius, coolHeat, stagger);
-        attack.isAerialBounce = true;
-        return attack;
-    }
-
-    private static PlayerAttackData DashLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int coolHeat, int stagger, float windupMoveDistance)
-    {
-        PlayerAttackData attack = Light(name, damage, windup, active, recovery, distance, radius, coolHeat, stagger, windupMoveDistance);
-        attack.isDashAttack = true;
-        return attack;
-    }
-
-    private static PlayerAttackSequence DashLightSequence()
-    {
-        return new PlayerAttackSequence
-        {
-            sequenceName = "Dash Light",
-            isDashAttack = true,
-            strikes = new[]
-            {
-                DashLight("Dash L1", 22, .04f, .12f, .12f, 1.40f, .90f, 180, 10, 1.00f),
-                DashLight("Dash L2", 28, .05f, .13f, .14f, 1.55f, .95f, 220, 14, 1.05f),
-                DashLight("Dash L3", 42, .08f, .17f, .32f, 1.80f, 1.10f, 320, 24, 1.20f)
-            }
-        };
-    }
-
-    private static PlayerAttackData DashLaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generateHeat, int stagger, float windupMoveDistance)
-    {
-        PlayerAttackData attack = LaunchHeavy(name, damage, windup, active, recovery, distance, radius, generateHeat, stagger, windupMoveDistance);
-        attack.isDashAttack = true;
         attack.launchesPlayer = true;
         return attack;
     }

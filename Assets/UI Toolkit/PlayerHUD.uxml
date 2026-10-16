@@ -1,16 +1,17 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="PlayerHUD.uss" />
     <ui:VisualElement name="player-hud">
-        <ui:Label name="heat-value" text="HEAT  0 / 10000" />
-        <ui:VisualElement name="heat-track" class="meter-track">
-            <ui:VisualElement name="heat-cold-fill" />
-            <ui:VisualElement name="heat-hot-fill" />
-            <ui:VisualElement name="heat-zero-marker" />
+        <ui:VisualElement name="heat-header">
+            <ui:Label name="heat-value" text="HEAT 0.0 / 100" />
+            <ui:Label name="heat-power-value" text="1x" />
         </ui:VisualElement>
-        <ui:Label name="superheat-value" text="SUPERHEAT  0 / 10000" />
-        <ui:VisualElement name="superheat-track" class="meter-track">
-            <ui:VisualElement name="superheat-fill" />
+        <ui:VisualElement name="heat-notch-row">
+            <ui:VisualElement name="heat-cold-notches" class="notch-group" />
+            <ui:VisualElement name="heat-zero-notch" />
+            <ui:VisualElement name="heat-hot-notches" class="notch-group" />
+            <ui:VisualElement name="superheat-notches" class="notch-group superheat-notch-group" />
         </ui:VisualElement>
+        <ui:Label name="superheat-value" text="SUPERHEAT 0.0 / 50" />
         <ui:VisualElement name="dash-row">
             <ui:VisualElement name="dash-indicator" />
             <ui:Label name="dash-text" text="DASH READY" />

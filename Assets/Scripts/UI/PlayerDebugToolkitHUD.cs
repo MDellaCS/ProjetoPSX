@@ -178,11 +178,19 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.Append("HEAT: ")
             .Append(FormatSigned(playerHeat.CurrentHeat))
             .Append(" / ")
-            .AppendLine(playerHeat.MaxHeat.ToString());
+            .AppendLine(playerHeat.MaxHeat.ToString("0"));
+        textBuilder.Append("HEAT NOTCH: ")
+            .AppendLine(playerHeat.CurrentHeatNotch.ToString());
+        textBuilder.Append("HEAVY POWER: ")
+            .AppendLine(playerHeat.HeavyDamageMultiplier.ToString("0.#") + "x");
+        textBuilder.Append("HEAVY POISE: ")
+            .AppendLine(playerHeat.HeavyPoiseMultiplier.ToString("0.##") + "x");
         textBuilder.Append("SUPERHEAT: ")
-            .Append(playerHeat.CurrentSuperheat)
+            .Append(playerHeat.CurrentSuperheat.ToString("0.0"))
             .Append(" / ")
-            .AppendLine(playerHeat.MaxSuperheat.ToString());
+            .AppendLine(playerHeat.MaxSuperheat.ToString("0"));
+        textBuilder.Append("BURN: ")
+            .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
         textBuilder.Append("ATTACKING: ")
             .AppendLine(playerCombat.IsAttacking ? "YES" : "NO");
         textBuilder.Append("MOUSE: ")
@@ -195,8 +203,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         debugText.text = textBuilder.ToString();
     }
 
-    private static string FormatSigned(int value)
+    private static string FormatSigned(float value)
     {
-        return value > 0 ? "+" + value : value.ToString();
+        return (value > 0f ? "+" : string.Empty) + value.ToString("0.0");
     }
 }
