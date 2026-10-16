@@ -34,6 +34,7 @@ public class PlayerCombat : MonoBehaviour
     private int currentDamage;
     private float currentHeavyPoiseMultiplier = 1f;
     private float currentHeavyHeatConsumed;
+    private float currentPhaseDurationMultiplier = 1f;
     private float currentAttackRadius;
     private bool aerialHeavyCancelQueued;
     private bool recoveryCancelQueued;
@@ -46,7 +47,8 @@ public class PlayerCombat : MonoBehaviour
 
     [Header("Attack Rotation")]
     [FormerlySerializedAs("windupRotationSpeed")]
-    [SerializeField] private float attackingRotationSpeed = 300f;
+    [Tooltip("Velocidade de giro do player exclusivamente durante o Windup. A direcao trava ao entrar em Active.")]
+    [SerializeField] private float attackingRotationSpeed = 900f;
 
     [Header("Aerial Attack And Enemy Juggle Movement")]
     [Tooltip("Impulso vertical compartilhado pelos leves aereos do player e pelo juggle de inimigos no ar.")]
@@ -58,17 +60,13 @@ public class PlayerCombat : MonoBehaviour
     [Tooltip("Velocidade vertical da queda do ataque Dive.")]
     [Min(0f)] public float aerialDiveFallSpeed = 28f;
 
-    [Header("Launch Up")]
-    [Tooltip("Gravidade aplicada apos o apice de Launch Up e Self Launch Up. Menor valor deixa a queda mais sustentada.")]
-    [Range(0f, 1f)] public float launchUpLowGravityMultiplier = .2f;
-    [Tooltip("Por quanto tempo a gravidade reduzida de Launch Up permanece ativa.")]
-    [Min(0f)] public float launchUpLowGravityDuration = .55f;
-
-    [Header("Launch")]
-    [Tooltip("Velocidade horizontal de Launch gerada por cada ponto de Poise Damage final.")]
-    [Min(0f)] public float launchForcePerPoiseDamage = .42f;
-    [Tooltip("Tempo maximo que o inimigo permanece sendo arremessado caso nao bata em uma parede.")]
-    [Min(0f)] public float launchDuration = .65f;
+    [Header("Push")]
+    [FormerlySerializedAs("launchForcePerPoiseDamage")]
+    [Tooltip("Velocidade horizontal de Push gerada por cada ponto de Poise Damage final.")]
+    [Min(0f)] public float pushForcePerPoiseDamage = .42f;
+    [FormerlySerializedAs("launchDuration")]
+    [Tooltip("Tempo maximo que o inimigo permanece empurrado caso nao bata em uma parede.")]
+    [Min(0f)] public float pushDuration = .65f;
 
     [Header("Combat Status")]
     [Min(0f)]
@@ -120,9 +118,9 @@ public class PlayerCombat : MonoBehaviour
 
         float duration = attackPhase switch
         {
-            AttackPhase.Windup => currentAttack.windupDuration,
-            AttackPhase.Active => currentAttack.activeDuration,
-            AttackPhase.Recovery => currentAttack.recoveryDuration,
+            AttackPhase.Windup => GetPhaseDuration(currentAttack.windupDuration),
+            AttackPhase.Active => GetPhaseDuration(currentAttack.activeDuration),
+            AttackPhase.Recovery => GetPhaseDuration(currentAttack.recoveryDuration),
             _ => 0f
         };
 
@@ -234,7 +232,8 @@ public class PlayerCombat : MonoBehaviour
         System.Action<PlayerAttackData> onAttackHit,
         int damage,
         float attackRadius,
-        bool isHeavy = false
+        bool isHeavy = false,
+        float phaseDurationMultiplier = 1f
     )
     {
         bool canStartAttack = playerState != null &&
@@ -266,7 +265,8 @@ public class PlayerCombat : MonoBehaviour
             attack,
             damage,
             attackRadius,
-            isHeavy
+            isHeavy,
+            phaseDurationMultiplier
         );
 
         return true;
@@ -295,7 +295,6 @@ public class PlayerCombat : MonoBehaviour
 
             case AttackPhase.Active:
 
-                RotateDuringActive();
                 Attack();
                 ApplySelfLaunchUpIfNeeded();
 
@@ -309,7 +308,7 @@ public class PlayerCombat : MonoBehaviour
                     if (!diveHasLanded)
                     {
                         diveHasLanded = true;
-                        attackTimer = currentAttack.activeDuration;
+                        attackTimer = GetPhaseDuration(currentAttack.activeDuration);
                     }
                 }
 
@@ -389,6 +388,7 @@ public class PlayerCombat : MonoBehaviour
         attackHitCallback = null;
         currentAttackIsHeavy = false;
         currentHeavyHeatConsumed = 0f;
+        currentPhaseDurationMultiplier = 1f;
         playerMovement?.StopAerialAttackMovement();
     }
 
@@ -396,7 +396,7 @@ public class PlayerCombat : MonoBehaviour
     {
         attackPhase = newPhase;
 
-        attackTimer = duration;
+        attackTimer = GetPhaseDuration(duration);
 
         if (newPhase == AttackPhase.Windup)
             windupElapsed = 0f;
@@ -419,7 +419,7 @@ public class PlayerCombat : MonoBehaviour
         playerMovement.BeginAerialLight(
             juggleLiftSpeed,
             juggleGravityMultiplier,
-            attack.windupDuration + attack.activeDuration
+            GetPhaseDuration(attack.windupDuration + attack.activeDuration)
         );
     }
 
@@ -428,7 +428,7 @@ public class PlayerCombat : MonoBehaviour
         if (currentAttack == null ||
             playerMovement == null ||
             currentAttack.windupMoveDistance <= 0f ||
-            currentAttack.windupDuration <= 0f)
+            GetPhaseDuration(currentAttack.windupDuration) <= 0f)
         {
             return;
         }
@@ -445,12 +445,13 @@ public class PlayerCombat : MonoBehaviour
         if (moveEnd <= moveStart)
             return;
 
-        float previousTime = windupElapsed / currentAttack.windupDuration;
+        float windupDuration = GetPhaseDuration(currentAttack.windupDuration);
+        float previousTime = windupElapsed / windupDuration;
         windupElapsed = Mathf.Min(
-            currentAttack.windupDuration,
+            windupDuration,
             windupElapsed + Time.deltaTime
         );
-        float currentTime = windupElapsed / currentAttack.windupDuration;
+        float currentTime = windupElapsed / windupDuration;
 
         float previousProgress = GetWindupMoveProgress(
             previousTime,
@@ -539,20 +540,18 @@ public class PlayerCombat : MonoBehaviour
                 {
                     enemy.ApplyLaunchUp(
                         GetLaunchUpInitialSpeed(),
-                        GetLaunchUpGravity(),
-                        launchUpLowGravityMultiplier,
-                        launchUpLowGravityDuration
+                        GetLaunchUpGravity()
                     );
                 }
 
-                if (currentAttack.isLaunch)
+                if (currentAttack.isPush)
                 {
-                    float launchForce = finalPoiseDamage *
-                        launchForcePerPoiseDamage;
-                    enemy.ApplyLaunch(
+                    float pushForce = finalPoiseDamage *
+                        pushForcePerPoiseDamage;
+                    enemy.ApplyPush(
                         transform.position,
-                        launchForce,
-                        launchDuration
+                        pushForce,
+                        pushDuration
                     );
                 }
 
@@ -610,9 +609,7 @@ public class PlayerCombat : MonoBehaviour
         // mas tambem lanca o player quando o golpe erra.
         playerMovement?.ApplySelfLaunchUp(
             GetLaunchUpInitialSpeed(),
-            GetLaunchUpGravity(),
-            launchUpLowGravityMultiplier,
-            launchUpLowGravityDuration
+            GetLaunchUpGravity()
         );
         hasLaunchedPlayer = true;
     }
@@ -635,8 +632,10 @@ public class PlayerCombat : MonoBehaviour
         PlayerAttackData attack,
         int damage,
         float attackRadius,
-        bool isHeavy)
+        bool isHeavy,
+        float phaseDurationMultiplier)
     {
+        currentPhaseDurationMultiplier = Mathf.Max(.01f, phaseDurationMultiplier);
         currentAttackIsHeavy = isHeavy;
         currentAttack = attack;
         currentHeavyPoiseMultiplier = 1f;
@@ -677,6 +676,11 @@ public class PlayerCombat : MonoBehaviour
         ChangeAttackPhase(AttackPhase.Windup, currentAttack.windupDuration);
     }
 
+    private float GetPhaseDuration(float baseDuration)
+    {
+        return baseDuration * currentPhaseDurationMultiplier;
+    }
+
     private void ApplyJuggleToAirborneEnemy(BaseEnemy enemy)
     {
         if (enemy == null || currentAttack == null)
@@ -690,9 +694,9 @@ public class PlayerCombat : MonoBehaviour
         if (currentAttack.isLaunchUp)
             return;
 
-        // O pesado aereo atual e um Launch horizontal: ele nao adiciona o
+        // O pesado aereo atual e um Push horizontal: ele nao adiciona o
         // lift de juggle depois de arremessar o alvo.
-        if (currentAttack.isAerial && currentAttack.isLaunch)
+        if (currentAttack.isAerial && currentAttack.isPush)
             return;
 
         // Juggle pertence ao estado do inimigo, nao ao estado do player:
@@ -723,9 +727,7 @@ public class PlayerCombat : MonoBehaviour
 
         enemy.ApplyLaunchUp(
             GetLaunchUpInitialSpeed(),
-            GetLaunchUpGravity(),
-            launchUpLowGravityMultiplier,
-            launchUpLowGravityDuration
+            GetLaunchUpGravity()
         );
         enemy.ApplyLaunchUpHorizontalImpulse(
             horizontalDirection,
@@ -766,23 +768,6 @@ public class PlayerCombat : MonoBehaviour
         }
 
         RotateTowards(attackFacingDirection);
-    }
-
-    private void RotateDuringActive()
-    {
-        if (playerMovement == null)
-        {
-            return;
-        }
-
-        Vector3 direction = GetLockOnDirectionOrZero();
-        if (direction.sqrMagnitude <= 0.0001f)
-            direction = playerMovement.DesiredDirection;
-
-        if (direction.sqrMagnitude <= 0.0001f)
-            return;
-
-        RotateTowards(direction);
     }
 
     private void RotateTowards(Vector3 direction)

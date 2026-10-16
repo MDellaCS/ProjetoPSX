@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 public class PlayerHeat : MonoBehaviour
 {
@@ -23,45 +24,59 @@ public class PlayerHeat : MonoBehaviour
     private enum BurnPhase { None, InitialStun, Burning, FinalStun }
 
     [Header("Heat Notches")]
+    [Tooltip("Limite positivo de Heat. De 0 ate este valor existem 10 notches; cada notch aumenta o poder dos pesados.")]
     [Min(1f)] public float maxHeat = 100f;
-    [Min(1f)] public float minHeatMagnitude = 100f;
+    [FormerlySerializedAs("minHeatMagnitude")]
+    [Tooltip("Magnitude maxima de Cold. O limite real de Heat e o valor negativo deste campo; alcanca-lo mata o player.")]
+    [Min(1f)] public float maxColdMagnitude = 100f;
 
     [Header("Superheat Notches")]
+    [Tooltip("Capacidade maxima de Superheat. Ao encher, inicia o estado Burn.")]
     [Min(1f)] public float maxSuperheat = 50f;
     [Tooltip("Parte do Heat que excede 100 convertida em Superheat.")]
     [Min(0f)] public float excessHeatToSuperheatMultiplier = .5f;
 
-    [Header("Light Heat Conversion")]
-    [Tooltip("Converte o Heat gerado por leves. 0.01 transforma 300 em 3.")]
-    [Min(0f)] public float attackHeatValueScale = .01f;
-    [Tooltip("Multiplicador aplicado ao dano recebido antes de removê-lo do Heat.")]
-    [Min(0f)] public float incomingDamageToHeatMultiplier = 1f;
-
     [Header("Passive Heat Cooling")]
+    [Tooltip("Tempo fora de combate antes de o resfriamento passivo de Heat positivo comecar.")]
     [Min(0f)] public float passiveHeatCoolingStartDelay = 5f;
+    [Tooltip("Heat removido por segundo no inicio do resfriamento, apos o Start Delay.")]
     [Min(0f)] public float initialPassiveHeatCoolingPerSecond = .2f;
-    [Min(0f)] public float finalPassiveHeatCoolingPerSecond = 15f;
-    [Min(0f)] public float passiveHeatCoolingRampDuration = 16f;
+    [Tooltip("Heat removido por segundo quando a rampa de resfriamento chega ao fim.")]
+    [Min(0f)] public float finalPassiveHeatCoolingPerSecond = 18f;
+    [Tooltip("Tempo fora de combate para a taxa de resfriamento ir do valor Initial ate o Final.")]
+    [Min(0f)] public float passiveHeatCoolingRampDuration = 15f;
+    [Tooltip("Formato da aceleracao da rampa. Valores maiores mantem o resfriamento fraco por mais tempo e aceleram perto do final.")]
     [Min(.01f)] public float passiveHeatCoolingRampExponent = 1.4f;
 
     [Header("Passive Cold Recovery")]
-    [Min(0f)] public float passiveColdRecoveryPerSecond = 2f;
-    [Range(0f, 1f)] public float coldRecoveryLimitPercent = .9f;
+    [Tooltip("Heat recuperado por segundo enquanto o player esta com Heat negativo e fora de combate.")]
+    [Min(0f)] public float passiveColdRecoveryPerSecond = 1f;
+    [Tooltip("Parte do Cold maximo ate onde a recuperacao passiva pode chegar. Ex.: 0.9 recupera somente ate -90 se Min Heat for -100.")]
+    [Range(0f, 1f)] public float coldRecoveryLimitPercent = .7f;
 
     [Header("Passive Superheat Cooling")]
+    [Tooltip("Superheat removido por segundo enquanto o player esta fora de combate.")]
     [Min(0f)] public float passiveSuperheatCoolingPerSecond = 1f;
+    [Tooltip("Superheat extra removido por segundo enquanto o Heat atual esta negativo. Acumula com o resfriamento fora de combate.")]
     [Min(0f)] public float coldSuperheatCoolingPerSecond = 4f;
 
     [Header("Burn")]
+    [Tooltip("Duracao do stun completo ao iniciar Burn por Superheat cheio.")]
     [Min(0f)] public float burnInitialStunDuration = 1.25f;
+    [Tooltip("Duracao do estado Burning, em que o player so pode andar lentamente.")]
     [Min(0f)] public float burningDuration = 4f;
+    [Tooltip("Duracao do stun completo aplicado ao fim de Burning.")]
     [Min(0f)] public float burnFinalStunDuration = 1.25f;
+    [Tooltip("Multiplicador da velocidade de movimento durante Burning.")]
     [Range(0f, 1f)] public float burnMovementSpeedMultiplier = .3f;
-    [Range(-100f, 0f)] public float burnFinalHeat = -90f;
+    [Tooltip("Heat final ao terminar Burn. O Superheat sempre termina em 0.")]
+    [Range(-100f, 0f)] public float burnFinalHeat = -70f;
 
     [Header("Debug")]
+    [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes.")]
     [SerializeField] private bool debugHeatInputEnabled = true;
-    [Min(0f)] [SerializeField] private float debugHeatPerSecond = 30f;
+    [Tooltip("Quantidade de Heat adicionada ou removida por segundo pelos atalhos de debug.")]
+    [Min(0f)] [SerializeField] private float debugHeatPerSecond = 15f;
     [SerializeField, HideInInspector] private int heatReworkVersion;
 
     private float currentHeat;
@@ -83,11 +98,11 @@ public class PlayerHeat : MonoBehaviour
     public float CurrentHeat => currentHeat;
     public float CurrentSuperheat => currentSuperheat;
     public float MaxHeat => maxHeat;
-    public float MinHeat => -minHeatMagnitude;
+    public float MinHeat => -maxColdMagnitude;
     public float MaxSuperheat => maxSuperheat;
     // A pequena tolerancia evita que 100 armazenado como 99.99999 por
     // operacoes de ponto flutuante deixe o ultimo quadrado apagado.
-    public int CurrentHeatNotch => GetSignedNotch(currentHeat, maxHeat, minHeatMagnitude);
+    public int CurrentHeatNotch => GetSignedNotch(currentHeat, maxHeat, maxColdMagnitude);
     public int CurrentSuperheatNotch => GetPositiveNotch(currentSuperheat, maxSuperheat, 5);
     public bool IsBurning => burnPhase != BurnPhase.None;
     public float BurnMovementSpeedMultiplier => burnMovementSpeedMultiplier;
@@ -125,11 +140,9 @@ public class PlayerHeat : MonoBehaviour
     {
         if (heatReworkVersion >= 1) return;
         maxHeat = 100f;
-        minHeatMagnitude = 100f;
+        maxColdMagnitude = 100f;
         maxSuperheat = 50f;
         excessHeatToSuperheatMultiplier = .5f;
-        attackHeatValueScale = .01f;
-        incomingDamageToHeatMultiplier = 1f;
         passiveHeatCoolingStartDelay = 5f;
         initialPassiveHeatCoolingPerSecond = .2f;
         finalPassiveHeatCoolingPerSecond = 15f;
@@ -217,7 +230,7 @@ public class PlayerHeat : MonoBehaviour
     public void RemoveHeat(float amount)
     {
         if (amount <= 0f) return;
-        currentHeat = Mathf.Max(MinHeat, currentHeat - amount * incomingDamageToHeatMultiplier);
+        currentHeat = Mathf.Max(MinHeat, currentHeat - amount);
         CheckColdDeath();
     }
 
@@ -233,13 +246,6 @@ public class PlayerHeat : MonoBehaviour
         if (amount > 0f) currentSuperheat = Mathf.Max(0f, currentSuperheat - amount);
     }
 
-    public float CalculateLightHeatGeneration(int legacyAttackHeatValue)
-    {
-        return legacyAttackHeatValue <= 0
-            ? 0f
-            : legacyAttackHeatValue * attackHeatValueScale;
-    }
-
     /// <summary>
     /// Captura a carga do pesado e a gasta imediatamente. O snapshot e usado
     /// pelo golpe mesmo se ele errar ou se o Heat mudar durante a animacao.
@@ -247,7 +253,7 @@ public class PlayerHeat : MonoBehaviour
     public HeavyAttackCharge ConsumeHeatForHeavyAttack()
     {
         float heatConsumed = Mathf.Max(0f, currentHeat);
-        int consumedNotch = GetSignedNotch(heatConsumed, maxHeat, minHeatMagnitude);
+        int consumedNotch = GetSignedNotch(heatConsumed, maxHeat, maxColdMagnitude);
         float damageMultiplier = GetHeavyDamageMultiplier(consumedNotch);
         float poiseMultiplier = GetHeavyPoiseMultiplier(consumedNotch);
 

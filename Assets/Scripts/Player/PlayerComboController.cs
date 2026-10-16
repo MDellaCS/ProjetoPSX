@@ -28,8 +28,11 @@ public class PlayerComboController : MonoBehaviour
     private enum AttackInput
     {
         Light,
+        SlowLight,
         Heavy
     }
+
+    private const float SlowLightPhaseDurationMultiplier = 5f;
 
     [Header("1. Global Combo Timing")]
     [Tooltip("Tempo sem apertar um botao que transforma qualquer proxima entrada em PAUSE.")]
@@ -55,7 +58,7 @@ public class PlayerComboController : MonoBehaviour
     public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 250, 18);
     public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
     public PlayerAttackData aerialL5 = AerialDive("Air L5 (Dive)", 65, .08f, .20f, .45f, 1.95f, 1.20f, 400, 35);
-    public PlayerAttackData aerialH1 = AerialLaunchHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 38);
+    public PlayerAttackData aerialH1 = AerialPushHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 38);
 
     [Header("6. Dash Attack")]
     [FormerlySerializedAs("dashH1")]
@@ -146,7 +149,7 @@ public class PlayerComboController : MonoBehaviour
             aerialH1.attackName = "Air H1";
             aerialH1.isHeavy = true;
             aerialH1.isAerial = true;
-            aerialH1.isLaunch = true;
+            aerialH1.isPush = true;
             aerialH1.launchesPlayer = false;
         }
 
@@ -185,6 +188,10 @@ public class PlayerComboController : MonoBehaviour
         TryHandleBufferedInput(
             PlayerBufferedInput.LightAttack,
             AttackInput.Light
+        );
+        TryHandleBufferedInput(
+            PlayerBufferedInput.SlowLightAttack,
+            AttackInput.SlowLight
         );
         TryHandleBufferedInput(
             PlayerBufferedInput.HeavyAttack,
@@ -255,8 +262,8 @@ public class PlayerComboController : MonoBehaviour
                 return;
 
             CancelCombo();
-            if (input == AttackInput.Light)
-                Execute(ComboNode.DashL1);
+            if (IsLightInput(input))
+                Execute(ComboNode.DashL1, input);
             return;
         }
 
@@ -268,9 +275,10 @@ public class PlayerComboController : MonoBehaviour
                 // saiu do chao. O mesmo input inicia um ataque aereo novo.
                 CancelCombo();
                 Execute(
-                    input == AttackInput.Light
+                    IsLightInput(input)
                         ? ComboNode.AerialL1
-                        : ComboNode.AerialH1
+                        : ComboNode.AerialH1,
+                    input
                 );
                 return;
             }
@@ -290,15 +298,17 @@ public class PlayerComboController : MonoBehaviour
             if (IsAirborne())
             {
                 Execute(
-                    input == AttackInput.Light
+                    IsLightInput(input)
                         ? ComboNode.AerialL1
-                        : ComboNode.AerialH1
+                        : ComboNode.AerialH1,
+                    input
                 );
             }
             else
-            {
-                Execute(input == AttackInput.Light ? ComboNode.L1 : ComboNode.H1);
-            }
+                Execute(
+                    IsLightInput(input) ? ComboNode.L1 : ComboNode.H1,
+                    input
+                );
         }
     }
 
@@ -321,26 +331,26 @@ public class PlayerComboController : MonoBehaviour
     {
         ComboNode next = GetNextNode(currentNode, input, paused);
         if (next == ComboNode.None) { CancelCombo(); return; }
-        Execute(next);
+        Execute(next, input);
     }
 
     private static ComboNode GetNextNode(ComboNode node, AttackInput input, bool paused)
     {
         switch (node)
         {
-            case ComboNode.L1: return input == AttackInput.Light ? (paused ? ComboNode.L2Prime : ComboNode.L2) : ComboNode.None;
-            case ComboNode.L2: return input == AttackInput.Light ? ComboNode.L3 : ComboNode.None;
-            case ComboNode.L2Prime: return input == AttackInput.Light ? ComboNode.L3Prime : ComboNode.None;
+            case ComboNode.L1: return IsLightInput(input) ? (paused ? ComboNode.L2Prime : ComboNode.L2) : ComboNode.None;
+            case ComboNode.L2: return IsLightInput(input) ? ComboNode.L3 : ComboNode.None;
+            case ComboNode.L2Prime: return IsLightInput(input) ? ComboNode.L3Prime : ComboNode.None;
             case ComboNode.H1: return ComboNode.None;
-            case ComboNode.AerialL1: return input == AttackInput.Light ? ComboNode.AerialL2 : ComboNode.None;
-            case ComboNode.AerialL2: return input == AttackInput.Light ? ComboNode.AerialL3 : ComboNode.None;
-            case ComboNode.AerialL3: return input == AttackInput.Light ? ComboNode.AerialL4 : ComboNode.None;
-            case ComboNode.AerialL4: return input == AttackInput.Light ? ComboNode.AerialL5 : ComboNode.None;
+            case ComboNode.AerialL1: return IsLightInput(input) ? ComboNode.AerialL2 : ComboNode.None;
+            case ComboNode.AerialL2: return IsLightInput(input) ? ComboNode.AerialL3 : ComboNode.None;
+            case ComboNode.AerialL3: return IsLightInput(input) ? ComboNode.AerialL4 : ComboNode.None;
+            case ComboNode.AerialL4: return IsLightInput(input) ? ComboNode.AerialL5 : ComboNode.None;
             default: return ComboNode.None;
         }
     }
 
-    private void Execute(ComboNode node)
+    private void Execute(ComboNode node, AttackInput input = AttackInput.Light)
     {
         PlayerAttackData attack = GetAttack(node);
         if (attack == null)
@@ -361,7 +371,10 @@ public class PlayerComboController : MonoBehaviour
             _ => OnAttackHit(attack),
             attack.damage,
             attack.attackRadius,
-            attack.isHeavy
+            attack.isHeavy,
+            input == AttackInput.SlowLight
+                ? SlowLightPhaseDurationMultiplier
+                : 1f
         );
 
         if (!started)
@@ -378,10 +391,7 @@ public class PlayerComboController : MonoBehaviour
 
         if (!attack.isHeavy)
         {
-            float heatGenerated = playerHeat.CalculateLightHeatGeneration(
-                attack.heatGeneratedOnHit
-            );
-            playerHeat.AddHeat(heatGenerated);
+            playerHeat.AddHeat(attack.heatGeneratedOnHit);
         }
     }
 
@@ -393,7 +403,7 @@ public class PlayerComboController : MonoBehaviour
             IsAirborne())
         {
             hasBufferedInput = false;
-            Execute(ComboNode.AerialH1);
+            Execute(ComboNode.AerialH1, AttackInput.Heavy);
             return;
         }
 
@@ -421,6 +431,11 @@ public class PlayerComboController : MonoBehaviour
             node == ComboNode.L2Prime || node == ComboNode.AerialL1 ||
             node == ComboNode.AerialL2 || node == ComboNode.AerialL3 ||
             node == ComboNode.AerialL4;
+    }
+
+    private static bool IsLightInput(AttackInput input)
+    {
+        return input == AttackInput.Light || input == AttackInput.SlowLight;
     }
 
     private PlayerAttackData GetAttack(ComboNode node)
@@ -503,9 +518,9 @@ public class PlayerComboController : MonoBehaviour
         return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGeneratedOnHit = generatedHeat, staggerDamage = stagger, isHeavy = false, isAerial = true };
     }
 
-    private static PlayerAttackData AerialLaunchHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger)
+    private static PlayerAttackData AerialPushHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger)
     {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = true, isAerial = true, isLaunch = true };
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = true, isAerial = true, isPush = true };
     }
 
     private static PlayerAttackData AerialDive(string name, int damage, float windup, float active, float recovery, float distance, float radius, int generatedHeat, int stagger)

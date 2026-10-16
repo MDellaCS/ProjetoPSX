@@ -21,7 +21,7 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Desaceleracao ao segurar a direcao oposta ao movimento atual.")]
     [Min(0f)] public float reverseDeceleration = 220f;
     [Tooltip("Desaceleracao do momentum extra ao voltar para a Speed normal.")]
-    [Min(0f)] public float momentumDeceleration = 33f;
+    [Min(0f)] public float momentumDeceleration = 57f;
     [Min(0f)] public float rotationSpeed = 17f;
 
     [Header("Attack Momentum")]
@@ -135,12 +135,7 @@ public class PlayerMovement : MonoBehaviour
     private float aerialGravityMultiplier = 1f;
     private float aerialDiveFallSpeed;
     private float launchGravity;
-    private float launchGravityMultiplier = 1f;
-    private float launchLowGravityMultiplier = 1f;
-    private float launchLowGravityTimer;
-    private float launchLowGravityDuration;
     private float enemyGroundContactTimer;
-    private bool launchLowGravityPending;
     private int jumpsUsed;
     private bool hasUsedAirDash;
     private bool dashStartedGrounded;
@@ -575,7 +570,6 @@ public class PlayerMovement : MonoBehaviour
             isLaunched = false;
             verticalVelocity = -2f;
             jumpHoldTimer = 0f;
-            ResetLaunchLowGravity();
         }
 
         if (playerState.IsDashing())
@@ -590,9 +584,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (isLaunched)
         {
-            UpdateLaunchLowGravity();
-            verticalVelocity += launchGravity * launchGravityMultiplier *
-                Time.deltaTime;
+            verticalVelocity += launchGravity * Time.deltaTime;
             ClampTerminalFallSpeed();
             return;
         }
@@ -652,43 +644,6 @@ public class PlayerMovement : MonoBehaviour
 
         if (aerialLightTimer <= 0f)
             aerialGravityMultiplier = 1f;
-    }
-
-    private void UpdateLaunchLowGravity()
-    {
-        if (launchLowGravityPending)
-        {
-            // A sustentacao comeca somente quando a subida terminou.
-            if (verticalVelocity > 0f)
-                return;
-
-            launchLowGravityPending = false;
-            launchLowGravityTimer = launchLowGravityDuration;
-            launchGravityMultiplier = launchLowGravityMultiplier;
-        }
-
-        if (launchLowGravityTimer <= 0f)
-        {
-            launchGravityMultiplier = 1f;
-            return;
-        }
-
-        launchLowGravityTimer = Mathf.Max(
-            0f,
-            launchLowGravityTimer - Time.deltaTime
-        );
-
-        if (launchLowGravityTimer <= 0f)
-            launchGravityMultiplier = 1f;
-    }
-
-    private void ResetLaunchLowGravity()
-    {
-        launchLowGravityTimer = 0f;
-        launchLowGravityDuration = 0f;
-        launchLowGravityPending = false;
-        launchGravityMultiplier = 1f;
-        launchLowGravityMultiplier = 1f;
     }
 
     private void ApplyJumpHold()
@@ -1218,7 +1173,6 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         isLaunched = false;
-        ResetLaunchLowGravity();
         // O leve aereo substitui o momentum vertical do pulo. Primeiro ele
         // interrompe a subida/queda atual e o hold do pulo; depois aplica
         // somente o lift configurado para o ataque.
@@ -1239,7 +1193,6 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         isLaunched = false;
-        ResetLaunchLowGravity();
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
         aerialDiveFallSpeed = Mathf.Max(0f, fallSpeed);
@@ -1296,8 +1249,7 @@ public class PlayerMovement : MonoBehaviour
         return Mathf.Max(0f, heightDuringHold + heightAfterHold);
     }
 
-    public void ApplySelfLaunchUp(float initialSpeed, float gravity,
-        float lowGravityMultiplier, float lowGravityDuration)
+    public void ApplySelfLaunchUp(float initialSpeed, float gravity)
     {
         // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
         // Launch Up e uma trajetoria vertical intencional: ele limpa qualquer momentum horizontal anterior antes de aplicar o impulso para cima.
@@ -1309,12 +1261,6 @@ public class PlayerMovement : MonoBehaviour
         jumpHoldTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravity = gravity;
-        launchGravityMultiplier = 1f;
-        launchLowGravityMultiplier = Mathf.Clamp01(lowGravityMultiplier);
-        launchLowGravityTimer = 0f;
-        launchLowGravityDuration = Mathf.Max(0f, lowGravityDuration);
-        launchLowGravityPending = launchLowGravityDuration > 0f &&
-            launchLowGravityMultiplier < 1f;
         isLaunched = true;
     }
 }

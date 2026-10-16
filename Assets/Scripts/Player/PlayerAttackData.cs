@@ -30,7 +30,7 @@ public class PlayerAttackData
     public AnimationCurve windupMoveCurve = CreateWindupEaseInCurve();
 
     [Header("Heat")]
-    [Tooltip("Valor legado convertido pela escala global de Heat quando este ataque leve acerta.")]
+    [Tooltip("Heat ganho diretamente quando este ataque leve acerta.")]
     [FormerlySerializedAs("heatRemovedOnHit")]
     public int heatGeneratedOnHit = 0;
 
@@ -41,8 +41,9 @@ public class PlayerAttackData
     [Header("Attack Type")]
     public bool isHeavy = false;
     public bool isLaunchUp = false;
-    [Tooltip("Arremessa o inimigo horizontalmente, podendo causar Wall Splat ao bater no cenario.")]
-    public bool isLaunch = false;
+    [FormerlySerializedAs("isLaunch")]
+    [Tooltip("Empurra o inimigo horizontalmente, podendo causar Wall Splat ao bater no cenario.")]
+    public bool isPush = false;
     public bool launchesPlayer = false;
     public bool isAerial = false;
     [Tooltip("Queda aerea: mantem a hitbox ativa ate o player tocar o chao.")]

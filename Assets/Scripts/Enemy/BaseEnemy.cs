@@ -137,18 +137,13 @@ public class BaseEnemy : MonoBehaviour
     private float playerHeadPushTimer;
     private float verticalVelocity;
     private float launchGravity;
-    private float launchGravityMultiplier = 1f;
-    private float launchLowGravityMultiplier = 1f;
-    private float launchLowGravityTimer;
-    private float launchLowGravityDuration;
-    private bool launchLowGravityPending;
     private float juggleTimer;
     private float juggleGravityMultiplier = 1f;
-    private Vector3 horizontalLaunchVelocity;
-    private float horizontalLaunchTimer;
+    private Vector3 horizontalPushVelocity;
+    private float horizontalPushTimer;
     private Vector3 lastMoveVelocity;
     private bool isLaunched;
-    private bool isHorizontallyLaunched;
+    private bool isPushed;
     private bool hasDamagedDuringActive;
     private bool isEncounterEngaged;
     private bool isWaitingForEncounter;
@@ -245,7 +240,7 @@ public class BaseEnemy : MonoBehaviour
         UpdatePoise();
         UpdateVerticalMovement();
 
-        if (isLaunched || isHorizontallyLaunched)
+        if (isLaunched || isPushed)
         {
             Move(Vector3.zero);
             return;
@@ -520,8 +515,8 @@ public class BaseEnemy : MonoBehaviour
 
     private void Move(Vector3 horizontalVelocity)
     {
-        Vector3 velocity = isHorizontallyLaunched
-            ? horizontalLaunchVelocity
+        Vector3 velocity = isPushed
+            ? horizontalPushVelocity
             : playerHeadPushTimer > 0f
                 ? playerHeadPushVelocity
             : hasSlideLaunchHorizontalImpulse
@@ -540,11 +535,11 @@ public class BaseEnemy : MonoBehaviour
         lastMoveVelocity = velocity;
         CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
 
-        if (isHorizontallyLaunched)
+        if (isPushed)
         {
-            horizontalLaunchTimer -= Time.deltaTime;
-            if (horizontalLaunchTimer <= 0f)
-                ResetHorizontalLaunch();
+            horizontalPushTimer -= Time.deltaTime;
+            if (horizontalPushTimer <= 0f)
+                ResetHorizontalPush();
         }
 
         if (isLaunched && verticalVelocity <= 0f &&
@@ -552,7 +547,6 @@ public class BaseEnemy : MonoBehaviour
         {
             isLaunched = false;
             verticalVelocity = -2f;
-            ResetLaunchLowGravity();
             ResetJuggleMovement();
             CancelSlideLaunchHorizontalImpulse();
             currentState = State.Combat;
@@ -572,13 +566,9 @@ public class BaseEnemy : MonoBehaviour
                 juggleGravityMultiplier = 1f;
         }
 
-        UpdateLaunchLowGravity();
         float activeGravity = isLaunched ? launchGravity : gravity;
-        float activeGravityMultiplier = isLaunched
-            ? launchGravityMultiplier
-            : 1f;
         verticalVelocity = Mathf.Max(
-            verticalVelocity + activeGravity * activeGravityMultiplier *
+            verticalVelocity + activeGravity *
             juggleGravityMultiplier * Time.deltaTime,
             -terminalFallSpeed
         );
@@ -884,8 +874,7 @@ public class BaseEnemy : MonoBehaviour
         currentState = State.Staggered;
     }
 
-    public void ApplyLaunchUp(float initialSpeed, float gravity,
-        float lowGravityMultiplier, float lowGravityDuration)
+    public void ApplyLaunchUp(float initialSpeed, float gravity)
     {
         if (!canBeLaunched || hasDied)
             return;
@@ -896,12 +885,6 @@ public class BaseEnemy : MonoBehaviour
         knockbackTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravity = gravity;
-        launchGravityMultiplier = 1f;
-        launchLowGravityMultiplier = Mathf.Clamp01(lowGravityMultiplier);
-        launchLowGravityTimer = 0f;
-        launchLowGravityDuration = Mathf.Max(0f, lowGravityDuration);
-        launchLowGravityPending = launchLowGravityDuration > 0f &&
-            launchLowGravityMultiplier < 1f;
         isLaunched = true;
         ResetJuggleMovement();
         CancelSlideLaunchHorizontalImpulse();
@@ -932,7 +915,7 @@ public class BaseEnemy : MonoBehaviour
         hasSlideLaunchHorizontalImpulse = false;
     }
 
-    public void ApplyLaunch(Vector3 attackerPosition, float force, float duration)
+    public void ApplyPush(Vector3 attackerPosition, float force, float duration)
     {
         if (!canBeLaunched || hasDied || force <= 0f || duration <= 0f)
             return;
@@ -946,9 +929,9 @@ public class BaseEnemy : MonoBehaviour
         repositionTimer = 0f;
         knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
-        horizontalLaunchVelocity = direction.normalized * force;
-        horizontalLaunchTimer = duration;
-        isHorizontallyLaunched = true;
+        horizontalPushVelocity = direction.normalized * force;
+        horizontalPushTimer = duration;
+        isPushed = true;
         CancelSlideLaunchHorizontalImpulse();
     }
 
@@ -961,7 +944,6 @@ public class BaseEnemy : MonoBehaviour
         currentAttack = null;
         verticalVelocity = liftSpeed;
         launchGravity = gravity;
-        ResetLaunchLowGravity();
         juggleGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
         juggleTimer = Mathf.Max(juggleTimer, duration);
     }
@@ -977,7 +959,6 @@ public class BaseEnemy : MonoBehaviour
 
         currentAttack = null;
         verticalVelocity = -Mathf.Max(0f, fallSpeed);
-        ResetLaunchLowGravity();
         ResetJuggleMovement();
     }
 
@@ -1122,59 +1103,16 @@ public class BaseEnemy : MonoBehaviour
         juggleGravityMultiplier = 1f;
     }
 
-    private void UpdateLaunchLowGravity()
+    private void ResetHorizontalPush()
     {
-        if (!isLaunched)
-        {
-            launchGravityMultiplier = 1f;
-            return;
-        }
-
-        if (launchLowGravityPending)
-        {
-            // A sustentacao comeca somente quando a subida terminou.
-            if (verticalVelocity > 0f)
-                return;
-
-            launchLowGravityPending = false;
-            launchLowGravityTimer = launchLowGravityDuration;
-            launchGravityMultiplier = launchLowGravityMultiplier;
-        }
-
-        if (launchLowGravityTimer <= 0f)
-        {
-            launchGravityMultiplier = 1f;
-            return;
-        }
-
-        launchLowGravityTimer = Mathf.Max(
-            0f,
-            launchLowGravityTimer - Time.deltaTime
-        );
-
-        if (launchLowGravityTimer <= 0f)
-            launchGravityMultiplier = 1f;
-    }
-
-    private void ResetLaunchLowGravity()
-    {
-        launchLowGravityTimer = 0f;
-        launchLowGravityDuration = 0f;
-        launchLowGravityPending = false;
-        launchGravityMultiplier = 1f;
-        launchLowGravityMultiplier = 1f;
-    }
-
-    private void ResetHorizontalLaunch()
-    {
-        horizontalLaunchVelocity = Vector3.zero;
-        horizontalLaunchTimer = 0f;
-        isHorizontallyLaunched = false;
+        horizontalPushVelocity = Vector3.zero;
+        horizontalPushTimer = 0f;
+        isPushed = false;
     }
 
     private void ApplyWallSplat()
     {
-        ResetHorizontalLaunch();
+        ResetHorizontalPush();
         CancelSlideLaunchHorizontalImpulse();
 
         currentAttack = null;
@@ -1245,7 +1183,7 @@ public class BaseEnemy : MonoBehaviour
                 " / " + currentAttack.recoveryDuration.ToString("0.00")
             : "W/A/R: -";
         string targetName = target != null ? target.name : "None";
-        string status = isHorizontallyLaunched ? "LAUNCH" :
+        string status = isPushed ? "PUSHED" :
             isLaunched ? "LAUNCHED" :
             IsSearchingLastKnownPosition ? "SEARCHING" : "GROUND";
         float aggressionVelocity = GetCurrentAggressionVelocity();

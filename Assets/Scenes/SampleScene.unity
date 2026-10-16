@@ -13758,7 +13758,7 @@ MonoBehaviour:
   acceleration: 120
   releaseDeceleration: 90
   reverseDeceleration: 220
-  momentumDeceleration: 33
+  momentumDeceleration: 57
   rotationSpeed: 17
   attackMomentumDeceleration: 80
   crouchSpeedMultiplier: 0.3
@@ -13827,14 +13827,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a442852eb8564943be366f447610546, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCombat
-  attackingRotationSpeed: 300
+  attackingRotationSpeed: 900
   juggleLiftSpeed: 4
   juggleGravityMultiplier: 0.3
   aerialDiveFallSpeed: 28
-  launchUpLowGravityMultiplier: 0.2
-  launchUpLowGravityDuration: 0.55
-  launchForcePerPoiseDamage: 0.42
-  launchDuration: 0.65
+  pushForcePerPoiseDamage: 0.42
+  pushDuration: 0.65
   combatTimerDuration: 5
   combatTimerSettingsVersion: 1
 --- !u!114 &825647893
@@ -13887,25 +13885,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeat
   maxHeat: 100
-  minHeatMagnitude: 100
+  maxColdMagnitude: 100
   maxSuperheat: 50
   excessHeatToSuperheatMultiplier: 0.5
-  attackHeatValueScale: 0.01
-  incomingDamageToHeatMultiplier: 1
   passiveHeatCoolingStartDelay: 5
   initialPassiveHeatCoolingPerSecond: 0.2
-  finalPassiveHeatCoolingPerSecond: 15
-  passiveHeatCoolingRampDuration: 16
+  finalPassiveHeatCoolingPerSecond: 18
+  passiveHeatCoolingRampDuration: 15
   passiveHeatCoolingRampExponent: 1.4
-  passiveColdRecoveryPerSecond: 2
-  coldRecoveryLimitPercent: 0.9
+  passiveColdRecoveryPerSecond: 1
+  coldRecoveryLimitPercent: 0.7
   passiveSuperheatCoolingPerSecond: 1
   coldSuperheatCoolingPerSecond: 4
   burnInitialStunDuration: 1.25
   burningDuration: 4
   burnFinalStunDuration: 1.25
   burnMovementSpeedMultiplier: 0.3
-  burnFinalHeat: -90
+  burnFinalHeat: -70
   debugHeatInputEnabled: 1
   debugHeatPerSecond: 30
   heatReworkVersion: 1
@@ -13992,7 +13988,7 @@ MonoBehaviour:
     staggerDamage: 10
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 0
     isDive: 0
@@ -14036,7 +14032,7 @@ MonoBehaviour:
     staggerDamage: 14
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 0
     isDive: 0
@@ -14080,7 +14076,7 @@ MonoBehaviour:
     staggerDamage: 24
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 0
     isDive: 0
@@ -14124,7 +14120,7 @@ MonoBehaviour:
     staggerDamage: 18
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 0
     isDive: 0
@@ -14168,7 +14164,7 @@ MonoBehaviour:
     staggerDamage: 30
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 0
     isDive: 0
@@ -14212,7 +14208,7 @@ MonoBehaviour:
     staggerDamage: 35
     isHeavy: 1
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 0
     isDive: 0
@@ -14256,7 +14252,7 @@ MonoBehaviour:
     staggerDamage: 8
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 1
     isDive: 0
@@ -14300,7 +14296,7 @@ MonoBehaviour:
     staggerDamage: 12
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 1
     isDive: 0
@@ -14344,7 +14340,7 @@ MonoBehaviour:
     staggerDamage: 18
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 1
     isDive: 0
@@ -14388,7 +14384,7 @@ MonoBehaviour:
     staggerDamage: 26
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 1
     isDive: 0
@@ -14432,7 +14428,7 @@ MonoBehaviour:
     staggerDamage: 35
     isHeavy: 0
     isLaunchUp: 0
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 0
     isAerial: 1
     isDive: 1
@@ -14476,7 +14472,7 @@ MonoBehaviour:
     staggerDamage: 38
     isHeavy: 1
     isLaunchUp: 0
-    isLaunch: 1
+    isPush: 1
     launchesPlayer: 0
     isAerial: 1
     isDive: 0
@@ -14520,7 +14516,7 @@ MonoBehaviour:
     staggerDamage: 52
     isHeavy: 0
     isLaunchUp: 1
-    isLaunch: 0
+    isPush: 0
     launchesPlayer: 1
     isAerial: 0
     isDive: 0
@@ -16173,68 +16169,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96e9cc568d4048178f6aa0d0dfbb5c77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicZombie
---- !u!1 &1805170975
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1805170977}
-  - component: {fileID: 1805170976}
-  m_Layer: 0
-  m_Name: CombatImpactSystem
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1805170976
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1805170975}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 92582e13769f0724ab1904a6097d2861, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CombatImpactSystem
-  lightAttackImpact:
-    hitstopDuration: 0.018
-    cameraShakeDistance: 0.045
-    cameraShakeDuration: 0.055
-  heavyAttackImpact:
-    hitstopDuration: 0.055
-    cameraShakeDistance: 0.16
-    cameraShakeDuration: 0.1
-  maxHeatHitstopBonus: 0.045
-  maxHeatShakeDistanceBonus: 0.16
-  maxHeatShakeDurationBonus: 0.07
-  enemyAttackImpact:
-    hitstopDuration: 0.035
-    cameraShakeDistance: 0.1
-    cameraShakeDuration: 0.08
-  enemyDamageReference: 30
-  maxEnemyDamageHitstopBonus: 0.025
-  maxEnemyDamageShakeDistanceBonus: 0.1
---- !u!4 &1805170977
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1805170975}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.63786, y: 0, z: -13.20485}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1836985209
 GameObject:
   m_ObjectHideFlags: 0
@@ -16629,6 +16563,140 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1 &2015301417
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2015301418}
+  - component: {fileID: 2015301420}
+  - component: {fileID: 2015301419}
+  m_Layer: 0
+  m_Name: GameAudioSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2015301418
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2015301417}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.63786, y: 0, z: -13.20485}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2015301419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2015301417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92582e13769f0724ab1904a6097d2861, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatImpactSystem
+  lightAttackImpact:
+    hitstopDuration: 0.018
+    cameraShakeDistance: 0.045
+    cameraShakeDuration: 0.055
+  heavyAttackImpact:
+    hitstopDuration: 0.055
+    cameraShakeDistance: 0.16
+    cameraShakeDuration: 0.1
+  lightAttackHitSound:
+    clips:
+    - {fileID: 8300000, guid: 77654ee8f367815428b1519f36bb9907, type: 3}
+    volume: 1
+    volumeVariation: 0.08
+    pitch: 1
+    pitchVariation: 0.06
+    is3D: 1
+    minDistance: 1
+    maxDistance: 25
+    outputMixerGroup: {fileID: 0}
+  heavyAttackHitSound:
+    clips:
+    - {fileID: 8300000, guid: a782b9935f54df347b4c8a36b4e64ad5, type: 3}
+    volume: 1
+    volumeVariation: 0.08
+    pitch: 1
+    pitchVariation: 0.06
+    is3D: 1
+    minDistance: 1
+    maxDistance: 25
+    outputMixerGroup: {fileID: 0}
+  enemyAttackHitSound:
+    clips:
+    - {fileID: 8300000, guid: 72ce6af274f2c1e489b77bb97d47e2ea, type: 3}
+    volume: 1
+    volumeVariation: 0.08
+    pitch: 1
+    pitchVariation: 0.06
+    is3D: 1
+    minDistance: 1
+    maxDistance: 25
+    outputMixerGroup: {fileID: 0}
+  impactShakeIntensity:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  maxHeatHitstopBonus: 0.045
+  maxHeatShakeDistanceBonus: 0.16
+  maxHeatShakeDurationBonus: 0.07
+  enemyAttackImpact:
+    hitstopDuration: 0.035
+    cameraShakeDistance: 0.1
+    cameraShakeDuration: 0.08
+  enemyDamageReference: 30
+  maxEnemyDamageHitstopBonus: 0.025
+  maxEnemyDamageShakeDistanceBonus: 0.1
+--- !u!114 &2015301420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2015301417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f4904d9eb5858b40b13c97205624e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameAudioSystem
+  initialSourceCount: 12
+  maximumSourceCount: 32
 --- !u!1001 &2018780479
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -17171,7 +17239,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 330585546}
   - {fileID: 1026784254}
-  - {fileID: 1805170977}
+  - {fileID: 2015301418}
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 825647889}
