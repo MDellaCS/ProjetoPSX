@@ -70,7 +70,7 @@ public class BasicArcher : EnemyBase
 
         Vector3 spawn = projectileSpawnPoint != null
             ? projectileSpawnPoint.position
-            : transform.position + Vector3.up + transform.forward * .7f;
+            : AttackOrigin + transform.forward * .7f;
         Vector3 aim = Target != null
             ? Target.position + Vector3.up - spawn
             : transform.forward;

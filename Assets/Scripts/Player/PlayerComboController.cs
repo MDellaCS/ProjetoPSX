@@ -40,27 +40,27 @@ public class PlayerComboController : MonoBehaviour
     [Min(0.01f)] public float continuationWindow = 0.5f;
 
     [Header("2. Light Route: L1 - L2 - L3")]
-    public PlayerAttackData l1 = Light("L1", 20, .10f, .12f, .20f, 1.45f, .85f, 250, 10, .35f);
-    public PlayerAttackData l2 = Light("L2", 28, .12f, .13f, .22f, 1.55f, .90f, 300, 14, .45f);
-    public PlayerAttackData l3 = Light("L3", 45, .18f, .18f, .42f, 1.75f, 1.05f, 450, 24, .70f);
+    public PlayerAttackData l1 = Light("L1", 20, .10f, .12f, .20f, 1.45f, .85f, 10, .35f);
+    public PlayerAttackData l2 = Light("L2", 28, .12f, .13f, .22f, 1.55f, .90f, 14, .45f);
+    public PlayerAttackData l3 = Light("L3", 45, .18f, .18f, .42f, 1.75f, 1.05f, 24, .70f);
 
     [Header("3. Light Pause Route: L1 - PAUSE - L2' - L3'")]
-    public PlayerAttackData l2Prime = Light("L2'", 35, .17f, .16f, .30f, 1.65f, 1.00f, 350, 18, .50f);
-    public PlayerAttackData l3Prime = Light("L3'", 55, .25f, .20f, .48f, 1.95f, 1.20f, 550, 30, .85f);
+    public PlayerAttackData l2Prime = Light("L2'", 35, .17f, .16f, .30f, 1.65f, 1.00f, 18, .50f);
+    public PlayerAttackData l3Prime = Light("L3'", 55, .25f, .20f, .48f, 1.95f, 1.20f, 30, .85f);
 
     [Header("4. Heavy Attack")]
     public PlayerAttackData h1 = Heavy("H1", 35, .25f, .18f, .35f, 1.60f, 1.00f, 35, .55f);
 
     [Header("5. Aerial Route: L1 - L2 - L3 - L4 - L5 (Dive) / H1")]
-    public PlayerAttackData aerialL1 = AerialLight("Air L1", 18, .07f, .12f, .1f, 1.30f, .80f, 150, 8);
-    public PlayerAttackData aerialL2 = AerialLight("Air L2", 24, .07f, .13f, .1f, 1.45f, .85f, 180, 12);
-    public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 250, 18);
-    public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 300, 26);
-    public PlayerAttackData aerialL5 = AerialDive("Air L5 (Dive)", 65, .08f, .20f, .45f, 1.95f, 1.20f, 400, 35);
+    public PlayerAttackData aerialL1 = AerialLight("Air L1", 18, .07f, .12f, .1f, 1.30f, .80f, 8);
+    public PlayerAttackData aerialL2 = AerialLight("Air L2", 24, .07f, .13f, .1f, 1.45f, .85f, 12);
+    public PlayerAttackData aerialL3 = AerialLight("Air L3", 36, .07f, .17f, .1f, 1.65f, .95f, 18);
+    public PlayerAttackData aerialL4 = AerialLight("Air L4", 48, .07f, .20f, .3f, 1.85f, 1.05f, 26);
+    public PlayerAttackData aerialL5 = AerialDive("Air L5 (Dive)", 65, .08f, .20f, .45f, 1.95f, 1.20f, 35);
     public PlayerAttackData aerialH1 = AerialPushHeavy("Air H1", 40, .08f, .3f, .3f, 1f, 3f, 38);
 
     [Header("6. Dash Attack")]
-    public PlayerAttackData dashL1 = DashLaunchLight("Dash L1", 35, .10f, .18f, .05f, 1.70f, 1.15f, 380, 52, .45f);
+    public PlayerAttackData dashL1 = DashLaunchLight("Dash L1", 35, .10f, .18f, .05f, 1.70f, 1.15f, 52, .45f);
 
 
     #region Runtime References
@@ -392,7 +392,7 @@ public class PlayerComboController : MonoBehaviour
 
         if (!attack.isHeavy)
         {
-            playerHeat.AddHeat(attack.heatGeneratedOnHit);
+            playerHeat.AddHeat(playerHeat.lightAttackHeatGeneratedOnHit);
         }
     }
 
@@ -519,9 +519,9 @@ public class PlayerComboController : MonoBehaviour
         return combo;
     }
 
-    private static PlayerAttackData Light(string name, int damage, float windup, float active, float recovery, float distance, float radius, float generatedHeat, int stagger, float windupActiveMoveDistance)
+    private static PlayerAttackData Light(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger, float windupActiveMoveDistance)
     {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGeneratedOnHit = generatedHeat, staggerDamage = stagger, isHeavy = false, windupMoveDistance = windupActiveMoveDistance };
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = false, windupMoveDistance = windupActiveMoveDistance };
     }
 
     private static PlayerAttackData Heavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger, float windupActiveMoveDistance)
@@ -529,9 +529,9 @@ public class PlayerComboController : MonoBehaviour
         return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = true, windupMoveDistance = windupActiveMoveDistance };
     }
 
-    private static PlayerAttackData AerialLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, float generatedHeat, int stagger)
+    private static PlayerAttackData AerialLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger)
     {
-        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, heatGeneratedOnHit = generatedHeat, staggerDamage = stagger, isHeavy = false, isAerial = true };
+        return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = false, isAerial = true };
     }
 
     private static PlayerAttackData AerialPushHeavy(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger)
@@ -539,16 +539,16 @@ public class PlayerComboController : MonoBehaviour
         return new PlayerAttackData { attackName = name, damage = damage, windupDuration = windup, activeDuration = active, recoveryDuration = recovery, attackDistance = distance, attackRadius = radius, staggerDamage = stagger, isHeavy = true, isAerial = true, isPush = true };
     }
 
-    private static PlayerAttackData AerialDive(string name, int damage, float windup, float active, float recovery, float distance, float radius, float generatedHeat, int stagger)
+    private static PlayerAttackData AerialDive(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger)
     {
-        PlayerAttackData attack = AerialLight(name, damage, windup, active, recovery, distance, radius, generatedHeat, stagger);
+        PlayerAttackData attack = AerialLight(name, damage, windup, active, recovery, distance, radius, stagger);
         attack.isDive = true;
         return attack;
     }
 
-    private static PlayerAttackData DashLaunchLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, float generatedHeat, int stagger, float windupActiveMoveDistance)
+    private static PlayerAttackData DashLaunchLight(string name, int damage, float windup, float active, float recovery, float distance, float radius, int stagger, float windupActiveMoveDistance)
     {
-        PlayerAttackData attack = Light(name, damage, windup, active, recovery, distance, radius, generatedHeat, stagger, windupActiveMoveDistance);
+        PlayerAttackData attack = Light(name, damage, windup, active, recovery, distance, radius, stagger, windupActiveMoveDistance);
         attack.isDashAttack = true;
         attack.isLaunchUp = true;
         attack.launchesPlayer = true;

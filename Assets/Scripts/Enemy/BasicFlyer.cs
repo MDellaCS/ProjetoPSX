@@ -181,8 +181,8 @@ public class BasicFlyer : EnemyBase
     protected override bool ExecuteAttack(EnemyAttackData attack)
     {
         Vector3 hitPosition = IsAirSpinAttack(attack)
-            ? transform.position
-            : transform.position + transform.forward * attack.hitboxDistance;
+            ? AttackOrigin
+            : AttackOrigin + transform.forward * attack.hitboxDistance;
 
         foreach (Collider hit in Physics.OverlapSphere(hitPosition, attack.hitboxRadius))
         {
@@ -192,7 +192,7 @@ public class BasicFlyer : EnemyBase
 
             playerHealth.TakeDamage(
                 attack.damage,
-                transform.position,
+                AttackOrigin,
                 attack.knockbackForce,
                 attack.knockbackDuration,
                 true,
@@ -225,7 +225,7 @@ public class BasicFlyer : EnemyBase
         }
 
         Gizmos.color = new Color(1f, .35f, .1f, .9f);
-        Gizmos.DrawWireSphere(transform.position, CurrentAttack.hitboxRadius);
+        Gizmos.DrawWireSphere(AttackOrigin, CurrentAttack.hitboxRadius);
     }
 
     private bool IsTargetAirborne()

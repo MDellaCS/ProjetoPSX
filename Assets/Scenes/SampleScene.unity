@@ -196,7 +196,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &79238167
 Transform:
   m_ObjectHideFlags: 0
@@ -13990,7 +13990,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &801637553
 Transform:
   m_ObjectHideFlags: 0
@@ -14205,7 +14205,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeat
   maxHeat: 100
   maxColdMagnitude: 100
-  heavyDamageAdditivePowerBonus: 5
+  heavyDamageAdditivePowerBonus: 4
+  lightAttackHeatGeneratedOnHit: 4.33
   maxSuperheat: 50
   excessHeatToSuperheatMultiplier: 0.5
   passiveHeatCoolingStartDelay: 5
@@ -14305,7 +14306,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 50
     isHeavy: 0
     isLaunchUp: 0
@@ -14349,7 +14349,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 50
     isHeavy: 0
     isLaunchUp: 0
@@ -14393,7 +14392,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 50
     isHeavy: 0
     isLaunchUp: 0
@@ -14437,7 +14435,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 30
     isHeavy: 0
     isLaunchUp: 0
@@ -14481,7 +14478,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 30
     isHeavy: 0
     isLaunchUp: 1
@@ -14492,15 +14488,15 @@ MonoBehaviour:
     isDashAttack: 0
   h1:
     attackName: H1
-    damage: 130
+    damage: 120
     windupDuration: 0.5
-    activeDuration: 0.2
+    activeDuration: 0.1
     recoveryDuration: 0.35
     attackDistance: 2
     attackRadius: 2
-    windupMoveDistance: 2
+    windupMoveDistance: 1
     windupMoveStart: 0
-    windupMoveEnd: 0.3
+    windupMoveEnd: 1
     windupMoveCurve:
       serializedVersion: 2
       m_Curve:
@@ -14525,7 +14521,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 0
     staggerDamage: 60
     isHeavy: 1
     isLaunchUp: 0
@@ -14569,7 +14564,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 20
     isHeavy: 0
     isLaunchUp: 0
@@ -14613,7 +14607,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 20
     isHeavy: 0
     isLaunchUp: 0
@@ -14657,7 +14650,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 20
     isHeavy: 0
     isLaunchUp: 0
@@ -14701,7 +14693,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 20
     isHeavy: 0
     isLaunchUp: 0
@@ -14711,7 +14702,7 @@ MonoBehaviour:
     isDive: 0
     isDashAttack: 0
   aerialL5:
-    attackName: Air L5 (Dive)
+    attackName: Air L5
     damage: 12
     windupDuration: 0.1
     activeDuration: 0.2
@@ -14745,20 +14736,19 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 60
     isHeavy: 0
     isLaunchUp: 0
     isPush: 0
     launchesPlayer: 0
     isAerial: 1
-    isDive: 1
+    isDive: 0
     isDashAttack: 0
   aerialH1:
     attackName: Air H1
-    damage: 130
+    damage: 120
     windupDuration: 0.55
-    activeDuration: 0.2
+    activeDuration: 0.1
     recoveryDuration: 0.25
     attackDistance: 0
     attackRadius: 2.1
@@ -14789,7 +14779,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 0
     staggerDamage: 60
     isHeavy: 1
     isLaunchUp: 0
@@ -14833,7 +14822,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    heatGeneratedOnHit: 3
     staggerDamage: 35
     isHeavy: 0
     isLaunchUp: 1
@@ -18023,7 +18011,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4659638988055089537, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5318782377259686372, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_Mesh

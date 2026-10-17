@@ -26,6 +26,7 @@ public class EnemyBase : MonoBehaviour
     private EnemyMovement movement;
     private EnemyHealth health;
     private EnemyDebug debugView;
+    private CharacterController characterController;
     private bool initialized;
 
     public State CurrentState { get; internal set; } = State.Idle;
@@ -41,6 +42,21 @@ public class EnemyBase : MonoBehaviour
     public float CurrentAggressionPercent => brain != null ? brain.CurrentAggressionPercent : 0f;
     public Transform Target => brain != null ? brain.Target : null;
     public bool IsSearchingLastKnownPosition => brain != null && brain.IsSearchingLastKnownPosition;
+    /// <summary>
+    /// Centro de combate do inimigo. Hitboxes e ataques sem um ponto visual
+    /// explicito devem partir daqui, nao dos pes do Transform raiz.
+    /// </summary>
+    public Vector3 AttackOrigin
+    {
+        get
+        {
+            if (characterController == null)
+                characterController = GetComponent<CharacterController>();
+            return characterController != null
+                ? transform.TransformPoint(characterController.center)
+                : transform.position;
+        }
+    }
     protected EnemyAttackData CurrentAttack => attacks != null ? attacks.CurrentAttack : null;
     protected EnemyBrain Brain => brain;
     protected EnemyAttackController AttackController => attacks;
@@ -73,6 +89,7 @@ public class EnemyBase : MonoBehaviour
         movement = GetOrAdd<EnemyMovement>();
         health = GetOrAdd<EnemyHealth>();
         debugView = GetOrAdd<EnemyDebug>();
+        characterController = GetOrAdd<CharacterController>();
 
         movement.Initialize(this, health);
         attacks.Initialize(this, brain, CreateDefaultAttacks());

@@ -35,7 +35,7 @@ public sealed class EnemyDebug : MonoBehaviour
         if (owner.CurrentState != EnemyBase.State.Active || attack == null)
             return;
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position +
+        Gizmos.DrawWireSphere(owner.AttackOrigin +
             transform.forward * attack.hitboxDistance, attack.hitboxRadius);
     }
 

@@ -33,6 +33,10 @@ public class PlayerHeat : MonoBehaviour
     [Tooltip("Bonus de dano base adicionado por cada ponto do multiplicador de poder antes de multiplicar o pesado. Ex.: dano 130, poder 10x e bonus 5 resulta em (130 + 10 x 5) x 10 = 1800.")]
     [Min(0f)] public float heavyDamageAdditivePowerBonus = 5f;
 
+    [Header("Light Attack Heat")]
+    [Tooltip("Heat gerado quando qualquer ataque leve do player acerta. Vale para leves terrestres, aereos e Dash L1; pesados nao geram Heat.")]
+    [Min(0f)] public float lightAttackHeatGeneratedOnHit = 5f;
+
     [Header("Superheat Notches")]
     [Tooltip("Capacidade maxima de Superheat. Ao encher, inicia o estado Burn.")]
     [Min(1f)] public float maxSuperheat = 50f;

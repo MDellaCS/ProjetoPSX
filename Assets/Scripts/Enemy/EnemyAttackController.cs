@@ -180,13 +180,13 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     public bool ExecuteMeleeAttack(EnemyAttackData attack)
     {
-        Vector3 center = transform.position +
+        Vector3 center = owner.AttackOrigin +
             transform.forward * attack.hitboxDistance;
         foreach (Collider hit in Physics.OverlapSphere(center, attack.hitboxRadius))
         {
             PlayerHealth player = hit.GetComponentInParent<PlayerHealth>();
             if (player == null) continue;
-            player.TakeDamage(attack.damage, transform.position,
+            player.TakeDamage(attack.damage, owner.AttackOrigin,
                 attack.knockbackForce, attack.knockbackDuration, true, transform);
             return true;
         }

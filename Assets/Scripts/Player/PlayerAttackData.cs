@@ -41,10 +41,6 @@ public class PlayerAttackData
     [InspectorName("Windup + Active Move Curve")]
     public AnimationCurve windupMoveCurve = CreateWindupActiveEaseInCurve();
 
-    [Header("Heat")]
-    [Tooltip("Heat ganho diretamente quando este ataque leve acerta.")]
-    public float heatGeneratedOnHit = 0f;
-
     [Header("Stagger")]
     [Min(0)]
     [Tooltip("Dano de Poise aplicado ao inimigo. Pesados recebem multiplicador conforme Heat consumido.")]

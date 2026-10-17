@@ -108,14 +108,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21882b701d20d8448b0e1fb973e82c57, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicFlyer
-  groundFlightHeight: 4
+  groundFlightHeight: 3.5
   flightGroundLayers:
     serializedVersion: 2
     m_Bits: 4294967295
   groundProbeDistance: 20
   groundProbeStartOffset: 2
   heightCorrectionSpeed: 5
-  bobbingAmplitude: 0.2
+  bobbingAmplitude: 0.35
   bobbingFrequency: 0.3
   sweepDescentSpeed: 7
   visualRoot: {fileID: 699346647437120168}
@@ -197,11 +197,11 @@ MonoBehaviour:
     damage: 25
     maximumRange: 1
     windupDuration: 1.5
-    activeDuration: 0.1
-    recoveryDuration: 2
+    activeDuration: 0.25
+    recoveryDuration: 1.4
     hitboxDistance: 0.5
-    hitboxRadius: 1.5
-    knockbackForce: 10
+    hitboxRadius: 1.2
+    knockbackForce: 4
     knockbackDuration: 0.5
   - attackName: Flyer Air Spin
     attackId: FlyerAirSpin
@@ -211,12 +211,12 @@ MonoBehaviour:
     continuations: []
     isProjectileAttack: 0
     damage: 30
-    maximumRange: 3
-    windupDuration: 2
-    activeDuration: 0.2
-    recoveryDuration: 2
+    maximumRange: 2.5
+    windupDuration: 1.8
+    activeDuration: 0.4
+    recoveryDuration: 3
     hitboxDistance: 0
-    hitboxRadius: 3
+    hitboxRadius: 2.5
     knockbackForce: 15
     knockbackDuration: 0.5
   maximumAttacksPerSequence: 5
