@@ -193,53 +193,72 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36e932942b924b0bae8cce670e47113a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicArcher
-  maxHealth: 100
+  maxHealth: 800
   isUnkillable: 0
-  maxPoise: 60
+  maxPoise: 40
   poiseRecoveryDelay: 3
-  poiseRecoveryPerSecond: 20
-  movementSpeed: 2.2
-  gravity: -20
+  poiseRecoveryPerSecond: 10
+  movementSpeed: 1
+  gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 240
+  rotationSpeed: 120
+  useTankControls: 0
   detectionRange: 8
   combatDetectionRange: 14
   lastKnownSearchDuration: 2.5
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
-    min: 20
-    max: 30
+    min: 25
+    max: 50
   minimumAggressionPercent: 10
-  maximumAggressionPercent: 100
+  maximumAggressionPercent: 85
   aggressionChangeRatePerSecond:
-    min: 6
-    max: 10
+    min: 2
+    max: 5
   aggressionChangeInterval:
-    min: 1.5
-    max: 3
-  playerBackTurnedAggressionGain: 12
-  outOfCameraAggressionLoss: 16
-  cameraVisibilityPadding: 3
+    min: 5
+    max: 10
+  playerBackTurnedAggressionGain: 0
+  outOfCameraAggressionLoss: -5
+  cameraVisibilityPadding: 1
+  damageTakenAggressionReduction: 0
+  lowEnemyHealthPercent: 0
+  lowEnemyHealthDecreaseChance: 0
+  lowPlayerHealthPercent: 0
+  lowPlayerHealthAggressionGainPerSecond: 0
+  highPlayerHealthPercent: 0
+  highPlayerHealthAggressionLossPerSecond: 0
+  retreatsWhenPlayerTakesEnemyDamage: 0
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
+  playerDamagedAggressionPercent: 0.2
+  playerDamagedAggressionFlatChange: 5
   decisionInterval:
-    min: 0.3
-    max: 0.7
+    min: 2
+    max: 6
   repositionDuration:
-    min: 0.3
-    max: 0.8
+    min: 4
+    max: 5
   repositionSpeedMultiplier:
     min: 0.25
     max: 0.55
   chaseCommitmentDuration: 1.2
+  chaseCommitmentCooldown: 2
   comboContinuationChance: 65
   staggerDuration: 0.8
   staggerKnockbackForce: 8
   staggerKnockbackDuration: 0.2
   canBeLaunched: 1
   canBeJuggled: 1
+  wallSplatMinimumSpeed: 10
+  wallSplatStunDuration: 1
+  wallSplatLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
   damageFlashDuration: 0.15
   debugLabelHeight: 2.4
   attackCombo:
   - attackName: Arrow Shot
+    isProjectileAttack: 0
     damage: 14
     maximumRange: 12
     windupDuration: 0.7

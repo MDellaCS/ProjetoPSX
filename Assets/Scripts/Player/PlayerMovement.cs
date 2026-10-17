@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -14,14 +13,17 @@ public class PlayerMovement : MonoBehaviour
     private const int MaximumJumpCount = 2;
 
     [Header("Walking")]
+    [Tooltip("Velocidade base maxima ao andar no chao.")]
     [Min(0f)] public float speed = 8f;
+    [Tooltip("Rapidez para atingir a velocidade desejada ao comecar a andar.")]
     [Min(0f)] public float acceleration = 120f;
     [Tooltip("Desaceleracao ao soltar completamente o movimento.")]
     [Min(0f)] public float releaseDeceleration = 90f;
     [Tooltip("Desaceleracao ao segurar a direcao oposta ao movimento atual.")]
     [Min(0f)] public float reverseDeceleration = 220f;
     [Tooltip("Desaceleracao do momentum extra ao voltar para a Speed normal.")]
-    [Min(0f)] public float momentumDeceleration = 57f;
+    [Min(0f)] public float momentumDeceleration = 61f;
+    [Tooltip("Rapidez com que o visual gira para a direcao de movimento normal.")]
     [Min(0f)] public float rotationSpeed = 17f;
 
     [Header("Attack Momentum")]
@@ -30,7 +32,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Crouch")]
     [Tooltip("Botao lateral voltar do mouse. Deve permanecer pressionado para agachar.")]
-    [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.3f;
+    [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.5f;
     [Tooltip("Multiplicador da altura do CharacterController ao agachar ou deslizar.")]
     [Range(0.2f, 1f)] public float crouchingHeightMultiplier = 0.6f;
     [Tooltip("Largura da capsula agachada como porcentagem do maximo fisicamente possivel para sua altura. 1 = o mais largo permitido.")]
@@ -46,14 +48,13 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Multiplicador da Speed necessario para iniciar um slide. 1.1 significa 110% da velocidade base.")]
     [Min(0f)] public float slideStartSpeedPercent = 1.1f;
     [Tooltip("Velocidade abaixo da qual o slide termina.")]
-    [Min(0f)] public float slideEndSpeed = 0.1f;
+    [Min(0f)] public float slideEndSpeed = 0f;
     [Tooltip("Quanto o slide perde de velocidade no chao plano.")]
-    [Min(0f)] public float slideFriction = 14f;
+    [Min(0f)] public float slideFriction = 16f;
     [Tooltip("Aceleracao adicional ao deslizar em uma descida.")]
     [Min(0f)] public float slideSlopeAcceleration = 24f;
 
     [Header("Steering")]
-    [FormerlySerializedAs("slideSteeringSpeed")]
     [Tooltip("Velocidade, em graus por segundo, para curvar Slide, Dash e Dash Jump.")]
     [Min(0f)] public float steeringStrength = 40f;
 
@@ -64,17 +65,20 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float steepSlopeMaximumSlideSpeed = 10f;
 
     [Header("Gravity")]
+    [Tooltip("Aceleracao vertical aplicada ao player. Deve ser negativa para puxar para baixo.")]
     public float gravity = -60f;
     [Tooltip("Velocidade maxima de queda, aplicada a gravidade e Launch Up.")]
     [Min(2f)] public float terminalFallSpeed = 30f;
 
     [Header("Jump")]
+    [Tooltip("Velocidade vertical aplicada ao iniciar um pulo.")]
     [Min(0f)] public float jumpInitialSpeed = 14f;
+    [Tooltip("Velocidade vertical adicional por segundo enquanto o botao de pulo permanece pressionado.")]
     [Min(0f)] public float jumpHoldAcceleration = 40f;
+    [Tooltip("Tempo maximo em que segurar pulo aumenta sua altura.")]
     [Min(0f)] public float maxJumpHoldDuration = 0.25f;
 
     [Header("Air Movement")]
-    [FormerlySerializedAs("airControlMultiplier")]
     [Tooltip("Aceleracao usada para mudar direcao e velocidade enquanto existe input no ar.")]
     [Min(0f)] public float airControl = 40f;
     [Tooltip("Multiplicador da Speed no chao que limita a velocidade no ar.")]
@@ -83,10 +87,9 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float airDrag = 8f;
 
     [Header("Dash")]
-    [FormerlySerializedAs("dashSpeedMultiplier")]
     [Tooltip("Impulso unico do Dash, calculado a partir da Speed base do jogador.")]
     [Min(0f)] public float dashImpulseMultiplier = 1.6f;
-    [Min(0f)] public float dashDuration = 0.33f;
+    [Min(0f)] public float dashDuration = 0.3f;
     [Min(0f)] public float dashCooldown = 1.3f;
 
     [Header("Enemy Body Interaction")]
@@ -94,6 +97,7 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float enemyHeadPushSpeed = 10f;
 
     [Header("References")]
+    [Tooltip("Camera usada para converter o input de movimento em direcoes do mundo.")]
     public Transform cameraTransform;
 
     public Vector3 DesiredDirection { get; private set; }
@@ -152,12 +156,8 @@ public class PlayerMovement : MonoBehaviour
 
     private bool IsStandingOnEnemy => enemyGroundContactTimer > 0f;
 
-    [SerializeField, HideInInspector]
-    private int airMovementSettingsVersion;
-
     void Start()
     {
-        EnsureAirMovementDefaults();
         controller = GetComponent<CharacterController>();
         CacheStandingControllerShape();
         playerState = GetComponent<PlayerState>();
@@ -167,24 +167,6 @@ public class PlayerMovement : MonoBehaviour
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
 
-    }
-
-    void OnValidate()
-    {
-        EnsureAirMovementDefaults();
-    }
-
-    private void EnsureAirMovementDefaults()
-    {
-        if (airMovementSettingsVersion >= 1)
-            return;
-
-        // Os valores anteriores usavam Air Drag como aceleracao. Esta
-        // migracao aplica valores equivalentes para a nova semantica.
-        airControl = 16f;
-        airMaxSpeedMultiplier = 0.75f;
-        airDrag = 3f;
-        airMovementSettingsVersion = 1;
     }
 
     void Update()
@@ -678,7 +660,7 @@ public class PlayerMovement : MonoBehaviour
         if (playerState.IsBurnStunned())
             return Vector3.zero;
 
-        if (playerState.IsBurning())
+        if (playerState.IsBurnWalking())
             return CalculateBurnWalkVelocity();
 
         if (playerState.IsAttacking())
@@ -1051,7 +1033,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void RotateTowardsMovement()
     {
-        if (!playerState.IsNormal())
+        // Pre-Explosion e Burn liberam somente caminhada lenta, mas o corpo
+        // ainda precisa acompanhar a direcao desse movimento.
+        if (!playerState.IsNormal() && !playerState.IsBurnWalking())
         {
             return;
         }

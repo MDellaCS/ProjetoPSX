@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 
 public class PlayerHeat : MonoBehaviour
 {
@@ -21,12 +21,11 @@ public class PlayerHeat : MonoBehaviour
         }
     }
 
-    private enum BurnPhase { None, InitialStun, Burning, FinalStun }
+    private enum BurnPhase { None, PreExplosion, ExplosionStun, Burning, RecoveryStun }
 
     [Header("Heat Notches")]
     [Tooltip("Limite positivo de Heat. De 0 ate este valor existem 10 notches; cada notch aumenta o poder dos pesados.")]
     [Min(1f)] public float maxHeat = 100f;
-    [FormerlySerializedAs("minHeatMagnitude")]
     [Tooltip("Magnitude maxima de Cold. O limite real de Heat e o valor negativo deste campo; alcanca-lo mata o player.")]
     [Min(1f)] public float maxColdMagnitude = 100f;
 
@@ -61,23 +60,36 @@ public class PlayerHeat : MonoBehaviour
     [Min(0f)] public float coldSuperheatCoolingPerSecond = 4f;
 
     [Header("Burn")]
-    [Tooltip("Duracao do stun completo ao iniciar Burn por Superheat cheio.")]
-    [Min(0f)] public float burnInitialStunDuration = 1.25f;
-    [Tooltip("Duracao do estado Burning, em que o player so pode andar lentamente.")]
-    [Min(0f)] public float burningDuration = 4f;
-    [Tooltip("Duracao do stun completo aplicado ao fim de Burning.")]
-    [Min(0f)] public float burnFinalStunDuration = 1.25f;
-    [Tooltip("Multiplicador da velocidade de movimento durante Burning.")]
+    [Tooltip("Tempo de Pre-Explosion em que o player pode apenas andar lentamente antes de explodir.")]
+    [Min(0f)] public float burnPreExplosionDuration = 1.5f;
+    [Tooltip("Duracao do stun completo causado pela propria explosao de Burn.")]
+    [Min(0f)] public float burnInitialStunDuration = 3f;
+    [Tooltip("Duracao do Burn depois da explosao. Durante esse tempo o player anda lentamente e perde Heat ate o alvo final.")]
+    [Min(0f)] public float burningDuration = 5f;
+    [Tooltip("Duracao do stun de Burn Recovery aplicado ao fim do Burn.")]
+    [Min(0f)] public float burnFinalStunDuration = 1f;
+    [Tooltip("Multiplicador da velocidade de movimento durante Pre-Explosion e Burn.")]
     [Range(0f, 1f)] public float burnMovementSpeedMultiplier = .3f;
-    [Tooltip("Heat final ao terminar Burn. O Superheat sempre termina em 0.")]
-    [Range(-100f, 0f)] public float burnFinalHeat = -70f;
+    [Tooltip("Porcentagem do Cold maximo alcancada ao terminar Burn. Ex.: 0.7 leva o Heat a -70 quando o Cold maximo e 100.")]
+    [Range(0f, 1f)] public float burnFinalColdPercent = .7f;
+
+    [Header("Burn Blast")]
+    [Tooltip("Raio da explosao disparada a partir do centro do player quando o primeiro stun de Burn comeca.")]
+    [Min(0f)] public float burnBlastRadius = 6f;
+    [Tooltip("Tempo em que a hitbox da explosao de Burn permanece ativa. Cada inimigo pode ser atingido uma unica vez nessa janela.")]
+    [Min(.01f)] public float burnBlastActiveDuration = .7f;
+    [Tooltip("Dano causado pela explosao de Burn em cada inimigo dentro do raio.")]
+    [Min(0)] public int burnBlastDamage = 1500;
+    [Tooltip("Forca horizontal de Push aplicada pela explosao de Burn.")]
+    [Min(0f)] public float burnBlastPushForce = 6f;
+    [Tooltip("Duracao do Push aplicado pela explosao de Burn.")]
+    [Min(0f)] public float burnBlastPushDuration = .25f;
 
     [Header("Debug")]
     [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes.")]
     [SerializeField] private bool debugHeatInputEnabled = true;
     [Tooltip("Quantidade de Heat adicionada ou removida por segundo pelos atalhos de debug.")]
-    [Min(0f)] [SerializeField] private float debugHeatPerSecond = 15f;
-    [SerializeField, HideInInspector] private int heatReworkVersion;
+    [Min(0f)] [SerializeField] private float debugHeatPerSecond = 35f;
 
     private float currentHeat;
     private float currentSuperheat;
@@ -87,13 +99,14 @@ public class PlayerHeat : MonoBehaviour
     private BurnPhase burnPhase;
     private float burnPhaseTimer;
     private float burnElapsed;
-    private float burnTotalDuration;
     private float burnStartHeat;
-    private float burnStartSuperheat;
+    private float burnBlastActiveTimer;
+    private readonly HashSet<BaseEnemy> burnBlastAffectedEnemies = new();
 
     private PlayerState playerState;
     private PlayerCombat playerCombat;
     private PlayerMovement playerMovement;
+    private CharacterController characterController;
 
     public float CurrentHeat => currentHeat;
     public float CurrentSuperheat => currentSuperheat;
@@ -108,15 +121,14 @@ public class PlayerHeat : MonoBehaviour
     public float BurnMovementSpeedMultiplier => burnMovementSpeedMultiplier;
     public float HeavyDamageMultiplier => GetHeavyDamageMultiplier();
     public float HeavyPoiseMultiplier => GetHeavyPoiseMultiplier();
-
-    private void Awake() => ApplyHeatReworkDefaults();
-    private void OnValidate() => ApplyHeatReworkDefaults();
+    private float BurnFinalHeatTarget => -maxColdMagnitude * burnFinalColdPercent;
 
     private void Start()
     {
         playerState = GetComponent<PlayerState>();
         playerCombat = GetComponent<PlayerCombat>();
         playerMovement = GetComponent<PlayerMovement>();
+        characterController = GetComponent<CharacterController>();
     }
 
     private void Update()
@@ -127,6 +139,7 @@ public class PlayerHeat : MonoBehaviour
         if (IsBurning)
         {
             UpdateBurn();
+            UpdateBurnBlast();
             CheckColdDeath();
             return;
         }
@@ -134,26 +147,6 @@ public class PlayerHeat : MonoBehaviour
         UpdatePassiveHeat();
         UpdatePassiveSuperheat();
         CheckColdDeath();
-    }
-
-    private void ApplyHeatReworkDefaults()
-    {
-        if (heatReworkVersion >= 1) return;
-        maxHeat = 100f;
-        maxColdMagnitude = 100f;
-        maxSuperheat = 50f;
-        excessHeatToSuperheatMultiplier = .5f;
-        passiveHeatCoolingStartDelay = 5f;
-        initialPassiveHeatCoolingPerSecond = .2f;
-        finalPassiveHeatCoolingPerSecond = 15f;
-        passiveHeatCoolingRampDuration = 16f;
-        passiveHeatCoolingRampExponent = 1.4f;
-        passiveColdRecoveryPerSecond = 2f;
-        coldRecoveryLimitPercent = .9f;
-        passiveSuperheatCoolingPerSecond = 1f;
-        coldSuperheatCoolingPerSecond = 4f;
-        debugHeatPerSecond = 30f;
-        heatReworkVersion = 1;
     }
 
     private void UpdatePassiveHeat()
@@ -247,6 +240,20 @@ public class PlayerHeat : MonoBehaviour
     }
 
     /// <summary>
+    /// Atalho de teste usado por F8. Encher Superheat dispara Burn da mesma
+    /// forma que ocorreria no gameplay normal.
+    /// </summary>
+    public void FillHeatAndSuperheatForDebug()
+    {
+        if (IsBurning)
+            return;
+
+        currentHeat = maxHeat;
+        currentSuperheat = maxSuperheat;
+        BeginBurn();
+    }
+
+    /// <summary>
     /// Captura a carga do pesado e a gasta imediatamente. O snapshot e usado
     /// pelo golpe mesmo se ele errar ou se o Heat mudar durante a animacao.
     /// </summary>
@@ -330,45 +337,121 @@ public class PlayerHeat : MonoBehaviour
 
     private void BeginBurn()
     {
-        burnPhase = BurnPhase.InitialStun;
-        burnPhaseTimer = burnInitialStunDuration;
+        burnPhase = BurnPhase.PreExplosion;
+        burnPhaseTimer = burnPreExplosionDuration;
         burnElapsed = 0f;
-        burnTotalDuration = burnInitialStunDuration + burningDuration + burnFinalStunDuration;
         burnStartHeat = currentHeat;
-        burnStartSuperheat = currentSuperheat;
         playerCombat?.CancelAttack();
         playerMovement?.InterruptForBurn();
-        playerState?.ChangeState(PlayerState.State.BurnStunned);
+        playerState?.ChangeState(PlayerState.State.BurnPreExplosion);
     }
 
     private void UpdateBurn()
     {
-        burnElapsed += Time.deltaTime;
-        float progress = burnTotalDuration <= 0f ? 1f : Mathf.Clamp01(burnElapsed / burnTotalDuration);
-        currentHeat = Mathf.Lerp(burnStartHeat, burnFinalHeat, progress);
-        currentSuperheat = Mathf.Lerp(burnStartSuperheat, 0f, progress);
+        if (burnPhase == BurnPhase.Burning)
+        {
+            burnElapsed += Time.deltaTime;
+            float progress = burningDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(burnElapsed / burningDuration);
+            currentHeat = Mathf.Lerp(burnStartHeat, BurnFinalHeatTarget, progress);
+        }
+
         burnPhaseTimer -= Time.deltaTime;
         if (burnPhaseTimer > 0f) return;
 
         switch (burnPhase)
         {
-            case BurnPhase.InitialStun:
+            case BurnPhase.PreExplosion:
+                currentSuperheat = 0f;
+                burnPhase = BurnPhase.ExplosionStun;
+                burnPhaseTimer = burnInitialStunDuration;
+                playerState.ChangeState(PlayerState.State.BurnStunned);
+                BeginBurnBlast();
+                break;
+            case BurnPhase.ExplosionStun:
                 burnPhase = BurnPhase.Burning;
                 burnPhaseTimer = burningDuration;
+                burnElapsed = 0f;
+                burnStartHeat = currentHeat;
                 playerState.ChangeState(PlayerState.State.Burning);
                 break;
             case BurnPhase.Burning:
-                burnPhase = BurnPhase.FinalStun;
+                currentHeat = BurnFinalHeatTarget;
+                burnPhase = BurnPhase.RecoveryStun;
                 burnPhaseTimer = burnFinalStunDuration;
                 playerState.ChangeState(PlayerState.State.BurnStunned);
                 break;
-            case BurnPhase.FinalStun:
-                currentHeat = burnFinalHeat;
+            case BurnPhase.RecoveryStun:
+                currentHeat = BurnFinalHeatTarget;
                 currentSuperheat = 0f;
                 burnPhase = BurnPhase.None;
                 playerState.ChangeState(PlayerState.State.Normal);
                 break;
         }
+    }
+
+    private void BeginBurnBlast()
+    {
+        if (burnBlastRadius <= 0f || burnBlastActiveDuration <= 0f)
+            return;
+
+        burnBlastAffectedEnemies.Clear();
+        burnBlastActiveTimer = burnBlastActiveDuration;
+        ApplyBurnBlastHitbox();
+    }
+
+    private void UpdateBurnBlast()
+    {
+        if (burnBlastActiveTimer <= 0f)
+            return;
+
+        ApplyBurnBlastHitbox();
+        burnBlastActiveTimer = Mathf.Max(
+            0f,
+            burnBlastActiveTimer - Time.deltaTime
+        );
+    }
+
+    private void ApplyBurnBlastHitbox()
+    {
+        Vector3 origin = GetBurnBlastOrigin();
+
+        foreach (Collider hit in Physics.OverlapSphere(origin, burnBlastRadius))
+        {
+            BaseEnemy enemy = hit.GetComponentInParent<BaseEnemy>();
+            if (enemy == null || !burnBlastAffectedEnemies.Add(enemy))
+                continue;
+
+            if (burnBlastDamage > 0)
+                enemy.TakeDamage(burnBlastDamage, origin, 0, true);
+
+            enemy.ApplyPush(
+                origin,
+                burnBlastPushForce,
+                burnBlastPushDuration
+            );
+        }
+    }
+
+    private Vector3 GetBurnBlastOrigin()
+    {
+        return characterController != null
+            ? characterController.bounds.center
+            : transform.position;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!Application.isPlaying ||
+            !PlayerDebugToolkitHUD.IsVisible ||
+            burnBlastActiveTimer <= 0f)
+        {
+            return;
+        }
+
+        Gizmos.color = new Color(1f, .45f, 0f, .9f);
+        Gizmos.DrawWireSphere(GetBurnBlastOrigin(), burnBlastRadius);
     }
 
     private void UpdateDebugHeatInput()

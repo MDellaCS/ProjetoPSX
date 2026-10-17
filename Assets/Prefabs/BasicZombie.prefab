@@ -103,90 +103,101 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96e9cc568d4048178f6aa0d0dfbb5c77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicZombie
-  maxHealth: 100
+  maxHealth: 1200
   isUnkillable: 0
-  maxPoise: 60
+  maxPoise: 50
   poiseRecoveryDelay: 3
-  poiseRecoveryPerSecond: 20
-  movementSpeed: 2.2
-  gravity: -20
+  poiseRecoveryPerSecond: 10
+  movementSpeed: 2
+  gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 240
+  rotationSpeed: 70
+  useTankControls: 1
   detectionRange: 8
   combatDetectionRange: 14
   lastKnownSearchDuration: 2.5
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
-    min: 20
-    max: 30
+    min: 25
+    max: 50
   minimumAggressionPercent: 10
-  maximumAggressionPercent: 100
+  maximumAggressionPercent: 85
   aggressionChangeRatePerSecond:
-    min: 6
-    max: 10
+    min: 2
+    max: 5
   aggressionChangeInterval:
-    min: 1.5
-    max: 3
-  playerBackTurnedAggressionGain: 12
-  outOfCameraAggressionLoss: 16
-  cameraVisibilityPadding: 3
-  damageTakenAggressionReduction: 12
-  lowEnemyHealthPercent: 0.35
-  lowEnemyHealthDecreaseChance: 0.75
-  lowPlayerHealthPercent: 0.3
-  lowPlayerHealthAggressionGainPerSecond: 14
-  highPlayerHealthPercent: 0.75
-  highPlayerHealthAggressionLossPerSecond: 10
+    min: 5
+    max: 10
+  playerBackTurnedAggressionGain: 0
+  outOfCameraAggressionLoss: -5
+  cameraVisibilityPadding: 1
+  damageTakenAggressionReduction: 0
+  lowEnemyHealthPercent: 0
+  lowEnemyHealthDecreaseChance: 0
+  lowPlayerHealthPercent: 0
+  lowPlayerHealthAggressionGainPerSecond: 0
+  highPlayerHealthPercent: 0
+  highPlayerHealthAggressionLossPerSecond: 0
+  retreatsWhenPlayerTakesEnemyDamage: 0
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
+  playerDamagedAggressionPercent: 0.2
+  playerDamagedAggressionFlatChange: 5
   decisionInterval:
-    min: 0.3
-    max: 0.7
+    min: 2
+    max: 6
   repositionDuration:
-    min: 0.3
-    max: 0.8
+    min: 4
+    max: 5
   repositionSpeedMultiplier:
     min: 0.25
-    max: 0.55
-  chaseCommitmentDuration: 1.2
-  comboContinuationChance: 65
-  staggerDuration: 0.8
-  staggerKnockbackForce: 8
+    max: 0.5
+  chaseCommitmentDuration: 5
+  chaseCommitmentCooldown: 5
+  comboContinuationChance: 50
+  staggerDuration: 1
+  staggerKnockbackForce: 0.5
   staggerKnockbackDuration: 0.2
   canBeLaunched: 1
   canBeJuggled: 1
+  wallSplatMinimumSpeed: 12
+  wallSplatStunDuration: 3
+  wallSplatLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
   damageFlashDuration: 0.15
   debugLabelHeight: 2.4
   attackCombo:
   - attackName: Zombie Strike 1
     isProjectileAttack: 0
-    damage: 18
-    maximumRange: 1.7
-    windupDuration: 0.65
+    damage: 20
+    maximumRange: 1.5
+    windupDuration: 1.5
     activeDuration: 0.1
-    recoveryDuration: 0.65
-    hitboxDistance: 1
-    hitboxRadius: 0.75
+    recoveryDuration: 1
+    hitboxDistance: 0.5
+    hitboxRadius: 1
     knockbackForce: 3
     knockbackDuration: 0.12
   - attackName: Zombie Strike 2
     isProjectileAttack: 0
-    damage: 18
-    maximumRange: 1.7
-    windupDuration: 0.45
+    damage: 20
+    maximumRange: 1.5
+    windupDuration: 1
     activeDuration: 0.1
-    recoveryDuration: 0.55
-    hitboxDistance: 1
-    hitboxRadius: 0.75
+    recoveryDuration: 1
+    hitboxDistance: 0.5
+    hitboxRadius: 1
     knockbackForce: 3
     knockbackDuration: 0.12
   - attackName: Zombie Strike 3
     isProjectileAttack: 0
-    damage: 18
-    maximumRange: 1.7
-    windupDuration: 0.28
+    damage: 20
+    maximumRange: 1.5
+    windupDuration: 0.5
     activeDuration: 0.1
-    recoveryDuration: 0.8
-    hitboxDistance: 1
-    hitboxRadius: 0.75
+    recoveryDuration: 1
+    hitboxDistance: 0.5
+    hitboxRadius: 1
     knockbackForce: 3
     knockbackDuration: 0.12
 --- !u!1001 &8321301459396382457

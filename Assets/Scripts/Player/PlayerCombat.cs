@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
-using UnityEngine.Serialization;
 
 public class PlayerCombat : MonoBehaviour
 {
@@ -30,7 +29,7 @@ public class PlayerCombat : MonoBehaviour
     private bool currentAttackIsHeavy;
 
     private float attackTimer;
-    private float windupElapsed;
+    private float windupActiveMovementElapsed;
     private int currentDamage;
     private float currentHeavyPoiseMultiplier = 1f;
     private float currentHeavyHeatConsumed;
@@ -46,35 +45,26 @@ public class PlayerCombat : MonoBehaviour
     private System.Action<PlayerAttackData> attackHitCallback;
 
     [Header("Attack Rotation")]
-    [FormerlySerializedAs("windupRotationSpeed")]
     [Tooltip("Velocidade de giro do player exclusivamente durante o Windup. A direcao trava ao entrar em Active.")]
-    [SerializeField] private float attackingRotationSpeed = 900f;
+    [SerializeField] private float attackingRotationSpeed = 1500f;
 
     [Header("Aerial Attack And Enemy Juggle Movement")]
     [Tooltip("Impulso vertical compartilhado pelos leves aereos do player e pelo juggle de inimigos no ar.")]
-    [FormerlySerializedAs("aerialLightLiftSpeed")]
-    [Min(0f)] public float juggleLiftSpeed = 4f;
+    [Min(0f)] public float juggleLiftSpeed = 2f;
     [Tooltip("Multiplicador de gravidade compartilhado pelos leves aereos do player e pelo juggle de inimigos no ar.")]
-    [FormerlySerializedAs("aerialLightGravityMultiplier")]
     [Range(0f, 1f)] public float juggleGravityMultiplier = .3f;
     [Tooltip("Velocidade vertical da queda do ataque Dive.")]
-    [Min(0f)] public float aerialDiveFallSpeed = 28f;
+    [Min(0f)] public float aerialDiveFallSpeed = 35f;
 
     [Header("Push")]
-    [FormerlySerializedAs("launchForcePerPoiseDamage")]
     [Tooltip("Velocidade horizontal de Push gerada por cada ponto de Poise Damage final.")]
     [Min(0f)] public float pushForcePerPoiseDamage = .42f;
-    [FormerlySerializedAs("launchDuration")]
     [Tooltip("Tempo maximo que o inimigo permanece empurrado caso nao bata em uma parede.")]
     [Min(0f)] public float pushDuration = .65f;
 
     [Header("Combat Status")]
     [Min(0f)]
-    [FormerlySerializedAs("outOfCombatDamageDelay")]
     [SerializeField] private float combatTimerDuration = 5f;
-
-    [SerializeField, HideInInspector]
-    private int combatTimerSettingsVersion;
 
     private PlayerMovement playerMovement;
     private PlayerLockOn playerLockOn;
@@ -83,6 +73,7 @@ public class PlayerCombat : MonoBehaviour
     private bool hasAggroedEnemies;
     private float combatTimer;
     private DebugCombatOverride debugCombatOverride;
+    private static GUIStyle currentAttackDebugStyle;
 
     public bool IsAttacking
     {
@@ -131,30 +122,11 @@ public class PlayerCombat : MonoBehaviour
 
     void Awake()
     {
-        EnsureCombatTimerDefaults();
         // O player nasce fora de combate. O timer so e preenchido por aggro ou dano real.
         combatTimer = 0f;
         PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerComboController.GetOrAdd(gameObject);
         playerLockOn = PlayerLockOn.GetOrAdd(gameObject);
-    }
-
-    private void OnValidate()
-    {
-        EnsureCombatTimerDefaults();
-    }
-
-    private void EnsureCombatTimerDefaults()
-    {
-        if (combatTimerSettingsVersion >= 1)
-            return;
-
-        // A versao anterior usava 10 segundos. Esta atualizacao de design
-        // reduz o valor existente para 5 sem afetar valores ja customizados.
-        if (Mathf.Approximately(combatTimerDuration, 10f))
-            combatTimerDuration = 5f;
-
-        combatTimerSettingsVersion = 1;
     }
 
     void Start()
@@ -279,7 +251,7 @@ public class PlayerCombat : MonoBehaviour
             case AttackPhase.Windup:
 
                 RotateDuringWindup();
-                ApplyWindupMovement();
+                ApplyWindupActiveMovement();
 
                 attackTimer -= Time.deltaTime;
 
@@ -295,7 +267,15 @@ public class PlayerCombat : MonoBehaviour
 
             case AttackPhase.Active:
 
+                ApplyWindupActiveMovement();
                 Attack();
+
+                // Attack() pode disparar callbacks de gameplay. Por exemplo,
+                // um leve que enche Superheat inicia Burn e cancela o ataque.
+                // Nao podemos continuar lendo currentAttack depois disso.
+                if (currentAttack == null || attackPhase != AttackPhase.Active)
+                    return;
+
                 ApplySelfLaunchUpIfNeeded();
 
                 if (currentAttack.isDive)
@@ -371,7 +351,7 @@ public class PlayerCombat : MonoBehaviour
     {
         attackPhase = AttackPhase.None;
         attackTimer = 0f;
-        windupElapsed = 0f;
+        windupActiveMovementElapsed = 0f;
 
         currentAttack = null;
         currentDamage = 0;
@@ -398,8 +378,6 @@ public class PlayerCombat : MonoBehaviour
 
         attackTimer = GetPhaseDuration(duration);
 
-        if (newPhase == AttackPhase.Windup)
-            windupElapsed = 0f;
     }
 
     private void ApplyAerialAttackMovement(PlayerAttackData attack)
@@ -423,12 +401,11 @@ public class PlayerCombat : MonoBehaviour
         );
     }
 
-    private void ApplyWindupMovement()
+    private void ApplyWindupActiveMovement()
     {
         if (currentAttack == null ||
             playerMovement == null ||
-            currentAttack.windupMoveDistance <= 0f ||
-            GetPhaseDuration(currentAttack.windupDuration) <= 0f)
+            currentAttack.windupMoveDistance <= 0f)
         {
             return;
         }
@@ -445,20 +422,25 @@ public class PlayerCombat : MonoBehaviour
         if (moveEnd <= moveStart)
             return;
 
-        float windupDuration = GetPhaseDuration(currentAttack.windupDuration);
-        float previousTime = windupElapsed / windupDuration;
-        windupElapsed = Mathf.Min(
-            windupDuration,
-            windupElapsed + Time.deltaTime
+        float movementDuration = GetPhaseDuration(
+            currentAttack.windupDuration + currentAttack.activeDuration
         );
-        float currentTime = windupElapsed / windupDuration;
+        if (movementDuration <= 0f)
+            return;
 
-        float previousProgress = GetWindupMoveProgress(
+        float previousTime = windupActiveMovementElapsed / movementDuration;
+        windupActiveMovementElapsed = Mathf.Min(
+            movementDuration,
+            windupActiveMovementElapsed + Time.deltaTime
+        );
+        float currentTime = windupActiveMovementElapsed / movementDuration;
+
+        float previousProgress = GetWindupActiveMoveProgress(
             previousTime,
             moveStart,
             moveEnd
         );
-        float currentProgress = GetWindupMoveProgress(
+        float currentProgress = GetWindupActiveMoveProgress(
             currentTime,
             moveStart,
             moveEnd
@@ -466,20 +448,20 @@ public class PlayerCombat : MonoBehaviour
 
         float distance = currentAttack.windupMoveDistance *
             (currentProgress - previousProgress);
-        // O avanco segue a frente atual. O giro durante o Windup permite
-        // steer sem alterar a distancia total planejada para o ataque.
+        // O avanco segue a frente atual. O giro do jogador durante o ataque
+        // permite steer sem alterar a distancia total planejada para o golpe.
         playerMovement.ApplyAttackMovement(transform.forward * distance);
     }
 
-    private float GetWindupMoveProgress(
-        float windupTime,
+    private float GetWindupActiveMoveProgress(
+        float windupActiveTime,
         float moveStart,
         float moveEnd)
     {
         float normalizedTime = Mathf.InverseLerp(
             moveStart,
             moveEnd,
-            windupTime
+            windupActiveTime
         );
         AnimationCurve curve = currentAttack.windupMoveCurve;
         return curve != null
@@ -504,6 +486,12 @@ public class PlayerCombat : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
+            // O callback de um acerto pode cancelar o ataque (ex.: Burn por
+            // Superheat cheio). Se houver mais de um Collider no Overlap,
+            // interrompe o restante do loop antes de acessar dados limpos.
+            if (currentAttack == null || attackPhase != AttackPhase.Active)
+                return;
+
             BaseEnemy enemy = hit.GetComponentInParent<BaseEnemy>();
 
             if (enemy != null && !enemiesHit.Contains(enemy))
@@ -785,6 +773,52 @@ public class PlayerCombat : MonoBehaviour
             targetRotation,
             attackingRotationSpeed * Time.deltaTime
         );
+    }
+
+    private void OnGUI()
+    {
+        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
+            currentAttack == null || characterController == null)
+        {
+            return;
+        }
+
+        Camera gameCamera = Camera.main;
+        if (gameCamera == null)
+            return;
+
+        Vector3 screenPosition = gameCamera.WorldToScreenPoint(
+            characterController.bounds.center +
+            Vector3.up * (characterController.height * .65f)
+        );
+        if (screenPosition.z <= 0f)
+            return;
+
+        EnsureCurrentAttackDebugStyle();
+        const float width = 260f;
+        const float height = 42f;
+        Rect labelRect = new Rect(
+            screenPosition.x - width * .5f,
+            Screen.height - screenPosition.y - height,
+            width,
+            height
+        );
+        GUI.Label(labelRect, currentAttack.attackName,
+            currentAttackDebugStyle);
+    }
+
+    private static void EnsureCurrentAttackDebugStyle()
+    {
+        if (currentAttackDebugStyle != null)
+            return;
+
+        currentAttackDebugStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 26,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.black }
+        };
     }
 
     private Vector3 GetLockOnDirectionOrZero()

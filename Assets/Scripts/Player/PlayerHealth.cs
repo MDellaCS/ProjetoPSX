@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -16,9 +17,12 @@ public class PlayerHealth : MonoBehaviour
     private PlayerComboController comboController;
 
     private PlayerHeat playerHeat;
+    private bool godMode;
 
     private float staggerTimer;
     private Color normalColor;
+
+    public bool IsGodMode => godMode;
 
     void Start()
     {
@@ -37,6 +41,8 @@ public class PlayerHealth : MonoBehaviour
 
     void Update()
     {
+        UpdateDebugShortcuts();
+
         if (playerState.IsStaggered())
         {
             staggerTimer -= Time.deltaTime;
@@ -46,6 +52,18 @@ public class PlayerHealth : MonoBehaviour
                 EndStagger();
             }
         }
+    }
+
+    private void UpdateDebugShortcuts()
+    {
+        if (Keyboard.current == null)
+            return;
+
+        if (Keyboard.current.f7Key.wasPressedThisFrame)
+            godMode = !godMode;
+
+        if (Keyboard.current.f8Key.wasPressedThisFrame)
+            playerHeat?.FillHeatAndSuperheatForDebug();
     }
 
     void StartStagger()
@@ -87,13 +105,14 @@ public class PlayerHealth : MonoBehaviour
         Transform attacker = null
     )
     {
-        if (playerState.IsDead())
+        if (playerState.IsDead() || godMode)
             return;
 
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {
             playerCombat.RegisterDamageTakenFromEnemy();
+            BaseEnemy.NotifyPlayerDamagedByEnemy();
         }
 
         DamageNumber.Show(
@@ -127,7 +146,7 @@ public class PlayerHealth : MonoBehaviour
         // Burn continua vulneravel a dano, mas nao pode ser substituido por
         // knockback/stagger: durante Burning o unico movimento permitido e
         // a caminhada lenta controlada por PlayerHeat.
-        if (playerState.IsBurnStunned() || playerState.IsBurning())
+        if (playerState.IsBurnStunned() || playerState.IsBurnWalking())
             return;
 
         // =========================

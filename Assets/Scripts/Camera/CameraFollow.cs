@@ -6,6 +6,7 @@ public class CameraFollow : MonoBehaviour
     public static CameraFollow Instance;
 
     [Header("Target")]
+    [Tooltip("Transform do player que a camera acompanha.")]
     public Transform target;
     [Tooltip("Posicao da camera em relacao ao ponto que ela acompanha.")]
     public Vector3 offset = new Vector3(0f, 7f, -8f);
@@ -19,13 +20,17 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] private bool lockCursorOnStart = true;
 
     [Header("Follow Smoothing")]
+    [Tooltip("Tempo de suavizacao ao seguir o foco. Menor responde mais rapido.")]
     [Min(0.01f)] public float followSmoothTime = 0.1f;
     [Tooltip("Area horizontal em que o player pode se mover antes de arrastar a camera.")]
     [Min(0f)] public float deadZoneHorizontal = 0f;
+    [Tooltip("Folga para frente/tras antes de o foco da camera acompanhar o player.")]
     [Min(0f)] public float deadZoneForward = 0f;
 
     [Header("Look Ahead")]
+    [Tooltip("Antecipacao maxima na direcao de movimento, usada apenas fora de combate.")]
     [Min(0f)] public float lookAheadDistance = 0f;
+    [Tooltip("Tempo de suavizacao para entrar e sair do Look Ahead.")]
     [Min(0.01f)] public float lookAheadSmoothTime = 0.01f;
 
     [Header("Combat Framing")]
@@ -35,6 +40,7 @@ public class CameraFollow : MonoBehaviour
     public float outOfCombatOffsetY = 1f;
     [Tooltip("Altura efetiva da camera enquanto o player esta em combate.")]
     public float combatOffsetY = 3.5f;
+    [Tooltip("Tempo de transicao entre o enquadramento de exploracao e combate.")]
     [Min(0.01f)] public float combatFramingSmoothTime = 0.75f;
 
     [Header("Lock On Framing")]
@@ -42,9 +48,13 @@ public class CameraFollow : MonoBehaviour
     [Range(0f, 1f)] public float lockOnFocusWeight = .22f;
 
     [Header("Scene Collision")]
+    [Tooltip("Camadas do cenario que bloqueiam a camera.")]
     public LayerMask collisionLayers = ~0;
+    [Tooltip("Raio da esfera usada para detectar colisao da camera.")]
     [Min(0.01f)] public float collisionRadius = 0.2f;
+    [Tooltip("Folga deixada antes do obstaculo detectado.")]
     [Min(0f)] public float collisionPadding = 0.1f;
+    [Tooltip("Distancia minima entre o foco e a camera ao colidir com o cenario.")]
     [Min(0f)] public float minimumDistanceFromFocus = 0.8f;
 
     private PlayerMovement playerMovement;

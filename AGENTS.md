@@ -7,3 +7,4 @@
 - O estilo visual é retrô de PS1, com modelos low-poly.
 - As mecânicas devem priorizar agressividade extrema e recompensar decisões de risco.
 - "F3" ou "o F3" referencia a tela de debug com valores do jogo/jogador. Quando criar um gizmo, exiba-o quando em F3.
+- Ao adicionar novos atributos expostos no Inspector, sempre incluir tooltips explicativos em portugues, descrevendo seu efeito no jogo.

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 [RequireComponent(typeof(CharacterController))]
 public class BaseEnemy : MonoBehaviour
@@ -24,44 +23,44 @@ public class BaseEnemy : MonoBehaviour
     public event Action<BaseEnemy> Died;
 
     [Header("Health")]
-    [Min(1)] [SerializeField] private int maxHealth = 100;
-    [SerializeField] private bool isUnkillable;
+    [Tooltip("Vida maxima do inimigo.")] [Min(1)] [SerializeField] private int maxHealth = 100;
+    [Tooltip("Impede que a vida chegue a zero; util para dummies de teste.")] [SerializeField] private bool isUnkillable;
 
     [Header("Poise")]
-    [Min(1)] [SerializeField] private int maxPoise = 60;
-    [Min(0f)] [SerializeField] private float poiseRecoveryDelay = 3f;
-    [Min(0f)] [SerializeField] private float poiseRecoveryPerSecond = 20f;
+    [Tooltip("Poise necessario para causar Stagger.")] [Min(1)] [SerializeField] private int maxPoise = 60;
+    [Tooltip("Tempo sem receber Poise Damage antes de comecar a recuperar.")] [Min(0f)] [SerializeField] private float poiseRecoveryDelay = 3f;
+    [Tooltip("Poise recuperado por segundo apos o atraso.")] [Min(0f)] [SerializeField] private float poiseRecoveryPerSecond = 20f;
 
     [Header("Movement")]
-    [Min(0f)] [SerializeField] private float movementSpeed = 2.2f;
+    [Tooltip("Velocidade maxima de deslocamento normal.")] [Min(0f)] [SerializeField] private float movementSpeed = 2.2f;
     [Tooltip("Aceleracao vertical adicionada a velocidade. Use valor negativo para queda, como no player.")]
     [SerializeField] private float gravity = -20f;
-    [Min(2f)] [SerializeField] private float terminalFallSpeed = 30f;
-    [Min(0f)] [SerializeField] private float rotationSpeed = 240f;
+    [Tooltip("Velocidade maxima de queda vertical.")] [Min(2f)] [SerializeField] private float terminalFallSpeed = 30f;
+    [Tooltip("Velocidade de giro para olhar na direcao de movimento ou ataque.")] [Min(0f)] [SerializeField] private float rotationSpeed = 240f;
+    [Tooltip("Quando ligado, o inimigo primeiro gira para a direcao desejada e anda apenas para sua frente, sem strafe.")]
+    [SerializeField] private bool useTankControls;
 
     [Header("Detection")]
-    [Min(0f)] [SerializeField] private float detectionRange = 8f;
+    [Tooltip("Alcance para detectar o player antes de entrar em combate.")] [Min(0f)] [SerializeField] private float detectionRange = 8f;
     [Tooltip("Alcance de deteccao usado depois que o inimigo ja entrou em combate.")]
     [Min(0f)] [SerializeField] private float combatDetectionRange = 14f;
     [Tooltip("Por quanto tempo procura a ultima posicao conhecida depois de perder o player.")]
     [Min(0f)] [SerializeField] private float lastKnownSearchDuration = 2.5f;
-    [Min(0f)] [SerializeField] private float lastKnownArrivalDistance = .35f;
+    [Tooltip("Distancia da ultima posicao conhecida considerada suficiente para encerrar a busca.")] [Min(0f)] [SerializeField] private float lastKnownArrivalDistance = .35f;
 
     [Header("Aggression")]
     [Tooltip("Agressividade inicial sorteada uma vez ao nascer. Ex.: 20-20 sempre resulta em 20%.")]
-    [FormerlySerializedAs("aggressionPercent")]
     [SerializeField] private EnemyFloatRange initialAggressionPercent = new() { min = 20f, max = 30f };
-    [Range(0f, 100f)] [SerializeField] private float minimumAggressionPercent = 10f;
-    [Range(0f, 100f)] [SerializeField] private float maximumAggressionPercent = 100f;
+    [Tooltip("Limite minimo que a agressividade atual nunca ultrapassa para baixo.")] [Range(0f, 100f)] [SerializeField] private float minimumAggressionPercent = 10f;
+    [Tooltip("Limite maximo que a agressividade atual nunca ultrapassa para cima.")] [Range(0f, 100f)] [SerializeField] private float maximumAggressionPercent = 100f;
     [Tooltip("Velocidade com que a agressividade sobe ou desce durante cada fase aleatoria.")]
-    [FormerlySerializedAs("aggressionGrowthPerSecond")]
     [SerializeField] private EnemyFloatRange aggressionChangeRatePerSecond = new() { min = 6f, max = 10f };
     [Tooltip("Tempo antes de sortear se a agressividade sobe ou desce novamente.")]
     [SerializeField] private EnemyFloatRange aggressionChangeInterval = new() { min = 1.5f, max = 3f };
     [Tooltip("Ganho adicional de agressividade por segundo quando o player esta de costas para este inimigo.")]
     [Min(0f)] [SerializeField] private float playerBackTurnedAggressionGain = 12f;
-    [Tooltip("Perda de agressividade por segundo quando o inimigo esta fora da camera, incluindo a margem extra configurada.")]
-    [Min(0f)] [SerializeField] private float outOfCameraAggressionLoss = 16f;
+    [Tooltip("Variacao de agressividade por segundo fora da camera, incluindo a margem extra. Valor positivo reduz agressividade; valor negativo aumenta.")]
+    [SerializeField] private float outOfCameraAggressionLoss = 16f;
     [Tooltip("Margem, em unidades de mundo, adicionada ao enquadramento da camera antes de o inimigo ser considerado fora de vista.")]
     [Min(0f)] [SerializeField] private float cameraVisibilityPadding = 3f;
     [Header("Aggression Combat Reactions")]
@@ -69,13 +68,21 @@ public class BaseEnemy : MonoBehaviour
     [Min(0f)] [SerializeField] private float damageTakenAggressionReduction = 12f;
     [Tooltip("Abaixo desta porcentagem de vida, o proximo Mood Change tende a reduzir agressividade.")]
     [Range(0f, 1f)] [SerializeField] private float lowEnemyHealthPercent = .35f;
-    [Range(0f, 1f)] [SerializeField] private float lowEnemyHealthDecreaseChance = .75f;
+    [Tooltip("Chance de o proximo Mood Change reduzir agressividade quando a vida estiver baixa.")] [Range(0f, 1f)] [SerializeField] private float lowEnemyHealthDecreaseChance = .75f;
     [Tooltip("Abaixo desta porcentagem de vida do player, todos os inimigos ganham agressividade continuamente.")]
     [Range(0f, 1f)] [SerializeField] private float lowPlayerHealthPercent = .3f;
-    [Min(0f)] [SerializeField] private float lowPlayerHealthAggressionGainPerSecond = 14f;
+    [Tooltip("Agressividade adicional por segundo enquanto a vida do player esta baixa.")] [Min(0f)] [SerializeField] private float lowPlayerHealthAggressionGainPerSecond = 14f;
     [Tooltip("Acima desta porcentagem de Heat/vida do player, os inimigos perdem agressividade continuamente.")]
     [Range(0f, 1f)] [SerializeField] private float highPlayerHealthPercent = .75f;
-    [Min(0f)] [SerializeField] private float highPlayerHealthAggressionLossPerSecond = 10f;
+    [Tooltip("Agressividade perdida por segundo enquanto a vida/Heat do player esta alta.")] [Min(0f)] [SerializeField] private float highPlayerHealthAggressionLossPerSecond = 10f;
+    [Tooltip("Se ligado, este inimigo reduz a agressividade quando qualquer inimigo causa dano ao player. Esta opcao tem prioridade sobre a reacao invertida.")]
+    [SerializeField] private bool retreatsWhenPlayerTakesEnemyDamage = true;
+    [Tooltip("Se ligado e o inimigo nao respeitar a regra de recuar, ele ganha agressividade quando qualquer inimigo causa dano ao player.")]
+    [SerializeField] private bool gainsAggressionWhenPlayerTakesEnemyDamage;
+    [Tooltip("Percentual da agressividade atual removido ou adicionado pela reacao ao dano do player. Ex.: 0.2 remove 20% do valor atual.")]
+    [Range(0f, 1f)] [SerializeField] private float playerDamagedAggressionPercent = .2f;
+    [Tooltip("Pontos percentuais adicionais removidos ou adicionados pela reacao ao dano do player.")]
+    [Min(0f)] [SerializeField] private float playerDamagedAggressionFlatChange = 5f;
     [Tooltip("Tempo entre decisoes de perseguir, atacar ou se reposicionar.")]
     [SerializeField] private EnemyFloatRange decisionInterval = new() { min = .3f, max = .7f };
     [Tooltip("Tempo que um reposicionamento aleatorio dura.")]
@@ -84,33 +91,35 @@ public class BaseEnemy : MonoBehaviour
     [SerializeField] private EnemyFloatRange repositionSpeedMultiplier = new() { min = .25f, max = .55f };
 
     [Header("Chase Commitment")]
-    [Tooltip("Tempo que uma decisao de perseguir e mantida antes da proxima decisao de IA.")]
-    [Min(0f)] [SerializeField] private float chaseCommitmentDuration = 1.2f;
+    [Tooltip("Tempo que o inimigo permanece comprometido com a pressao: durante esse periodo, ele so alterna entre perseguir e atacar o player.")]
+    [Min(0f)] [SerializeField] private float chaseCommitmentDuration = 5f;
+    [Tooltip("Tempo de espera apos um Chase Commitment terminar antes de o inimigo poder iniciar outro. Durante a espera ele pode se reposicionar, mas nao inicia ataques por commitment.")]
+    [Min(0f)] [SerializeField] private float chaseCommitmentCooldown = 2f;
 
     [Header("Attack Combo")]
-    [Range(0f, 100f)] [SerializeField] private float comboContinuationChance = 65f;
+    [Tooltip("Chance percentual de continuar para o proximo ataque do combo quando ele estiver disponivel.")] [Range(0f, 100f)] [SerializeField] private float comboContinuationChance = 65f;
 
     [Header("Stagger")]
-    [Min(0f)] [SerializeField] private float staggerDuration = .8f;
-    [Min(0f)] [SerializeField] private float staggerKnockbackForce = 8f;
-    [Min(0f)] [SerializeField] private float staggerKnockbackDuration = .2f;
+    [Tooltip("Tempo em que Stagger impede o inimigo de agir.")] [Min(0f)] [SerializeField] private float staggerDuration = .8f;
+    [Tooltip("Forca horizontal aplicada ao receber Stagger.")] [Min(0f)] [SerializeField] private float staggerKnockbackForce = 8f;
+    [Tooltip("Duracao do knockback causado por Stagger.")] [Min(0f)] [SerializeField] private float staggerKnockbackDuration = .2f;
 
     [Header("Launch Up")]
-    [SerializeField] private bool canBeLaunched = true;
-    [SerializeField] private bool canBeJuggled = true;
+    [Tooltip("Permite que ataques com Launch Up levantem este inimigo.")] [SerializeField] private bool canBeLaunched = true;
+    [Tooltip("Permite que ataques de Juggle alterem verticalmente este inimigo ja no ar.")] [SerializeField] private bool canBeJuggled = true;
 
     [Header("Wall Splat")]
     [Tooltip("Velocidade horizontal minima ao colidir com uma parede para aplicar Wall Splat.")]
     [Min(0f)] [SerializeField] private float wallSplatMinimumSpeed = 10f;
-    [Min(0f)] [SerializeField] private float wallSplatStunDuration = 1f;
+    [Tooltip("Tempo de Stagger aplicado ao bater em parede durante Push.")] [Min(0f)] [SerializeField] private float wallSplatStunDuration = 1f;
     [Tooltip("Camadas do cenario que contam como parede para Wall Splat.")]
     [SerializeField] private LayerMask wallSplatLayers = ~0;
 
     [Header("Visual Feedback")]
-    [Min(0f)] [SerializeField] private float damageFlashDuration = .15f;
+    [Tooltip("Tempo que o material visual permanece piscando apos tomar dano.")] [Min(0f)] [SerializeField] private float damageFlashDuration = .15f;
 
     [Header("Debug")]
-    [Min(0f)] [SerializeField] private float debugLabelHeight = 2.4f;
+    [Tooltip("Altura acima do inimigo onde o texto de debug F3 aparece.")] [Min(0f)] [SerializeField] private float debugLabelHeight = 2.4f;
 
     private CharacterController controller;
     private Renderer enemyRenderer;
@@ -125,7 +134,9 @@ public class BaseEnemy : MonoBehaviour
     private float repositionTimer;
     private Vector3 repositionDirection;
     private float repositionSpeed;
-    private float chaseTimer;
+    private bool isChasing;
+    private float combatCommitmentTimer;
+    private float combatCommitmentCooldownTimer;
     private Vector3 lastKnownPlayerPosition;
     private float lastKnownSearchTimer;
     private bool hasLastKnownPlayerPosition;
@@ -156,10 +167,12 @@ public class BaseEnemy : MonoBehaviour
     private float aggressionChangeTimer;
     private float currentAggressionPercent;
     private Color normalColor;
-
     private static GUIStyle debugTextStyle;
 
+
     public bool IsDead => hasDied;
+    public bool IsInAttackSequence => currentState == State.Windup ||
+        currentState == State.Active || currentState == State.Recovery;
     public bool CanBeLaunched => canBeLaunched && !hasDied;
     public bool IsLaunched => isLaunched;
     public bool CanBeLockOnTarget => isActiveAndEnabled && !hasDied && !isWaitingForEncounter;
@@ -239,6 +252,7 @@ public class BaseEnemy : MonoBehaviour
         UpdateAggression();
         UpdatePoise();
         UpdateVerticalMovement();
+        UpdateCombatCommitmentTimers();
 
         if (isLaunched || isPushed)
         {
@@ -250,6 +264,7 @@ public class BaseEnemy : MonoBehaviour
         {
             case State.Idle:
                 UpdateIdle();
+                Move(Vector3.zero);
                 break;
             case State.Combat:
                 UpdateCombat();
@@ -257,17 +272,22 @@ public class BaseEnemy : MonoBehaviour
             case State.Windup:
                 FaceTarget();
                 UpdateTimedState(State.Active);
+                Move(Vector3.zero);
                 break;
             case State.Active:
                 FaceTarget();
                 DealAttackDamage();
                 UpdateTimedState(State.Recovery);
+                Move(Vector3.zero);
                 break;
             case State.Recovery:
                 UpdateRecovery();
+                if (currentState == State.Recovery)
+                    Move(Vector3.zero);
                 break;
             case State.Staggered:
                 UpdateTimedState(State.Combat);
+                Move(Vector3.zero);
                 break;
         }
     }
@@ -295,21 +315,26 @@ public class BaseEnemy : MonoBehaviour
         RememberPlayerPosition();
         FaceTarget();
 
-        if (chaseTimer > 0f)
-        {
-            chaseTimer -= Time.deltaTime;
-            Move(DirectionToTarget() * repositionSpeed);
-            return;
-        }
-
         decisionTimer -= Time.deltaTime;
         if (decisionTimer <= 0f)
             ChooseCombatAction();
 
+        if (currentState != State.Combat)
+            return;
+
+        if (IsCombatCommitted() || isChasing)
+        {
+            Move(DirectionToTarget() * repositionSpeed);
+            return;
+        }
+
         if (repositionTimer > 0f)
         {
             repositionTimer -= Time.deltaTime;
-            Move(repositionDirection * repositionSpeed);
+            // Reposicionamento pode ser strafe/recuo real ate para inimigos
+            // com Tank Controls. Eles preservam a orientacao atual enquanto
+            // se deslocam, em vez de sempre girar para andar para frente.
+            Move(repositionDirection * repositionSpeed, false);
         }
         else
         {
@@ -328,21 +353,32 @@ public class BaseEnemy : MonoBehaviour
             : null;
         float aggression = currentAggressionPercent / 100f;
 
-        // Fora do alcance, o inimigo sempre fecha a distancia. A agressividade
-        // determina quao rapido ele faz isso; ela nao pode deixa-lo preso em
-        // um reposicionamento lateral para sempre.
-        if (selectedAttack != null &&
-            DistanceToTarget() > selectedAttack.maximumRange)
+        // Um commitment nao prende o inimigo somente no Chase. Ele pode
+        // alternar entre aproximar-se e atacar, mas nao recua/orbita ate o
+        // tempo dessa pressao terminar.
+        if (IsCombatCommitted())
         {
-            BeginChase(aggression);
+            if (selectedAttack != null &&
+                DistanceToTarget() <= selectedAttack.maximumRange)
+            {
+                TryBeginAttack(attackIndex);
+            }
+            else
+            {
+                BeginChase(aggression);
+            }
+
             return;
         }
 
+        // Dentro do alcance, atacar e a unica acao deliberada. O cooldown
+        // impede apenas iniciar uma nova pressao/commitment; ele nao deixa o
+        // inimigo parado na frente do player sem poder usar seu ataque.
         if (selectedAttack != null &&
-            DistanceToTarget() <= selectedAttack.maximumRange &&
-            UnityEngine.Random.value <= aggression)
+            DistanceToTarget() <= selectedAttack.maximumRange)
         {
-            BeginAttack(attackIndex);
+            TryStartCombatCommitment();
+            TryBeginAttack(attackIndex);
             return;
         }
 
@@ -350,6 +386,7 @@ public class BaseEnemy : MonoBehaviour
         if (toTarget.sqrMagnitude > 0.001f &&
             UnityEngine.Random.value <= aggression)
         {
+            TryStartCombatCommitment();
             BeginChase(aggression);
             return;
         }
@@ -378,6 +415,7 @@ public class BaseEnemy : MonoBehaviour
 
     private void BeginReposition(Vector3 direction)
     {
+        isChasing = false;
         repositionDirection = direction.sqrMagnitude > .001f
             ? direction.normalized
             : Vector3.zero;
@@ -387,10 +425,49 @@ public class BaseEnemy : MonoBehaviour
 
     private void BeginChase(float aggression)
     {
+        isChasing = true;
         repositionDirection = DirectionToTarget();
         repositionSpeed = movementSpeed * Mathf.Lerp(.2f, 1f, aggression);
         repositionTimer = 0f;
-        chaseTimer = Mathf.Max(.01f, chaseCommitmentDuration);
+    }
+
+    private bool IsCombatCommitted() => combatCommitmentTimer > 0f;
+
+    private bool TryStartCombatCommitment()
+    {
+        if (combatCommitmentCooldownTimer > 0f ||
+            chaseCommitmentDuration <= 0f)
+        {
+            return false;
+        }
+
+        combatCommitmentTimer = chaseCommitmentDuration;
+        return true;
+    }
+
+    private void UpdateCombatCommitmentTimers()
+    {
+        if (combatCommitmentCooldownTimer > 0f)
+            combatCommitmentCooldownTimer = Mathf.Max(
+                0f,
+                combatCommitmentCooldownTimer - Time.deltaTime
+            );
+
+        if (combatCommitmentTimer <= 0f)
+            return;
+
+        combatCommitmentTimer = Mathf.Max(
+            0f,
+            combatCommitmentTimer - Time.deltaTime
+        );
+
+        if (combatCommitmentTimer <= 0f)
+        {
+            combatCommitmentCooldownTimer = Mathf.Max(
+                combatCommitmentCooldownTimer,
+                chaseCommitmentCooldown
+            );
+        }
     }
 
     private void UpdateLastKnownSearch()
@@ -402,7 +479,8 @@ public class BaseEnemy : MonoBehaviour
             return;
         }
 
-        chaseTimer = 0f;
+        combatCommitmentTimer = 0f;
+        isChasing = false;
         lastKnownSearchTimer -= Time.deltaTime;
         Vector3 searchDirection = DirectionToLastKnownPlayerPosition();
         float distance = HorizontalDistanceTo(lastKnownPlayerPosition);
@@ -426,9 +504,16 @@ public class BaseEnemy : MonoBehaviour
 
         comboIndex = index;
         currentAttack = combo[index];
+        isChasing = false;
         repositionTimer = 0f;
         stateTimer = currentAttack.windupDuration;
         currentState = State.Windup;
+    }
+
+    private void TryBeginAttack(int index)
+    {
+        if (EnemyDirector.RequestAttackTurn(this))
+            BeginAttack(index);
     }
 
     private void UpdateRecovery()
@@ -465,6 +550,7 @@ public class BaseEnemy : MonoBehaviour
             {
                 stateTimer = currentAttack != null ? currentAttack.activeDuration : 0f;
                 hasDamagedDuringActive = false;
+                OnAttackActiveStarted(currentAttack);
             }
             else if (nextState == State.Recovery)
             {
@@ -474,6 +560,12 @@ public class BaseEnemy : MonoBehaviour
             currentState = nextState;
         }
     }
+
+    /// <summary>
+    /// Gancho para inimigos cujo ataque precisa preparar dados exatamente ao
+    /// entrar na fase Active, como hitboxes persistentes.
+    /// </summary>
+    protected virtual void OnAttackActiveStarted(BaseEnemyAttack attack) { }
 
     private void DealAttackDamage()
     {
@@ -513,8 +605,24 @@ public class BaseEnemy : MonoBehaviour
         return false;
     }
 
-    private void Move(Vector3 horizontalVelocity)
+    private void Move(
+        Vector3 horizontalVelocity,
+        bool rotateTankControlsTowardMovement = true)
     {
+        bool usesRequestedMovement = !isPushed &&
+            playerHeadPushTimer <= 0f &&
+            !hasSlideLaunchHorizontalImpulse &&
+            knockbackTimer <= 0f;
+
+        if (usesRequestedMovement && horizontalVelocity.sqrMagnitude > .001f)
+        {
+            // Chase e busca mantem o comportamento de Tank Controls: o corpo
+            // gira antes de avancar. Reposicionamento pode desativar esse giro
+            // para permitir strafe e recuo sem perder a orientacao atual.
+            if (useTankControls && rotateTankControlsTowardMovement)
+                FaceDirection(horizontalVelocity);
+        }
+
         Vector3 velocity = isPushed
             ? horizontalPushVelocity
             : playerHeadPushTimer > 0f
@@ -554,7 +662,7 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
-    private void UpdateVerticalMovement()
+    protected virtual void UpdateVerticalMovement()
     {
         if (!isLaunched && controller.isGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
@@ -574,8 +682,17 @@ public class BaseEnemy : MonoBehaviour
         );
     }
 
+    /// <summary>Permite que inimigos voadores controlem a velocidade vertical.</summary>
+    protected void SetVerticalVelocity(float value)
+    {
+        verticalVelocity = value;
+    }
+
     private void FaceTarget()
     {
+        if (useTankControls)
+            return;
+
         Vector3 direction = DirectionToTarget();
         FaceDirection(direction);
     }
@@ -1049,7 +1166,9 @@ public class BaseEnemy : MonoBehaviour
         isEncounterEngaged = false;
         currentAttack = null;
         currentState = State.Idle;
-        chaseTimer = 0f;
+        isChasing = false;
+        combatCommitmentTimer = 0f;
+        combatCommitmentCooldownTimer = 0f;
         lastKnownSearchTimer = 0f;
         ResetAggression();
     }
@@ -1068,6 +1187,41 @@ public class BaseEnemy : MonoBehaviour
         }
 
         return false;
+    }
+
+    public static void NotifyPlayerDamagedByEnemy()
+    {
+        foreach (BaseEnemy enemy in activeEnemies)
+        {
+            if (enemy != null)
+                enemy.ReactToPlayerDamagedByEnemy();
+        }
+    }
+
+    private void ReactToPlayerDamagedByEnemy()
+    {
+        if (hasDied || isWaitingForEncounter)
+            return;
+
+        float change = currentAggressionPercent * playerDamagedAggressionPercent +
+            playerDamagedAggressionFlatChange;
+
+        if (retreatsWhenPlayerTakesEnemyDamage)
+        {
+            currentAggressionPercent = Mathf.Max(
+                minimumAggressionPercent,
+                currentAggressionPercent - change
+            );
+            return;
+        }
+
+        if (gainsAggressionWhenPlayerTakesEnemyDamage)
+        {
+            currentAggressionPercent = Mathf.Min(
+                maximumAggressionPercent,
+                currentAggressionPercent + change
+            );
+        }
     }
 
     private void Die()
@@ -1159,7 +1313,10 @@ public class BaseEnemy : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible || hasDied)
+        // Dados de inimigo passaram para o painel UI Toolkit de lock-on.
+        // Sem lock-on o HUD fica oculto; com lock-on ele aparece no canto.
+        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
+            hasDied || PlayerDebugToolkitHUD.IsVisible)
             return;
 
         Camera gameCamera = Camera.main;
@@ -1233,5 +1390,39 @@ public class BaseEnemy : MonoBehaviour
             padding = new RectOffset(6, 6, 4, 4),
             normal = { textColor = Color.white }
         };
+    }
+
+    public string GetDebugStatusText()
+    {
+        string attackName = currentAttack != null ? currentAttack.attackName : "-";
+        string attackTimings = currentAttack != null
+            ? currentAttack.windupDuration.ToString("0.00") + " / " +
+                currentAttack.activeDuration.ToString("0.00") + " / " +
+                currentAttack.recoveryDuration.ToString("0.00")
+            : "-";
+        string status = isPushed ? "PUSHED" : isLaunched ? "LAUNCHED" :
+            IsSearchingLastKnownPosition ? "SEARCHING" : "GROUND";
+        float aggressionVelocity = GetCurrentAggressionVelocity();
+        string playerBackStatus = IsPlayerBackTurnedToEnemy() ? "YES" : "NO";
+        string cameraStatus = IsInsideCameraVisibilityPadding()
+            ? "VISIBLE"
+            : "HIDDEN";
+        return GetType().Name + "\n" +
+            "HP: " + CurrentHealth + " / " + maxHealth +
+            "   POISE: " + Mathf.CeilToInt(currentPoise) + " / " + maxPoise + "\n" +
+            "STATE: " + currentState + "   " + status + "\n" +
+            "AGGRO: " + currentAggressionPercent.ToString("0.0") + "% (" +
+            aggressionVelocity.ToString("+0.0;-0.0;0.0") + "/s)\n" +
+            "MOOD: " + aggressionChangeTimer.ToString("0.00") + "s" +
+            "   BACK: " + playerBackStatus + "\n" +
+            "CAMERA: " + cameraStatus + "\n" +
+            "COMMIT: " + combatCommitmentTimer.ToString("0.00") + "s" +
+            "   CD: " + combatCommitmentCooldownTimer.ToString("0.00") + "s\n" +
+            "MOVE: " + movementSpeed.ToString("0.00") +
+            "   DETECT: " + detectionRange.ToString("0.00") +
+            " / " + combatDetectionRange.ToString("0.00") + "\n" +
+            "ATTACK: " + attackName + "\n" +
+            "W/A/R: " + attackTimings + "\n" +
+            "TARGET: " + (target != null ? target.name : "None");
     }
 }

@@ -47,20 +47,6 @@ public class BasicArcher : BaseEnemy
 
     protected override BaseEnemyAttack[] AttackCombo => attackCombo;
 
-    private void Start()
-    {
-        EnsureAttackDefaults();
-    }
-
-    protected override void OnValidate()
-    {
-        base.OnValidate();
-
-        // Prefabs criados antes do empurrao possuem somente o tiro no array.
-        // Preservamos seus valores e acrescentamos o novo ataque.
-        EnsureAttackDefaults();
-    }
-
     protected override int SelectAttackIndex()
     {
         // O segundo ataque e exclusivamente defensivo: impede que o arqueiro
@@ -77,35 +63,6 @@ public class BasicArcher : BaseEnemy
     {
         // Tiro e empurrao sao escolhas separadas, nao um combo.
         return false;
-    }
-
-    private void EnsureAttackDefaults()
-    {
-        if (attackCombo == null || attackCombo.Length == 0)
-        {
-            attackCombo = new[]
-            {
-                CreateArrowShot(),
-                CreateClosePush()
-            };
-            return;
-        }
-
-        if (attackCombo[0] == null)
-            attackCombo[0] = CreateArrowShot();
-
-        // Um BasicArcher sempre usa seu primeiro ataque como tiro.
-        attackCombo[0].isProjectileAttack = true;
-
-        if (attackCombo.Length > 1)
-        {
-            if (attackCombo[1] == null)
-                attackCombo[1] = CreateClosePush();
-            return;
-        }
-
-        System.Array.Resize(ref attackCombo, 2);
-        attackCombo[1] = CreateClosePush();
     }
 
     private static BaseEnemyAttack CreateArrowShot() => new()

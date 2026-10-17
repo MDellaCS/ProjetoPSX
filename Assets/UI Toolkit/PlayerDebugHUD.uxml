@@ -3,4 +3,7 @@
     <ui:VisualElement name="debug-panel">
         <ui:Label name="debug-text" text="DEBUG HUD" />
     </ui:VisualElement>
+    <ui:VisualElement name="enemy-debug-panel">
+        <ui:Label name="enemy-debug-text" text="ENEMY DEBUG" />
+    </ui:VisualElement>
 </ui:UXML>

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class PlayerState : MonoBehaviour
 {
@@ -13,7 +12,8 @@ public class PlayerState : MonoBehaviour
         // Mantem o valor serializado do slide apos remover os estados defensivos.
         Sliding = 7,
         BurnStunned = 8,
-        Burning = 9
+        Burning = 9,
+        BurnPreExplosion = 10
     }
 
     [Header("Debug - State Colors")]
@@ -21,12 +21,13 @@ public class PlayerState : MonoBehaviour
 
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color attackingColor = Color.yellow;
-    [FormerlySerializedAs("dodgingColor")]
     [SerializeField] private Color dashingColor = Color.cyan;
     [SerializeField] private Color slidingColor = new Color(1f, 0.5f, 0f);
     [SerializeField] private Color staggerColor = new Color(1f, 0.5f, 0f);
     [SerializeField] private Color burnStunnedColor = new Color(1f, 0.15f, 0f);
     [SerializeField] private Color burningColor = new Color(0.85f, 0.08f, 0f);
+    [Tooltip("Cor de debug durante o periodo de Pre-Explosion do Burn.")]
+    [SerializeField] private Color burnPreExplosionColor = new Color(1f, 0.45f, 0.05f);
     [SerializeField] private Color deadColor = Color.gray;
 
     private Material debugMaterial;
@@ -43,6 +44,8 @@ public class PlayerState : MonoBehaviour
     public bool IsStaggered() => currentState == State.Stagger;
     public bool IsBurnStunned() => currentState == State.BurnStunned;
     public bool IsBurning() => currentState == State.Burning;
+    public bool IsBurnPreExplosion() => currentState == State.BurnPreExplosion;
+    public bool IsBurnWalking() => IsBurnPreExplosion() || IsBurning();
     public bool IsDead() => currentState == State.Dead;
 
     public void ChangeState(State newState)
@@ -98,6 +101,10 @@ public class PlayerState : MonoBehaviour
 
             case State.Burning:
                 debugMaterial.color = burningColor;
+                break;
+
+            case State.BurnPreExplosion:
+                debugMaterial.color = burnPreExplosionColor;
                 break;
 
             case State.Dead:

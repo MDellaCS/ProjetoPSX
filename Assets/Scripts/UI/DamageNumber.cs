@@ -6,9 +6,15 @@ using UnityEngine;
 /// </summary>
 public class DamageNumber : MonoBehaviour
 {
-    [Min(.01f)] [SerializeField] private float lifetime = .8f;
-    [Min(0f)] [SerializeField] private float riseSpeed = 1.5f;
-    [Min(1)] [SerializeField] private int fontSize = 22;
+    [Min(.01f)]
+    [Tooltip("Tempo total, em segundos, que o numero de dano permanece visivel.")]
+    [SerializeField] private float lifetime = 1.35f;
+    [Min(0f)]
+    [Tooltip("Velocidade vertical com que o numero sobe na tela.")]
+    [SerializeField] private float riseSpeed = 1.5f;
+    [Min(1)]
+    [Tooltip("Tamanho da fonte usado pelos numeros de dano.")]
+    [SerializeField] private int fontSize = 32;
 
     private static GUIStyle textStyle;
     private static GUIStyle shadowStyle;

@@ -24,11 +24,14 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerState playerState;
     private PlayerHeat playerHeat;
+    private PlayerHealth playerHealth;
     private PlayerCombat playerCombat;
-    private PlayerInputBuffer playerInputBuffer;
+    private PlayerLockOn playerLockOn;
 
     private VisualElement debugPanel;
     private Label debugText;
+    private VisualElement enemyDebugPanel;
+    private Label enemyDebugText;
     private bool isVisible;
 
     private void Awake()
@@ -67,10 +70,14 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (!isVisible || debugText == null)
             return;
 
-        if (!HasPlayerComponents())
+        // PlayerLockOn pode ser adicionado pelo PlayerCombat durante Awake.
+        // A ordem de Awake entre objetos nao e garantida, entao tentamos
+        // encontra-lo novamente enquanto o F3 estiver aberto.
+        if (!HasPlayerComponents() || playerLockOn == null)
             ResolvePlayerComponents();
 
         UpdateDebugText();
+        UpdateLockedEnemyDebug();
     }
 
     private void HandleUIReload(
@@ -83,6 +90,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
         debugPanel = rootVisualElement.Q<VisualElement>("debug-panel");
         debugText = rootVisualElement.Q<Label>("debug-text");
+        enemyDebugPanel = rootVisualElement.Q<VisualElement>("enemy-debug-panel");
+        enemyDebugText = rootVisualElement.Q<Label>("enemy-debug-text");
 
         SetVisible(isVisible);
     }
@@ -104,8 +113,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         playerMovement = playerTransform.GetComponent<PlayerMovement>();
         playerState = playerTransform.GetComponent<PlayerState>();
         playerHeat = playerTransform.GetComponent<PlayerHeat>();
+        playerHealth = playerTransform.GetComponent<PlayerHealth>();
         playerCombat = playerTransform.GetComponent<PlayerCombat>();
-        playerInputBuffer = playerTransform.GetComponent<PlayerInputBuffer>();
+        playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
     }
 
     private bool HasPlayerComponents()
@@ -113,8 +123,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         return playerMovement != null &&
                playerState != null &&
                playerHeat != null &&
-               playerCombat != null &&
-               playerInputBuffer != null;
+               playerHealth != null &&
+               playerCombat != null;
     }
 
     private void SetVisible(bool value)
@@ -128,6 +138,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
                 ? DisplayStyle.Flex
                 : DisplayStyle.None;
         }
+
+        if (enemyDebugPanel != null)
+            enemyDebugPanel.style.display = DisplayStyle.None;
     }
 
     private void UpdateDebugText()
@@ -142,6 +155,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.AppendLine("DEBUG HUD");
         textBuilder.Append("STATE: ")
             .AppendLine(playerState.CurrentState.ToString());
+        textBuilder.Append("GOD MODE: ")
+            .AppendLine(playerHealth.IsGodMode ? "ON" : "OFF");
         textBuilder.Append("COMBAT: ")
             .AppendLine(playerCombat.IsOutOfCombat
                 ? "OUT OF COMBAT"
@@ -193,14 +208,22 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
         textBuilder.Append("ATTACKING: ")
             .AppendLine(playerCombat.IsAttacking ? "YES" : "NO");
-        textBuilder.Append("MOUSE: ")
-            .AppendLine(playerInputBuffer.HasMouseDevice ? "READY" : "MISSING");
-        textBuilder.Append("CLICKS DETECTED: L ")
-            .Append(playerInputBuffer.LightPressesDetected)
-            .Append(" / H ")
-            .AppendLine(playerInputBuffer.HeavyPressesDetected.ToString());
-
         debugText.text = textBuilder.ToString();
+    }
+
+    private void UpdateLockedEnemyDebug()
+    {
+        if (enemyDebugPanel == null || enemyDebugText == null)
+            return;
+
+        BaseEnemy enemy = playerLockOn != null
+            ? playerLockOn.LockedEnemy
+            : null;
+        bool show = enemy != null;
+        enemyDebugPanel.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+
+        if (show)
+            enemyDebugText.text = enemy.GetDebugStatusText();
     }
 
     private static string FormatSigned(float value)

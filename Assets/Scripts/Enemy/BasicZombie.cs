@@ -12,39 +12,39 @@ public class BasicZombie : BaseEnemy
         new BaseEnemyAttack
         {
             attackName = "Zombie Strike 1",
-            damage = 18,
-            maximumRange = 1.7f,
-            windupDuration = .65f,
+            damage = 20,
+            maximumRange = 1.5f,
+            windupDuration = 1.5f,
             activeDuration = .1f,
-            recoveryDuration = .65f,
-            hitboxDistance = 1f,
-            hitboxRadius = .75f,
+            recoveryDuration = 1f,
+            hitboxDistance = .5f,
+            hitboxRadius = 1f,
             knockbackForce = 3f,
             knockbackDuration = .12f
         },
         new BaseEnemyAttack
         {
             attackName = "Zombie Strike 2",
-            damage = 18,
-            maximumRange = 1.7f,
-            windupDuration = .45f,
+            damage = 20,
+            maximumRange = 1.5f,
+            windupDuration = 1f,
             activeDuration = .1f,
-            recoveryDuration = .55f,
-            hitboxDistance = 1f,
-            hitboxRadius = .75f,
+            recoveryDuration = 1f,
+            hitboxDistance = .5f,
+            hitboxRadius = 1f,
             knockbackForce = 3f,
             knockbackDuration = .12f
         },
         new BaseEnemyAttack
         {
             attackName = "Zombie Strike 3",
-            damage = 18,
-            maximumRange = 1.7f,
-            windupDuration = .28f,
+            damage = 20,
+            maximumRange = 1.5f,
+            windupDuration = .5f,
             activeDuration = .1f,
-            recoveryDuration = .8f,
-            hitboxDistance = 1f,
-            hitboxRadius = .75f,
+            recoveryDuration = 1f,
+            hitboxDistance = .5f,
+            hitboxRadius = 1f,
             knockbackForce = 3f,
             knockbackDuration = .12f
         }

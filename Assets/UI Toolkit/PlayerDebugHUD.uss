@@ -17,7 +17,31 @@
 
 #debug-text {
     color: rgb(225, 240, 255);
-    font-size: 14px;
+    font-size: 16px;
+    unity-font-style: normal;
+    white-space: normal;
+}
+
+#enemy-debug-panel {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    min-width: 250px;
+    padding: 12px;
+    background-color: rgba(0, 0, 0, 0.78);
+    border-left-width: 2px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgb(130, 255, 160);
+    border-top-color: rgb(130, 255, 160);
+    border-right-color: rgb(130, 255, 160);
+    border-bottom-color: rgb(130, 255, 160);
+}
+
+#enemy-debug-text {
+    color: rgb(220, 255, 225);
+    font-size: 16px;
     unity-font-style: normal;
     white-space: normal;
 }
