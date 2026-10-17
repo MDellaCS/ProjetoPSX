@@ -145,6 +145,7 @@ public class EnemyBase : MonoBehaviour
         locomotion.ApplyGravity();
     protected virtual bool CanUseAttack(EnemyAttackData attack, int index) => true;
     protected virtual bool TryChooseSpecialCombatAction() => false;
+    protected virtual void OnAttackStarted(EnemyAttackData attack) { }
     protected virtual void OnAttackActiveStarted(EnemyAttackData attack) { }
     protected virtual bool ExecuteAttack(EnemyAttackData attack) =>
         attacks.ExecuteMeleeAttack(attack);
@@ -152,6 +153,8 @@ public class EnemyBase : MonoBehaviour
     internal bool CanSelectAttack(EnemyAttackData attack, int index) =>
         CanUseAttack(attack, index);
     internal bool ChooseSpecialCombatAction() => TryChooseSpecialCombatAction();
+    internal void NotifyAttackStarted(EnemyAttackData attack) =>
+        OnAttackStarted(attack);
     internal void NotifyAttackActive(EnemyAttackData attack) =>
         OnAttackActiveStarted(attack);
     internal bool PerformAttack(EnemyAttackData attack) => ExecuteAttack(attack);

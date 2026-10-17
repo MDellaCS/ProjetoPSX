@@ -1141,6 +1141,28 @@ public class PlayerMovement : MonoBehaviour
         knockbackTimer = 0f;
     }
 
+    /// <summary>
+    /// Encerra traversal que pode ser substituida por um ataque pesado. Nao
+    /// interfere em stun, Burn ou morte, que continuam bloqueando ataques.
+    /// </summary>
+    public void InterruptForHeavyAttack()
+    {
+        if (playerState == null)
+            return;
+
+        if (playerState.IsDashing())
+        {
+            dashTimer = 0f;
+            dashStartedGrounded = false;
+            isDashJump = false;
+            playerState.ChangeState(PlayerState.State.Normal);
+            return;
+        }
+
+        if (playerState.IsSliding())
+            EndSlide();
+    }
+
     public void ApplyAttackMovement(Vector3 displacement)
     {
         if (controller == null || displacement.sqrMagnitude <= 0.000001f)

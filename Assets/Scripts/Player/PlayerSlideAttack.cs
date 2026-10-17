@@ -10,7 +10,7 @@ public class PlayerSlideAttack : MonoBehaviour
 {
     [Header("Slide Launch Attack")]
     [Tooltip("Velocidade horizontal minima para a hitbox do Slide ficar ativa.")]
-    [Min(0f)] public float minimumSlideSpeed = 15f;
+    [Min(0f)] public float minimumSlideSpeed = 12f;
     [Tooltip("Largura da hitbox em relacao a largura atual do player.")]
     [Min(1f)] public float hitboxWidthMultiplier = 1.75f;
     [Tooltip("Profundidade da hitbox em relacao a profundidade atual do player.")]

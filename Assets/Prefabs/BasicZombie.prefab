@@ -125,9 +125,9 @@ MonoBehaviour:
   lastKnownSearchDuration: 2.5
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
-    min: 25
+    min: 30
     max: 85
-  minimumAggressionPercent: 25
+  minimumAggressionPercent: 30
   maximumAggressionPercent: 85
   aggressionChangeRatePerSecond:
     min: 2
@@ -135,8 +135,8 @@ MonoBehaviour:
   aggressionChangeInterval:
     min: 3
     max: 6
-  playerBackTurnedAggressionGain: 0
-  outOfCameraAggressionLoss: 0
+  playerBackTurnedAggressionGain: 1
+  outOfCameraAggressionLoss: -1
   cameraVisibilityPadding: 1
   damageTakenAggressionReduction: 0
   lowEnemyHealthPercent: 0
@@ -145,13 +145,14 @@ MonoBehaviour:
   lowPlayerHealthAggressionGainPerSecond: 0
   highPlayerHealthPercent: 0
   highPlayerHealthAggressionLossPerSecond: 0
+  playerAirborneAggressionChangePerSecond: -2
   retreatsWhenPlayerTakesEnemyDamage: 0
   gainsAggressionWhenPlayerTakesEnemyDamage: 0
   playerDamagedAggressionPercent: 0
   playerDamagedAggressionFlatChange: 0
   decisionInterval:
-    min: 3
-    max: 6
+    min: 1
+    max: 4
   repositionDuration:
     min: 2
     max: 4
@@ -177,22 +178,40 @@ MonoBehaviour:
   - attackName: Z1
     attackId: 
     canStartAttack: 1
-    openingWeight: 0
-    continuationChance: 0
+    openingWeight: 50
+    continuationChance: 50
     continuations:
-    - nextAttackIndex: 0
-      selectionWeight: 0
+    - nextAttackIndex: 1
+      selectionWeight: 100
     isProjectileAttack: 0
-    damage: 10
+    damage: 25
     maximumRange: 1.5
     windupDuration: 1.5
     activeDuration: 0.1
     recoveryDuration: 1
     hitboxDistance: 0.5
+    hitboxRadius: 1.25
+    knockbackForce: 3
+    knockbackDuration: 0.25
+  - attackName: Z2
+    attackId: 
+    canStartAttack: 1
+    openingWeight: 50
+    continuationChance: 50
+    continuations:
+    - nextAttackIndex: 0
+      selectionWeight: 100
+    isProjectileAttack: 0
+    damage: 20
+    maximumRange: 1.5
+    windupDuration: 1
+    activeDuration: 0.1
+    recoveryDuration: 0.75
+    hitboxDistance: 0.5
     hitboxRadius: 1
     knockbackForce: 3
     knockbackDuration: 0.25
-  maximumAttacksPerSequence: 5
+  maximumAttacksPerSequence: 2
 --- !u!114 &6292575565008901409
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -229,13 +248,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 800
+  maxHealth: 900
   isUnkillable: 0
   maxPoise: 50
   poiseRecoveryDelay: 3
   poiseRecoveryPerSecond: 10
   staggerDuration: 1
-  staggerKnockbackForce: 8
+  staggerKnockbackForce: 1
   staggerKnockbackDuration: 0.2
   damageFlashDuration: 0.15
 --- !u!114 &6421883612428584792
@@ -313,7 +332,7 @@ PrefabInstance:
     - target: {fileID: -7813590141776298306, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 538e9f68918e5524b8a53c1a95d1a128, type: 2}
+      objectReference: {fileID: 2100000, guid: 46eb48a4269e2454aaa31c25f64e2c7e, type: 2}
     - target: {fileID: 919132149155446097, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
       propertyPath: m_Name
       value: Model

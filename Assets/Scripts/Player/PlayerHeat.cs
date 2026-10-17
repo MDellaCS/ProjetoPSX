@@ -29,6 +29,10 @@ public class PlayerHeat : MonoBehaviour
     [Tooltip("Magnitude maxima de Cold. O limite real de Heat e o valor negativo deste campo; alcanca-lo mata o player.")]
     [Min(1f)] public float maxColdMagnitude = 100f;
 
+    [Header("Heavy Attack Power")]
+    [Tooltip("Bonus de dano base adicionado por cada ponto do multiplicador de poder antes de multiplicar o pesado. Ex.: dano 130, poder 10x e bonus 5 resulta em (130 + 10 x 5) x 10 = 1800.")]
+    [Min(0f)] public float heavyDamageAdditivePowerBonus = 5f;
+
     [Header("Superheat Notches")]
     [Tooltip("Capacidade maxima de Superheat. Ao encher, inicia o estado Burn.")]
     [Min(1f)] public float maxSuperheat = 50f;
@@ -79,7 +83,7 @@ public class PlayerHeat : MonoBehaviour
     [Tooltip("Tempo em que a hitbox da explosao de Burn permanece ativa. Cada inimigo pode ser atingido uma unica vez nessa janela.")]
     [Min(.01f)] public float burnBlastActiveDuration = .7f;
     [Tooltip("Dano causado pela explosao de Burn em cada inimigo dentro do raio.")]
-    [Min(0)] public int burnBlastDamage = 1500;
+    [Min(0)] public int burnBlastDamage = 850;
     [Tooltip("Forca horizontal de Push aplicada pela explosao de Burn.")]
     [Min(0f)] public float burnBlastPushForce = 6f;
     [Tooltip("Duracao do Push aplicado pela explosao de Burn.")]
@@ -287,7 +291,14 @@ public class PlayerHeat : MonoBehaviour
 
     public int CalculateHeavyDamage(int baseDamage, float damageMultiplier)
     {
-        return baseDamage <= 0 ? 0 : Mathf.RoundToInt(baseDamage * damageMultiplier);
+        if (baseDamage <= 0)
+            return 0;
+
+        float powerMultiplier = Mathf.Max(0f, damageMultiplier);
+        float additiveBonus = powerMultiplier *
+            Mathf.Max(0f, heavyDamageAdditivePowerBonus);
+        return Mathf.RoundToInt((baseDamage + additiveBonus) *
+            powerMultiplier);
     }
 
     public int CalculateHeavyPoiseDamage(int basePoiseDamage, float poiseMultiplier)

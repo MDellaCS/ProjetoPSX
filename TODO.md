@@ -37,3 +37,4 @@
 - Pending: permitir configurações próprias para o segundo pulo.
 - Pending: sistema de inimigo principal entre inimigos em aggro, com maior agressividade para um escolhido e menor para os demais.
 - Pending: right shoulder camera offset, caso seja retomado após novos testes.
+- Bloquear: não faz nada, apenas trava o player

@@ -43,6 +43,11 @@ GameObject:
   - component: {fileID: 7231791797390308556}
   - component: {fileID: 8065122105029396497}
   - component: {fileID: -5168411248268108556}
+  - component: {fileID: 7038528183464375128}
+  - component: {fileID: 485302232963280403}
+  - component: {fileID: 6292575565008901409}
+  - component: {fileID: 212785566711577276}
+  - component: {fileID: 6421883612428584792}
   m_Layer: 0
   m_Name: BasicFlyer
   m_TagString: Untagged
@@ -103,70 +108,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21882b701d20d8448b0e1fb973e82c57, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicFlyer
-  maxHealth: 800
-  isUnkillable: 0
-  maxPoise: 50
-  poiseRecoveryDelay: 3
-  poiseRecoveryPerSecond: 10
-  movementSpeed: 2
-  gravity: -60
-  terminalFallSpeed: 30
-  rotationSpeed: 70
-  useTankControls: 1
-  detectionRange: 8
-  combatDetectionRange: 14
-  lastKnownSearchDuration: 2.5
-  lastKnownArrivalDistance: 0.35
-  initialAggressionPercent:
-    min: 25
-    max: 50
-  minimumAggressionPercent: 10
-  maximumAggressionPercent: 85
-  aggressionChangeRatePerSecond:
-    min: 2
-    max: 5
-  aggressionChangeInterval:
-    min: 5
-    max: 10
-  playerBackTurnedAggressionGain: 5
-  outOfCameraAggressionLoss: -5
-  cameraVisibilityPadding: 1
-  damageTakenAggressionReduction: 0
-  lowEnemyHealthPercent: 0
-  lowEnemyHealthDecreaseChance: 0
-  lowPlayerHealthPercent: 0
-  lowPlayerHealthAggressionGainPerSecond: 0
-  highPlayerHealthPercent: 0
-  highPlayerHealthAggressionLossPerSecond: 0
-  retreatsWhenPlayerTakesEnemyDamage: 0
-  gainsAggressionWhenPlayerTakesEnemyDamage: 0
-  playerDamagedAggressionPercent: 0.2
-  playerDamagedAggressionFlatChange: 5
-  decisionInterval:
-    min: 2
-    max: 6
-  repositionDuration:
-    min: 4
-    max: 5
-  repositionSpeedMultiplier:
-    min: 1.25
-    max: 1.5
-  chaseCommitmentDuration: 5
-  chaseCommitmentCooldown: 5
-  comboContinuationChance: 65
-  staggerDuration: 1
-  staggerKnockbackForce: 0.5
-  staggerKnockbackDuration: 0.2
-  canBeLaunched: 1
-  canBeJuggled: 1
-  wallSplatMinimumSpeed: 18
-  wallSplatStunDuration: 3
-  wallSplatLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  damageFlashDuration: 0.15
-  debugLabelHeight: 2.4
-  groundFlightHeight: 3
+  groundFlightHeight: 4
   flightGroundLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -175,25 +117,166 @@ MonoBehaviour:
   heightCorrectionSpeed: 5
   bobbingAmplitude: 0.2
   bobbingFrequency: 0.3
-  sweepDescentSpeed: 8
+  sweepDescentSpeed: 7
   visualRoot: {fileID: 699346647437120168}
   airSpinVisualRotations: 2
-  attackCombo:
-  - attackName: Flyer Sweep
+--- !u!114 &7038528183464375128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5ecf5f43e7b4edcb2a3b5e2f3129441, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
+  detectionRange: 8
+  combatDetectionRange: 14
+  lastKnownSearchDuration: 2.5
+  lastKnownArrivalDistance: 0.35
+  initialAggressionPercent:
+    min: 25
+    max: 85
+  minimumAggressionPercent: 25
+  maximumAggressionPercent: 85
+  aggressionChangeRatePerSecond:
+    min: 2
+    max: 5
+  aggressionChangeInterval:
+    min: 3
+    max: 6
+  playerBackTurnedAggressionGain: 1
+  outOfCameraAggressionLoss: -1
+  cameraVisibilityPadding: 1
+  damageTakenAggressionReduction: 0
+  lowEnemyHealthPercent: 0
+  lowEnemyHealthDecreaseChance: 0
+  lowPlayerHealthPercent: 0
+  lowPlayerHealthAggressionGainPerSecond: 0
+  highPlayerHealthPercent: 0
+  highPlayerHealthAggressionLossPerSecond: 0
+  playerAirborneAggressionChangePerSecond: 15
+  retreatsWhenPlayerTakesEnemyDamage: 0
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
+  playerDamagedAggressionPercent: 0
+  playerDamagedAggressionFlatChange: 0
+  decisionInterval:
+    min: 3
+    max: 6
+  repositionDuration:
+    min: 2
+    max: 4
+  repositionSpeedMultiplier:
+    min: 0.25
+    max: 0.5
+  chaseCommitmentDuration: 5
+  chaseCommitmentCooldown: 5
+--- !u!114 &485302232963280403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 626817c8c5f64627a702307337b9c54f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
+  useDefaultAttacksWhenEmpty: 1
+  attacks:
+  - attackName: FlyerSweep
+    attackId: FlyerSweep
     canStartAttack: 1
     openingWeight: 100
-    continuationChance: 65
+    continuationChance: 0
     continuations: []
     isProjectileAttack: 0
-    damage: 20
-    maximumRange: 1.5
-    windupDuration: 1
-    activeDuration: 0.55
-    recoveryDuration: 0.9
-    hitboxDistance: 0.65
-    hitboxRadius: 1.2
-    knockbackForce: 4
-    knockbackDuration: 0.18
+    damage: 25
+    maximumRange: 1
+    windupDuration: 1.5
+    activeDuration: 0.1
+    recoveryDuration: 2
+    hitboxDistance: 0.5
+    hitboxRadius: 1.5
+    knockbackForce: 10
+    knockbackDuration: 0.5
+  - attackName: Flyer Air Spin
+    attackId: FlyerAirSpin
+    canStartAttack: 1
+    openingWeight: 100
+    continuationChance: 0
+    continuations: []
+    isProjectileAttack: 0
+    damage: 30
+    maximumRange: 3
+    windupDuration: 2
+    activeDuration: 0.2
+    recoveryDuration: 2
+    hitboxDistance: 0
+    hitboxRadius: 3
+    knockbackForce: 15
+    knockbackDuration: 0.5
+  maximumAttacksPerSequence: 5
+--- !u!114 &6292575565008901409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
+  movementSpeed: 2
+  gravity: -60
+  terminalFallSpeed: 30
+  rotationSpeed: 70
+  useTankControls: 1
+  canBeLaunched: 1
+  canBeJuggled: 1
+  wallSplatMinimumSpeed: 10
+  wallSplatStunDuration: 3
+  wallSplatLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &212785566711577276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
+  maxHealth: 500
+  isUnkillable: 0
+  maxPoise: 30
+  poiseRecoveryDelay: 3
+  poiseRecoveryPerSecond: 10
+  staggerDuration: 1
+  staggerKnockbackForce: 1
+  staggerKnockbackDuration: 0.2
+  damageFlashDuration: 0.15
+--- !u!114 &6421883612428584792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e231fc2ed4184c2489929e6187df4fb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDebug
 --- !u!1001 &8321301459396382457
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -254,10 +337,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: -7813590141776298306, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 538e9f68918e5524b8a53c1a95d1a128, type: 2}
+      objectReference: {fileID: 2100000, guid: 46eb48a4269e2454aaa31c25f64e2c7e, type: 2}
     - target: {fileID: 919132149155446097, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
       propertyPath: m_Name
       value: Model
@@ -265,7 +352,7 @@ PrefabInstance:
     - target: {fileID: 5822821947120931875, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 538e9f68918e5524b8a53c1a95d1a128, type: 2}
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
     - target: {fileID: 5866666021909216657, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
       propertyPath: m_ApplyRootMotion
       value: 0

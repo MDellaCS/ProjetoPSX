@@ -121,6 +121,7 @@ public class PlayerComboController : MonoBehaviour
 
     private void ReadInput()
     {
+        TryHandleHeavyPriorityInput();
         TryHandleBufferedInput(
             PlayerBufferedInput.LightAttack,
             AttackInput.Light
@@ -131,6 +132,54 @@ public class PlayerComboController : MonoBehaviour
         );
         TryHandleBufferedInput(
             PlayerBufferedInput.HeavyAttack,
+            AttackInput.Heavy
+        );
+    }
+
+    private void TryHandleHeavyPriorityInput()
+    {
+        if (inputBuffer == null ||
+            !inputBuffer.HasBuffered(PlayerBufferedInput.HeavyAttack) ||
+            playerCombat == null || playerState == null)
+        {
+            return;
+        }
+
+        // Um pesado nao interrompe outro pesado. Nesse caso o fluxo normal
+        // permite apenas o buffer/encadeamento que ja existia.
+        if (playerCombat.IsAttacking && playerCombat.IsCurrentAttackHeavy)
+        {
+            TryHandleBufferedInput(
+                PlayerBufferedInput.HeavyAttack,
+                AttackInput.Heavy
+            );
+            return;
+        }
+
+        bool canOverrideAttack = playerCombat.IsAttacking;
+        bool canInterruptTraversal = playerState.IsDashing() ||
+            playerState.IsSliding();
+        if (!canOverrideAttack && !canInterruptTraversal)
+        {
+            TryHandleBufferedInput(
+                PlayerBufferedInput.HeavyAttack,
+                AttackInput.Heavy
+            );
+            return;
+        }
+
+        if (!inputBuffer.TryConsume(PlayerBufferedInput.HeavyAttack))
+            return;
+
+        if (canOverrideAttack && !playerCombat.InterruptForHeavyOverride())
+            return;
+
+        if (canInterruptTraversal)
+            playerMovement?.InterruptForHeavyAttack();
+
+        CancelCombo();
+        Execute(
+            IsAirborne() ? ComboNode.AerialH1 : ComboNode.H1,
             AttackInput.Heavy
         );
     }
@@ -325,7 +374,8 @@ public class PlayerComboController : MonoBehaviour
             attack.isHeavy,
             input == AttackInput.SlowLight
                 ? SlowLightPhaseDurationMultiplier
-                : 1f
+                : 1f,
+            GetHeavyPowerTimingMultiplier(attack)
         );
 
         if (!started)
@@ -422,6 +472,18 @@ public class PlayerComboController : MonoBehaviour
     private bool IsAirborne()
     {
         return playerMovement != null && !playerMovement.IsGrounded;
+    }
+
+    private float GetHeavyPowerTimingMultiplier(PlayerAttackData attack)
+    {
+        if (attack == null || !attack.isHeavy || playerHeat == null)
+        {
+            return 1f;
+        }
+
+        float effectiveMultiplier = Mathf.Lerp(1f, playerHeat.HeavyDamageMultiplier, 0.5f);
+
+        return 1f / Mathf.Max(.01f, effectiveMultiplier);
     }
 
     private static bool IsAerialNode(ComboNode node)

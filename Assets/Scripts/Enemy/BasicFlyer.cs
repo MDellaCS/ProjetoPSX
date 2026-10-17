@@ -32,7 +32,7 @@ public class BasicFlyer : EnemyBase
     [Header("Air Spin")]
     [Tooltip("Objeto visual que gira durante Air Spin. O Collider e a IA permanecem no objeto raiz.")]
     [SerializeField] private Transform visualRoot;
-    [Tooltip("Numero de voltas completas do visual durante a janela Active de Air Spin.")]
+    [Tooltip("Numero de voltas completas do visual durante Windup + Active de Air Spin.")]
     [Min(0f)] [SerializeField] private float airSpinVisualRotations = 2f;
 
     protected override EnemyAttackData[] CreateDefaultAttacks() => new[]
@@ -85,8 +85,15 @@ public class BasicFlyer : EnemyBase
         if (CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
-        if (isAirSpinActive && CurrentState != State.Active)
+        if (isAirSpinActive &&
+            (CurrentState == State.Windup || CurrentState == State.Active))
+        {
+            UpdateAirSpinVisual(CurrentAttack);
+        }
+        else if (isAirSpinActive)
+        {
             StopAirSpinVisual();
+        }
     }
 
     protected override void UpdateVerticalMovement(EnemyMovement movement)
@@ -155,21 +162,24 @@ public class BasicFlyer : EnemyBase
         return foundGround;
     }
 
+    protected override void OnAttackStarted(EnemyAttackData attack)
+    {
+        if (!IsAirSpinAttack(attack))
+            return;
+
+        isAirSpinActive = true;
+        airSpinElapsed = 0f;
+        if (visualRoot != null)
+            airSpinBaseLocalRotation = visualRoot.localRotation;
+    }
+
     protected override void OnAttackActiveStarted(EnemyAttackData attack)
     {
         sweepHitPlayers.Clear();
-
-        isAirSpinActive = IsAirSpinAttack(attack);
-        airSpinElapsed = 0f;
-        if (isAirSpinActive && visualRoot != null)
-            airSpinBaseLocalRotation = visualRoot.localRotation;
     }
 
     protected override bool ExecuteAttack(EnemyAttackData attack)
     {
-        if (IsAirSpinAttack(attack))
-            UpdateAirSpinVisual(attack.activeDuration);
-
         Vector3 hitPosition = IsAirSpinAttack(attack)
             ? transform.position
             : transform.position + transform.forward * attack.hitboxDistance;
@@ -231,15 +241,16 @@ public class BasicFlyer : EnemyBase
         return attack != null && attack.attackId == AirSpinAttackId;
     }
 
-    private void UpdateAirSpinVisual(float activeDuration)
+    private void UpdateAirSpinVisual(EnemyAttackData attack)
     {
-        if (visualRoot == null)
+        if (visualRoot == null || attack == null)
             return;
 
         airSpinElapsed += Time.deltaTime;
-        float progress = activeDuration <= 0f
+        float spinDuration = attack.windupDuration + attack.activeDuration;
+        float progress = spinDuration <= 0f
             ? 1f
-            : Mathf.Clamp01(airSpinElapsed / activeDuration);
+            : Mathf.Clamp01(airSpinElapsed / spinDuration);
         float degrees = 360f * airSpinVisualRotations * progress;
         visualRoot.localRotation = airSpinBaseLocalRotation *
             Quaternion.Euler(0f, degrees, 0f);

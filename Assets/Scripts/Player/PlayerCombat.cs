@@ -34,6 +34,7 @@ public class PlayerCombat : MonoBehaviour
     private float currentHeavyPoiseMultiplier = 1f;
     private float currentHeavyHeatConsumed;
     private float currentPhaseDurationMultiplier = 1f;
+    private float currentHeavyWindupRecoveryDurationMultiplier = 1f;
     private float currentAttackRadius;
     private bool aerialHeavyCancelQueued;
     private bool recoveryCancelQueued;
@@ -87,6 +88,7 @@ public class PlayerCombat : MonoBehaviour
         ? currentAttack.attackName
         : string.Empty;
     public AttackPhase CurrentAttackPhase => attackPhase;
+    public bool IsCurrentAttackHeavy => IsAttacking && currentAttackIsHeavy;
     public float CurrentAttackPhaseProgress => GetCurrentAttackPhaseProgress();
     public bool HasAggroedEnemies => hasAggroedEnemies;
     public bool IsOutOfCombat =>
@@ -208,7 +210,8 @@ public class PlayerCombat : MonoBehaviour
         int damage,
         float attackRadius,
         bool isHeavy = false,
-        float phaseDurationMultiplier = 1f
+        float phaseDurationMultiplier = 1f,
+        float heavyWindupRecoveryDurationMultiplier = 1f
     )
     {
         bool canStartAttack = playerState != null &&
@@ -241,7 +244,8 @@ public class PlayerCombat : MonoBehaviour
             damage,
             attackRadius,
             isHeavy,
-            phaseDurationMultiplier
+            phaseDurationMultiplier,
+            heavyWindupRecoveryDurationMultiplier
         );
 
         return true;
@@ -372,6 +376,7 @@ public class PlayerCombat : MonoBehaviour
         currentAttackIsHeavy = false;
         currentHeavyHeatConsumed = 0f;
         currentPhaseDurationMultiplier = 1f;
+        currentHeavyWindupRecoveryDurationMultiplier = 1f;
         playerMovement?.StopAerialAttackMovement();
     }
 
@@ -400,7 +405,7 @@ public class PlayerCombat : MonoBehaviour
         playerMovement.BeginAerialLight(
             juggleLiftSpeed,
             juggleGravityMultiplier,
-            GetPhaseDuration(attack.windupDuration + attack.activeDuration)
+            GetWindupActiveDuration(attack)
         );
     }
 
@@ -425,9 +430,7 @@ public class PlayerCombat : MonoBehaviour
         if (moveEnd <= moveStart)
             return;
 
-        float movementDuration = GetPhaseDuration(
-            currentAttack.windupDuration + currentAttack.activeDuration
-        );
+        float movementDuration = GetWindupActiveDuration(currentAttack);
         if (movementDuration <= 0f)
             return;
 
@@ -568,6 +571,22 @@ public class PlayerCombat : MonoBehaviour
         ResetAttack();
     }
 
+    /// <summary>
+    /// Interrompe imediatamente um ataque leve para iniciar um pesado. O
+    /// callback do ataque interrompido nao e chamado, portanto ele nao pode
+    /// continuar o combo antigo depois do override.
+    /// </summary>
+    public bool InterruptForHeavyOverride()
+    {
+        if (!IsAttacking || currentAttackIsHeavy)
+            return false;
+
+        ResetAttack();
+        if (playerState != null && playerState.IsAttacking())
+            playerState.ChangeState(PlayerState.State.Normal);
+        return true;
+    }
+
     public bool QueueAerialLightHeavyCancel()
     {
         if (currentAttack == null ||
@@ -624,9 +643,14 @@ public class PlayerCombat : MonoBehaviour
         int damage,
         float attackRadius,
         bool isHeavy,
-        float phaseDurationMultiplier)
+        float phaseDurationMultiplier,
+        float heavyWindupRecoveryDurationMultiplier)
     {
         currentPhaseDurationMultiplier = Mathf.Max(.01f, phaseDurationMultiplier);
+        currentHeavyWindupRecoveryDurationMultiplier = Mathf.Max(
+            .01f,
+            heavyWindupRecoveryDurationMultiplier
+        );
         currentAttackIsHeavy = isHeavy;
         currentAttack = attack;
         currentHeavyPoiseMultiplier = 1f;
@@ -669,7 +693,27 @@ public class PlayerCombat : MonoBehaviour
 
     private float GetPhaseDuration(float baseDuration)
     {
-        return baseDuration * currentPhaseDurationMultiplier;
+        float phaseMultiplier = currentPhaseDurationMultiplier;
+        if (currentAttackIsHeavy &&
+            (attackPhase == AttackPhase.Windup ||
+             attackPhase == AttackPhase.Recovery))
+        {
+            phaseMultiplier *= currentHeavyWindupRecoveryDurationMultiplier;
+        }
+        return baseDuration * phaseMultiplier;
+    }
+
+    private float GetWindupActiveDuration(PlayerAttackData attack)
+    {
+        if (attack == null)
+            return 0f;
+
+        float windupMultiplier = currentPhaseDurationMultiplier;
+        if (currentAttackIsHeavy)
+            windupMultiplier *= currentHeavyWindupRecoveryDurationMultiplier;
+
+        return attack.windupDuration * windupMultiplier +
+            attack.activeDuration * currentPhaseDurationMultiplier;
     }
 
     private void ApplyJuggleToAirborneEnemy(EnemyBase enemy)
@@ -700,7 +744,7 @@ public class PlayerCombat : MonoBehaviour
             juggleLiftSpeed,
             launchGravity,
             juggleGravityMultiplier,
-            currentAttack.windupDuration + currentAttack.activeDuration
+            GetWindupActiveDuration(currentAttack)
         );
     }
 

@@ -87,6 +87,7 @@ public sealed class EnemyAttackController : MonoBehaviour
             return;
         attacksInSequence++;
         brain.OnAttackStarted();
+        owner.NotifyAttackStarted(currentAttack);
         stateTimer = Mathf.Max(0f, currentAttack.windupDuration);
         hasDamagedDuringActive = false;
         owner.CurrentState = EnemyBase.State.Windup;

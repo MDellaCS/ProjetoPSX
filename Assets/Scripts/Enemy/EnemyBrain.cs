@@ -54,6 +54,8 @@ public sealed class EnemyBrain : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float highPlayerHealthPercent = .75f;
     [Tooltip("Agressividade perdida por segundo com o jogador em Heat alto.")]
     [Min(0f)] [SerializeField] private float highPlayerHealthAggressionLossPerSecond = 10f;
+    [Tooltip("Variacao de agressividade por segundo enquanto o jogador esta no ar. Use valor positivo para o inimigo pressionar o combate aereo ou negativo para ele recuar.")]
+    [SerializeField] private float playerAirborneAggressionChangePerSecond;
     [Tooltip("Reduz agressividade quando qualquer inimigo acerta o jogador. Tem prioridade sobre a reacao invertida.")]
     [SerializeField] private bool retreatsWhenPlayerTakesEnemyDamage = true;
     [Tooltip("Aumenta agressividade quando outro inimigo acerta o jogador, se a regra de recuar estiver desligada.")]
@@ -84,6 +86,7 @@ public sealed class EnemyBrain : MonoBehaviour
     private EnemyHealth health;
     private Transform target;
     private PlayerHeat playerHeat;
+    private PlayerMovement playerMovement;
     private float decisionTimer;
     private float repositionTimer;
     private Vector3 repositionDirection;
@@ -161,6 +164,8 @@ public sealed class EnemyBrain : MonoBehaviour
         }
         if (target != null && playerHeat == null)
             playerHeat = target.GetComponent<PlayerHeat>();
+        if (target != null && playerMovement == null)
+            playerMovement = target.GetComponent<PlayerMovement>();
     }
 
     internal void TickIdle()
@@ -317,6 +322,7 @@ public sealed class EnemyBrain : MonoBehaviour
             return;
         target = encounterPlayer;
         playerHeat = target.GetComponent<PlayerHeat>();
+        playerMovement = target.GetComponent<PlayerMovement>();
         isWaitingForEncounter = false;
         isEncounterEngaged = true;
         if (owner.CurrentState == EnemyBase.State.Idle)
@@ -409,6 +415,8 @@ public sealed class EnemyBrain : MonoBehaviour
             velocity += lowPlayerHealthAggressionGainPerSecond;
         else if (playerHealthPercent >= highPlayerHealthPercent)
             velocity -= highPlayerHealthAggressionLossPerSecond;
+        if (playerMovement != null && !playerMovement.IsGrounded)
+            velocity += playerAirborneAggressionChangePerSecond;
         return velocity;
     }
 
