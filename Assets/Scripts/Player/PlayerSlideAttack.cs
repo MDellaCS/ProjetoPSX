@@ -20,7 +20,7 @@ public class PlayerSlideAttack : MonoBehaviour
     [Tooltip("Converte a velocidade atual do Slide em impulso horizontal para o inimigo lancado.")]
     [Min(0f)] public float launchForwardConversion = 0f;
 
-    private readonly HashSet<BaseEnemy> enemiesLaunchedThisSlide = new();
+    private readonly HashSet<EnemyBase> enemiesLaunchedThisSlide = new();
     private readonly List<IgnoredEnemyCollision> ignoredEnemyCollisions = new();
 
     private PlayerMovement playerMovement;
@@ -83,7 +83,7 @@ public class PlayerSlideAttack : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
-            BaseEnemy enemy = hit.GetComponentInParent<BaseEnemy>();
+            EnemyBase enemy = hit.GetComponentInParent<EnemyBase>();
             if (enemy == null || !enemy.CanBeLaunched ||
                 enemiesLaunchedThisSlide.Contains(enemy))
             {
@@ -100,7 +100,7 @@ public class PlayerSlideAttack : MonoBehaviour
         }
     }
 
-    private void IgnoreEnemyCollisionTemporarily(BaseEnemy enemy)
+    private void IgnoreEnemyCollisionTemporarily(EnemyBase enemy)
     {
         if (enemy == null || controller == null ||
             launchedEnemyCollisionIgnoreDuration <= 0f)

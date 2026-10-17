@@ -115,7 +115,7 @@ public class PlayerHealth : MonoBehaviour
         if (causedByEnemy)
         {
             playerCombat.RegisterDamageTakenFromEnemy();
-            BaseEnemy.NotifyPlayerDamagedByEnemy();
+            EnemyBase.NotifyPlayerDamagedByEnemy();
         }
 
         DamageNumber.Show(

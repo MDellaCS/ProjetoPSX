@@ -33,7 +33,7 @@ public class EnemyEncounterWave
     public int maxAlive = 4;
 
     [Tooltip("Lista manual usada apenas quando Enemies Parent estiver vazio.")]
-    public BaseEnemy[] enemies;
+    public EnemyBase[] enemies;
 }
 
 /// <summary>
@@ -64,10 +64,10 @@ public class EnemyEncounter : MonoBehaviour
     [SerializeField] private EncounterState currentState =
         EncounterState.Inactive;
 
-    private readonly HashSet<BaseEnemy> participants =
-        new HashSet<BaseEnemy>();
-    private readonly Dictionary<EnemyEncounterWave, BaseEnemy[]> waveEnemyCache =
-        new Dictionary<EnemyEncounterWave, BaseEnemy[]>();
+    private readonly HashSet<EnemyBase> participants =
+        new HashSet<EnemyBase>();
+    private readonly Dictionary<EnemyEncounterWave, EnemyBase[]> waveEnemyCache =
+        new Dictionary<EnemyEncounterWave, EnemyBase[]>();
 
     private int currentWaveIndex = -1;
     private int nextWaveIndex;
@@ -108,7 +108,7 @@ public class EnemyEncounter : MonoBehaviour
 
         for (int waveIndex = 0; waveIndex < WaveCount; waveIndex++)
         {
-            foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
+            foreach (EnemyBase enemy in GetWaveEnemies(waveIndex))
                 PrepareEnemyForEncounter(enemy);
         }
     }
@@ -116,13 +116,13 @@ public class EnemyEncounter : MonoBehaviour
     private void OnEnable()
     {
         activeEncounters.Add(this);
-        BaseEnemy.EnemyDied += HandleEnemyDied;
+        EnemyBase.EnemyDied += HandleEnemyDied;
     }
 
     private void OnDisable()
     {
         activeEncounters.Remove(this);
-        BaseEnemy.EnemyDied -= HandleEnemyDied;
+        EnemyBase.EnemyDied -= HandleEnemyDied;
     }
 
     private void Start()
@@ -162,7 +162,7 @@ public class EnemyEncounter : MonoBehaviour
         TryScheduleEligibleNextWave();
     }
 
-    private void HandleEnemyDied(BaseEnemy enemy)
+    private void HandleEnemyDied(EnemyBase enemy)
     {
         if (currentState != EncounterState.Active ||
             enemy == null ||
@@ -196,7 +196,7 @@ public class EnemyEncounter : MonoBehaviour
         if (player == null)
             return;
 
-        foreach (BaseEnemy enemy in participants)
+        foreach (EnemyBase enemy in participants)
         {
             if (enemy == null || !enemy.gameObject.activeInHierarchy)
                 continue;
@@ -279,7 +279,7 @@ public class EnemyEncounter : MonoBehaviour
 
     private void ActivateAllEnemiesInWave(int waveIndex)
     {
-        foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
+        foreach (EnemyBase enemy in GetWaveEnemies(waveIndex))
         {
             if (enemy != null && !enemy.IsDead)
                 enemy.gameObject.SetActive(true);
@@ -332,13 +332,13 @@ public class EnemyEncounter : MonoBehaviour
             return;
 
         EnemyEncounterWave wave = waves[maintainCapWaveIndex];
-        BaseEnemy[] waveEnemies = GetWaveEnemies(maintainCapWaveIndex);
+        EnemyBase[] waveEnemies = GetWaveEnemies(maintainCapWaveIndex);
         int maxAlive = Mathf.Max(1, wave.maxAlive);
         int livingEnemies = CountLivingActiveEnemiesInWave(maintainCapWaveIndex);
 
         while (livingEnemies < maxAlive && nextCapEnemyIndex < waveEnemies.Length)
         {
-            BaseEnemy enemy = waveEnemies[nextCapEnemyIndex++];
+            EnemyBase enemy = waveEnemies[nextCapEnemyIndex++];
             if (enemy == null || enemy.IsDead)
                 continue;
 
@@ -360,12 +360,12 @@ public class EnemyEncounter : MonoBehaviour
         maintainCapWaveIndex = -1;
     }
 
-    private bool IsEnemyInMaintainCapWave(BaseEnemy enemy)
+    private bool IsEnemyInMaintainCapWave(EnemyBase enemy)
     {
         if (maintainCapWaveIndex < 0)
             return false;
 
-        foreach (BaseEnemy waveEnemy in GetWaveEnemies(maintainCapWaveIndex))
+        foreach (EnemyBase waveEnemy in GetWaveEnemies(maintainCapWaveIndex))
         {
             if (waveEnemy == enemy)
                 return true;
@@ -380,7 +380,7 @@ public class EnemyEncounter : MonoBehaviour
             nextCapEnemyIndex < GetWaveEnemies(maintainCapWaveIndex).Length;
     }
 
-    private void PrepareEnemyForEncounter(BaseEnemy enemy)
+    private void PrepareEnemyForEncounter(EnemyBase enemy)
     {
         if (enemy == null || !participants.Add(enemy))
             return;
@@ -403,7 +403,7 @@ public class EnemyEncounter : MonoBehaviour
     {
         int livingEnemies = 0;
 
-        foreach (BaseEnemy enemy in GetWaveEnemies(waveIndex))
+        foreach (EnemyBase enemy in GetWaveEnemies(waveIndex))
         {
             if (enemy != null &&
                 enemy.gameObject.activeInHierarchy &&
@@ -430,16 +430,16 @@ public class EnemyEncounter : MonoBehaviour
         CompleteEncounter();
     }
 
-    private BaseEnemy[] GetWaveEnemies(int waveIndex)
+    private EnemyBase[] GetWaveEnemies(int waveIndex)
     {
         if (waves == null || waveIndex < 0 || waveIndex >= waves.Length)
-            return System.Array.Empty<BaseEnemy>();
+            return System.Array.Empty<EnemyBase>();
 
         EnemyEncounterWave wave = waves[waveIndex];
         if (wave == null)
-            return System.Array.Empty<BaseEnemy>();
+            return System.Array.Empty<EnemyBase>();
 
-        if (waveEnemyCache.TryGetValue(wave, out BaseEnemy[] cachedEnemies))
+        if (waveEnemyCache.TryGetValue(wave, out EnemyBase[] cachedEnemies))
             return cachedEnemies;
 
         return GetConfiguredWaveEnemies(wave);
@@ -459,21 +459,21 @@ public class EnemyEncounter : MonoBehaviour
         }
     }
 
-    private static BaseEnemy[] GetConfiguredWaveEnemies(EnemyEncounterWave wave)
+    private static EnemyBase[] GetConfiguredWaveEnemies(EnemyEncounterWave wave)
     {
         if (wave.enemiesParent == null)
-            return wave.enemies ?? System.Array.Empty<BaseEnemy>();
+            return wave.enemies ?? System.Array.Empty<EnemyBase>();
 
         // GetChild segue exatamente a ordem visivel da Hierarchy. Buscamos
         // apenas filhos diretos para um pai de onda nao absorver inimigos de
         // subgrupos/ondas vizinhas por acidente.
-        List<BaseEnemy> enemiesFromParent = new List<BaseEnemy>();
+        List<EnemyBase> enemiesFromParent = new List<EnemyBase>();
         for (int childIndex = 0;
              childIndex < wave.enemiesParent.childCount;
              childIndex++)
         {
             Transform child = wave.enemiesParent.GetChild(childIndex);
-            BaseEnemy enemy = child.GetComponent<BaseEnemy>();
+            EnemyBase enemy = child.GetComponent<EnemyBase>();
             if (enemy != null)
                 enemiesFromParent.Add(enemy);
         }

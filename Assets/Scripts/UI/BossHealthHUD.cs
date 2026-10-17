@@ -11,8 +11,8 @@ public class BossHealthHUD : MonoBehaviour
     [Header("References")]
     [SerializeField] private PanelRenderer panelRenderer;
 
-    private BaseEnemy currentBoss;
-    private BaseEnemy currentHealth;
+    private EnemyBase currentBoss;
+    private EnemyBase currentHealth;
     private string currentBossName;
 
     private VisualElement bossPanel;
@@ -37,7 +37,7 @@ public class BossHealthHUD : MonoBehaviour
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
     }
 
-    public void Show(BaseEnemy boss, string bossName)
+    public void Show(EnemyBase boss, string bossName)
     {
         if (boss == null)
             return;
@@ -60,7 +60,7 @@ public class BossHealthHUD : MonoBehaviour
         SetVisible(true);
     }
 
-    public void Hide(BaseEnemy boss)
+    public void Hide(EnemyBase boss)
     {
         if (boss != null && boss != currentBoss)
             return;
@@ -94,7 +94,7 @@ public class BossHealthHUD : MonoBehaviour
         SetVisible(currentBoss != null);
     }
 
-    private void UpdateHealth(BaseEnemy _, int current, int maximum)
+    private void UpdateHealth(EnemyBase _, int current, int maximum)
     {
         UpdateHealthVisuals(current, maximum);
     }

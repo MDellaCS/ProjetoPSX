@@ -21,7 +21,7 @@ public class PlayerCombat : MonoBehaviour
 
     private AttackPhase attackPhase = AttackPhase.None;
 
-    private HashSet<BaseEnemy> enemiesHit = new HashSet<BaseEnemy>();
+    private HashSet<EnemyBase> enemiesHit = new HashSet<EnemyBase>();
 
     private PlayerState playerState;
     private PlayerAttackData currentAttack;
@@ -171,7 +171,7 @@ public class PlayerCombat : MonoBehaviour
 
     private void UpdateCombatStatus()
     {
-        hasAggroedEnemies = BaseEnemy.IsAnyEnemyAggroedOn(transform);
+        hasAggroedEnemies = EnemyBase.IsAnyEnemyAggroedOn(transform);
 
         if (hasAggroedEnemies ||
             EnemyEncounter.IsPlayerInActiveEncounter(transform))
@@ -495,7 +495,7 @@ public class PlayerCombat : MonoBehaviour
             if (currentAttack == null || attackPhase != AttackPhase.Active)
                 return;
 
-            BaseEnemy enemy = hit.GetComponentInParent<BaseEnemy>();
+            EnemyBase enemy = hit.GetComponentInParent<EnemyBase>();
 
             if (enemy != null && !enemiesHit.Contains(enemy))
             {
@@ -672,7 +672,7 @@ public class PlayerCombat : MonoBehaviour
         return baseDuration * currentPhaseDurationMultiplier;
     }
 
-    private void ApplyJuggleToAirborneEnemy(BaseEnemy enemy)
+    private void ApplyJuggleToAirborneEnemy(EnemyBase enemy)
     {
         if (enemy == null || currentAttack == null)
         {
@@ -709,7 +709,7 @@ public class PlayerCombat : MonoBehaviour
     /// Usado por mecanicas de movimento, como o impacto do Slide.
     /// </summary>
     public void ApplyNonDamagingLaunchUp(
-        BaseEnemy enemy,
+        EnemyBase enemy,
         Vector3 horizontalDirection,
         float horizontalImpulse)
     {

@@ -2,13 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Inimigo aereo basico. Mantem uma altura sobre o player com bobbing suave
-/// e executa um sweep descendente cuja hitbox permanece ativa no Active todo.
+/// Inimigo aereo basico. Mantem altura sobre o chao e oferece Sweep e Air Spin.
 /// </summary>
-public class BasicFlyer : BaseEnemy
+public class BasicFlyer : EnemyBase
 {
-    private const int SweepAttackIndex = 0;
-    private const int AirSpinAttackIndex = 1;
+    private const string SweepAttackId = "FlyerSweep";
+    private const string AirSpinAttackId = "FlyerAirSpin";
 
     [Header("Flight")]
     [Tooltip("Altura que o inimigo busca manter acima do chao enquanto nao esta em sweep.")]
@@ -36,12 +35,12 @@ public class BasicFlyer : BaseEnemy
     [Tooltip("Numero de voltas completas do visual durante a janela Active de Air Spin.")]
     [Min(0f)] [SerializeField] private float airSpinVisualRotations = 2f;
 
-    [Header("Basic Flyer Attack")]
-    [SerializeField] private BaseEnemyAttack[] attackCombo =
+    protected override EnemyAttackData[] CreateDefaultAttacks() => new[]
     {
-        new BaseEnemyAttack
+        new EnemyAttackData
         {
             attackName = "Flyer Sweep",
+            attackId = SweepAttackId,
             damage = 14,
             maximumRange = 1.5f,
             windupDuration = .45f,
@@ -52,9 +51,10 @@ public class BasicFlyer : BaseEnemy
             knockbackForce = 4f,
             knockbackDuration = .18f
         },
-        new BaseEnemyAttack
+        new EnemyAttackData
         {
             attackName = "Flyer Air Spin",
+            attackId = AirSpinAttackId,
             damage = 16,
             maximumRange = 2.4f,
             windupDuration = .35f,
@@ -74,8 +74,6 @@ public class BasicFlyer : BaseEnemy
     private float airSpinElapsed;
     private Quaternion airSpinBaseLocalRotation;
 
-    protected override BaseEnemyAttack[] AttackCombo => attackCombo;
-
     private void Start()
     {
         fallbackFlightHeight = transform.position.y;
@@ -91,17 +89,17 @@ public class BasicFlyer : BaseEnemy
             StopAirSpinVisual();
     }
 
-    protected override void UpdateVerticalMovement()
+    protected override void UpdateVerticalMovement(EnemyMovement movement)
     {
         if (IsLaunched)
         {
-            base.UpdateVerticalMovement();
+            base.UpdateVerticalMovement(movement);
             return;
         }
 
-        if (CurrentState == State.Active)
+        if (CurrentState == State.Active && !IsAirSpinAttack(CurrentAttack))
         {
-            SetVerticalVelocity(-sweepDescentSpeed);
+            movement.SetVerticalVelocity(-sweepDescentSpeed);
             return;
         }
 
@@ -112,7 +110,7 @@ public class BasicFlyer : BaseEnemy
             bobbingAmplitude;
         float targetHeight = targetBaseHeight + bobbing;
         float heightDifference = targetHeight - transform.position.y;
-        SetVerticalVelocity(Mathf.Clamp(
+        movement.SetVerticalVelocity(Mathf.Clamp(
             heightDifference * heightCorrectionSpeed,
             -heightCorrectionSpeed,
             heightCorrectionSpeed
@@ -140,7 +138,7 @@ public class BasicFlyer : BaseEnemy
         {
             Collider hitCollider = groundHits[index].collider;
             if (hitCollider == null ||
-                hitCollider.GetComponentInParent<BaseEnemy>() != null ||
+                hitCollider.GetComponentInParent<EnemyBase>() != null ||
                 hitCollider.GetComponentInParent<PlayerHealth>() != null)
             {
                 continue;
@@ -157,7 +155,7 @@ public class BasicFlyer : BaseEnemy
         return foundGround;
     }
 
-    protected override void OnAttackActiveStarted(BaseEnemyAttack attack)
+    protected override void OnAttackActiveStarted(EnemyAttackData attack)
     {
         sweepHitPlayers.Clear();
 
@@ -167,7 +165,7 @@ public class BasicFlyer : BaseEnemy
             airSpinBaseLocalRotation = visualRoot.localRotation;
     }
 
-    protected override bool ExecuteAttack(BaseEnemyAttack attack)
+    protected override bool ExecuteAttack(EnemyAttackData attack)
     {
         if (IsAirSpinAttack(attack))
             UpdateAirSpinVisual(attack.activeDuration);
@@ -192,21 +190,17 @@ public class BasicFlyer : BaseEnemy
             );
         }
 
-        // Retorna false para BaseEnemy consultar a hitbox durante todo Active.
+        // Retorna false para consultar a hitbox durante todo Active.
         return false;
     }
 
-    protected override int SelectAttackIndex()
+    protected override bool CanUseAttack(EnemyAttackData attack, int attackIndex)
     {
-        return IsTargetAirborne() ? AirSpinAttackIndex : SweepAttackIndex;
-    }
-
-    protected override bool CanContinueAttackCombo(
-        int currentIndex,
-        int nextIndex)
-    {
-        // Os dois ataques sao unidades independentes, nunca um combo misto.
-        return false;
+        // Air Spin e a resposta especifica do Flyer ao jogador no ar; o
+        // Sweep ocupa o papel equivalente contra o jogador no chao.
+        return attack.attackId == AirSpinAttackId
+            ? IsTargetAirborne()
+            : attack.attackId != SweepAttackId || !IsTargetAirborne();
     }
 
     protected override void OnDrawGizmos()
@@ -232,10 +226,9 @@ public class BasicFlyer : BaseEnemy
         return targetMovement != null && !targetMovement.IsGrounded;
     }
 
-    private bool IsAirSpinAttack(BaseEnemyAttack attack)
+    private bool IsAirSpinAttack(EnemyAttackData attack)
     {
-        return attackCombo != null && attackCombo.Length > AirSpinAttackIndex &&
-            attack == attackCombo[AirSpinAttackIndex];
+        return attack != null && attack.attackId == AirSpinAttackId;
     }
 
     private void UpdateAirSpinVisual(float activeDuration)
@@ -267,6 +260,20 @@ public class BasicFlyer : BaseEnemy
 
         Animator animator = GetComponentInChildren<Animator>(true);
         if (animator != null && animator.transform != transform)
+        {
             visualRoot = animator.transform;
+            return;
+        }
+
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer.transform == transform)
+                continue;
+            Transform childRoot = renderer.transform;
+            while (childRoot.parent != null && childRoot.parent != transform)
+                childRoot = childRoot.parent;
+            visualRoot = childRoot;
+            return;
+        }
     }
 }

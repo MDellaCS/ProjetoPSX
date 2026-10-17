@@ -101,7 +101,7 @@ public class PlayerHeat : MonoBehaviour
     private float burnElapsed;
     private float burnStartHeat;
     private float burnBlastActiveTimer;
-    private readonly HashSet<BaseEnemy> burnBlastAffectedEnemies = new();
+    private readonly HashSet<EnemyBase> burnBlastAffectedEnemies = new();
 
     private PlayerState playerState;
     private PlayerCombat playerCombat;
@@ -422,7 +422,7 @@ public class PlayerHeat : MonoBehaviour
 
         foreach (Collider hit in Physics.OverlapSphere(origin, burnBlastRadius))
         {
-            BaseEnemy enemy = hit.GetComponentInParent<BaseEnemy>();
+            EnemyBase enemy = hit.GetComponentInParent<EnemyBase>();
             if (enemy == null || !burnBlastAffectedEnemies.Add(enemy))
                 continue;
 

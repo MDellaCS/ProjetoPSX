@@ -9,7 +9,7 @@ using UnityEngine;
 public class EnemySpawner : MonoBehaviour
 {
     [Header("Enemies")]
-    [SerializeField] private BaseEnemy[] enemyPrefabs;
+    [SerializeField] private EnemyBase[] enemyPrefabs;
     [Min(1)] [SerializeField] private int spawnCount = 1;
     [SerializeField] private bool spawnOnStart = true;
     [Min(0f)] [SerializeField] private float delayBetweenSpawns;
@@ -88,7 +88,7 @@ public class EnemySpawner : MonoBehaviour
         {
             pendingSpawnCount--;
 
-            BaseEnemy prefab = GetRandomPrefab();
+            EnemyBase prefab = GetRandomPrefab();
             if (prefab != null)
                 yield return SpawnEnemyUntilSuccessful(prefab);
 
@@ -100,7 +100,7 @@ public class EnemySpawner : MonoBehaviour
         spawnRoutine = null;
     }
 
-    private IEnumerator SpawnEnemyUntilSuccessful(BaseEnemy prefab)
+    private IEnumerator SpawnEnemyUntilSuccessful(EnemyBase prefab)
     {
         currentAreaMultiplier = 1f;
 
@@ -117,7 +117,7 @@ public class EnemySpawner : MonoBehaviour
                     continue;
                 }
 
-                BaseEnemy spawnedEnemy = Instantiate(
+                EnemyBase spawnedEnemy = Instantiate(
                     prefab,
                     spawnPosition,
                     Quaternion.Euler(0f, Random.Range(0f, 360f), 0f),
@@ -215,7 +215,7 @@ public class EnemySpawner : MonoBehaviour
         if (enemyPrefabs == null)
             return false;
 
-        foreach (BaseEnemy prefab in enemyPrefabs)
+        foreach (EnemyBase prefab in enemyPrefabs)
         {
             if (prefab != null)
                 return true;
@@ -224,10 +224,10 @@ public class EnemySpawner : MonoBehaviour
         return false;
     }
 
-    private BaseEnemy GetRandomPrefab()
+    private EnemyBase GetRandomPrefab()
     {
         int validPrefabCount = 0;
-        foreach (BaseEnemy prefab in enemyPrefabs)
+        foreach (EnemyBase prefab in enemyPrefabs)
         {
             if (prefab != null)
                 validPrefabCount++;
@@ -237,7 +237,7 @@ public class EnemySpawner : MonoBehaviour
             return null;
 
         int selectedIndex = Random.Range(0, validPrefabCount);
-        foreach (BaseEnemy prefab in enemyPrefabs)
+        foreach (EnemyBase prefab in enemyPrefabs)
         {
             if (prefab == null)
                 continue;

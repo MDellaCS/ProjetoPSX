@@ -216,7 +216,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (enemyDebugPanel == null || enemyDebugText == null)
             return;
 
-        BaseEnemy enemy = playerLockOn != null
+        EnemyBase enemy = playerLockOn != null
             ? playerLockOn.LockedEnemy
             : null;
         bool show = enemy != null;

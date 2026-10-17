@@ -42,7 +42,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7231791797390308556}
   - component: {fileID: 8065122105029396497}
-  - component: {fileID: 1315655980432551887}
+  - component: {fileID: -1183834332778261383}
   m_Layer: 0
   m_Name: IntermediateZombie
   m_TagString: Untagged
@@ -91,7 +91,7 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 1.25, z: 0}
---- !u!114 &1315655980432551887
+--- !u!114 &-1183834332778261383
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -103,63 +103,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c32db2d3faf3f9c4bbe8b7a27d69889c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IntermediateZombie
-  maxHealth: 100
+  maxHealth: 1200
   isUnkillable: 0
   maxPoise: 60
   poiseRecoveryDelay: 3
   poiseRecoveryPerSecond: 20
-  movementSpeed: 2.2
-  gravity: -20
+  movementSpeed: 4
+  gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 240
-  useTankControls: 0
+  rotationSpeed: 210
+  useTankControls: 1
   detectionRange: 8
   combatDetectionRange: 14
   lastKnownSearchDuration: 2.5
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
-    min: 20
-    max: 30
-  minimumAggressionPercent: 10
-  maximumAggressionPercent: 100
+    min: 50
+    max: 70
+  minimumAggressionPercent: 25
+  maximumAggressionPercent: 95
   aggressionChangeRatePerSecond:
-    min: 6
-    max: 10
+    min: 2
+    max: 5
   aggressionChangeInterval:
-    min: 1.5
-    max: 3
-  playerBackTurnedAggressionGain: 12
-  outOfCameraAggressionLoss: 16
-  cameraVisibilityPadding: 3
-  damageTakenAggressionReduction: 12
-  lowEnemyHealthPercent: 0.35
-  lowEnemyHealthDecreaseChance: 0.75
-  lowPlayerHealthPercent: 0.3
-  lowPlayerHealthAggressionGainPerSecond: 14
-  highPlayerHealthPercent: 0.75
-  highPlayerHealthAggressionLossPerSecond: 10
+    min: 5
+    max: 10
+  playerBackTurnedAggressionGain: 2
+  outOfCameraAggressionLoss: -5
+  cameraVisibilityPadding: 1
+  damageTakenAggressionReduction: 10
+  lowEnemyHealthPercent: 0.2
+  lowEnemyHealthDecreaseChance: 0.5
+  lowPlayerHealthPercent: 0.6
+  lowPlayerHealthAggressionGainPerSecond: 15
+  highPlayerHealthPercent: 0.9
+  highPlayerHealthAggressionLossPerSecond: 20
   retreatsWhenPlayerTakesEnemyDamage: 1
   gainsAggressionWhenPlayerTakesEnemyDamage: 0
   playerDamagedAggressionPercent: 0.2
   playerDamagedAggressionFlatChange: 5
   decisionInterval:
-    min: 0.3
-    max: 0.7
+    min: 2
+    max: 4
   repositionDuration:
-    min: 0.3
-    max: 0.8
+    min: 2
+    max: 5
   repositionSpeedMultiplier:
-    min: 0.25
-    max: 0.55
-  chaseCommitmentDuration: 5
-  chaseCommitmentCooldown: 2
-  comboContinuationChance: 65
-  staggerDuration: 0.8
-  staggerKnockbackForce: 8
+    min: 0.75
+    max: 1
+  chaseCommitmentDuration: 6
+  chaseCommitmentCooldown: 4
+  comboContinuationChance: 85
+  staggerDuration: 1
+  staggerKnockbackForce: 0.5
   staggerKnockbackDuration: 0.2
   canBeLaunched: 1
   canBeJuggled: 1
-  wallSplatMinimumSpeed: 10
+  wallSplatMinimumSpeed: 15
   wallSplatStunDuration: 1
   wallSplatLayers:
     serializedVersion: 2
@@ -169,6 +169,10 @@ MonoBehaviour:
   heavyComboSelectionChance: 35
   attackCombo:
   - attackName: Zombie Strike 1
+    canStartAttack: 1
+    openingWeight: 100
+    continuationChance: 65
+    continuations: []
     isProjectileAttack: 0
     damage: 20
     maximumRange: 1.5
@@ -180,6 +184,10 @@ MonoBehaviour:
     knockbackForce: 3
     knockbackDuration: 0.12
   - attackName: Zombie Strike 2
+    canStartAttack: 1
+    openingWeight: 100
+    continuationChance: 65
+    continuations: []
     isProjectileAttack: 0
     damage: 20
     maximumRange: 1.5
@@ -191,6 +199,10 @@ MonoBehaviour:
     knockbackForce: 3
     knockbackDuration: 0.12
   - attackName: Zombie Strike 3
+    canStartAttack: 1
+    openingWeight: 100
+    continuationChance: 65
+    continuations: []
     isProjectileAttack: 0
     damage: 20
     maximumRange: 1.5
@@ -202,6 +214,10 @@ MonoBehaviour:
     knockbackForce: 3
     knockbackDuration: 0.12
   - attackName: Zombie Heavy 1
+    canStartAttack: 1
+    openingWeight: 100
+    continuationChance: 65
+    continuations: []
     isProjectileAttack: 0
     damage: 32
     maximumRange: 1.8
@@ -213,6 +229,10 @@ MonoBehaviour:
     knockbackForce: 5
     knockbackDuration: 0.2
   - attackName: Zombie Heavy 2
+    canStartAttack: 1
+    openingWeight: 100
+    continuationChance: 65
+    continuations: []
     isProjectileAttack: 0
     damage: 38
     maximumRange: 1.9

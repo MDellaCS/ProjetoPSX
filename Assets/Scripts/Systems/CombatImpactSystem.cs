@@ -345,7 +345,7 @@ public class CombatImpactSystem : MonoBehaviour
 
     private static Transform GetCombatantRoot(Transform transform)
     {
-        BaseEnemy enemy = transform.GetComponentInParent<BaseEnemy>();
+        EnemyBase enemy = transform.GetComponentInParent<EnemyBase>();
         if (enemy != null)
             return enemy.transform;
 

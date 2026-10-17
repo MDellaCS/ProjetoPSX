@@ -18,8 +18,10 @@ public class EnemyDirector : MonoBehaviour
     [Tooltip("Tempo que um inimigo espera apos terminar ou interromper seu ataque antes de poder reservar outra vaga.")]
     [Min(0f)] [SerializeField] private float attackerReentryCooldown = 1.25f;
 
-    private readonly HashSet<BaseEnemy> activeAttackers = new();
-    private readonly Dictionary<BaseEnemy, float> reentryCooldowns = new();
+    private readonly HashSet<EnemyBase> activeAttackers = new();
+    private readonly Dictionary<EnemyBase, float> reentryReadyAt = new();
+    private readonly List<EnemyBase> releasedEnemies = new();
+    private readonly List<EnemyBase> expiredCooldowns = new();
 
     public static bool IsControllingAttackTurns =>
         activeDirector != null && activeDirector.controlAttackTurns;
@@ -41,16 +43,16 @@ public class EnemyDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// Chamado pelo BaseEnemy imediatamente antes de abrir um novo combo.
+    /// Chamado pelo EnemyBase imediatamente antes de abrir um novo combo.
     /// Sem EnemyDirector ativo, a IA mantem o comportamento normal.
     /// </summary>
-    public static bool RequestAttackTurn(BaseEnemy enemy)
+    public static bool RequestAttackTurn(EnemyBase enemy)
     {
         return activeDirector == null ||
             activeDirector.TryReserveAttackTurn(enemy);
     }
 
-    private bool TryReserveAttackTurn(BaseEnemy enemy)
+    private bool TryReserveAttackTurn(EnemyBase enemy)
     {
         if (!controlAttackTurns || enemy == null)
             return true;
@@ -60,8 +62,8 @@ public class EnemyDirector : MonoBehaviour
         if (activeAttackers.Contains(enemy))
             return true;
 
-        if (reentryCooldowns.TryGetValue(enemy, out float cooldown) &&
-            cooldown > 0f)
+        if (reentryReadyAt.TryGetValue(enemy, out float readyAt) &&
+            Time.time < readyAt)
         {
             return false;
         }
@@ -77,42 +79,33 @@ public class EnemyDirector : MonoBehaviour
     {
         if (activeAttackers.Count > 0)
         {
-            List<BaseEnemy> releasedEnemies = new();
-            foreach (BaseEnemy enemy in activeAttackers)
+            releasedEnemies.Clear();
+            foreach (EnemyBase enemy in activeAttackers)
             {
                 if (enemy == null || enemy.IsDead || !enemy.IsInAttackSequence)
                     releasedEnemies.Add(enemy);
             }
 
-            foreach (BaseEnemy enemy in releasedEnemies)
+            foreach (EnemyBase enemy in releasedEnemies)
             {
                 activeAttackers.Remove(enemy);
                 if (enemy != null && attackerReentryCooldown > 0f)
-                    reentryCooldowns[enemy] = attackerReentryCooldown;
+                    reentryReadyAt[enemy] = Time.time + attackerReentryCooldown;
             }
         }
 
-        if (reentryCooldowns.Count == 0)
+        if (reentryReadyAt.Count == 0)
             return;
 
-        List<BaseEnemy> expiredCooldowns = new();
-        List<KeyValuePair<BaseEnemy, float>> updatedCooldowns = new();
-        foreach (KeyValuePair<BaseEnemy, float> pair in reentryCooldowns)
+        expiredCooldowns.Clear();
+        foreach (KeyValuePair<EnemyBase, float> pair in reentryReadyAt)
         {
-            BaseEnemy enemy = pair.Key;
-            float remaining = pair.Value - Time.deltaTime;
-            if (enemy == null || enemy.IsDead || remaining <= 0f)
+            EnemyBase enemy = pair.Key;
+            if (enemy == null || enemy.IsDead || Time.time >= pair.Value)
                 expiredCooldowns.Add(enemy);
-            else
-                updatedCooldowns.Add(
-                    new KeyValuePair<BaseEnemy, float>(enemy, remaining)
-                );
         }
 
-        foreach (KeyValuePair<BaseEnemy, float> pair in updatedCooldowns)
-            reentryCooldowns[pair.Key] = pair.Value;
-
-        foreach (BaseEnemy enemy in expiredCooldowns)
-            reentryCooldowns.Remove(enemy);
+        foreach (EnemyBase enemy in expiredCooldowns)
+            reentryReadyAt.Remove(enemy);
     }
 }

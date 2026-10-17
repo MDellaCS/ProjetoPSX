@@ -1077,7 +1077,7 @@ public class PlayerMovement : MonoBehaviour
         if (hit == null)
             return;
 
-        BaseEnemy enemy = hit.collider.GetComponentInParent<BaseEnemy>();
+        EnemyBase enemy = hit.collider.GetComponentInParent<EnemyBase>();
         if (enemy == null || enemy.IsDead || !IsLandingOnEnemyTop(enemy))
             return;
 
@@ -1096,7 +1096,7 @@ public class PlayerMovement : MonoBehaviour
         horizontalVelocity = pushDirection.normalized * enemyHeadPushSpeed;
     }
 
-    private bool IsLandingOnEnemyTop(BaseEnemy enemy)
+    private bool IsLandingOnEnemyTop(EnemyBase enemy)
     {
         // Colisoes laterais e por baixo tambem chamam
         // OnControllerColliderHit. So tratamos o inimigo como "chao invalido"

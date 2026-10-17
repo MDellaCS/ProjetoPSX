@@ -100,7 +100,7 @@ public class EnemyProjectile : MonoBehaviour
         Transform hitTransform = hit.transform;
         return hitTransform.IsChildOf(transform) ||
             transform.IsChildOf(hitTransform) ||
-            hit.GetComponentInParent<BaseEnemy>() != null ||
+            hit.GetComponentInParent<EnemyBase>() != null ||
             (owner != null &&
              (hitTransform.IsChildOf(owner) || owner.IsChildOf(hitTransform)));
     }

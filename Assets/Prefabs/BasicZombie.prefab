@@ -43,6 +43,11 @@ GameObject:
   - component: {fileID: 7231791797390308556}
   - component: {fileID: 8065122105029396497}
   - component: {fileID: 2183351498342374004}
+  - component: {fileID: 7038528183464375128}
+  - component: {fileID: 485302232963280403}
+  - component: {fileID: 6292575565008901409}
+  - component: {fileID: 212785566711577276}
+  - component: {fileID: 6421883612428584792}
   m_Layer: 0
   m_Name: BasicZombie
   m_TagString: Untagged
@@ -103,33 +108,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96e9cc568d4048178f6aa0d0dfbb5c77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicZombie
-  maxHealth: 1200
-  isUnkillable: 0
-  maxPoise: 50
-  poiseRecoveryDelay: 3
-  poiseRecoveryPerSecond: 10
-  movementSpeed: 2
-  gravity: -60
-  terminalFallSpeed: 30
-  rotationSpeed: 70
-  useTankControls: 1
+--- !u!114 &7038528183464375128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5ecf5f43e7b4edcb2a3b5e2f3129441, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
   detectionRange: 8
   combatDetectionRange: 14
   lastKnownSearchDuration: 2.5
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
     min: 25
-    max: 50
-  minimumAggressionPercent: 10
+    max: 85
+  minimumAggressionPercent: 25
   maximumAggressionPercent: 85
   aggressionChangeRatePerSecond:
     min: 2
     max: 5
   aggressionChangeInterval:
-    min: 5
-    max: 10
+    min: 3
+    max: 6
   playerBackTurnedAggressionGain: 0
-  outOfCameraAggressionLoss: -5
+  outOfCameraAggressionLoss: 0
   cameraVisibilityPadding: 1
   damageTakenAggressionReduction: 0
   lowEnemyHealthPercent: 0
@@ -140,36 +147,43 @@ MonoBehaviour:
   highPlayerHealthAggressionLossPerSecond: 0
   retreatsWhenPlayerTakesEnemyDamage: 0
   gainsAggressionWhenPlayerTakesEnemyDamage: 0
-  playerDamagedAggressionPercent: 0.2
-  playerDamagedAggressionFlatChange: 5
+  playerDamagedAggressionPercent: 0
+  playerDamagedAggressionFlatChange: 0
   decisionInterval:
-    min: 2
+    min: 3
     max: 6
   repositionDuration:
-    min: 4
-    max: 5
+    min: 2
+    max: 4
   repositionSpeedMultiplier:
     min: 0.25
     max: 0.5
   chaseCommitmentDuration: 5
   chaseCommitmentCooldown: 5
-  comboContinuationChance: 50
-  staggerDuration: 1
-  staggerKnockbackForce: 0.5
-  staggerKnockbackDuration: 0.2
-  canBeLaunched: 1
-  canBeJuggled: 1
-  wallSplatMinimumSpeed: 12
-  wallSplatStunDuration: 3
-  wallSplatLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  damageFlashDuration: 0.15
-  debugLabelHeight: 2.4
-  attackCombo:
-  - attackName: Zombie Strike 1
+--- !u!114 &485302232963280403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 626817c8c5f64627a702307337b9c54f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
+  useDefaultAttacksWhenEmpty: 1
+  attacks:
+  - attackName: Z1
+    attackId: 
+    canStartAttack: 1
+    openingWeight: 0
+    continuationChance: 0
+    continuations:
+    - nextAttackIndex: 0
+      selectionWeight: 0
     isProjectileAttack: 0
-    damage: 20
+    damage: 10
     maximumRange: 1.5
     windupDuration: 1.5
     activeDuration: 0.1
@@ -177,29 +191,65 @@ MonoBehaviour:
     hitboxDistance: 0.5
     hitboxRadius: 1
     knockbackForce: 3
-    knockbackDuration: 0.12
-  - attackName: Zombie Strike 2
-    isProjectileAttack: 0
-    damage: 20
-    maximumRange: 1.5
-    windupDuration: 1
-    activeDuration: 0.1
-    recoveryDuration: 1
-    hitboxDistance: 0.5
-    hitboxRadius: 1
-    knockbackForce: 3
-    knockbackDuration: 0.12
-  - attackName: Zombie Strike 3
-    isProjectileAttack: 0
-    damage: 20
-    maximumRange: 1.5
-    windupDuration: 0.5
-    activeDuration: 0.1
-    recoveryDuration: 1
-    hitboxDistance: 0.5
-    hitboxRadius: 1
-    knockbackForce: 3
-    knockbackDuration: 0.12
+    knockbackDuration: 0.25
+  maximumAttacksPerSequence: 5
+--- !u!114 &6292575565008901409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
+  movementSpeed: 2
+  gravity: -60
+  terminalFallSpeed: 30
+  rotationSpeed: 70
+  useTankControls: 1
+  canBeLaunched: 1
+  canBeJuggled: 1
+  wallSplatMinimumSpeed: 10
+  wallSplatStunDuration: 3
+  wallSplatLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &212785566711577276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
+  maxHealth: 800
+  isUnkillable: 0
+  maxPoise: 50
+  poiseRecoveryDelay: 3
+  poiseRecoveryPerSecond: 10
+  staggerDuration: 1
+  staggerKnockbackForce: 8
+  staggerKnockbackDuration: 0.2
+  damageFlashDuration: 0.15
+--- !u!114 &6421883612428584792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e231fc2ed4184c2489929e6187df4fb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDebug
 --- !u!1001 &8321301459396382457
 PrefabInstance:
   m_ObjectHideFlags: 0

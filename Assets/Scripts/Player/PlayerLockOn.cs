@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Controla um unico alvo travado pelo player. O alvo e escolhido entre os
-/// BaseEnemy ativos, pode ser alternado pelo scroll e recebe um marcador verde.
+/// EnemyBase ativos, pode ser alternado pelo scroll e recebe um marcador verde.
 /// </summary>
 public class PlayerLockOn : MonoBehaviour
 {
@@ -15,12 +15,12 @@ public class PlayerLockOn : MonoBehaviour
     [Min(1f)] [SerializeField] private float markerScreenSize = 16f;
     [SerializeField] private Color markerColor = new(.15f, 1f, .15f, 1f);
 
-    private readonly List<BaseEnemy> candidates = new();
-    private BaseEnemy lockedEnemy;
+    private readonly List<EnemyBase> candidates = new();
+    private EnemyBase lockedEnemy;
     private static Texture2D markerTexture;
 
     public bool IsLockedOn => lockedEnemy != null && lockedEnemy.CanBeLockOnTarget;
-    public BaseEnemy LockedEnemy => IsLockedOn ? lockedEnemy : null;
+    public EnemyBase LockedEnemy => IsLockedOn ? lockedEnemy : null;
     public Transform LockedTarget => IsLockedOn ? lockedEnemy.transform : null;
     public Vector3 LockPoint => IsLockedOn
         ? GetEnemyCenter(lockedEnemy)
@@ -108,10 +108,10 @@ public class PlayerLockOn : MonoBehaviour
             return;
 
         Camera gameCamera = Camera.main;
-        BaseEnemy bestTarget = null;
+        EnemyBase bestTarget = null;
         float bestScore = float.MaxValue;
 
-        foreach (BaseEnemy candidate in candidates)
+        foreach (EnemyBase candidate in candidates)
         {
             float distance = Vector3.Distance(transform.position, candidate.transform.position);
             float score = distance;
@@ -168,9 +168,9 @@ public class PlayerLockOn : MonoBehaviour
     private void RefreshCandidates()
     {
         candidates.Clear();
-        BaseEnemy[] enemies = Object.FindObjectsByType<BaseEnemy>();
+        EnemyBase[] enemies = Object.FindObjectsByType<EnemyBase>();
 
-        foreach (BaseEnemy enemy in enemies)
+        foreach (EnemyBase enemy in enemies)
         {
             if (enemy == null || !enemy.CanBeLockOnTarget ||
                 Vector3.Distance(transform.position, enemy.transform.position) >
@@ -190,7 +190,7 @@ public class PlayerLockOn : MonoBehaviour
         );
     }
 
-    private void SetLock(BaseEnemy enemy)
+    private void SetLock(EnemyBase enemy)
     {
         lockedEnemy = enemy;
     }
@@ -214,7 +214,7 @@ public class PlayerLockOn : MonoBehaviour
         }
     }
 
-    private static Vector3 GetEnemyCenter(BaseEnemy enemy)
+    private static Vector3 GetEnemyCenter(EnemyBase enemy)
     {
         Renderer enemyRenderer = enemy.GetComponentInChildren<Renderer>();
         if (enemyRenderer != null)
