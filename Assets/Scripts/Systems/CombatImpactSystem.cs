@@ -4,8 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Camada central de apresentacao para impactos de combate.
-/// Ela nao altera Time.timeScale: congela apenas os Animators envolvidos e
-/// solicita um impulso visual para a camera.
+/// Ela nao altera Time.timeScale: congela localmente a simulacao e os
+/// Animators dos envolvidos, sem parar a camera, HUD ou outros combatentes.
 /// </summary>
 [DisallowMultipleComponent]
 public class CombatImpactSystem : MonoBehaviour
@@ -13,7 +13,7 @@ public class CombatImpactSystem : MonoBehaviour
     [Serializable]
     public struct ImpactProfile
     {
-        [Tooltip("Tempo em segundos reais que os visuais dos envolvidos congelam.")]
+        [Tooltip("Tempo em segundos reais que o gameplay e os visuais dos envolvidos ficam congelados.")]
         [Min(0f)] public float hitstopDuration;
         [Tooltip("Deslocamento maximo da camera durante o impulso.")]
         [Min(0f)] public float cameraShakeDistance;
@@ -27,21 +27,28 @@ public class CombatImpactSystem : MonoBehaviour
         public float originalSpeed;
     }
 
+    private sealed class FrozenGameplay
+    {
+        public Transform combatantRoot;
+        public float restoreAt;
+    }
+
     private static CombatImpactSystem instance;
     private static readonly List<FrozenAnimator> frozenAnimators = new();
+    private static readonly List<FrozenGameplay> frozenGameplay = new();
 
     [Header("Player Attack Impact")]
     [SerializeField] private ImpactProfile lightAttackImpact = new ImpactProfile
     {
-        hitstopDuration = .018f,
-        cameraShakeDistance = .045f,
-        cameraShakeDuration = .055f
+        hitstopDuration = .005f,
+        cameraShakeDistance = .01f,
+        cameraShakeDuration = .015f
     };
     [SerializeField] private ImpactProfile heavyAttackImpact = new ImpactProfile
     {
-        hitstopDuration = .055f,
+        hitstopDuration = .2f,
         cameraShakeDistance = .16f,
-        cameraShakeDuration = .10f
+        cameraShakeDuration = .1f
     };
 
     [Header("Impact Sounds")]
@@ -126,8 +133,15 @@ public class CombatImpactSystem : MonoBehaviour
             }
 
             // LateUpdate vence qualquer presenter que ajuste Animator.speed
-            // durante Update, sem pausar fisica, input ou IA.
+            // durante Update enquanto o hitstop estiver ativo.
             frozen.animator.speed = 0f;
+        }
+
+        for (int index = frozenGameplay.Count - 1; index >= 0; index--)
+        {
+            FrozenGameplay frozen = frozenGameplay[index];
+            if (frozen.combatantRoot == null || now >= frozen.restoreAt)
+                frozenGameplay.RemoveAt(index);
         }
     }
 
@@ -139,6 +153,7 @@ public class CombatImpactSystem : MonoBehaviour
                 frozen.animator.speed = frozen.originalSpeed;
         }
         frozenAnimators.Clear();
+        frozenGameplay.Clear();
     }
 
     public static void ReportPlayerAttackImpact(
@@ -175,6 +190,22 @@ public class CombatImpactSystem : MonoBehaviour
         return frozenAnimators.Exists(
             frozen => frozen.animator == animator && now < frozen.restoreAt
         );
+    }
+
+    /// <summary>
+    /// Retorna se este participante esta em hitstop real. Sistemas de
+    /// movimento e combate devem interromper sua simulacao enquanto for true.
+    /// </summary>
+    public static bool IsGameplayFrozen(Component participant)
+    {
+        if (participant == null)
+            return false;
+
+        Transform combatantRoot = GetCombatantRoot(participant.transform);
+        FrozenGameplay frozen = frozenGameplay.Find(
+            entry => entry.combatantRoot == combatantRoot
+        );
+        return frozen != null && Time.unscaledTime < frozen.restoreAt;
     }
 
     public static void ReportEnemyAttackImpact(
@@ -222,6 +253,8 @@ public class CombatImpactSystem : MonoBehaviour
     {
         FreezePresentation(attacker, profile.hitstopDuration);
         FreezePresentation(target, profile.hitstopDuration);
+        FreezeGameplay(attacker, profile.hitstopDuration);
+        FreezeGameplay(target, profile.hitstopDuration);
 
         PlayImpactSound(attacker, target, sound);
 
@@ -286,5 +319,40 @@ public class CombatImpactSystem : MonoBehaviour
                 restoreAt = restoreAt
             });
         }
+    }
+
+    private static void FreezeGameplay(Transform participant, float duration)
+    {
+        if (participant == null || duration <= 0f)
+            return;
+
+        Transform combatantRoot = GetCombatantRoot(participant);
+        float freezeUntil = Time.unscaledTime + duration;
+        FrozenGameplay existing = frozenGameplay.Find(
+            entry => entry.combatantRoot == combatantRoot
+        );
+        if (existing != null)
+            existing.restoreAt = Mathf.Max(existing.restoreAt, freezeUntil);
+        else
+        {
+            frozenGameplay.Add(new FrozenGameplay
+            {
+                combatantRoot = combatantRoot,
+                restoreAt = freezeUntil
+            });
+        }
+    }
+
+    private static Transform GetCombatantRoot(Transform transform)
+    {
+        BaseEnemy enemy = transform.GetComponentInParent<BaseEnemy>();
+        if (enemy != null)
+            return enemy.transform;
+
+        PlayerHealth player = transform.GetComponentInParent<PlayerHealth>();
+        if (player != null)
+            return player.transform;
+
+        return transform.root;
     }
 }

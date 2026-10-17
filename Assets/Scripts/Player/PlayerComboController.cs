@@ -96,6 +96,9 @@ public class PlayerComboController : MonoBehaviour
 
     private void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         UpdatePauseTimer();
         ReadInput();
         UpdateContinuationWindow();

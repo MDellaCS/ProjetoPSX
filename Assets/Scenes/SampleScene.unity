@@ -16267,11 +16267,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatImpactSystem
   lightAttackImpact:
-    hitstopDuration: 0.018
-    cameraShakeDistance: 0.045
-    cameraShakeDuration: 0.055
+    hitstopDuration: 0.005
+    cameraShakeDistance: 0.01
+    cameraShakeDuration: 0.015
   heavyAttackImpact:
-    hitstopDuration: 0.055
+    hitstopDuration: 0.2
     cameraShakeDistance: 0.16
     cameraShakeDuration: 0.1
   lightAttackHitSound:
@@ -16314,16 +16314,25 @@ MonoBehaviour:
       time: 0
       value: 1
       inSlope: 0
-      outSlope: -1
+      outSlope: 0
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
+      time: 0.40967947
+      value: 0.00996333
+      inSlope: -1.3316324
+      outSlope: -1.3316324
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.14361747
+      outWeight: 0.15239821
+    - serializedVersion: 3
       time: 1
       value: 0
       inSlope: -1
-      outSlope: 0
+      outSlope: -1
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -16807,6 +16816,7 @@ SceneRoots:
   - {fileID: 330585546}
   - {fileID: 1026784254}
   - {fileID: 2015301418}
+  - {fileID: 1841670994}
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 825647889}
@@ -16818,4 +16828,3 @@ SceneRoots:
   - {fileID: 1120693878}
   - {fileID: 860775662}
   - {fileID: 1836985210}
-  - {fileID: 1841670994}

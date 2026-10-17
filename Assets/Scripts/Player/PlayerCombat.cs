@@ -141,6 +141,9 @@ public class PlayerCombat : MonoBehaviour
 
     void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         UpdateDebugCombatOverride();
         UpdateCombatStatus();
 

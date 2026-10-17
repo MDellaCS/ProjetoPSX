@@ -245,7 +245,8 @@ public class BaseEnemy : MonoBehaviour
 
     private void Update()
     {
-        if (hasDied || isWaitingForEncounter)
+        if (hasDied || isWaitingForEncounter ||
+            CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
         ResolvePlayer();
@@ -1294,7 +1295,7 @@ public class BaseEnemy : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmos()
+    protected virtual void OnDrawGizmos()
     {
         if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible)
             return;

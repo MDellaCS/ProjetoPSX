@@ -41,6 +41,9 @@ public class PlayerHealth : MonoBehaviour
 
     void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         UpdateDebugShortcuts();
 
         if (playerState.IsStaggered())

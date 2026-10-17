@@ -31,6 +31,9 @@ public class PlayerInputBuffer : MonoBehaviour
 
     private void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         CaptureInputsForCurrentFrame();
     }
 

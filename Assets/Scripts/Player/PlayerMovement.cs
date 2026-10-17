@@ -171,6 +171,9 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         enemyGroundContactTimer = Mathf.Max(
             0f,
             enemyGroundContactTimer - Time.deltaTime

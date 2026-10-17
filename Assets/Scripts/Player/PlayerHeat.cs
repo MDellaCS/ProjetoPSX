@@ -133,6 +133,9 @@ public class PlayerHeat : MonoBehaviour
 
     private void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         if (playerState == null || playerState.IsDead()) return;
         UpdateDebugHeatInput();
 

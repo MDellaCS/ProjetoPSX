@@ -59,6 +59,9 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private void Update()
     {
+        if (CombatImpactSystem.IsGameplayFrozen(this))
+            return;
+
         RestoreExpiredEnemyCollisions();
 
         bool isSliding = playerState != null && playerState.IsSliding();
