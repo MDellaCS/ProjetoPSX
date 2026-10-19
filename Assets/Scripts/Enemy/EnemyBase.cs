@@ -14,7 +14,7 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyDebug))]
 public class EnemyBase : MonoBehaviour
 {
-    public enum State { Idle, Combat, Windup, Active, Recovery, Staggered }
+    public enum State { Idle, Combat, Windup, Active, Recovery, Guarding, Dodging, Taunting, Staggered }
 
     private static readonly HashSet<EnemyBase> activeEnemies = new();
     public static event Action<EnemyBase> EnemyDied;
@@ -26,6 +26,9 @@ public class EnemyBase : MonoBehaviour
     private EnemyMovement movement;
     private EnemyHealth health;
     private EnemyDebug debugView;
+    private EnemyGuard guard;
+    private EnemyDodge dodge;
+    private EnemyTaunt taunt;
     private CharacterController characterController;
     private bool initialized;
 
@@ -35,13 +38,16 @@ public class EnemyBase : MonoBehaviour
         CurrentState == State.Active || CurrentState == State.Recovery;
     public bool CanBeLaunched => movement != null && movement.CanBeLaunched && !IsDead;
     public bool IsLaunched => movement != null && movement.IsLaunched;
+    public bool IsPushed => movement != null && movement.IsPushed;
     public bool CanBeLockOnTarget => isActiveAndEnabled && !IsDead &&
         brain != null && !brain.IsWaitingForEncounter;
     public int CurrentHealth => health != null ? health.CurrentHealth : 0;
     public int MaxHealth => health != null ? health.MaxHealth : 0;
     public float CurrentAggressionPercent => brain != null ? brain.CurrentAggressionPercent : 0f;
+    public float DirectorWeight => brain != null ? brain.DirectorWeight : 100f;
     public Transform Target => brain != null ? brain.Target : null;
     public bool IsSearchingLastKnownPosition => brain != null && brain.IsSearchingLastKnownPosition;
+    public bool IsGuarding => guard != null && guard.IsGuarding;
     /// <summary>
     /// Centro de combate do inimigo. Hitboxes e ataques sem um ponto visual
     /// explicito devem partir daqui, nao dos pes do Transform raiz.
@@ -90,11 +96,17 @@ public class EnemyBase : MonoBehaviour
         health = GetOrAdd<EnemyHealth>();
         debugView = GetOrAdd<EnemyDebug>();
         characterController = GetOrAdd<CharacterController>();
+        guard = GetComponent<EnemyGuard>();
+        dodge = GetComponent<EnemyDodge>();
+        taunt = GetComponent<EnemyTaunt>();
 
         movement.Initialize(this, health);
         attacks.Initialize(this, brain, CreateDefaultAttacks());
-        health.Initialize(this, brain, movement, attacks);
-        brain.Initialize(this, movement, attacks, health);
+        health.Initialize(this, brain, movement, attacks, guard, dodge);
+        brain.Initialize(this, movement, attacks, health, guard);
+        guard?.Initialize(this, brain, health, attacks, movement);
+        dodge?.Initialize(this, brain, movement, attacks);
+        taunt?.Initialize(this, brain, movement);
         debugView.Initialize(this, brain, attacks, movement, health);
         initialized = true;
     }
@@ -106,7 +118,23 @@ public class EnemyBase : MonoBehaviour
     }
 
     private void OnEnable() => activeEnemies.Add(this);
-    private void OnDisable() => activeEnemies.Remove(this);
+    private void OnDisable()
+    {
+        activeEnemies.Remove(this);
+        EnemyDirector.ReleaseEnemy(this);
+    }
+
+    internal static IEnumerable<EnemyBase> ActiveEnemies => activeEnemies;
+    internal bool HasAvailableOpening => attacks != null &&
+        attacks.HasAvailableOpening();
+    internal void CancelGuardForAirborne() => guard?.CancelForAirborne();
+    internal void CancelGuardForDodge() => guard?.CancelForDodge();
+    internal void EndStaggerForDodge() => health?.EndStaggerForDodge();
+    internal void CancelDodge() => dodge?.CancelDodge();
+    internal void CancelTaunt() => taunt?.CancelTaunt();
+    internal bool TryAvoidPlayerAttack(float attackRadius,
+        int incomingDamage = 0) => dodge != null &&
+        dodge.TryAvoidPlayerAttack(attackRadius, incomingDamage);
 
     private void Update()
     {
@@ -116,11 +144,15 @@ public class EnemyBase : MonoBehaviour
 
         brain.ResolvePlayer();
         brain.TickAggression();
+        guard?.TickCooldown();
+        dodge?.TickTimers();
+        taunt?.TickCooldown();
         health.TickPoise();
         UpdateVerticalMovement(movement);
         brain.TickCommitment();
 
-        if (movement.IsLaunched || movement.IsPushed)
+        if ((movement.IsLaunched || movement.IsPushed) &&
+            CurrentState != State.Dodging)
         {
             movement.Move(Vector3.zero);
             return;
@@ -141,18 +173,42 @@ public class EnemyBase : MonoBehaviour
                 movement.Move(Vector3.zero);
                 break;
             case State.Active:
-                movement.FaceTarget();
-                attacks.TickActive();
-                movement.Move(Vector3.zero);
+                EnemyAttackData activeAttack = attacks.CurrentAttack;
+                if (FaceTargetDuringActive(activeAttack))
+                    movement.FaceTarget();
+                movement.Move(GetActiveMovementVelocity(activeAttack));
+                if (CurrentState == State.Active)
+                    attacks.TickActive();
                 break;
             case State.Recovery:
                 attacks.TickRecovery();
                 if (CurrentState == State.Recovery)
                     movement.Move(Vector3.zero);
                 break;
-            case State.Staggered:
-                health.TickStagger();
+            case State.Guarding:
+                guard?.TickGuard();
+                movement.Move(guard != null
+                    ? guard.GetGuardRetreatVelocity() : Vector3.zero,
+                    rotateTankControlsTowardMovement: false);
+                break;
+            case State.Dodging:
+                movement.Move(dodge != null
+                    ? dodge.TickDodge() : Vector3.zero,
+                    rotateTankControlsTowardMovement: false);
+                break;
+            case State.Taunting:
+                taunt?.TickTaunt();
+                if (CurrentState == State.Taunting)
+                    movement.SetVerticalVelocity(0f);
                 movement.Move(Vector3.zero);
+                break;
+            case State.Staggered:
+                guard?.TickStaggerGuard();
+                if (CurrentState == State.Staggered)
+                {
+                    health.TickStagger();
+                    movement.Move(Vector3.zero);
+                }
                 break;
         }
     }
@@ -164,6 +220,9 @@ public class EnemyBase : MonoBehaviour
     protected virtual bool TryChooseSpecialCombatAction() => false;
     protected virtual void OnAttackStarted(EnemyAttackData attack) { }
     protected virtual void OnAttackActiveStarted(EnemyAttackData attack) { }
+    protected virtual bool FaceTargetDuringActive(EnemyAttackData attack) => true;
+    protected virtual Vector3 GetActiveMovementVelocity(EnemyAttackData attack) =>
+        Vector3.zero;
     protected virtual bool ExecuteAttack(EnemyAttackData attack) =>
         attacks.ExecuteMeleeAttack(attack);
 
@@ -176,9 +235,12 @@ public class EnemyBase : MonoBehaviour
         OnAttackActiveStarted(attack);
     internal bool PerformAttack(EnemyAttackData attack) => ExecuteAttack(attack);
 
-    public void TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
-        bool fromPlayerAttack = false) =>
-        health.TakeDamage(damage, attackerPosition, poiseDamage, fromPlayerAttack);
+    public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
+        bool fromPlayerAttack = false,
+        PlayerAttackType playerAttackType = PlayerAttackType.None,
+        float playerAttackRadius = 0f) =>
+        health.TakeDamage(damage, attackerPosition, poiseDamage,
+            fromPlayerAttack, playerAttackType, playerAttackRadius);
     public void ApplyStagger(Vector3 attackerPosition) =>
         health.ApplyStagger(attackerPosition);
     public void ApplyLaunchUp(float initialSpeed, float gravity) =>

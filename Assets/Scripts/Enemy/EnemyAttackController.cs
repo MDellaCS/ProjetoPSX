@@ -40,6 +40,18 @@ public sealed class EnemyAttackController : MonoBehaviour
         attacks != null && index >= 0 && index < attacks.Length
             ? attacks[index] : null;
 
+    public bool HasAvailableOpening()
+    {
+        if (brain == null || brain.Target == null || attacks == null)
+            return false;
+
+        for (int i = 0; i < attacks.Length; i++)
+            if (IsValidOpening(i))
+                return true;
+
+        return false;
+    }
+
     public int SelectOpeningAttackIndex()
     {
         if (brain.Target == null || attacks == null)

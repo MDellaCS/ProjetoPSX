@@ -266,9 +266,9 @@ public class CombatImpactSystem : MonoBehaviour
         Vector3 attackDirection = target.position - origin;
         attackDirection.y = 0f;
 
-        if (CameraFollow.Instance != null)
+        if (CameraEffectStack.Instance != null)
         {
-            CameraFollow.Instance.RequestImpactShake(
+            CameraEffectStack.Instance.AddDirectionalImpulse(
                 attackDirection,
                 profile.cameraShakeDistance,
                 profile.cameraShakeDuration,

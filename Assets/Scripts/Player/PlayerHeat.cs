@@ -94,7 +94,7 @@ public class PlayerHeat : MonoBehaviour
     [Min(0f)] public float burnBlastPushDuration = .25f;
 
     [Header("Debug")]
-    [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes.")]
+    [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes. Esses atalhos alteram apenas o Heat e nao geram Superheat.")]
     [SerializeField] private bool debugHeatInputEnabled = true;
     [Tooltip("Quantidade de Heat adicionada ou removida por segundo pelos atalhos de debug.")]
     [Min(0f)] [SerializeField] private float debugHeatPerSecond = 35f;
@@ -486,7 +486,15 @@ public class PlayerHeat : MonoBehaviour
         debugHeatAccumulator += debugHeatPerSecond * Time.deltaTime;
         float amount = debugHeatAccumulator;
         debugHeatAccumulator = 0f;
-        if (direction > 0f) AddHeat(amount); else RemoveHeat(amount);
+        // O controle de Heat isolado nao usa AddHeat: ultrapassar Max Heat
+        // por F5 nao deve gerar Superheat nem iniciar Burn. F8 testa esse
+        // fluxo completo separadamente.
+        currentHeat = Mathf.Clamp(
+            currentHeat + amount * direction,
+            MinHeat,
+            maxHeat
+        );
+        ResetHeatCoolingRamp();
     }
 
     private void CheckColdDeath()

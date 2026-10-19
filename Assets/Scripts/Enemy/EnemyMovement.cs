@@ -56,6 +56,8 @@ public sealed class EnemyMovement : MonoBehaviour
     public bool CanBeLaunched => canBeLaunched;
     public bool IsLaunched => isLaunched;
     public bool IsPushed => isPushed;
+    /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
+    public bool IsGrounded => controller != null && controller.isGrounded;
     public float VerticalVelocity => verticalVelocity;
 
     internal void Initialize(EnemyBase enemy, EnemyHealth enemyHealth)
@@ -133,6 +135,15 @@ public sealed class EnemyMovement : MonoBehaviour
 
     public void SetVerticalVelocity(float value) => verticalVelocity = value;
 
+    internal void StopForTaunt()
+    {
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+        playerHeadPushVelocity = Vector3.zero;
+        playerHeadPushTimer = 0f;
+        CancelSlideLaunchHorizontalImpulse();
+    }
+
     public void FaceTarget()
     {
         if (useTankControls || brain.Target == null) return;
@@ -163,6 +174,9 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         if (!canBeLaunched || owner.IsDead) return;
         attacks.CancelAttack();
+        owner.CancelDodge();
+        owner.CancelTaunt();
+        owner.CancelGuardForAirborne();
         owner.CurrentState = EnemyBase.State.Combat;
         brain.CancelReposition();
         knockbackVelocity = Vector3.zero;
@@ -190,6 +204,17 @@ public sealed class EnemyMovement : MonoBehaviour
         hasSlideLaunchHorizontalImpulse = false;
     }
 
+    internal void PrepareForDodge()
+    {
+        // A retirada precisa vencer deslocamentos horizontais antigos, mas a
+        // velocidade vertical e o Launch Up continuam existindo no ar.
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+        playerHeadPushVelocity = Vector3.zero;
+        playerHeadPushTimer = 0f;
+        CancelSlideLaunchHorizontalImpulse();
+    }
+
     public void ApplyPush(Vector3 attackerPosition, float force, float duration)
     {
         if (!canBeLaunched || owner.IsDead || force <= 0f || duration <= 0f)
@@ -199,6 +224,8 @@ public sealed class EnemyMovement : MonoBehaviour
         if (direction.sqrMagnitude <= .001f)
             direction = transform.forward;
         attacks.CancelAttack();
+        owner.CancelDodge();
+        owner.CancelTaunt();
         owner.CurrentState = EnemyBase.State.Combat;
         brain.CancelReposition();
         knockbackVelocity = Vector3.zero;

@@ -80,10 +80,16 @@ public sealed class EnemyBrain : MonoBehaviour
     [Tooltip("Espera apos um compromisso de perseguir ou atacar terminar.")]
     [Min(0f)] [SerializeField] private float chaseCommitmentCooldown = 2f;
 
+    [Header("Enemy Director")]
+    [Tooltip("Quantidade do orcamento de 100 pontos ocupada por este inimigo quando ele se torna Lead. Pesos menores permitem mais inimigos atacando ao mesmo tempo.")]
+    [Range(1f, 100f)] [SerializeField] private float directorWeight = 30f;
+
     private EnemyBase owner;
     private EnemyMovement movement;
     private EnemyAttackController attacks;
     private EnemyHealth health;
+    private EnemyGuard guard;
+    private EnemyTaunt taunt;
     private Transform target;
     private PlayerHeat playerHeat;
     private PlayerMovement playerMovement;
@@ -109,6 +115,9 @@ public sealed class EnemyBrain : MonoBehaviour
     public bool IsWaitingForEncounter => isWaitingForEncounter;
     public bool IsEncounterEngaged => isEncounterEngaged;
     public float CurrentAggressionPercent => currentAggressionPercent;
+    public float EffectiveAggressionPercent => Mathf.Clamp(
+        currentAggressionPercent + EnemyDirector.GetAggressionModifier(owner),
+        minimumAggressionPercent, maximumAggressionPercent);
     public float AggressionChangeTimer => aggressionChangeTimer;
     public float CommitmentTimer => commitmentTimer;
     public float CommitmentCooldownTimer => commitmentCooldownTimer;
@@ -119,14 +128,18 @@ public sealed class EnemyBrain : MonoBehaviour
     public float CurrentAggressionVelocity => GetCurrentAggressionVelocity();
     public bool IsPlayerBackTurned => IsPlayerBackTurnedToEnemy();
     public bool IsCameraVisible => IsInsideCameraVisibilityPadding();
+    public float DirectorWeight => Mathf.Clamp(directorWeight, 1f, 100f);
 
     internal void Initialize(EnemyBase enemy, EnemyMovement locomotion,
-        EnemyAttackController attackController, EnemyHealth enemyHealth)
+        EnemyAttackController attackController, EnemyHealth enemyHealth,
+        EnemyGuard enemyGuard)
     {
         owner = enemy;
         movement = locomotion;
         attacks = attackController;
         health = enemyHealth;
+        guard = enemyGuard;
+        taunt = GetComponent<EnemyTaunt>();
         ValidateBounds();
         initialAggression = Mathf.Clamp(initialAggressionPercent.RandomValue(),
             minimumAggressionPercent, maximumAggressionPercent);
@@ -195,13 +208,13 @@ public sealed class EnemyBrain : MonoBehaviour
         if (owner.CurrentState != EnemyBase.State.Combat)
             return;
 
-        if (commitmentTimer > 0f || isChasing)
-            movement.Move(DirectionToTarget() * repositionSpeed);
-        else if (repositionTimer > 0f)
+        if (repositionTimer > 0f)
         {
             repositionTimer -= Time.deltaTime;
             movement.Move(repositionDirection * repositionSpeed, false);
         }
+        else if (commitmentTimer > 0f || isChasing)
+            movement.Move(DirectionToTarget() * repositionSpeed);
         else
             movement.Move(Vector3.zero);
     }
@@ -211,20 +224,29 @@ public sealed class EnemyBrain : MonoBehaviour
         decisionTimer = Mathf.Max(.01f, decisionInterval.RandomValue());
         if (owner.ChooseSpecialCombatAction())
             return;
+        if (guard != null && guard.TryStartGuardFromDecision())
+            return;
+        if (taunt != null && taunt.TryStartFromDecision())
+            return;
         int attackIndex = attacks.SelectOpeningAttackIndex();
-        float aggression = currentAggressionPercent / 100f;
+        float aggression = EffectiveAggressionPercent / 100f;
         if (commitmentTimer > 0f)
         {
             if (attackIndex >= 0)
-                attacks.TryBeginAttack(attackIndex);
+            {
+                if (!attacks.TryBeginAttack(attackIndex))
+                    BeginSupportReposition();
+            }
             else
                 BeginChase(aggression);
             return;
         }
         if (attackIndex >= 0)
         {
-            TryStartCommitment();
-            attacks.TryBeginAttack(attackIndex);
+            if (attacks.TryBeginAttack(attackIndex))
+                TryStartCommitment();
+            else
+                BeginSupportReposition();
             return;
         }
 
@@ -239,6 +261,15 @@ public sealed class EnemyBrain : MonoBehaviour
             ? Vector3.Cross(Vector3.up, toTarget)
             : Vector3.Cross(toTarget, Vector3.up);
         BeginReposition(Random.value < .35f ? -toTarget : side);
+    }
+
+    private void BeginSupportReposition()
+    {
+        Vector3 towardTarget = DirectionToTarget();
+        Vector3 side = Random.value < .5f
+            ? Vector3.Cross(Vector3.up, towardTarget)
+            : Vector3.Cross(towardTarget, Vector3.up);
+        BeginReposition(Random.value < .25f ? -towardTarget : side);
     }
 
     private void BeginReposition(Vector3 direction)
@@ -331,6 +362,7 @@ public sealed class EnemyBrain : MonoBehaviour
 
     public void SetWaitingForEncounter()
     {
+        owner.CancelTaunt();
         isWaitingForEncounter = true;
         isEncounterEngaged = false;
         attacks.CancelAttack();

@@ -295,7 +295,7 @@ GameObject:
   - component: {fileID: 188150179}
   - component: {fileID: 188150178}
   - component: {fileID: 188150177}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -12781,6 +12781,8 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585550}
+  - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -12919,26 +12921,57 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 825647889}
-  offset: {x: 0, y: 0, z: -5.7}
-  lookAtOffset: {x: 0, y: 2, z: 0}
-  horizontalMouseSensitivity: 0.05
+  gameplayCamera: {fileID: 0}
+  gameplayCameraPriority: 10
+  distance: 5
+  initialYaw: 0
+  initialPitch: 22
+  minimumPitch: 22
+  maximumPitch: 22
+  horizontalMouseSensitivity: 0.04
+  verticalMouseSensitivity: 0
+  invertVerticalInput: 0
   lockCursorOnStart: 1
-  followSmoothTime: 0.1
-  deadZoneHorizontal: 0
-  deadZoneForward: 0
-  lookAheadDistance: 0
-  lookAheadSmoothTime: 0.01
-  combatDistanceMultiplier: 1.2
-  outOfCombatOffsetY: 1
-  combatOffsetY: 3.5
-  combatFramingSmoothTime: 0.75
-  lockOnFocusWeight: 0.22
-  collisionLayers:
+  followSmoothTime: 0.4
+  teleportSnapDistance: 12
+  cinemachineCollisionLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 64
   collisionRadius: 0.2
-  collisionPadding: 0.1
-  minimumDistanceFromFocus: 0.8
+  collisionInSmoothTime: 0.03
+  collisionOutSmoothTime: 0.5
+  baseFieldOfView: 60
+--- !u!114 &330585549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f8d1b6c2a7e43f0b9c5d6e1a2f37480, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraGameplayEffects
+  combatDistanceOffset: 2.75
+  combatPitchOffset: 10
+  combatBlendTime: 1
+  maximumHeatDistanceOffset: -5
+  maximumHeatPitchOffset: -8
+  maximumHeatFieldOfViewOffset: 25
+  heatBlendTime: 0.4
+--- !u!114 &330585550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a1e9f4c3b2d4e25a6f8091c7d8e5b42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraEffectStack
 --- !u!1001 &352632787
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14490,7 +14523,7 @@ MonoBehaviour:
     attackName: H1
     damage: 120
     windupDuration: 0.5
-    activeDuration: 0.1
+    activeDuration: 0.03
     recoveryDuration: 0.35
     attackDistance: 2
     attackRadius: 2
@@ -14748,7 +14781,7 @@ MonoBehaviour:
     attackName: Air H1
     damage: 120
     windupDuration: 0.55
-    activeDuration: 0.1
+    activeDuration: 0.03
     recoveryDuration: 0.25
     attackDistance: 0
     attackRadius: 2.1
@@ -16729,7 +16762,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1836985210}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Map
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -16843,9 +16876,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 526fd12853fd30943a7e37fba38816a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDirector
-  controlAttackTurns: 0
-  maximumConcurrentAttackers: 1
-  attackerReentryCooldown: 1.25
+  controlAttackTurns: 1
+  maximumLeadWeight: 100
+  halfWeightSpawnChance: 10
+  doubleWeightSpawnChance: 10
+  leadAggressionBonus: 100
+  supportAggressionPenalty: 100
+  proximityPriorityPerUnit: 8
+  undodgeableDamagePercentOfMaximumHealth: 50
+  airborneDodgeChanceMultiplier: 0.5
 --- !u!4 &1841670994
 Transform:
   m_ObjectHideFlags: 0

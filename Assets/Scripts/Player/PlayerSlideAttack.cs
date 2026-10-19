@@ -73,9 +73,12 @@ public class PlayerSlideAttack : MonoBehaviour
         if (!IsActive || playerCombat == null || controller == null)
             return;
 
+        Vector3 hitboxHalfExtents = GetHitboxHalfExtents();
+        float horizontalAttackRadius = new Vector2(
+            hitboxHalfExtents.x, hitboxHalfExtents.z).magnitude;
         Collider[] hits = Physics.OverlapBox(
             GetHitboxCenter(),
-            GetHitboxHalfExtents(),
+            hitboxHalfExtents,
             transform.rotation,
             Physics.DefaultRaycastLayers,
             QueryTriggerInteraction.Ignore
@@ -87,6 +90,12 @@ public class PlayerSlideAttack : MonoBehaviour
             if (enemy == null || !enemy.CanBeLaunched ||
                 enemiesLaunchedThisSlide.Contains(enemy))
             {
+                continue;
+            }
+
+            if (enemy.TryAvoidPlayerAttack(horizontalAttackRadius))
+            {
+                enemiesLaunchedThisSlide.Add(enemy);
                 continue;
             }
 
@@ -186,7 +195,9 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+        if (!Application.isPlaying ||
+            !PlayerDebugToolkitHUD.IsVisible ||
+            !IsActive)
             return;
 
         CharacterController characterController = controller != null
@@ -210,12 +221,10 @@ public class PlayerSlideAttack : MonoBehaviour
 
         // O preenchimento torna a area legivel mesmo quando ela se sobrepoe
         // ao CharacterController e aos gizmos do cenario.
-        Gizmos.color = IsActive
-            ? new Color(1f, .38f, 0f, .22f)
-            : new Color(1f, .38f, 0f, .08f);
+        Gizmos.color = new Color(1f, .38f, 0f, .22f);
         Gizmos.DrawCube(Vector3.zero, halfExtents * 2f);
 
-        Gizmos.color = IsActive ? Color.yellow : new Color(1f, .65f, 0f, .6f);
+        Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(Vector3.zero, halfExtents * 2f);
         Gizmos.matrix = Matrix4x4.identity;
     }

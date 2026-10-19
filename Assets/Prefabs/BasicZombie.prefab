@@ -126,9 +126,9 @@ MonoBehaviour:
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
     min: 30
-    max: 85
+    max: 70
   minimumAggressionPercent: 30
-  maximumAggressionPercent: 85
+  maximumAggressionPercent: 70
   aggressionChangeRatePerSecond:
     min: 2
     max: 5
@@ -161,6 +161,7 @@ MonoBehaviour:
     max: 0.5
   chaseCommitmentDuration: 5
   chaseCommitmentCooldown: 5
+  directorWeight: 30
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0

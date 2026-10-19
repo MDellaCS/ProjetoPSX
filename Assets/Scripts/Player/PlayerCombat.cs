@@ -512,12 +512,20 @@ public class PlayerCombat : MonoBehaviour
                     );
                 }
 
-                enemy.TakeDamage(
+                bool connected = enemy.TakeDamage(
                     currentDamage,
                     transform.position,
                     finalPoiseDamage,
-                    true
+                    true,
+                    GetCurrentPlayerAttackType(),
+                    currentAttackRadius
                 );
+
+                // O golpe foi evitado: esta mesma hitbox nao tenta acertar
+                // novamente, nem gera impacto, Launch, Push ou Heat.
+                enemiesHit.Add(enemy);
+                if (!connected)
+                    continue;
 
                 CombatImpactSystem.ReportPlayerAttackImpact(
                     transform,
@@ -555,8 +563,6 @@ public class PlayerCombat : MonoBehaviour
                     ApplyJuggleToAirborneEnemy(enemy);
 
                 RegisterDamageDealtToEnemy();
-
-                enemiesHit.Add(enemy);
 
                 attackHitCallback?.Invoke(currentAttack);
             }
@@ -629,6 +635,21 @@ public class PlayerCombat : MonoBehaviour
         return playerMovement != null
             ? playerMovement.GetMaximumJumpLaunchSpeed()
             : 18f;
+    }
+
+    private PlayerAttackType GetCurrentPlayerAttackType()
+    {
+        if (currentAttack == null)
+            return PlayerAttackType.None;
+        if (currentAttack.isDashAttack)
+            return PlayerAttackType.DashLight;
+        if (currentAttack.isAerial)
+            return currentAttackIsHeavy
+                ? PlayerAttackType.AerialHeavy
+                : PlayerAttackType.AerialLight;
+        return currentAttackIsHeavy
+            ? PlayerAttackType.Heavy
+            : PlayerAttackType.Light;
     }
 
     private float GetLaunchUpGravity()

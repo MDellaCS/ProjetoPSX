@@ -34,12 +34,17 @@ public sealed class EnemyHealth : MonoBehaviour
     private EnemyBrain brain;
     private EnemyMovement movement;
     private EnemyAttackController attacks;
+    private EnemyGuard guard;
+    private EnemyDodge dodge;
     private Renderer enemyRenderer;
     private DamageNumberSpawner damageNumbers;
     private Color normalColor;
+    private static readonly Color guardingColor = new(.55f, .2f, .8f, 1f);
     private float currentPoise;
     private float timeSinceLastPoiseDamage;
     private float staggerTimer;
+    private bool isGuardBreakStagger;
+    private bool isShowingGuardVisual;
 
     public bool IsDead { get; private set; }
     public int CurrentHealth { get; private set; }
@@ -50,12 +55,15 @@ public sealed class EnemyHealth : MonoBehaviour
         ? Mathf.Clamp01((float)CurrentHealth / maxHealth) : 0f;
 
     internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
-        EnemyMovement locomotion, EnemyAttackController attackController)
+        EnemyMovement locomotion, EnemyAttackController attackController,
+        EnemyGuard enemyGuard, EnemyDodge enemyDodge)
     {
         owner = enemy;
         brain = enemyBrain;
         movement = locomotion;
         attacks = attackController;
+        guard = enemyGuard;
+        dodge = enemyDodge;
         CurrentHealth = maxHealth;
         currentPoise = maxPoise;
         enemyRenderer = GetComponentInChildren<Renderer>();
@@ -75,12 +83,19 @@ public sealed class EnemyHealth : MonoBehaviour
                 currentPoise + poiseRecoveryPerSecond * Time.deltaTime);
     }
 
-    public void TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
-        bool fromPlayerAttack = false)
+    public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
+        bool fromPlayerAttack = false,
+        PlayerAttackType playerAttackType = PlayerAttackType.None,
+        float playerAttackRadius = 0f)
     {
-        if (IsDead) return;
+        if (IsDead) return false;
+        if (fromPlayerAttack && dodge != null &&
+            dodge.TryAvoidPlayerAttack(playerAttackRadius, damage))
+            return false;
         if (fromPlayerAttack)
             movement.CancelSlideLaunchHorizontalImpulse();
+        guard?.TryBlock(playerAttackType, attackerPosition,
+            ref damage, ref poiseDamage);
         CurrentHealth -= damage;
         damageNumbers?.ShowDamage(damage);
         brain.OnDamaged();
@@ -96,10 +111,11 @@ public sealed class EnemyHealth : MonoBehaviour
                 CurrentHealth = 0;
                 owner.RaiseHealthChanged();
                 Die();
-                return;
+                return true;
             }
         }
         owner.RaiseHealthChanged();
+        return true;
     }
 
     private void ApplyPoiseDamage(int amount, Vector3 attackerPosition)
@@ -107,7 +123,7 @@ public sealed class EnemyHealth : MonoBehaviour
         if (amount <= 0) return;
         currentPoise -= amount;
         timeSinceLastPoiseDamage = 0f;
-        if (currentPoise > 0f) return;
+        if (currentPoise > 0f || isGuardBreakStagger) return;
         ApplyStagger(attackerPosition);
         currentPoise = maxPoise;
     }
@@ -115,17 +131,52 @@ public sealed class EnemyHealth : MonoBehaviour
     public void ApplyStagger(Vector3 attackerPosition)
     {
         if (IsDead || movement.IsLaunched) return;
+        dodge?.CancelDodge();
+        owner.CancelTaunt();
+        bool wasAlreadyStaggered = owner.CurrentState == EnemyBase.State.Staggered;
+        isGuardBreakStagger = false;
         movement.ApplyKnockback(attackerPosition, staggerKnockbackForce,
             staggerKnockbackDuration);
         attacks.CancelAttack();
         brain.CancelReposition();
         staggerTimer = staggerDuration;
         owner.CurrentState = EnemyBase.State.Staggered;
+        if (!wasAlreadyStaggered)
+            guard?.NotifyStaggerStarted();
+    }
+
+    internal void EndStaggerForGuard()
+    {
+        staggerTimer = 0f;
+        isGuardBreakStagger = false;
+    }
+
+    internal void EndStaggerForDodge()
+    {
+        staggerTimer = 0f;
+        isGuardBreakStagger = false;
+    }
+
+    internal void ApplyGuardBreakStagger(Vector3 attackerPosition, float duration)
+    {
+        if (IsDead || movement.IsLaunched)
+            return;
+
+        movement.ApplyKnockback(attackerPosition, staggerKnockbackForce,
+            staggerKnockbackDuration);
+        attacks.CancelAttack();
+        brain.CancelReposition();
+        staggerTimer = Mathf.Max(0f, duration);
+        isGuardBreakStagger = staggerTimer > 0f;
+        owner.CurrentState = staggerTimer > 0f
+            ? EnemyBase.State.Staggered : EnemyBase.State.Combat;
     }
 
     internal void ApplyWallSplatStagger(float duration)
     {
         if (IsDead) return;
+        dodge?.CancelDodge();
+        owner.CancelTaunt();
         staggerTimer = duration;
         owner.CurrentState = duration > 0f
             ? EnemyBase.State.Staggered : EnemyBase.State.Combat;
@@ -135,10 +186,17 @@ public sealed class EnemyHealth : MonoBehaviour
     {
         staggerTimer -= Time.deltaTime;
         if (staggerTimer > 0f) return;
+        isGuardBreakStagger = false;
         owner.CurrentState = EnemyBase.State.Combat;
     }
 
     public void SetUnkillable(bool value) => isUnkillable = value;
+
+    internal void SetGuardVisual(bool isGuarding)
+    {
+        isShowingGuardVisual = isGuarding;
+        ResetVisualColor();
+    }
 
     private void Die()
     {
@@ -159,6 +217,7 @@ public sealed class EnemyHealth : MonoBehaviour
     private void ResetVisualColor()
     {
         if (enemyRenderer != null)
-            enemyRenderer.material.color = normalColor;
+            enemyRenderer.material.color = isShowingGuardVisual
+                ? guardingColor : normalColor;
     }
 }
