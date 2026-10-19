@@ -120,9 +120,9 @@ public class PlayerMovement : MonoBehaviour
 
     private CharacterController controller;
     private PlayerState playerState;
-    private PlayerCombat playerCombat;
+    private PlayerAttackController attackController;
     private PlayerHeat playerHeat;
-    private PlayerComboController comboController;
+    private PlayerMovesetController movesetController;
     private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
@@ -161,9 +161,9 @@ public class PlayerMovement : MonoBehaviour
         controller = GetComponent<CharacterController>();
         CacheStandingControllerShape();
         playerState = GetComponent<PlayerState>();
-        playerCombat = GetComponent<PlayerCombat>();
+        attackController = GetComponent<PlayerAttackController>();
         playerHeat = GetComponent<PlayerHeat>();
-        comboController = PlayerComboController.GetOrAdd(gameObject);
+        movesetController = GetComponent<PlayerMovesetController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
 
@@ -359,15 +359,16 @@ public class PlayerMovement : MonoBehaviour
         RecoveryCancelAction action)
     {
         if (!inputBuffer.HasBuffered(input) ||
-            playerCombat == null ||
-            !playerCombat.QueueRecoveryCancel())
+            attackController == null ||
+            !attackController.RequestCancel(action == RecoveryCancelAction.Jump
+                ? PlayerAttackCancelAction.Jump : PlayerAttackCancelAction.Dash))
         {
             return;
         }
 
         inputBuffer.TryConsume(input);
         queuedRecoveryCancelAction = action;
-        comboController?.CancelCombo();
+        movesetController?.ResetSequence();
     }
 
     private void ResetAirActionsWhenGrounded()
@@ -669,7 +670,7 @@ public class PlayerMovement : MonoBehaviour
         if (playerState.IsAttacking())
         {
             isDashJump = false;
-            // O avanco proprio do ataque e aplicado por PlayerCombat. Aqui desaceleramos o movimento que ja existia para evitar um corte brusco de velocidade ao atacar enquanto corre.
+            // O avanco proprio do ataque e aplicado por PlayerAttackMovement. Aqui desaceleramos o movimento que ja existia para evitar um corte brusco de velocidade ao atacar enquanto corre.
             return Vector3.MoveTowards(
                 horizontalVelocity,
                 Vector3.zero,
@@ -1168,7 +1169,7 @@ public class PlayerMovement : MonoBehaviour
         if (controller == null || displacement.sqrMagnitude <= 0.000001f)
             return;
 
-        // PlayerCombat planeja o ataque; PlayerMovement continua sendo o unico
+        // PlayerAttackMovement planeja o ataque; PlayerMovement continua sendo o unico
         // responsavel por mover o CharacterController e respeitar colisoes.
         controller.Move(displacement);
     }

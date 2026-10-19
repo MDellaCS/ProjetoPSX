@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b98f1fcdf334852af096c0b0bb97bcb, type: 3}
+  m_Name: H1
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
+  attackId: H1
+  displayName: H1
+  kind: 1
+  context: 0
+  windupDuration: 0.5
+  activeDuration: 0.03
+  recoveryDuration: 0.35
+  baseDamage: 120
+  basePoiseDamage: 60
+  movement:
+    forwardDistance: 1
+    startNormalized: 0
+    endNormalized: 1
+    movementCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    windupRotationSpeed: 1500
+  strikes:
+  - strikeName: H1
+    activeStartNormalized: 0
+    activeEndNormalized: 1
+    damageMultiplier: 1
+    poiseMultiplier: 1
+    generatesHeatOnHit: 0
+    effects:
+      launchUp: 0
+      push: 0
+      juggle: 0
+      selfLaunchUp: 0
+    hitboxes:
+    - trackName: Heavy Sphere
+      shape: 0
+      anchorMode: 0
+      primaryAnchorId: 
+      secondaryAnchorId: 
+      startLocalPosition: {x: 0, y: 0, z: 2}
+      endLocalPosition: {x: 0, y: 0, z: 2}
+      startLocalEuler: {x: 0, y: 0, z: 0}
+      endLocalEuler: {x: 0, y: 0, z: 0}
+      radius: 2
+      capsuleHeight: 1
+      capsuleAxis: 2
+      boxSize: {x: 1, y: 1, z: 1}
+      activeStartNormalized: 0
+      activeEndNormalized: 1
+      sweep: 0
+      sweepStepDistance: 0.25
+      hitGroup: 0
+      allowRepeatHits: 0
+      repeatHitInterval: 0.1
+  cancelRules:
+  - action: 2
+    allowedPhases: 6
+    finishActiveBeforeCancelling: 1
+  - action: 3
+    allowedPhases: 6
+    finishActiveBeforeCancelling: 1

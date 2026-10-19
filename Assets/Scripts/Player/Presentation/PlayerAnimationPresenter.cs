@@ -21,7 +21,7 @@ public class PlayerAnimationPresenter : MonoBehaviour
 
     private PlayerState playerState;
     private PlayerMovement playerMovement;
-    private PlayerCombat playerCombat;
+    private PlayerAttackController attackController;
     private bool hasResolvedState;
 
     public PlayerVisualState CurrentVisualState { get; private set; } =
@@ -79,8 +79,8 @@ public class PlayerAnimationPresenter : MonoBehaviour
             playerState = GetComponent<PlayerState>();
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
-        if (playerCombat == null)
-            playerCombat = GetComponent<PlayerCombat>();
+        if (attackController == null)
+            attackController = GetComponent<PlayerAttackController>();
     }
 
     private PlayerVisualState ResolveVisualState()
@@ -97,7 +97,7 @@ public class PlayerAnimationPresenter : MonoBehaviour
         if (playerState != null && playerState.IsDashing())
             return PlayerVisualState.Dash;
 
-        if (playerCombat != null && playerCombat.IsAttacking)
+        if (attackController != null && attackController.IsAttacking)
             return PlayerVisualState.Attack;
 
         if (playerState != null && playerState.IsSliding())
@@ -142,8 +142,8 @@ public class PlayerAnimationPresenter : MonoBehaviour
 
     private void PresentCurrentAttack()
     {
-        if (playerCombat == null || !playerCombat.IsAttacking ||
-            string.IsNullOrEmpty(playerCombat.CurrentAttackId))
+        if (attackController == null || !attackController.IsAttacking ||
+            string.IsNullOrEmpty(attackController.CurrentAttackId))
         {
             return;
         }
@@ -153,9 +153,9 @@ public class PlayerAnimationPresenter : MonoBehaviour
             if (playback is IPlayerAttackAnimationPlayback attackPlayback)
             {
                 attackPlayback.PresentAttack(
-                    playerCombat.CurrentAttackId,
-                    playerCombat.CurrentAttackPhase,
-                    playerCombat.CurrentAttackPhaseProgress
+                    attackController.CurrentAttackId,
+                    attackController.CurrentPhase,
+                    attackController.CurrentPhaseProgress
                 );
             }
         }

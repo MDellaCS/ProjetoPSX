@@ -17,6 +17,8 @@ public sealed class CameraFollow : MonoBehaviour
     [Header("Target")]
     [Tooltip("Transform raiz do player acompanhado pela camera.")]
     [SerializeField] private Transform target;
+    [Tooltip("Porcentagem da altura real do Character Controller somada ao seu centro. Por exemplo, 10 desloca o alvo para cima em 10% da altura do player.")]
+    [Range(-100f, 100f)] [SerializeField] private float targetHeightOffsetPercent;
 
     [Header("Cinemachine")]
     [Tooltip("Camera Cinemachine usada pelo gameplay. Se estiver vazia, uma camera configurada por este componente sera criada ao iniciar o jogo.")]
@@ -27,7 +29,7 @@ public sealed class CameraFollow : MonoBehaviour
     [Header("Orbit")]
     [Tooltip("Distancia base entre a camera e o centro real do player.")]
     [Min(.1f)] [SerializeField] private float distance = 5.7f;
-    [Tooltip("Rotacao horizontal inicial da camera, em graus.")]
+    [Tooltip("Offset horizontal inicial em relacao a direcao para a qual o player esta olhando. Zero inicia a camera exatamente nas costas do player.")]
     [SerializeField] private float initialYaw;
     [Tooltip("Rotacao vertical inicial da camera, em graus positivos olhando de cima.")]
     [SerializeField] private float initialPitch = 18f;
@@ -70,6 +72,7 @@ public sealed class CameraFollow : MonoBehaviour
     private CinemachineThirdPersonFollow thirdPersonFollow;
     private CameraEffectStack effectStack;
     private CameraGameplayEffects gameplayEffects;
+    private CameraPlayerVisibility playerVisibility;
     private Transform trackingPivot;
     private bool ownsGameplayCamera;
     private bool ownsTrackingPivot;
@@ -94,6 +97,10 @@ public sealed class CameraFollow : MonoBehaviour
         gameplayEffects = GetComponent<CameraGameplayEffects>();
         if (gameplayEffects == null)
             gameplayEffects = gameObject.AddComponent<CameraGameplayEffects>();
+
+        playerVisibility = GetComponent<CameraPlayerVisibility>();
+        if (playerVisibility == null)
+            playerVisibility = gameObject.AddComponent<CameraPlayerVisibility>();
     }
 
     private void Start()
@@ -180,7 +187,7 @@ public sealed class CameraFollow : MonoBehaviour
             return;
 
         targetController = target.GetComponent<CharacterController>();
-        yaw = initialYaw;
+        yaw = target.eulerAngles.y + initialYaw;
         pitch = Mathf.Clamp(initialPitch, minimumPitch, maximumPitch);
         previousTargetCenter = GetTargetCenter();
 
@@ -201,6 +208,7 @@ public sealed class CameraFollow : MonoBehaviour
 
         effectStack?.Initialize(gameplayCamera);
         gameplayEffects?.Initialize(target, effectStack);
+        playerVisibility?.Initialize(target, GetComponent<Camera>());
         initialized = true;
     }
 
@@ -259,9 +267,15 @@ public sealed class CameraFollow : MonoBehaviour
             return transform.position;
         if (targetController == null)
             targetController = target.GetComponent<CharacterController>();
-        return targetController != null
-            ? targetController.bounds.center
-            : target.position;
+        if (targetController != null)
+        {
+            Bounds bounds = targetController.bounds;
+            float heightOffset = bounds.size.y *
+                (targetHeightOffsetPercent / 100f);
+            return bounds.center + Vector3.up * heightOffset;
+        }
+
+        return target.position;
     }
 
     private void UpdateMouseOrbit()

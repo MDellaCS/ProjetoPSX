@@ -236,10 +236,11 @@ public class EnemyBase : MonoBehaviour
     internal bool PerformAttack(EnemyAttackData attack) => ExecuteAttack(attack);
 
     public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
+        out int damageDealt,
         bool fromPlayerAttack = false,
         PlayerAttackType playerAttackType = PlayerAttackType.None,
         float playerAttackRadius = 0f) =>
-        health.TakeDamage(damage, attackerPosition, poiseDamage,
+        health.TakeDamage(damage, attackerPosition, poiseDamage, out damageDealt,
             fromPlayerAttack, playerAttackType, playerAttackRadius);
     public void ApplyStagger(Vector3 attackerPosition) =>
         health.ApplyStagger(attackerPosition);

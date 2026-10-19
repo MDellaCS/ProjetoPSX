@@ -15,8 +15,7 @@ public class CombatImpactSystem : MonoBehaviour
     {
         [Tooltip("Tempo em segundos reais que o gameplay e os visuais dos envolvidos ficam congelados.")]
         [Min(0f)] public float hitstopDuration;
-        [Tooltip("Deslocamento maximo da camera durante o impulso.")]
-        [Min(0f)] public float cameraShakeDistance;
+        [Tooltip("Duracao em segundos reais do tremor de camera causado pelo impacto.")]
         [Min(0f)] public float cameraShakeDuration;
     }
 
@@ -41,13 +40,11 @@ public class CombatImpactSystem : MonoBehaviour
     [SerializeField] private ImpactProfile lightAttackImpact = new ImpactProfile
     {
         hitstopDuration = .005f,
-        cameraShakeDistance = .01f,
         cameraShakeDuration = .015f
     };
     [SerializeField] private ImpactProfile heavyAttackImpact = new ImpactProfile
     {
         hitstopDuration = .2f,
-        cameraShakeDistance = .16f,
         cameraShakeDuration = .1f
     };
 
@@ -63,26 +60,23 @@ public class CombatImpactSystem : MonoBehaviour
     [Tooltip("Curva global do impacto. X=0 e o inicio do shake; X=1 e o fim.")]
     [SerializeField] private AnimationCurve impactShakeIntensity =
         AnimationCurve.Linear(0f, 1f, 1f, 0f);
-
-    [Header("Heavy Heat Scaling")]
-    [Tooltip("Hitstop adicional de um pesado ao consumir 100% do Heat maximo.")]
-    [Min(0f)] [SerializeField] private float maxHeatHitstopBonus = .045f;
-    [Tooltip("Tremor adicional de um pesado ao consumir 100% do Heat maximo.")]
-    [Min(0f)] [SerializeField] private float maxHeatShakeDistanceBonus = .16f;
-    [Tooltip("Duracao adicional do tremor de um pesado ao consumir 100% do Heat maximo.")]
-    [Min(0f)] [SerializeField] private float maxHeatShakeDurationBonus = .07f;
+    [Tooltip("Dano efetivamente causado que atinge a intensidade maxima de tremor. Danos menores escalam proporcionalmente.")]
+    [Min(1f)] [SerializeField] private float damageForMaximumShake = 500f;
+    [Tooltip("Deslocamento maximo da camera quando o dano de referencia e atingido.")]
+    [Min(0f)] [SerializeField] private float maximumShakeDistance = .25f;
+    [Tooltip("Rotacao maxima de Yaw causada pelo golpe quando o dano de referencia e atingido.")]
+    [Min(0f)] [SerializeField] private float maximumShakeYaw = 4f;
 
     [Header("Enemy Attack Impact")]
     [SerializeField] private ImpactProfile enemyAttackImpact = new ImpactProfile
     {
         hitstopDuration = .035f,
-        cameraShakeDistance = .10f,
         cameraShakeDuration = .08f
     };
     [Tooltip("Dano usado como referencia para um inimigo atingir a intensidade maxima adicional.")]
     [Min(1f)] [SerializeField] private float enemyDamageReference = 30f;
+    [Tooltip("Hitstop adicional quando o ataque inimigo atinge o dano de referencia.")]
     [Min(0f)] [SerializeField] private float maxEnemyDamageHitstopBonus = .025f;
-    [Min(0f)] [SerializeField] private float maxEnemyDamageShakeDistanceBonus = .10f;
 
     public static CombatImpactSystem Instance
     {
@@ -160,17 +154,18 @@ public class CombatImpactSystem : MonoBehaviour
         Transform attacker,
         Transform target,
         bool isHeavy,
-        float normalizedHeatConsumed,
+        int damageDealt,
         bool requestCameraShake = true)
     {
         CombatImpactSystem system = Instance;
         ImpactProfile profile = isHeavy
-            ? system.GetHeavyImpact(normalizedHeatConsumed)
+            ? system.heavyAttackImpact
             : system.lightAttackImpact;
         system.PlayImpact(
             attacker,
             target,
             profile,
+            damageDealt,
             null,
             isHeavy ? system.heavyAttackHitSound : system.lightAttackHitSound,
             requestCameraShake
@@ -221,32 +216,22 @@ public class CombatImpactSystem : MonoBehaviour
         ImpactProfile profile = system.enemyAttackImpact;
         profile.hitstopDuration +=
             system.maxEnemyDamageHitstopBonus * normalizedDamage;
-        profile.cameraShakeDistance +=
-            system.maxEnemyDamageShakeDistanceBonus * normalizedDamage;
         system.PlayImpact(
             attacker,
             target,
             profile,
+            damage,
             attackerPosition,
             system.enemyAttackHitSound,
             true
         );
     }
 
-    private ImpactProfile GetHeavyImpact(float normalizedHeatConsumed)
-    {
-        float heat = Mathf.Clamp01(normalizedHeatConsumed);
-        ImpactProfile profile = heavyAttackImpact;
-        profile.hitstopDuration += maxHeatHitstopBonus * heat;
-        profile.cameraShakeDistance += maxHeatShakeDistanceBonus * heat;
-        profile.cameraShakeDuration += maxHeatShakeDurationBonus * heat;
-        return profile;
-    }
-
     private void PlayImpact(
         Transform attacker,
         Transform target,
         ImpactProfile profile,
+        int damageDealt,
         Vector3? explicitAttackerPosition,
         AudioCue sound,
         bool requestCameraShake)
@@ -268,9 +253,14 @@ public class CombatImpactSystem : MonoBehaviour
 
         if (CameraEffectStack.Instance != null)
         {
+            float normalizedDamage = Mathf.Clamp01(
+                Mathf.Max(0, damageDealt) /
+                Mathf.Max(1f, damageForMaximumShake)
+            );
             CameraEffectStack.Instance.AddDirectionalImpulse(
                 attackDirection,
-                profile.cameraShakeDistance,
+                maximumShakeDistance * normalizedDamage,
+                maximumShakeYaw * normalizedDamage,
                 profile.cameraShakeDuration,
                 impactShakeIntensity
             );

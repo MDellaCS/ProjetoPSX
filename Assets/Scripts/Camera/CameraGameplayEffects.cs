@@ -30,7 +30,7 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
     private Transform player;
     private CameraEffectStack effects;
-    private PlayerCombat playerCombat;
+    private PlayerCombatStatus combatStatus;
     private PlayerHeat playerHeat;
     private float combatWeight;
     private float combatVelocity;
@@ -61,16 +61,16 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
     private void ResolvePlayerComponents()
     {
-        if (playerCombat == null)
-            playerCombat = player.GetComponent<PlayerCombat>();
+        if (combatStatus == null)
+            combatStatus = player.GetComponent<PlayerCombatStatus>();
         if (playerHeat == null)
             playerHeat = player.GetComponent<PlayerHeat>();
     }
 
     private void UpdateCombatEffect()
     {
-        float targetWeight = playerCombat != null &&
-            !playerCombat.IsOutOfCombat ? 1f : 0f;
+        float targetWeight = combatStatus != null &&
+            !combatStatus.IsOutOfCombat ? 1f : 0f;
         combatWeight = Damp(combatWeight, targetWeight,
             ref combatVelocity, combatBlendTime);
         CameraModifier modifier = CameraModifier.Identity;

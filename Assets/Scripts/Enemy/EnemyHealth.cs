@@ -84,10 +84,12 @@ public sealed class EnemyHealth : MonoBehaviour
     }
 
     public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
+        out int damageDealt,
         bool fromPlayerAttack = false,
         PlayerAttackType playerAttackType = PlayerAttackType.None,
         float playerAttackRadius = 0f)
     {
+        damageDealt = 0;
         if (IsDead) return false;
         if (fromPlayerAttack && dodge != null &&
             dodge.TryAvoidPlayerAttack(playerAttackRadius, damage))
@@ -96,6 +98,7 @@ public sealed class EnemyHealth : MonoBehaviour
             movement.CancelSlideLaunchHorizontalImpulse();
         guard?.TryBlock(playerAttackType, attackerPosition,
             ref damage, ref poiseDamage);
+        damageDealt = Mathf.Max(0, damage);
         CurrentHealth -= damage;
         damageNumbers?.ShowDamage(damage);
         brain.OnDamaged();

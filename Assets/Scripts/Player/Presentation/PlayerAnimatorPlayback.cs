@@ -37,7 +37,7 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         [Range(0f, 1f)] public float recoveryStart;
         [Range(0f, 1f)] public float recoveryEnd;
 
-        public float GetClipProgress(PlayerCombat.AttackPhase phase,
+        public float GetClipProgress(PlayerAttackPhase phase,
             float phaseProgress)
         {
             float start;
@@ -45,15 +45,15 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
 
             switch (phase)
             {
-                case PlayerCombat.AttackPhase.Windup:
+                case PlayerAttackPhase.Windup:
                     start = windupStart;
                     end = windupEnd;
                     break;
-                case PlayerCombat.AttackPhase.Active:
+                case PlayerAttackPhase.Active:
                     start = activeStart;
                     end = activeEnd;
                     break;
-                case PlayerCombat.AttackPhase.Recovery:
+                case PlayerAttackPhase.Recovery:
                     start = recoveryStart;
                     end = recoveryEnd;
                     break;
@@ -189,7 +189,7 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         );
     }
 
-    public void PresentAttack(string attackId, PlayerCombat.AttackPhase phase,
+    public void PresentAttack(string attackId, PlayerAttackPhase phase,
         float phaseProgress)
     {
         if (string.IsNullOrEmpty(attackId) || animator == null ||
@@ -204,7 +204,7 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         if (!animator.HasState(layerIndex, stateHash))
             return;
 
-        // O tempo do PlayerCombat escolhe exatamente a pose do clip. Assim,
+        // O tempo do PlayerAttackController escolhe exatamente a pose do clip. Assim,
         // alterar Windup/Active/Recovery jamais devolve autoridade ao Animator.
         animator.Play(
             stateHash,

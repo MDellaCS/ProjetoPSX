@@ -25,7 +25,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerState playerState;
     private PlayerHeat playerHeat;
     private PlayerHealth playerHealth;
-    private PlayerCombat playerCombat;
+    private PlayerCombatStatus combatStatus;
+    private PlayerAttackController attackController;
     private PlayerLockOn playerLockOn;
 
     private VisualElement debugPanel;
@@ -70,7 +71,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (!isVisible || debugText == null)
             return;
 
-        // PlayerLockOn pode ser adicionado pelo PlayerCombat durante Awake.
+        // PlayerLockOn pode ser adicionado pelo sistema de ataques durante Awake.
         // A ordem de Awake entre objetos nao e garantida, entao tentamos
         // encontra-lo novamente enquanto o F3 estiver aberto.
         if (!HasPlayerComponents() || playerLockOn == null)
@@ -114,7 +115,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         playerState = playerTransform.GetComponent<PlayerState>();
         playerHeat = playerTransform.GetComponent<PlayerHeat>();
         playerHealth = playerTransform.GetComponent<PlayerHealth>();
-        playerCombat = playerTransform.GetComponent<PlayerCombat>();
+        combatStatus = playerTransform.GetComponent<PlayerCombatStatus>();
+        attackController = playerTransform.GetComponent<PlayerAttackController>();
         playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
     }
 
@@ -124,7 +126,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
                playerState != null &&
                playerHeat != null &&
                playerHealth != null &&
-               playerCombat != null;
+               combatStatus != null &&
+               attackController != null;
     }
 
     private void SetVisible(bool value)
@@ -158,13 +161,13 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.Append("GOD MODE: ")
             .AppendLine(playerHealth.IsGodMode ? "ON" : "OFF");
         textBuilder.Append("COMBAT: ")
-            .AppendLine(playerCombat.IsOutOfCombat
+            .AppendLine(combatStatus.IsOutOfCombat
                 ? "OUT OF COMBAT"
                 : "IN COMBAT");
-        if (playerCombat.IsCombatStateForced)
+        if (combatStatus.IsCombatStateForced)
         {
             textBuilder.Append("COMBAT OVERRIDE: ")
-                .AppendLine(playerCombat.IsForcedInCombat
+                .AppendLine(combatStatus.IsForcedInCombat
                     ? "FORCED IN"
                     : "FORCED OUT");
         }
@@ -173,9 +176,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             textBuilder.AppendLine("COMBAT OVERRIDE: NEUTRAL");
         }
         textBuilder.Append("ENEMY AGGRO: ")
-            .AppendLine(playerCombat.HasAggroedEnemies ? "YES" : "NO");
+            .AppendLine(combatStatus.HasAggroedEnemies ? "YES" : "NO");
         textBuilder.Append("COMBAT TIMER: ")
-            .AppendLine(playerCombat.CombatTimer.ToString("F2") + " s");
+            .AppendLine(combatStatus.CombatTimer.ToString("F2") + " s");
         textBuilder.Append("GROUNDED: ")
             .AppendLine(playerMovement.IsGrounded ? "YES" : "NO");
         textBuilder.Append("CROUCHING: ")
@@ -207,7 +210,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.Append("BURN: ")
             .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
         textBuilder.Append("ATTACKING: ")
-            .AppendLine(playerCombat.IsAttacking ? "YES" : "NO");
+            .AppendLine(attackController.IsAttacking ? "YES" : "NO");
         debugText.text = textBuilder.ToString();
     }
 

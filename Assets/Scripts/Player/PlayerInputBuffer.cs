@@ -4,7 +4,6 @@ using UnityEngine.InputSystem;
 public enum PlayerBufferedInput
 {
     LightAttack,
-    SlowLightAttack,
     HeavyAttack,
     Jump,
     Dash
@@ -96,12 +95,6 @@ public class PlayerInputBuffer : MonoBehaviour
 
         if (keyboard.spaceKey.wasPressedThisFrame)
             Buffer(PlayerBufferedInput.Jump);
-
-        // Tecla temporaria de teste: mesma rota de leves, mas cada fase usa
-        // uma duracao maior. Mantemos um input proprio para preservar isso no
-        // buffer global e entre os elos do combo.
-        if (keyboard.fKey.wasPressedThisFrame)
-            Buffer(PlayerBufferedInput.SlowLightAttack);
 
         if (keyboard.leftShiftKey.wasPressedThisFrame)
             Buffer(PlayerBufferedInput.Dash);

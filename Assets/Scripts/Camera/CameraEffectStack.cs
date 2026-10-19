@@ -10,9 +10,18 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class CameraEffectStack : MonoBehaviour
 {
+    private sealed class YawImpulse
+    {
+        public float degrees;
+        public float duration;
+        public float elapsed;
+        public AnimationCurve intensity;
+    }
+
     public static CameraEffectStack Instance { get; private set; }
 
     private readonly Dictionary<string, CameraModifier> modifiers = new();
+    private readonly List<YawImpulse> yawImpulses = new();
     private CinemachineCamera gameplayCamera;
     private CinemachineImpulseListener impulseListener;
 
@@ -58,27 +67,46 @@ public sealed class CameraEffectStack : MonoBehaviour
     public void AddDirectionalImpulse(
         Vector3 direction,
         float distance,
+        float yawDegrees,
         float duration,
         AnimationCurve intensity)
     {
         direction.y = 0f;
         if (gameplayCamera == null || direction.sqrMagnitude <= .0001f ||
-            distance <= 0f || duration <= 0f)
+            duration <= 0f || (distance <= 0f && yawDegrees <= 0f))
             return;
 
-        CinemachineImpulseDefinition definition = new()
+        direction.Normalize();
+
+        if (distance > 0f)
         {
-            ImpulseChannel = 1,
-            ImpulseShape = CinemachineImpulseDefinition.ImpulseShapes.Custom,
-            CustomImpulseShape = intensity ??
-                AnimationCurve.Linear(0f, 1f, 1f, 0f),
-            ImpulseDuration = duration,
-            ImpulseType = CinemachineImpulseDefinition.ImpulseTypes.Uniform
-        };
-        definition.CreateEvent(
-            gameplayCamera.State.GetFinalPosition(),
-            direction.normalized * distance
-        );
+            CinemachineImpulseDefinition definition = new()
+            {
+                ImpulseChannel = 1,
+                ImpulseShape = CinemachineImpulseDefinition.ImpulseShapes.Custom,
+                CustomImpulseShape = intensity ??
+                    AnimationCurve.Linear(0f, 1f, 1f, 0f),
+                ImpulseDuration = duration,
+                ImpulseType = CinemachineImpulseDefinition.ImpulseTypes.Uniform
+            };
+            definition.CreateEvent(
+                gameplayCamera.State.GetFinalPosition(),
+                direction * distance
+            );
+        }
+
+        Vector3 cameraRight = gameplayCamera.State.RawOrientation * Vector3.right;
+        float horizontalDirection = Vector3.Dot(cameraRight, direction);
+        float signedYaw = yawDegrees * horizontalDirection;
+        if (Mathf.Abs(signedYaw) > .0001f)
+        {
+            yawImpulses.Add(new YawImpulse
+            {
+                degrees = signedYaw,
+                duration = duration,
+                intensity = intensity
+            });
+        }
     }
 
     internal CameraEffectFrame Evaluate()
@@ -93,7 +121,30 @@ public sealed class CameraEffectStack : MonoBehaviour
             frame.rollOffset += modifier.rollOffset;
             frame.fieldOfViewOffset += modifier.fieldOfViewOffset;
         }
+        EvaluateYawImpulses(ref frame);
         return frame;
+    }
+
+    private void EvaluateYawImpulses(ref CameraEffectFrame frame)
+    {
+        float strongestYaw = 0f;
+        for (int index = yawImpulses.Count - 1; index >= 0; index--)
+        {
+            YawImpulse impulse = yawImpulses[index];
+            impulse.elapsed += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(impulse.elapsed / impulse.duration);
+            float strength = impulse.intensity != null
+                ? impulse.intensity.Evaluate(progress)
+                : 1f - progress;
+            float currentYaw = impulse.degrees * strength;
+            if (Mathf.Abs(currentYaw) > Mathf.Abs(strongestYaw))
+                strongestYaw = currentYaw;
+
+            if (impulse.elapsed >= impulse.duration)
+                yawImpulses.RemoveAt(index);
+        }
+
+        frame.yawOffset += strongestYaw;
     }
 }
 

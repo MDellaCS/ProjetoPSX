@@ -112,7 +112,8 @@ public class PlayerHeat : MonoBehaviour
     private readonly HashSet<EnemyBase> burnBlastAffectedEnemies = new();
 
     private PlayerState playerState;
-    private PlayerCombat playerCombat;
+    private PlayerCombatStatus combatStatus;
+    private PlayerAttackController attackController;
     private PlayerMovement playerMovement;
     private CharacterController characterController;
 
@@ -134,7 +135,8 @@ public class PlayerHeat : MonoBehaviour
     private void Start()
     {
         playerState = GetComponent<PlayerState>();
-        playerCombat = GetComponent<PlayerCombat>();
+        combatStatus = GetComponent<PlayerCombatStatus>();
+        attackController = GetComponent<PlayerAttackController>();
         playerMovement = GetComponent<PlayerMovement>();
         characterController = GetComponent<CharacterController>();
     }
@@ -162,7 +164,7 @@ public class PlayerHeat : MonoBehaviour
 
     private void UpdatePassiveHeat()
     {
-        if (playerCombat == null || !playerCombat.IsOutOfCombat)
+        if (combatStatus == null || !combatStatus.IsOutOfCombat)
         {
             ResetHeatCoolingRamp();
             return;
@@ -213,7 +215,7 @@ public class PlayerHeat : MonoBehaviour
         // Superheat so nasce do Heat que excede o maximo. Permanecer com
         // Heat alto nao o gera passivamente.
         float cooling = 0f;
-        if (playerCombat != null && playerCombat.IsOutOfCombat) cooling += passiveSuperheatCoolingPerSecond;
+        if (combatStatus != null && combatStatus.IsOutOfCombat) cooling += passiveSuperheatCoolingPerSecond;
         if (currentHeat < 0f) cooling += coldSuperheatCoolingPerSecond;
         RemoveSuperheat(cooling * Time.deltaTime);
     }
@@ -359,7 +361,7 @@ public class PlayerHeat : MonoBehaviour
         burnPhaseTimer = burnPreExplosionDuration;
         burnElapsed = 0f;
         burnStartHeat = currentHeat;
-        playerCombat?.CancelAttack();
+        attackController?.CancelAttack();
         playerMovement?.InterruptForBurn();
         playerState?.ChangeState(PlayerState.State.BurnPreExplosion);
     }
@@ -442,7 +444,13 @@ public class PlayerHeat : MonoBehaviour
                 continue;
 
             if (burnBlastDamage > 0)
-                enemy.TakeDamage(burnBlastDamage, origin, 0, true);
+                enemy.TakeDamage(
+                    burnBlastDamage,
+                    origin,
+                    0,
+                    out _,
+                    true
+                );
 
             enemy.ApplyPush(
                 origin,

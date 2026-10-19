@@ -10,14 +10,14 @@ public interface IPlayerAnimationPlayback
 
 /// <summary>
 /// Playback opcional de ataques. O presenter envia somente a identificacao e
-/// o progresso que ja pertencem ao PlayerCombat; este contrato nao controla
+/// o progresso que ja pertencem ao PlayerAttackController; este contrato nao controla
 /// nem altera a simulacao.
 /// </summary>
 public interface IPlayerAttackAnimationPlayback
 {
     void PresentAttack(
         string attackId,
-        PlayerCombat.AttackPhase phase,
+        PlayerAttackPhase phase,
         float phaseProgress
     );
 }

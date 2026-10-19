@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Hitbox sem dano do Slide. Inimigos atingidos recebem somente o Launch Up
-/// global do PlayerCombat, no maximo uma vez por slide.
+/// global do PlayerAttackResolver, no maximo uma vez por slide.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerSlideAttack : MonoBehaviour
@@ -25,7 +25,7 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private PlayerMovement playerMovement;
     private PlayerState playerState;
-    private PlayerCombat playerCombat;
+    private PlayerAttackResolver attackResolver;
     private CharacterController controller;
     private bool wasSliding;
 
@@ -53,7 +53,7 @@ public class PlayerSlideAttack : MonoBehaviour
     {
         playerMovement = GetComponent<PlayerMovement>();
         playerState = GetComponent<PlayerState>();
-        playerCombat = GetComponent<PlayerCombat>();
+        attackResolver = GetComponent<PlayerAttackResolver>();
         controller = GetComponent<CharacterController>();
     }
 
@@ -70,7 +70,7 @@ public class PlayerSlideAttack : MonoBehaviour
 
         wasSliding = isSliding;
 
-        if (!IsActive || playerCombat == null || controller == null)
+        if (!IsActive || attackResolver == null || controller == null)
             return;
 
         Vector3 hitboxHalfExtents = GetHitboxHalfExtents();
@@ -100,7 +100,7 @@ public class PlayerSlideAttack : MonoBehaviour
             }
 
             IgnoreEnemyCollisionTemporarily(enemy);
-            playerCombat.ApplyNonDamagingLaunchUp(
+            attackResolver.ApplyNonDamagingLaunchUp(
                 enemy,
                 transform.forward,
                 playerMovement.HorizontalSpeed * launchForwardConversion

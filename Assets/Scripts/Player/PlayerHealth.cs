@@ -12,9 +12,10 @@ public class PlayerHealth : MonoBehaviour
     private Renderer playerRenderer;
 
     private PlayerState playerState;
-    private PlayerCombat playerCombat;
+    private PlayerAttackController attackController;
+    private PlayerCombatStatus combatStatus;
     private PlayerMovement playerMovement;
-    private PlayerComboController comboController;
+    private PlayerMovesetController movesetController;
 
     private PlayerHeat playerHeat;
     private bool godMode;
@@ -30,9 +31,10 @@ public class PlayerHealth : MonoBehaviour
         // a simulacao. Esta referencia e apenas feedback visual opcional.
         playerRenderer = GetComponentInChildren<Renderer>(true);
         playerState = GetComponent<PlayerState>();
-        playerCombat = GetComponent<PlayerCombat>();
+        attackController = GetComponent<PlayerAttackController>();
+        combatStatus = GetComponent<PlayerCombatStatus>();
         playerMovement = GetComponent<PlayerMovement>();
-        comboController = PlayerComboController.GetOrAdd(gameObject);
+        movesetController = GetComponent<PlayerMovesetController>();
         playerHeat = GetComponent<PlayerHeat>();
 
         if (playerRenderer != null)
@@ -80,8 +82,8 @@ public class PlayerHealth : MonoBehaviour
         if (playerRenderer != null)
             playerRenderer.material.color = Color.yellow;
 
-        playerCombat.CancelAttack();
-        comboController.CancelCombo();
+        attackController?.CancelAttack();
+        movesetController?.ResetSequence();
     }
 
     void EndStagger()
@@ -114,7 +116,7 @@ public class PlayerHealth : MonoBehaviour
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {
-            playerCombat.RegisterDamageTakenFromEnemy();
+            combatStatus?.RegisterDamageTakenFromEnemy();
             EnemyBase.NotifyPlayerDamagedByEnemy();
         }
 
