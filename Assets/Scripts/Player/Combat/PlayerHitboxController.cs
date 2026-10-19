@@ -125,7 +125,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible) return;
-        Gizmos.color = Color.yellow;
+        Gizmos.color = Color.crimson;
         foreach (DebugVolume volume in debugVolumes)
         {
             if (volume.shape == PlayerHitboxShape.Sphere) Gizmos.DrawWireSphere(volume.center, volume.radius);

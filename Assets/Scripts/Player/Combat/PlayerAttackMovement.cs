@@ -21,16 +21,19 @@ public sealed class PlayerAttackMovement : MonoBehaviour
     {
         if (runtime == null) return;
         PlayerAttackMovementDefinition data = runtime.Definition.movement;
-        if (phase == PlayerAttackPhase.Windup)
+        if (phase == PlayerAttackPhase.Windup ||
+            phase == PlayerAttackPhase.Active)
         {
             Vector3 direction = lockOn != null && lockOn.IsLockedOn
                 ? lockOn.GetDirectionToLockedTarget()
                 : movement != null && movement.DesiredDirection.sqrMagnitude > .001f
                     ? movement.DesiredDirection : transform.forward;
             direction.y = 0f;
-            if (direction.sqrMagnitude > .001f && data.windupRotationSpeed > 0f)
+            if (direction.sqrMagnitude > .001f &&
+                runtime.WindupActiveRotationSpeed > 0f)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation,
-                    Quaternion.LookRotation(direction.normalized), data.windupRotationSpeed * deltaTime);
+                    Quaternion.LookRotation(direction.normalized),
+                    runtime.WindupActiveRotationSpeed * deltaTime);
         }
         if (phase != PlayerAttackPhase.Windup && phase != PlayerAttackPhase.Active) return;
         float duration = runtime.WindupDuration + runtime.ActiveDuration;

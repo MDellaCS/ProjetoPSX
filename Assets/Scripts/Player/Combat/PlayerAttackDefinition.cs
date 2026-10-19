@@ -79,8 +79,6 @@ public class PlayerAttackMovementDefinition
         new Keyframe(0f, 0f, 0f, 0f),
         new Keyframe(1f, 1f, 2f, 2f)
     );
-    [Tooltip("Velocidade de giro em graus por segundo durante o Windup. Zero impede giro.")]
-    [Min(0f)] public float windupRotationSpeed = 1500f;
 }
 
 [Serializable]
@@ -200,7 +198,4 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Tooltip("Impactos independentes executados dentro da fase Active.")]
     public List<PlayerAttackStrikeDefinition> strikes = new();
 
-    [Header("Cancels")]
-    [Tooltip("Acoes autorizadas a interromper ou encurtar este ataque.")]
-    public List<PlayerAttackCancelRule> cancelRules = new();
 }

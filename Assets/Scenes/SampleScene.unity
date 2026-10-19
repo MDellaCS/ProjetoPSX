@@ -13967,6 +13967,7 @@ GameObject:
   - component: {fileID: 825647908}
   - component: {fileID: 825647907}
   - component: {fileID: 825647906}
+  - component: {fileID: 825647913}
   - component: {fileID: 825647905}
   m_Layer: 0
   m_Name: Player
@@ -14319,6 +14320,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCombatStatus
   combatTimerDuration: 5
+--- !u!114 &825647913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 825647885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 536ee412887f1af498cd4e6038c32726, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerLockOn
+  maximumLockDistance: 14
+  markerScreenSize: 16
+  markerColor: {r: 0.15, g: 1, b: 0.15, a: 1}
 --- !u!1001 &828313777
 PrefabInstance:
   m_ObjectHideFlags: 0

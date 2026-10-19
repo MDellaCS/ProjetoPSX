@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b98f1fcdf334852af096c0b0bb97bcb, type: 3}
+  m_Name: L2
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
+  attackId: L2
+  displayName: L2
+  kind: 0
+  context: 0
+  windupDuration: 0.05
+  activeDuration: 0.15
+  recoveryDuration: 0.1
+  baseDamage: 10
+  basePoiseDamage: 25
+  movement:
+    forwardDistance: 0.4
+    startNormalized: 0
+    endNormalized: 0.5
+    movementCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  strikes:
+  - strikeName: L2
+    activeStartNormalized: 0
+    activeEndNormalized: 1
+    damageMultiplier: 1
+    poiseMultiplier: 1
+    generatesHeatOnHit: 1
+    effects:
+      launchUp: 0
+      push: 0
+      juggle: 0
+      selfLaunchUp: 0
+    hitboxes:
+    - trackName: L2_Vai
+      shape: 1
+      anchorMode: 0
+      primaryAnchorId: 
+      secondaryAnchorId: 
+      startLocalPosition: {x: -0.36, y: 0.36, z: 1.2}
+      endLocalPosition: {x: 0, y: 0.36, z: 3.5}
+      startLocalEuler: {x: 0, y: 0, z: 0}
+      endLocalEuler: {x: 0, y: 0, z: 0}
+      radius: 0.5
+      capsuleHeight: 3.12
+      capsuleAxis: 2
+      boxSize: {x: 1, y: 1, z: 1}
+      activeStartNormalized: 0
+      activeEndNormalized: 0.5
+      sweep: 1
+      sweepStepDistance: 0.18
+      hitGroup: 0
+      allowRepeatHits: 0
+      repeatHitInterval: 0.05
+    - trackName: L2_Volta
+      shape: 1
+      anchorMode: 0
+      primaryAnchorId: 
+      secondaryAnchorId: 
+      startLocalPosition: {x: 0, y: 0.36, z: 3.5}
+      endLocalPosition: {x: -0.36, y: 0.36, z: 1.2}
+      startLocalEuler: {x: 0, y: 0, z: 0}
+      endLocalEuler: {x: 0, y: 0, z: 0}
+      radius: 0.5
+      capsuleHeight: 3.12
+      capsuleAxis: 2
+      boxSize: {x: 1, y: 1, z: 1}
+      activeStartNormalized: 0.5
+      activeEndNormalized: 1
+      sweep: 1
+      sweepStepDistance: 0.18
+      hitGroup: 1
+      allowRepeatHits: 0
+      repeatHitInterval: 0.05

@@ -10,6 +10,7 @@ public sealed class PlayerAttackController : MonoBehaviour
     private PlayerAttackMovement attackMovement;
     private PlayerHitboxController hitboxes;
     private PlayerAttackResolver resolver;
+    private PlayerMovesetController movesetController;
     private float phaseTimer;
     private bool finishAfterActive;
 
@@ -35,6 +36,7 @@ public sealed class PlayerAttackController : MonoBehaviour
         playerState = GetComponent<PlayerState>(); heat = GetComponent<PlayerHeat>();
         attackMovement = GetComponent<PlayerAttackMovement>(); hitboxes = GetComponent<PlayerHitboxController>();
         resolver = GetComponent<PlayerAttackResolver>();
+        movesetController = GetComponent<PlayerMovesetController>();
     }
 
     private void Update()
@@ -61,7 +63,13 @@ public sealed class PlayerAttackController : MonoBehaviour
         if (definition == null || IsAttacking || playerState == null || !playerState.IsNormal()) return false;
         PlayerMovement movement = GetComponent<PlayerMovement>();
         if (definition.context == PlayerAttackContext.Ground && movement != null && !movement.IsGrounded) return false;
-        CurrentAttack = new PlayerAttackRuntime(definition, heat);
+        PlayerMovesetDefinition moveset = movesetController != null
+            ? movesetController.Moveset : null;
+        float rotationSpeed = moveset != null
+            ? moveset.GetWindupActiveRotationSpeed(definition.kind)
+            : 0f;
+        CurrentAttack = new PlayerAttackRuntime(definition, heat,
+            rotationSpeed);
         CurrentPhase = PlayerAttackPhase.Windup; phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false;
         playerState.ChangeState(PlayerState.State.Attacking);
@@ -74,7 +82,12 @@ public sealed class PlayerAttackController : MonoBehaviour
     public bool RequestCancel(PlayerAttackCancelAction action)
     {
         if (!IsAttacking) return true;
-        PlayerAttackCancelRule rule = CurrentAttack.Definition.cancelRules.Find(candidate => candidate != null && candidate.action == action);
+        PlayerMovesetDefinition moveset = movesetController != null
+            ? movesetController.Moveset : null;
+        System.Collections.Generic.List<PlayerAttackCancelRule> rules =
+            moveset != null ? moveset.GetCancelRules(CurrentAttack.Definition.kind) : null;
+        PlayerAttackCancelRule rule = rules?.Find(candidate =>
+            candidate != null && candidate.action == action);
         if (rule == null || (rule.allowedPhases & ToFlag(CurrentPhase)) == 0) return false;
         if (CurrentPhase == PlayerAttackPhase.Active && rule.finishActiveBeforeCancelling)
         {

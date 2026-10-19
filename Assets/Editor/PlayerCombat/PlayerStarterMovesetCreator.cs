@@ -101,15 +101,7 @@ public static class PlayerStarterMovesetCreator
         attack.baseDamage = damage; attack.basePoiseDamage = poise;
         attack.windupDuration = windup; attack.activeDuration = active; attack.recoveryDuration = recovery;
         attack.movement.forwardDistance = movement; attack.movement.startNormalized = 0f; attack.movement.endNormalized = kind == PlayerAttackKind.Light ? .5f : 1f;
-        attack.movement.windupRotationSpeed = 1500f;
         attack.strikes = new List<PlayerAttackStrikeDefinition> { new() { strikeName = id } };
-        attack.cancelRules = new List<PlayerAttackCancelRule>
-        {
-            new() { action = PlayerAttackCancelAction.Jump, allowedPhases = PlayerAttackCancelPhases.Active | PlayerAttackCancelPhases.Recovery, finishActiveBeforeCancelling = true },
-            new() { action = PlayerAttackCancelAction.Dash, allowedPhases = PlayerAttackCancelPhases.Active | PlayerAttackCancelPhases.Recovery, finishActiveBeforeCancelling = true }
-        };
-        if (kind == PlayerAttackKind.Light)
-            attack.cancelRules.Add(new PlayerAttackCancelRule { action = PlayerAttackCancelAction.HeavyAttack, allowedPhases = PlayerAttackCancelPhases.All, finishActiveBeforeCancelling = false });
         return attack;
     }
 }

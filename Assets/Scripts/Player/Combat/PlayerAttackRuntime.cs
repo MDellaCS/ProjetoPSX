@@ -11,9 +11,11 @@ public sealed class PlayerAttackRuntime
     public readonly float ActiveDuration;
     public readonly float RecoveryDuration;
     public readonly float HeatConsumed;
+    public readonly float WindupActiveRotationSpeed;
     public bool HitConfirmed;
 
-    public PlayerAttackRuntime(PlayerAttackDefinition definition, PlayerHeat heat)
+    public PlayerAttackRuntime(PlayerAttackDefinition definition, PlayerHeat heat,
+        float windupActiveRotationSpeed)
     {
         Definition = definition;
         int damage = definition.baseDamage;
@@ -34,5 +36,7 @@ public sealed class PlayerAttackRuntime
         ActiveDuration = definition.activeDuration;
         RecoveryDuration = definition.recoveryDuration * timing;
         HeatConsumed = consumed;
+        WindupActiveRotationSpeed = Mathf.Max(0f,
+            windupActiveRotationSpeed);
     }
 }

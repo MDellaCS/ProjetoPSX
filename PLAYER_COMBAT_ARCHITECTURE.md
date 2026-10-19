@@ -4,11 +4,11 @@ O gameplay dos ataques nao depende do `Animator`. Animacoes leem o estado do ata
 
 ## Responsabilidades
 
-1. `PlayerAttackDefinition`: asset de um ataque; contem timing, poder, movimento, Strikes, Hitbox Tracks e regras de cancelamento.
-2. `PlayerMovesetDefinition`: grafo de entradas, Nodes e transicoes. O moveset inicial possui somente `L1` e `H1`, sem combo.
+1. `PlayerAttackDefinition`: asset de um ataque; contem somente aquilo que diferencia o golpe: timing, poder, movimento, Strikes e Hitbox Tracks.
+2. `PlayerMovesetDefinition`: grafo de entradas, Nodes e transicoes, alem das regras globais de cancelamento, velocidades de rotacao e tempos de transicao separados entre leves e pesados. O moveset inicial possui somente `L1` e `H1`, sem combo.
 3. `PlayerMovesetController`: consome o input global e escolhe um Node do grafo.
 4. `PlayerAttackController`: autoridade da timeline `Windup -> Active -> Recovery`; cria um snapshot imutavel do poder do golpe.
-5. `PlayerAttackMovement`: aplica avanco e giro durante Windup sem depender da animacao.
+5. `PlayerAttackMovement`: aplica avanco e giro durante Windup + Active sem depender da animacao. A direcao trava ao entrar em Recovery.
 6. `PlayerHitboxController`: avalia Sphere, Capsule e Box, incluindo Sweep, Anchors, grupos e repeticao de acertos.
 7. `PlayerAttackResolver`: converte uma deteccao em dano, Poise, Heat, Impact, Launch Up, Push e Juggle.
 8. `PlayerCombatStatus`: controla exclusivamente dentro/fora de combate e o override de F6.

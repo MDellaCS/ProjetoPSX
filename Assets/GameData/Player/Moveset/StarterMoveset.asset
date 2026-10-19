@@ -13,6 +13,31 @@ MonoBehaviour:
   m_Name: StarterMoveset
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
   globalPauseDelay: 0.25
+  lightWindupActiveRotationSpeed: 1500
+  heavyWindupActiveRotationSpeed: 1500
+  lightTransitionTiming:
+    minimumDelayAfterWindup: 0
+    continuationWindow: 0.5
+  heavyTransitionTiming:
+    minimumDelayAfterWindup: 0
+    continuationWindow: 0.5
+  lightCancelRules:
+  - action: 2
+    allowedPhases: 6
+    finishActiveBeforeCancelling: 1
+  - action: 3
+    allowedPhases: 6
+    finishActiveBeforeCancelling: 1
+  - action: 1
+    allowedPhases: 7
+    finishActiveBeforeCancelling: 0
+  heavyCancelRules:
+  - action: 2
+    allowedPhases: 4
+    finishActiveBeforeCancelling: 1
+  - action: 3
+    allowedPhases: 4
+    finishActiveBeforeCancelling: 1
   entries:
   - input: 0
     context: 0
@@ -23,6 +48,13 @@ MonoBehaviour:
   nodes:
   - nodeId: L1
     attack: {fileID: 11400000, guid: 54d1fc2271d160849b7c6cfc939fd6ef, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L2
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: L2
+    attack: {fileID: 11400000, guid: b5c584aa6e940a44caa09e31d4925dea, type: 2}
     transitions: []
   - nodeId: H1
     attack: {fileID: 11400000, guid: 8a9407bd5f8cbaa45b8e5b21f924c8ea, type: 2}

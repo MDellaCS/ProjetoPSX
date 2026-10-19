@@ -17,10 +17,10 @@ MonoBehaviour:
   kind: 1
   context: 0
   windupDuration: 0.5
-  activeDuration: 0.03
+  activeDuration: 0.05
   recoveryDuration: 0.35
   baseDamage: 120
-  basePoiseDamage: 60
+  basePoiseDamage: 80
   movement:
     forwardDistance: 1
     startNormalized: 0
@@ -49,7 +49,6 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    windupRotationSpeed: 1500
   strikes:
   - strikeName: H1
     activeStartNormalized: 0
@@ -68,11 +67,11 @@ MonoBehaviour:
       anchorMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
-      startLocalPosition: {x: 0, y: 0, z: 2}
-      endLocalPosition: {x: 0, y: 0, z: 2}
+      startLocalPosition: {x: 0.36, y: -0.36, z: 1.15}
+      endLocalPosition: {x: 0, y: 0, z: 1.75}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
-      radius: 2
+      radius: 1.75
       capsuleHeight: 1
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}
@@ -83,10 +82,3 @@ MonoBehaviour:
       hitGroup: 0
       allowRepeatHits: 0
       repeatHitInterval: 0.1
-  cancelRules:
-  - action: 2
-    allowedPhases: 6
-    finishActiveBeforeCancelling: 1
-  - action: 3
-    allowedPhases: 6
-    finishActiveBeforeCancelling: 1

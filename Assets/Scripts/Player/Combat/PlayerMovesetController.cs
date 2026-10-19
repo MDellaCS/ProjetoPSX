@@ -11,7 +11,6 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private PlayerMovement movement;
     private string currentNodeId;
     private float activeStartedAt;
-    private float finishedAt = float.NegativeInfinity;
 
     public PlayerMovesetDefinition Moveset => moveset;
 
@@ -19,12 +18,12 @@ public sealed class PlayerMovesetController : MonoBehaviour
     {
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         attacks = GetComponent<PlayerAttackController>(); movement = GetComponent<PlayerMovement>();
-        attacks.AttackStarted += OnAttackStarted; attacks.AttackFinished += OnAttackFinished;
+        attacks.AttackStarted += OnAttackStarted;
     }
     private void OnDestroy()
     {
         if (attacks == null) return;
-        attacks.AttackStarted -= OnAttackStarted; attacks.AttackFinished -= OnAttackFinished;
+        attacks.AttackStarted -= OnAttackStarted;
     }
     private void Update()
     {
@@ -51,13 +50,16 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private PlayerMoveNode FindContinuation(PlayerAttackInput input)
     {
         PlayerMoveNode current = moveset.FindNode(currentNodeId);
-        if (current == null) return null;
+        if (current == null || current.attack == null) return null;
+        PlayerTransitionTimingSettings timing = moveset.GetTransitionTiming(
+            current.attack.kind);
+        if (timing == null) return null;
         foreach (PlayerMoveTransition transition in current.transitions)
         {
             if (transition == null || transition.input != input) continue;
             float sinceActive = Time.time - activeStartedAt;
-            float sinceFinished = Time.time - finishedAt;
-            if (sinceActive < transition.minimumDelayAfterWindup || sinceFinished > transition.continuationWindow) continue;
+            if (sinceActive < timing.minimumDelayAfterWindup ||
+                sinceActive > timing.continuationWindow) continue;
             if (transition.requiresPause && sinceActive < moveset.globalPauseDelay) continue;
             return moveset.FindNode(transition.targetNodeId);
         }
@@ -72,6 +74,5 @@ public sealed class PlayerMovesetController : MonoBehaviour
         return null;
     }
     private void OnAttackStarted(PlayerAttackRuntime _) { activeStartedAt = Time.time + (_.WindupDuration); }
-    private void OnAttackFinished(PlayerAttackRuntime _) { finishedAt = Time.time; }
-    public void ResetSequence() { currentNodeId = null; finishedAt = float.NegativeInfinity; }
+    public void ResetSequence() { currentNodeId = null; }
 }
