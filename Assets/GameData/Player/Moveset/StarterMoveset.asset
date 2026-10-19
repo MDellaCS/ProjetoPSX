@@ -12,15 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6c0923b5d764d3894c72c934ddb8589, type: 3}
   m_Name: StarterMoveset
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
-  globalPauseDelay: 0.25
+  globalPauseDelay: 0.4
   lightWindupActiveRotationSpeed: 1500
   heavyWindupActiveRotationSpeed: 1500
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
-    continuationWindow: 0.5
+    continuationWindow: 0.6
   heavyTransitionTiming:
     minimumDelayAfterWindup: 0
-    continuationWindow: 0.5
+    continuationWindow: 0.6
+  extendedArmHitboxRadius: 0.1
   lightCancelRules:
   - action: 2
     allowedPhases: 6
@@ -55,6 +56,27 @@ MonoBehaviour:
       requiresHitConfirm: 0
   - nodeId: L2
     attack: {fileID: 11400000, guid: b5c584aa6e940a44caa09e31d4925dea, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L3
+      requiresPause: 0
+      requiresHitConfirm: 0
+    - input: 0
+      targetNodeId: L3p
+      requiresPause: 1
+      requiresHitConfirm: 0
+  - nodeId: L3
+    attack: {fileID: 11400000, guid: 0521bd37a88a5e84a9d37f42db85c475, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L4
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: L3p
+    attack: {fileID: 11400000, guid: 06ff9d088f5a4af4e90452ef7653392b, type: 2}
+    transitions: []
+  - nodeId: L4
+    attack: {fileID: 11400000, guid: 25871bd56eaedcc4da477ff5382d1d40, type: 2}
     transitions: []
   - nodeId: H1
     attack: {fileID: 11400000, guid: 8a9407bd5f8cbaa45b8e5b21f924c8ea, type: 2}

@@ -72,6 +72,10 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     [Tooltip("Tempos de transicao compartilhados por todos os ataques pesados.")]
     public PlayerTransitionTimingSettings heavyTransitionTiming = new();
 
+    [Header("Global Hitbox Extension")]
+    [Tooltip("Raio global da linha de colisao criada entre o centro do player e a hitbox de ataques com Extended Arm Hitbox. Representa metade da grossura total.")]
+    [Min(.01f)] public float extendedArmHitboxRadius = .25f;
+
     [Header("Global Cancel Rules")]
     [Tooltip("Regras de cancelamento compartilhadas por todos os ataques leves deste moveset.")]
     public List<PlayerAttackCancelRule> lightCancelRules = CreateLightCancelRules();

@@ -49,6 +49,9 @@ public sealed class PlayerAttackPreview : MonoBehaviour
         CharacterController controller = GetComponent<CharacterController>();
         Vector3 origin = transform.position + transform.rotation * (controller != null ? controller.center : Vector3.zero);
         Gizmos.color = previewColor;
+        float extendedArmRadius = definition.usesExtendedArmHitbox
+            ? GetExtendedArmRadius()
+            : 0f;
         foreach (PlayerAttackStrikeDefinition strike in definition.strikes)
         {
             if (strike == null || strike.hitboxes == null ||
@@ -61,21 +64,34 @@ public sealed class PlayerAttackPreview : MonoBehaviour
                     continue;
                 float t = Mathf.InverseLerp(track.activeStartNormalized, track.activeEndNormalized, strikeProgress);
                 GetPose(track, origin, t, out Vector3 center, out Quaternion rotation,
-                    out Vector3 capsuleA, out Vector3 capsuleB);
-            if (track.shape == PlayerHitboxShape.Sphere) Gizmos.DrawWireSphere(center, track.radius);
+                    out Vector3 capsuleA, out Vector3 capsuleB,
+                    out float effectiveRadius);
+            if (track.shape == PlayerHitboxShape.Sphere) Gizmos.DrawWireSphere(center, effectiveRadius);
             else if (track.shape == PlayerHitboxShape.Box)
             { Matrix4x4 old = Gizmos.matrix; Gizmos.matrix = Matrix4x4.TRS(center, rotation, Vector3.one); Gizmos.DrawWireCube(Vector3.zero, track.boxSize); Gizmos.matrix = old; }
             else
             {
-                Gizmos.DrawWireSphere(capsuleA, track.radius); Gizmos.DrawWireSphere(capsuleB, track.radius);
-                Gizmos.DrawLine(capsuleA, capsuleB);
+                DrawWireCapsule(capsuleA, capsuleB, effectiveRadius);
             }
+            if (extendedArmRadius > 0f)
+                DrawWireCapsule(origin, center, extendedArmRadius);
             }
         }
     }
 
+    private float GetExtendedArmRadius()
+    {
+        PlayerMovesetController controller =
+            GetComponent<PlayerMovesetController>();
+        return controller != null && controller.Moveset != null
+            ? Mathf.Max(.01f,
+                controller.Moveset.extendedArmHitboxRadius)
+            : .25f;
+    }
+
     private void GetPose(PlayerHitboxTrackDefinition track, Vector3 origin, float progress,
-        out Vector3 center, out Quaternion rotation, out Vector3 capsuleA, out Vector3 capsuleB)
+        out Vector3 center, out Quaternion rotation, out Vector3 capsuleA,
+        out Vector3 capsuleB, out float effectiveRadius)
     {
         if (track.anchorMode == PlayerHitboxAnchorMode.FollowAnchors)
         {
@@ -85,6 +101,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
             {
                 center = primary.transform.position;
                 rotation = primary.transform.rotation;
+                effectiveRadius = track.radius;
                 if (secondary != null)
                 {
                     capsuleA = primary.transform.position;
@@ -92,13 +109,36 @@ public sealed class PlayerAttackPreview : MonoBehaviour
                     center = (capsuleA + capsuleB) * .5f;
                     return;
                 }
-                GetCapsuleEndpoints(track, center, rotation, out capsuleA, out capsuleB);
+                GetCapsuleEndpoints(track, center, rotation,
+                    effectiveRadius, out capsuleA, out capsuleB);
                 return;
             }
         }
-        center = origin + transform.rotation * Vector3.Lerp(track.startLocalPosition, track.endLocalPosition, progress);
+        Vector3 local;
+        if (track.trajectoryMode == PlayerHitboxTrajectoryMode.Orbit)
+        {
+            float angleProgress = Evaluate(track.orbitAngleCurve, progress);
+            float distanceProgress = Evaluate(track.orbitDistanceCurve, progress);
+            float radiusProgress = Evaluate(track.orbitRadiusCurve, progress);
+            float angle = Mathf.LerpUnclamped(track.orbitStartAngleDegrees,
+                track.orbitEndAngleDegrees, angleProgress) * Mathf.Deg2Rad;
+            float distance = Mathf.LerpUnclamped(track.orbitStartDistance,
+                track.orbitEndDistance, distanceProgress);
+            local = new Vector3(Mathf.Sin(angle) * distance,
+                track.orbitHeight, Mathf.Cos(angle) * distance);
+            effectiveRadius = Mathf.Max(.01f, Mathf.LerpUnclamped(
+                track.orbitStartRadius, track.orbitEndRadius, radiusProgress));
+        }
+        else
+        {
+            local = Vector3.Lerp(track.startLocalPosition,
+                track.endLocalPosition, progress);
+            effectiveRadius = track.radius;
+        }
+        center = origin + transform.rotation * local;
         rotation = transform.rotation * Quaternion.Euler(Vector3.Lerp(track.startLocalEuler, track.endLocalEuler, progress));
-        GetCapsuleEndpoints(track, center, rotation, out capsuleA, out capsuleB);
+        GetCapsuleEndpoints(track, center, rotation, effectiveRadius,
+            out capsuleA, out capsuleB);
     }
 
     private PlayerHitboxAnchor FindAnchor(string id)
@@ -110,12 +150,35 @@ public sealed class PlayerAttackPreview : MonoBehaviour
     }
 
     private static void GetCapsuleEndpoints(PlayerHitboxTrackDefinition track,
-        Vector3 center, Quaternion rotation, out Vector3 a, out Vector3 b)
+        Vector3 center, Quaternion rotation, float effectiveRadius,
+        out Vector3 a, out Vector3 b)
     {
         Vector3 axis = track.capsuleAxis == PlayerHitboxAxis.X ? Vector3.right :
             track.capsuleAxis == PlayerHitboxAxis.Y ? Vector3.up : Vector3.forward;
-        Vector3 offset = rotation * axis * Mathf.Max(0f, track.capsuleHeight * .5f - track.radius);
+        Vector3 offset = rotation * axis * Mathf.Max(0f,
+            track.capsuleHeight * .5f - effectiveRadius);
         a = center - offset;
         b = center + offset;
+    }
+
+    private static float Evaluate(AnimationCurve curve, float progress) =>
+        curve == null || curve.length == 0
+            ? progress
+            : curve.Evaluate(progress);
+
+    private static void DrawWireCapsule(Vector3 a, Vector3 b, float radius)
+    {
+        Gizmos.DrawWireSphere(a, radius);
+        Gizmos.DrawWireSphere(b, radius);
+        Vector3 axis = (b - a).normalized;
+        Vector3 side = Vector3.Cross(axis, Vector3.up);
+        if (side.sqrMagnitude < .001f)
+            side = Vector3.Cross(axis, Vector3.right);
+        side.Normalize();
+        Vector3 secondSide = Vector3.Cross(axis, side).normalized;
+        Gizmos.DrawLine(a + side * radius, b + side * radius);
+        Gizmos.DrawLine(a - side * radius, b - side * radius);
+        Gizmos.DrawLine(a + secondSide * radius, b + secondSide * radius);
+        Gizmos.DrawLine(a - secondSide * radius, b - secondSide * radius);
     }
 }

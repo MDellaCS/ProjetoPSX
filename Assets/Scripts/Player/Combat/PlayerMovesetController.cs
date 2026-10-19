@@ -60,7 +60,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
             float sinceActive = Time.time - activeStartedAt;
             if (sinceActive < timing.minimumDelayAfterWindup ||
                 sinceActive > timing.continuationWindow) continue;
-            if (transition.requiresPause && sinceActive < moveset.globalPauseDelay) continue;
+            bool isPauseInput = sinceActive >= moveset.globalPauseDelay;
+            if (transition.requiresPause != isPauseInput) continue;
             return moveset.FindNode(transition.targetNodeId);
         }
         return null;

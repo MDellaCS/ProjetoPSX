@@ -28,6 +28,12 @@ public enum PlayerHitboxAnchorMode
     FollowAnchors
 }
 
+public enum PlayerHitboxTrajectoryMode
+{
+    Linear,
+    Orbit
+}
+
 public enum PlayerHitboxAxis
 {
     X,
@@ -104,6 +110,9 @@ public class PlayerHitboxTrackDefinition
     [Tooltip("Procedural interpola os valores locais. Follow Anchors acompanha sockets do modelo sem depender deles para o tempo do ataque.")]
     public PlayerHitboxAnchorMode anchorMode =
         PlayerHitboxAnchorMode.Procedural;
+    [Tooltip("Linear interpola entre Start e End. Orbit faz a hitbox circular ao redor do centro real do player sem depender da animacao.")]
+    public PlayerHitboxTrajectoryMode trajectoryMode =
+        PlayerHitboxTrajectoryMode.Linear;
     [Tooltip("ID do anchor principal quando Anchor Mode e Follow Anchors.")]
     public string primaryAnchorId;
     [Tooltip("ID do segundo anchor usado por Capsules em Follow Anchors.")]
@@ -116,6 +125,28 @@ public class PlayerHitboxTrackDefinition
     public Vector3 startLocalEuler;
     [Tooltip("Rotacao local final do volume procedural.")]
     public Vector3 endLocalEuler;
+
+    [Header("Procedural Orbit")]
+    [Tooltip("Angulo inicial da orbita em graus. Zero aponta para a frente do player, 90 para a direita e 180 para tras.")]
+    public float orbitStartAngleDegrees;
+    [Tooltip("Angulo final da orbita em graus. Pode ultrapassar 360 para executar voltas completas ou multiplas.")]
+    public float orbitEndAngleDegrees = 360f;
+    [Tooltip("Distancia horizontal do centro do player no inicio da orbita.")]
+    [Min(0f)] public float orbitStartDistance = 1f;
+    [Tooltip("Distancia horizontal do centro do player no fim da orbita.")]
+    [Min(0f)] public float orbitEndDistance = 1f;
+    [Tooltip("Altura local da orbita em relacao ao centro real do CharacterController.")]
+    public float orbitHeight;
+    [Tooltip("Curva que distribui a progressao angular da orbita.")]
+    public AnimationCurve orbitAngleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [Tooltip("Curva que distribui o crescimento ou reducao da distancia orbital.")]
+    public AnimationCurve orbitDistanceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [Tooltip("Raio da hitbox no inicio da orbita.")]
+    [Min(.01f)] public float orbitStartRadius = .5f;
+    [Tooltip("Raio da hitbox no fim da orbita.")]
+    [Min(.01f)] public float orbitEndRadius = .5f;
+    [Tooltip("Curva que distribui o crescimento ou reducao do raio durante a orbita.")]
+    public AnimationCurve orbitRadiusCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [Tooltip("Raio de Sphere e Capsule.")]
     [Min(.01f)] public float radius = .5f;
     [Tooltip("Comprimento total da Capsule, incluindo suas extremidades.")]
@@ -197,5 +228,9 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Header("Strikes")]
     [Tooltip("Impactos independentes executados dentro da fase Active.")]
     public List<PlayerAttackStrikeDefinition> strikes = new();
+
+    [Header("Extended Arm Hitbox")]
+    [Tooltip("Cria uma hitbox reta entre o centro real do player e cada Hitbox Track ativa, evitando espacos vazios em ataques longos ou orbitais.")]
+    public bool usesExtendedArmHitbox;
 
 }

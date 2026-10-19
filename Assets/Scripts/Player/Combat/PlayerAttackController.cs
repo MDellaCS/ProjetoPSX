@@ -68,8 +68,11 @@ public sealed class PlayerAttackController : MonoBehaviour
         float rotationSpeed = moveset != null
             ? moveset.GetWindupActiveRotationSpeed(definition.kind)
             : 0f;
+        float extendedArmRadius = moveset != null
+            ? moveset.extendedArmHitboxRadius
+            : .25f;
         CurrentAttack = new PlayerAttackRuntime(definition, heat,
-            rotationSpeed);
+            rotationSpeed, extendedArmRadius);
         CurrentPhase = PlayerAttackPhase.Windup; phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false;
         playerState.ChangeState(PlayerState.State.Attacking);
