@@ -24,13 +24,24 @@ public class PlayerInputBuffer : MonoBehaviour
     private float expirationTime = -1f;
     private float capturedTime = -1f;
     private int lastCapturedFrame = -1;
+    private int ignoreInputThroughFrame = -1;
 
     public bool HasMouseDevice => Mouse.current != null;
     public int LightPressesDetected { get; private set; }
     public int HeavyPressesDetected { get; private set; }
 
+    private void OnEnable() => GamePauseController.PauseChanged += OnPauseChanged;
+    private void OnDisable() => GamePauseController.PauseChanged -= OnPauseChanged;
+
+    private void OnPauseChanged(bool _) => ClearBufferedInputs(ignoreNextFrame: true);
+
     private void Update()
     {
+        if (GamePauseController.IsPaused)
+        {
+            ClearBufferedInputs();
+            return;
+        }
         if (CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
@@ -39,6 +50,11 @@ public class PlayerInputBuffer : MonoBehaviour
 
     public bool HasBuffered(PlayerBufferedInput input)
     {
+        if (GamePauseController.IsPaused)
+        {
+            ClearBufferedInputs();
+            return false;
+        }
         CaptureInputsForCurrentFrame();
         ClearExpiredInput();
         return expirationTime >= Time.time && bufferedInput == input;
@@ -81,37 +97,41 @@ public class PlayerInputBuffer : MonoBehaviour
         return buffer;
     }
 
+    /// <summary>Descarta o buffer e o input do frame atual, usado ao pausar ou retomar.</summary>
+    public void ClearBufferedInputs(bool ignoreNextFrame = false)
+    {
+        expirationTime = -1f;
+        capturedTime = -1f;
+        lastCapturedFrame = Time.frameCount;
+        if (ignoreNextFrame)
+            ignoreInputThroughFrame = Time.frameCount + 1;
+    }
+
     private void CaptureInputsForCurrentFrame()
     {
+        if (GamePauseController.IsPaused || Time.frameCount <= ignoreInputThroughFrame)
+            return;
         if (lastCapturedFrame == Time.frameCount)
             return;
 
         lastCapturedFrame = Time.frameCount;
 
-        Mouse mouse = Mouse.current;
-        if (mouse != null)
+        if (GameInput.LightPressed)
         {
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                LightPressesDetected++;
-                Buffer(PlayerBufferedInput.LightAttack);
-            }
-
-            if (mouse.rightButton.wasPressedThisFrame)
-            {
-                HeavyPressesDetected++;
-                Buffer(PlayerBufferedInput.HeavyAttack);
-            }
+            LightPressesDetected++;
+            Buffer(PlayerBufferedInput.LightAttack);
         }
 
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null)
-            return;
+        if (GameInput.HeavyPressed)
+        {
+            HeavyPressesDetected++;
+            Buffer(PlayerBufferedInput.HeavyAttack);
+        }
 
-        if (keyboard.spaceKey.wasPressedThisFrame)
+        if (GameInput.JumpPressed)
             Buffer(PlayerBufferedInput.Jump);
 
-        if (keyboard.leftShiftKey.wasPressedThisFrame)
+        if (GameInput.DashPressed)
             Buffer(PlayerBufferedInput.Dash);
 
     }

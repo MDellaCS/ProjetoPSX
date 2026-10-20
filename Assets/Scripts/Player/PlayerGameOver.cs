@@ -44,7 +44,8 @@ public class PlayerGameOver : MonoBehaviour
                 ShowGameOver();
         }
 
-        if (gameOverVisible && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        if (!GamePauseController.IsPaused && gameOverVisible &&
+            GameInput.RestartPressed)
         {
             RestartGame();
         }

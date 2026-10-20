@@ -30,11 +30,10 @@ public class PlayerLockOn : MonoBehaviour
     {
         ValidateLockedTarget();
 
-        Mouse mouse = Mouse.current;
-        if (mouse == null)
+        if (GamePauseController.IsPaused)
             return;
 
-        if (mouse.middleButton.wasPressedThisFrame)
+        if (GameInput.LockOnPressed)
         {
             if (IsLockedOn)
                 ClearLock();
@@ -44,7 +43,7 @@ public class PlayerLockOn : MonoBehaviour
 
         if (IsLockedOn)
         {
-            float scroll = mouse.scroll.ReadValue().y;
+            float scroll = GameInput.CycleTarget.y;
             if (scroll > .01f)
                 CycleTarget(1);
             else if (scroll < -.01f)

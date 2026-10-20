@@ -106,13 +106,13 @@ public class PlayerHealth : MonoBehaviour
 
     private void UpdateDebugShortcuts()
     {
-        if (Keyboard.current == null)
+        if (GamePauseController.IsPaused)
             return;
 
-        if (Keyboard.current.f7Key.wasPressedThisFrame)
+        if (GameInput.DebugGodModePressed)
             godMode = !godMode;
 
-        if (Keyboard.current.f8Key.wasPressedThisFrame)
+        if (GameInput.DebugMaxHeatPressed)
             playerHeat?.FillHeatAndSuperheatForDebug();
     }
 

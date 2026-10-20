@@ -41,7 +41,8 @@ public sealed class PlayerAttackController : MonoBehaviour
 
     private void Update()
     {
-        if (!IsAttacking || CombatImpactSystem.IsGameplayFrozen(this)) return;
+        if (!IsAttacking || GamePauseController.IsPaused ||
+            CombatImpactSystem.IsGameplayFrozen(this)) return;
         attackMovement.Tick(CurrentPhase, Time.deltaTime);
         if (CurrentPhase == PlayerAttackPhase.Active)
         {

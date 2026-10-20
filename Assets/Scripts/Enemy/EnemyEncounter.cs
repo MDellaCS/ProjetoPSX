@@ -132,6 +132,8 @@ public class EnemyEncounter : MonoBehaviour
 
     private void Update()
     {
+        if (GamePauseController.IsPaused)
+            return;
         if (currentState != EncounterState.Active)
             return;
 

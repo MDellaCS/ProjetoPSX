@@ -127,7 +127,7 @@ public class EnemyBase : MonoBehaviour
 
     private void Update()
     {
-        if (IsDead || brain.IsWaitingForEncounter ||
+        if (GamePauseController.IsPaused || IsDead || brain.IsWaitingForEncounter ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
 

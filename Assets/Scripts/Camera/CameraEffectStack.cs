@@ -71,6 +71,9 @@ public sealed class CameraEffectStack : MonoBehaviour
         float duration,
         AnimationCurve intensity)
     {
+        float shakeScale = GameSettingsService.Applied.cameraShake;
+        distance *= shakeScale;
+        yawDegrees *= shakeScale;
         direction.y = 0f;
         if (gameplayCamera == null || direction.sqrMagnitude <= .0001f ||
             duration <= 0f || (distance <= 0f && yawDegrees <= 0f))

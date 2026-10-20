@@ -76,3 +76,10 @@
     margin-right: 6px;
     background-color: rgb(230, 245, 255);
 }
+
+#combat-controls-hint {
+    color: rgb(167, 184, 195);
+    font-size: 12px;
+    margin-top: 5px;
+    white-space: normal;
+}

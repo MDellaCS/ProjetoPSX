@@ -172,7 +172,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (CombatImpactSystem.IsGameplayFrozen(this))
+        if (GamePauseController.IsPaused ||
+            CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
         enemyGroundContactTimer = Mathf.Max(
@@ -203,16 +204,7 @@ public class PlayerMovement : MonoBehaviour
         if (cameraTransform == null)
             return Vector3.zero;
 
-        Vector2 input = Vector2.zero;
-        Keyboard keyboard = Keyboard.current;
-
-        if (keyboard != null)
-        {
-            if (keyboard.wKey.isPressed) input.y += 1f;
-            if (keyboard.sKey.isPressed) input.y -= 1f;
-            if (keyboard.dKey.isPressed) input.x += 1f;
-            if (keyboard.aKey.isPressed) input.x -= 1f;
-        }
+        Vector2 input = GameInput.Move;
 
         Vector3 cameraForward = cameraTransform.forward;
         Vector3 cameraRight = cameraTransform.right;
@@ -228,8 +220,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartDash()
     {
-        Keyboard keyboard = Keyboard.current;
-
         if (playerState.IsAttacking())
         {
             if (dashCooldownTimer <= 0f &&
@@ -250,8 +240,7 @@ public class PlayerMovement : MonoBehaviour
         bool canStartDash = playerState.IsNormal() ||
             playerState.IsSliding();
 
-        if ((keyboard == null && !isQueuedDash) ||
-            !canStartDash ||
+        if (!canStartDash ||
             dashCooldownTimer > 0f ||
             (!IsGrounded && hasUsedAirDash) ||
             DesiredDirection.sqrMagnitude < 0.0001f)
@@ -295,8 +284,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartJump()
     {
-        Keyboard keyboard = Keyboard.current;
-
         if (playerState.IsAttacking())
         {
             if (jumpsUsed < MaximumJumpCount)
@@ -318,7 +305,7 @@ public class PlayerMovement : MonoBehaviour
             wasDashing) &&
             !IsStandingOnEnemy;
 
-        if ((keyboard == null && !isQueuedJump) || !canStartJump ||
+        if (!canStartJump ||
             jumpsUsed >= MaximumJumpCount)
         {
             return;
@@ -398,8 +385,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void UpdateCrouchState()
     {
-        Mouse mouse = Mouse.current;
-        bool wantsToCrouch = mouse != null && mouse.backButton.isPressed;
+        bool wantsToCrouch = GameInput.CrouchHeld;
 
         bool canCrouch = IsGrounded &&
             (playerState.IsNormal() || playerState.IsSliding());
@@ -635,10 +621,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void ApplyJumpHold()
     {
-        Keyboard keyboard = Keyboard.current;
-
-        if (keyboard == null ||
-            !keyboard.spaceKey.isPressed ||
+        if (!GameInput.JumpHeld ||
             jumpHoldTimer <= 0f ||
             verticalVelocity <= 0f)
         {
@@ -883,8 +866,7 @@ public class PlayerMovement : MonoBehaviour
 
     private bool IsCrouchHeld()
     {
-        Mouse mouse = Mouse.current;
-        return mouse != null && mouse.backButton.isPressed;
+        return GameInput.CrouchHeld;
     }
 
     private void EndSlide()

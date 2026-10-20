@@ -25,7 +25,7 @@ public sealed class PlayerCombatStatus : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.f6Key.wasPressedThisFrame)
+        if (!GamePauseController.IsPaused && GameInput.DebugCombatPressed)
             debugOverride = debugOverride switch
             {
                 DebugOverride.Neutral => DebugOverride.ForceInCombat,

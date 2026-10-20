@@ -62,8 +62,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null &&
-            Keyboard.current.f3Key.wasPressedThisFrame)
+        if (GameInput.DebugHUDPressed)
         {
             SetVisible(!isVisible);
         }

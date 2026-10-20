@@ -140,7 +140,8 @@ public class PlayerHeat : MonoBehaviour
 
     private void Update()
     {
-        if (CombatImpactSystem.IsGameplayFrozen(this))
+        if (GamePauseController.IsPaused ||
+            CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
         if (playerState == null || playerState.IsDead()) return;
@@ -492,10 +493,10 @@ public class PlayerHeat : MonoBehaviour
 
     private void UpdateDebugHeatInput()
     {
-        if (!debugHeatInputEnabled || Keyboard.current == null || IsBurning) return;
+        if (!debugHeatInputEnabled || IsBurning) return;
         float direction = 0f;
-        if (Keyboard.current.f4Key.isPressed) direction -= 1f;
-        if (Keyboard.current.f5Key.isPressed) direction += 1f;
+        if (GameInput.DebugHeatDownHeld) direction -= 1f;
+        if (GameInput.DebugHeatUpHeld) direction += 1f;
         if (Mathf.Approximately(direction, 0f))
         {
             debugHeatAccumulator = 0f;

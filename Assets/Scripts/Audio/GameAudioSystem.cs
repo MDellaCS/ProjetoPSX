@@ -73,6 +73,7 @@ public class GameAudioSystem : MonoBehaviour
     {
         public AudioSource source;
         public float startedAt;
+        public float baseVolume;
     }
 
     private static GameAudioSystem instance;
@@ -155,16 +156,26 @@ public class GameAudioSystem : MonoBehaviour
         source.minDistance = cue.minDistance;
         source.maxDistance = Mathf.Max(cue.minDistance, cue.maxDistance);
         source.outputAudioMixerGroup = cue.outputMixerGroup;
-        source.volume = Mathf.Clamp01(cue.volume + UnityEngine.Random.Range(
+        pooledSource.baseVolume = Mathf.Clamp01(cue.volume + UnityEngine.Random.Range(
             -cue.volumeVariation,
             cue.volumeVariation
         ));
+        source.volume = pooledSource.baseVolume * GameSettingsService.Applied.effectsVolume;
         source.pitch = Mathf.Max(.01f, cue.pitch + UnityEngine.Random.Range(
             -cue.pitchVariation,
             cue.pitchVariation
         ));
         source.Play();
         pooledSource.startedAt = Time.unscaledTime;
+    }
+
+    public static void RefreshEffectsVolume()
+    {
+        if (instance == null)
+            return;
+        float volume = GameSettingsService.Applied.effectsVolume;
+        foreach (PooledSource pooledSource in instance.sources)
+            pooledSource.source.volume = pooledSource.baseVolume * volume;
     }
 
     private PooledSource GetAvailableSource()

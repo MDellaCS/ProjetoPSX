@@ -131,6 +131,8 @@ public sealed class CameraFollow : MonoBehaviour
     {
         if (!initialized)
             Initialize();
+        if (GamePauseController.IsPaused)
+            return;
         UpdateMouseOrbit();
     }
 
@@ -280,26 +282,26 @@ public sealed class CameraFollow : MonoBehaviour
 
     private void UpdateMouseOrbit()
     {
-        Mouse mouse = Mouse.current;
-        if (mouse == null || target == null)
+        if (target == null)
             return;
-        if (lockCursorOnStart && !HandleCursorLock(mouse))
+        if (lockCursorOnStart && !HandleCursorLock())
             return;
 
-        Vector2 mouseDelta = mouse.delta.ReadValue();
-        yaw += mouseDelta.x * horizontalMouseSensitivity;
-        float verticalSign = invertVerticalInput ? 1f : -1f;
+        Vector2 mouseDelta = GameInput.Look;
+        float sensitivity = GameSettingsService.Applied.cameraSensitivity;
+        yaw += mouseDelta.x * horizontalMouseSensitivity * sensitivity;
+        float verticalSign = invertVerticalInput ^
+            GameSettingsService.Applied.invertCameraY ? 1f : -1f;
         pitch = Mathf.Clamp(
-            pitch + mouseDelta.y * verticalMouseSensitivity * verticalSign,
+            pitch + mouseDelta.y * verticalMouseSensitivity * sensitivity * verticalSign,
             minimumPitch,
             maximumPitch
         );
     }
 
-    private bool HandleCursorLock(Mouse mouse)
+    private bool HandleCursorLock()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+        if (GameInput.UnlockCursorPressed)
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -307,7 +309,7 @@ public sealed class CameraFollow : MonoBehaviour
         }
         if (Cursor.lockState == CursorLockMode.Locked)
             return true;
-        if (mouse.leftButton.wasPressedThisFrame)
+        if (GameInput.LightPressed)
             LockCursor();
         return Cursor.lockState == CursorLockMode.Locked;
     }

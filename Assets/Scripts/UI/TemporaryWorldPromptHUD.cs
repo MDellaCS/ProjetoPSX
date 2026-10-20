@@ -32,7 +32,6 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     private float visibleTimer;
     private float completionTimer = -1f;
     private bool isPausedByPrompt;
-    private float timeScaleBeforePromptPause = 1f;
 
     public float TriggerExpansionPercent => triggerExpansionPercent;
 
@@ -55,6 +54,8 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuHUD.IsOpen)
+            return;
         if (currentPrompt == null)
             return;
 
@@ -206,9 +207,8 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         if (isPausedByPrompt || prompt == null || !prompt.PausesGame)
             return;
 
-        timeScaleBeforePromptPause = Time.timeScale;
-        Time.timeScale = 0f;
         isPausedByPrompt = true;
+        GamePauseController.RequestPause(this);
     }
 
     private void ResumeGameIfPausedByPrompt()
@@ -216,7 +216,7 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         if (!isPausedByPrompt)
             return;
 
-        Time.timeScale = timeScaleBeforePromptPause;
         isPausedByPrompt = false;
+        GamePauseController.ReleasePause(this);
     }
 }

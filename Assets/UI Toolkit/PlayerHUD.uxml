@@ -16,5 +16,6 @@
             <ui:VisualElement name="dash-indicator" />
             <ui:Label name="dash-text" text="DASH READY" />
         </ui:VisualElement>
+        <ui:Label name="combat-controls-hint" text="" />
     </ui:VisualElement>
 </ui:UXML>

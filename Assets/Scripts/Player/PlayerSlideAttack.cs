@@ -61,7 +61,8 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private void Update()
     {
-        if (CombatImpactSystem.IsGameplayFrozen(this))
+        if (GamePauseController.IsPaused ||
+            CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
         RestoreExpiredEnemyCollisions();

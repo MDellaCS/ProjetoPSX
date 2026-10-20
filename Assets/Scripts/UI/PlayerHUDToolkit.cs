@@ -18,6 +18,7 @@ public class PlayerHUDToolkit : MonoBehaviour
     private Label superheatValueText;
     private VisualElement dashIndicator;
     private Label dashText;
+    private Label controlsHint;
 
     private void Awake()
     {
@@ -29,6 +30,17 @@ public class PlayerHUDToolkit : MonoBehaviour
     private void OnDestroy()
     {
         if (panelRenderer != null) panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+        GameInputBindings.BindingsChanged -= UpdateControlsHint;
+    }
+
+    private void OnEnable()
+    {
+        GameInputBindings.BindingsChanged += UpdateControlsHint;
+    }
+
+    private void OnDisable()
+    {
+        GameInputBindings.BindingsChanged -= UpdateControlsHint;
     }
 
     private void Update()
@@ -47,6 +59,8 @@ public class PlayerHUDToolkit : MonoBehaviour
         superheatValueText = root.Q<Label>("superheat-value");
         dashIndicator = root.Q<VisualElement>("dash-indicator");
         dashText = root.Q<Label>("dash-text");
+        controlsHint = root.Q<Label>("combat-controls-hint");
+        UpdateControlsHint();
         BuildNotches(root.Q<VisualElement>("heat-cold-notches"), coldNotches, 10, "heat-notch");
         BuildNotches(root.Q<VisualElement>("heat-hot-notches"), hotNotches, 10, "heat-notch");
         BuildNotches(root.Q<VisualElement>("superheat-notches"), superheatNotches, 5, "superheat-notch");
@@ -102,6 +116,14 @@ public class PlayerHUDToolkit : MonoBehaviour
         bool ready = playerMovement.IsDashReady;
         if (dashIndicator != null) dashIndicator.style.backgroundColor = ready ? new Color(.9f, .96f, 1f) : new Color(.2f, .26f, .32f);
         if (dashText != null) dashText.text = ready ? "DASH READY" : "DASH " + playerMovement.DashCooldownRemaining.ToString("F1") + "s";
+    }
+
+    private void UpdateControlsHint()
+    {
+        if (controlsHint == null) return;
+        controlsHint.text = "LEVE " + GameInputBindings.GetDisplayString("LightAttack") +
+            "  |  PESADO " + GameInputBindings.GetDisplayString("HeavyAttack") +
+            "  |  DASH " + GameInputBindings.GetDisplayString("Dash");
     }
 
     private static void SetNotchColor(VisualElement notch, Color color, bool active)

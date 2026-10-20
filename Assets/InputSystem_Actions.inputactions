@@ -2,7 +2,7 @@
     "name": "InputSystem_Actions",
     "maps": [
         {
-            "name": "Player",
+            "name": "Gameplay",
             "id": "df70fa95-8a34-4494-b137-73ab6b9c7d37",
             "actions": [
                 {
@@ -24,7 +24,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "Attack",
+                    "name": "LightAttack",
                     "type": "Button",
                     "id": "6c2ab1b8-8984-453a-af3d-a3c78ae1679a",
                     "expectedControlType": "Button",
@@ -78,14 +78,26 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Sprint",
+                    "name": "Dash",
                     "type": "Button",
                     "id": "641cd816-40e6-41b4-8c3d-04687c349290",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
-                }
+                },
+                {"name":"HeavyAttack","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e11","expectedControlType":"Button"},
+                {"name":"LockOn","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e12","expectedControlType":"Button"},
+                {"name":"CycleTarget","type":"Value","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e13","expectedControlType":"Vector2"},
+                {"name":"Pause","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e14","expectedControlType":"Button"},
+                {"name":"UnlockCursor","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e15","expectedControlType":"Button"},
+                {"name":"DebugHUD","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e16","expectedControlType":"Button"},
+                {"name":"DebugHeatDown","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e17","expectedControlType":"Button"},
+                {"name":"DebugHeatUp","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e18","expectedControlType":"Button"},
+                {"name":"DebugCombat","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e19","expectedControlType":"Button"},
+                {"name":"DebugGodMode","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1a","expectedControlType":"Button"},
+                {"name":"DebugMaxHeat","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1b","expectedControlType":"Button"},
+                {"name":"Restart","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1c","expectedControlType":"Button"}
             ],
             "bindings": [
                 {
@@ -260,7 +272,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Gamepad",
-                    "action": "Attack",
+                    "action": "LightAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -271,7 +283,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "Attack",
+                    "action": "LightAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -282,7 +294,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Touch",
-                    "action": "Attack",
+                    "action": "LightAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -293,7 +305,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Joystick",
-                    "action": "Attack",
+                    "action": "LightAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -304,18 +316,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "XR",
-                    "action": "Attack",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b3c1c7f0-bd20-4ee7-a0f1-899b24bca6d7",
-                    "path": "<Keyboard>/enter",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard&Mouse",
-                    "action": "Attack",
+                    "action": "LightAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -348,7 +349,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Sprint",
+                    "action": "Dash",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -359,7 +360,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Sprint",
+                    "action": "Dash",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -370,7 +371,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "XR",
-                    "action": "Sprint",
+                    "action": "Dash",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -472,13 +473,28 @@
                     "action": "Crouch",
                     "isComposite": false,
                     "isPartOfComposite": false
-                }
+                },
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e21","path":"<Mouse>/backButton","action":"Crouch"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e22","path":"<Mouse>/rightButton","action":"HeavyAttack"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e23","path":"<Mouse>/middleButton","action":"LockOn"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e24","path":"<Mouse>/scroll","action":"CycleTarget"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e25","path":"<Keyboard>/q","action":"Pause"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e26","path":"<Keyboard>/escape","action":"UnlockCursor"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e27","path":"<Keyboard>/f3","action":"DebugHUD"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e28","path":"<Keyboard>/f4","action":"DebugHeatDown"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e29","path":"<Keyboard>/f5","action":"DebugHeatUp"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2a","path":"<Keyboard>/f6","action":"DebugCombat"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2b","path":"<Keyboard>/f7","action":"DebugGodMode"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2c","path":"<Keyboard>/f8","action":"DebugMaxHeat"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2d","path":"<Keyboard>/r","action":"Restart"}
             ]
         },
         {
             "name": "UI",
             "id": "272f6d14-89ba-496f-b7ff-215263d3219f",
             "actions": [
+                {"name":"Pause","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e31","expectedControlType":"Button"},
+                {"name":"DebugHUD","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e32","expectedControlType":"Button"},
                 {
                     "name": "Navigate",
                     "type": "PassThrough",
@@ -571,6 +587,8 @@
                 }
             ],
             "bindings": [
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e33","path":"<Keyboard>/q","action":"Pause"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e34","path":"<Keyboard>/f3","action":"DebugHUD"},
                 {
                     "name": "Gamepad",
                     "id": "809f371f-c5e2-4e7a-83a1-d867598f40dd",
