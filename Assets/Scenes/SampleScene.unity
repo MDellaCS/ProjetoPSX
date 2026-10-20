@@ -14278,7 +14278,6 @@ MonoBehaviour:
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
   canBeJuggled: 1
-  damageNumberOffset: {x: 0, y: 2, z: 0}
   incomingDamageNumberColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!114 &825647894
 MonoBehaviour:
@@ -14317,8 +14316,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeat
   maxHeat: 100
   maxColdMagnitude: 100
-  heavyDamageAdditivePowerBonus: 4
-  heatGeneratedPerDamageDealt: 0.3
+  heavyDamageAdditivePowerBonus: 5
+  heatGeneratedPerDamageDealt: 0.25
   maxSuperheat: 50
   excessHeatToSuperheatMultiplier: 0.5
   passiveHeatCoolingStartDelay: 5
@@ -14338,8 +14337,8 @@ MonoBehaviour:
   burnFinalColdPercent: 0.7
   burnBlastRadius: 6
   burnBlastActiveDuration: 0.7
-  burnBlastDamage: 850
-  burnBlastPoiseDamage: 100
+  burnBlastDamage: 950
+  burnBlastPoiseDamage: 200
   debugHeatInputEnabled: 1
   debugHeatPerSecond: 35
 --- !u!114 &825647898
@@ -14426,7 +14425,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDebug
   labelHeightOffset: 1.25
-  fontSize: 24
+  fontSize: 30
 --- !u!114 &825647906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15039,9 +15038,10 @@ MonoBehaviour:
   poiseRegenDelay: 3
   poiseRegenMaxPercentPerSecond: 0.1
   poiseRegenFlatPerSecond: 5
-  launchForwardsForcePerDamageDealt: 0.075
-  launchForwardsDeceleration: 50
-  launchDownFallSpeed: 35
+  launchForwardsForcePerDamageDealt: 0.08
+  minimumLaunchForce: 16
+  maximumLaunchForce: 44
+  launchForwardsDeceleration: 37
   juggleLiftSpeed: 1.5
   juggleGravityMultiplier: 0.3
   juggleDuration: 0.15

@@ -6,6 +6,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     private PlayerHeat heat;
     private PlayerMovement movement;
     private PlayerCombatStatus combatStatus;
+    private PlayerDpsMeter dpsMeter;
     private bool cameraShakeReported;
 
     private void Awake()
@@ -13,6 +14,9 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         heat = GetComponent<PlayerHeat>();
         movement = GetComponent<PlayerMovement>();
         combatStatus = GetComponent<PlayerCombatStatus>();
+        dpsMeter = GetComponent<PlayerDpsMeter>();
+        if (dpsMeter == null)
+            dpsMeter = gameObject.AddComponent<PlayerDpsMeter>();
     }
 
     public void BeginAttack() => cameraShakeReported = false;
@@ -39,6 +43,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
+        dpsMeter?.ReportDamage(dealt);
         CombatImpactSystem.ReportPlayerAttackImpact(transform, enemy.transform,
             runtime.Definition.kind == PlayerAttackKind.Heavy, dealt, !cameraShakeReported);
         cameraShakeReported = true;
@@ -50,8 +55,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             transform.position,
             GetLaunchSpeed(),
             GetLaunchGravity(),
-            rules.LaunchDownFallSpeed,
-            rules.CalculateLaunchForwardsForce(dealt),
+            rules.CalculateLaunchForce(dealt),
+            rules.CalculateLaunchForce(dealt),
             rules.LaunchForwardsDeceleration,
             rules.JuggleLiftSpeed,
             rules.JuggleGravityMultiplier,
@@ -68,7 +73,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         movement.GetMaximumJumpLaunchSpeed(), movement.gravity);
 
     public void ApplySelfLaunchDown() =>
-        movement?.BeginAerialDive(CombatPoiseSystem.Instance.LaunchDownFallSpeed);
+        movement?.BeginAerialDive(CombatPoiseSystem.Instance.MinimumLaunchForce);
 
     public void ApplyJuggleToPlayer()
     {
@@ -92,7 +97,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         CombatPoiseSystem rules = CombatPoiseSystem.Instance;
         enemy.ApplyPoiseReaction(poiseHit, new CombatReactionRequest(
             CombatReactionType.LaunchUp, transform.position,
-            GetLaunchSpeed(), GetLaunchGravity(), rules.LaunchDownFallSpeed,
+            GetLaunchSpeed(), GetLaunchGravity(), rules.MinimumLaunchForce,
             0f, rules.LaunchForwardsDeceleration,
             rules.JuggleLiftSpeed, rules.JuggleGravityMultiplier,
             rules.JuggleDuration));

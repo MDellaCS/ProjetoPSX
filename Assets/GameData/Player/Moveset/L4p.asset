@@ -17,8 +17,8 @@ MonoBehaviour:
   kind: 0
   context: 0
   windupDuration: 0.1
-  activeDuration: 0.6
-  recoveryDuration: 0.2
+  activeDuration: 0.672
+  recoveryDuration: 0.22
   baseDamage: 45
   basePoiseDamage: 90
   movement:
@@ -57,10 +57,12 @@ MonoBehaviour:
     poiseMultiplier: 1
     generatesHeatOnHit: 1
     effects:
+      launchDown: 0
+      selfLaunchDown: 0
       launchUp: 1
+      selfLaunchUp: 0
       launchForwards: 1
       juggle: 0
-      selfLaunchUp: 0
     hitboxes:
     - trackName: L4p_Gira
       shape: 0
@@ -161,8 +163,8 @@ MonoBehaviour:
       sweepStepDistance: 0.18
       hitGroup: 0
       allowRepeatHits: 1
-      repeatHitInterval: 0.075
-    - trackName: L3p_Volta
+      repeatHitInterval: 0.2
+    - trackName: L4p_Volta
       shape: 0
       anchorMode: 0
       trajectoryMode: 0
@@ -261,5 +263,5 @@ MonoBehaviour:
       sweepStepDistance: 0.18
       hitGroup: 0
       allowRepeatHits: 1
-      repeatHitInterval: 0.075
+      repeatHitInterval: 0.2
   usesExtendedArmHitbox: 1

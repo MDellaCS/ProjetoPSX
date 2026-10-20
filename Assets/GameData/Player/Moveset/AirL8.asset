@@ -50,7 +50,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   strikes:
-  - strikeName: AirL7
+  - strikeName: AirL8
     activeStartNormalized: 0
     activeEndNormalized: 1
     damageMultiplier: 1
@@ -64,7 +64,7 @@ MonoBehaviour:
       launchForwards: 0
       juggle: 0
     hitboxes:
-    - trackName: AirL7_Dive
+    - trackName: AirL8_Dive
       shape: 0
       anchorMode: 0
       trajectoryMode: 0

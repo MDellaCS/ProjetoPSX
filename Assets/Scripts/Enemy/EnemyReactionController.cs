@@ -89,8 +89,8 @@ public sealed class EnemyReactionController : MonoBehaviour
                 movement.ApplyLaunchUp(request.LaunchSpeed, request.Gravity);
                 return true;
             case CombatReactionType.LaunchUpForwards:
-                movement.ApplyLaunchUp(request.LaunchSpeed, request.Gravity);
-                movement.ApplyLaunchForwards(request.SourcePosition,
+                movement.ApplyLaunchUpAndForwards(request.SourcePosition,
+                    request.LaunchSpeed, request.Gravity,
                     request.LaunchForwardsForce,
                     request.LaunchForwardsDeceleration);
                 return true;

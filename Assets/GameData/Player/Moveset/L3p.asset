@@ -163,7 +163,7 @@ MonoBehaviour:
       sweepStepDistance: 0.18
       hitGroup: 0
       allowRepeatHits: 1
-      repeatHitInterval: 0.075
+      repeatHitInterval: 0.2
     - trackName: L3p_Volta
       shape: 0
       anchorMode: 0
@@ -263,5 +263,5 @@ MonoBehaviour:
       sweepStepDistance: 0.18
       hitGroup: 0
       allowRepeatHits: 1
-      repeatHitInterval: 0.075
+      repeatHitInterval: 0.2
   usesExtendedArmHitbox: 1

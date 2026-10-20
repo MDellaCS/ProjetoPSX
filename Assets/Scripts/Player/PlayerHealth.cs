@@ -18,8 +18,6 @@ public class PlayerHealth : MonoBehaviour
     public bool canBeJuggled = true;
 
     [Header("Damage Numbers")]
-    [Tooltip("Deslocamento do numero de dano em relacao ao centro do player.")]
-    [SerializeField] private Vector3 damageNumberOffset = new Vector3(0f, 2f, 0f);
     [Tooltip("Cor dos numeros de dano recebido pelo player.")]
     [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
 
@@ -32,6 +30,7 @@ public class PlayerHealth : MonoBehaviour
     private PlayerMovesetController movesetController;
 
     private PlayerHeat playerHeat;
+    private DamageNumberSpawner damageNumbers;
     private bool godMode;
 
     private float staggerTimer;
@@ -54,6 +53,9 @@ public class PlayerHealth : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
         movesetController = GetComponent<PlayerMovesetController>();
         playerHeat = GetComponent<PlayerHeat>();
+        damageNumbers = GetComponent<DamageNumberSpawner>();
+        if (damageNumbers == null)
+            damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
         poise.Initialize(maxPoise);
 
         if (playerRenderer != null)
@@ -163,12 +165,7 @@ public class PlayerHealth : MonoBehaviour
             EnemyBase.NotifyPlayerDamagedByEnemy();
         }
 
-        DamageNumber.Show(
-            transform,
-            damage,
-            damageNumberOffset,
-            incomingDamageNumberColor
-        );
+        damageNumbers?.ShowDamage(damage, incomingDamageNumberColor);
 
         playerHeat.RemoveHeat(damage);
         CombatPoiseHitResult poiseHit = poise.ReceiveHit(poiseDamage, maxPoise);
@@ -239,7 +236,7 @@ public class PlayerHealth : MonoBehaviour
                 break;
             case CombatReactionType.LaunchDown:
                 playerMovement.BeginAerialDive(
-                    CombatPoiseSystem.Instance.LaunchDownFallSpeed);
+                    CombatPoiseSystem.Instance.CalculateLaunchForce(damageDealt));
                 break;
             case CombatReactionType.LaunchForwards:
                 Vector3 direction = transform.position - attackerPosition;
@@ -248,7 +245,7 @@ public class PlayerHealth : MonoBehaviour
                     direction = transform.forward;
                 CombatPoiseSystem rules = CombatPoiseSystem.Instance;
                 playerMovement.ApplyLaunchForwards(direction.normalized,
-                    rules.CalculateLaunchForwardsForce(damageDealt),
+                    rules.CalculateLaunchForce(damageDealt),
                     rules.LaunchForwardsDeceleration);
                 break;
             case CombatReactionType.Juggle:

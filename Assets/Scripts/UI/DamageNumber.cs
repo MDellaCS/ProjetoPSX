@@ -1,114 +1,99 @@
 using UnityEngine;
 
-/// <summary>
-/// Numero de dano desenhado como overlay de tela. Como nao e um texto no
-/// mundo, paredes, inimigos e outros meshes nunca conseguem esconde-lo.
-/// </summary>
-public class DamageNumber : MonoBehaviour
+/// <summary>Overlay de numero de dano usado somente enquanto o F3 esta aberto.</summary>
+public sealed class DamageNumber : MonoBehaviour
 {
-    [Min(.01f)]
-    [Tooltip("Tempo total, em segundos, que o numero de dano permanece visivel.")]
-    [SerializeField] private float lifetime = 1.35f;
-    [Min(0f)]
-    [Tooltip("Velocidade vertical com que o numero sobe na tela.")]
-    [SerializeField] private float riseSpeed = 1.5f;
-    [Min(1)]
-    [Tooltip("Tamanho da fonte usado pelos numeros de dano.")]
-    [SerializeField] private int fontSize = 32;
-
-    private static GUIStyle textStyle;
-    private static GUIStyle shadowStyle;
-
     private Transform target;
     private Vector3 headOffset;
     private Vector3 lastWorldPosition;
     private string damageText;
     private Color damageColor;
+    private Color shadowColor;
+    private float lifetime;
+    private float riseSpeed;
+    private float shadowOffsetPixels;
+    private int fontSize;
     private float timer;
 
-    public static void Show(Transform target, int damage, Vector3 headOffset,
-        Color color)
+    public static void Show(Transform target, int damage, Vector3 offset,
+        Color color, float horizontalScatter, float verticalScatter,
+        float lifetime, float riseSpeed, int fontSize, Color shadowColor,
+        float shadowOffsetPixels)
     {
-        if (target == null || damage <= 0)
+        if (!PlayerDebugToolkitHUD.IsVisible || target == null || damage <= 0)
             return;
 
-        GameObject numberObject = new GameObject("Damage Number");
+        GameObject numberObject = new("Damage Number");
         DamageNumber number = numberObject.AddComponent<DamageNumber>();
-        number.Initialize(target, damage, headOffset, color);
+        Vector3 scatter = new(Random.Range(-horizontalScatter, horizontalScatter),
+            Random.Range(0f, verticalScatter), 0f);
+        number.Initialize(target, damage, offset + scatter, color, lifetime,
+            riseSpeed, fontSize, shadowColor, shadowOffsetPixels);
     }
 
-    public void Initialize(Transform damageTarget, int damage,
-        Vector3 offset, Color color)
+    private void Initialize(Transform damageTarget, int damage, Vector3 offset,
+        Color color, float newLifetime, float newRiseSpeed, int newFontSize,
+        Color newShadowColor, float newShadowOffsetPixels)
     {
         target = damageTarget;
         headOffset = offset;
         lastWorldPosition = target.position + headOffset;
         damageText = damage.ToString();
         damageColor = color;
-        timer = 0f;
+        lifetime = Mathf.Max(.01f, newLifetime);
+        riseSpeed = Mathf.Max(0f, newRiseSpeed);
+        fontSize = Mathf.Max(1, newFontSize);
+        shadowColor = newShadowColor;
+        shadowOffsetPixels = Mathf.Max(0f, newShadowOffsetPixels);
     }
 
     private void Update()
     {
         timer += Time.deltaTime;
-
         if (target != null)
             lastWorldPosition = target.position + headOffset;
-
         if (timer >= lifetime)
             Destroy(gameObject);
     }
 
     private void OnGUI()
     {
-        if (string.IsNullOrEmpty(damageText))
+        if (!PlayerDebugToolkitHUD.IsVisible || string.IsNullOrEmpty(damageText))
             return;
 
         Camera gameCamera = Camera.main;
         if (gameCamera == null)
             return;
 
-        Vector3 worldPosition = lastWorldPosition +
-            Vector3.up * (riseSpeed * timer);
+        Vector3 worldPosition = lastWorldPosition + Vector3.up * (riseSpeed * timer);
         Vector3 screenPosition = gameCamera.WorldToScreenPoint(worldPosition);
         if (screenPosition.z <= 0f)
             return;
 
-        EnsureStyles();
-
         float fade = 1f - Mathf.Clamp01(timer / lifetime);
+        GUIStyle textStyle = CreateStyle(fontSize);
+        Rect rect = new(screenPosition.x - 50f,
+            Screen.height - screenPosition.y - 16f, 100f, 32f);
         Color previousColor = GUI.color;
         int previousDepth = GUI.depth;
         GUI.depth = -100;
 
-        Rect rect = new Rect(
-            screenPosition.x - 50f,
-            Screen.height - screenPosition.y - 16f,
-            100f,
-            32f
-        );
-
-        GUI.color = new Color(0f, 0f, 0f, fade);
-        GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height),
-            damageText, shadowStyle);
-        GUI.color = new Color(damageColor.r, damageColor.g, damageColor.b, fade);
+        GUI.color = new Color(shadowColor.r, shadowColor.g, shadowColor.b,
+            shadowColor.a * fade);
+        GUI.Label(new Rect(rect.x + shadowOffsetPixels,
+            rect.y + shadowOffsetPixels, rect.width, rect.height), damageText, textStyle);
+        GUI.color = new Color(damageColor.r, damageColor.g, damageColor.b,
+            damageColor.a * fade);
         GUI.Label(rect, damageText, textStyle);
 
         GUI.depth = previousDepth;
         GUI.color = previousColor;
     }
 
-    private void EnsureStyles()
+    private static GUIStyle CreateStyle(int size) => new(GUI.skin.label)
     {
-        if (textStyle != null)
-            return;
-
-        textStyle = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontStyle = FontStyle.Bold,
-            fontSize = fontSize
-        };
-        shadowStyle = new GUIStyle(textStyle);
-    }
+        alignment = TextAnchor.MiddleCenter,
+        fontStyle = FontStyle.Bold,
+        fontSize = size
+    };
 }

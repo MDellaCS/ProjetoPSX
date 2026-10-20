@@ -460,8 +460,8 @@ public class PlayerHeat : MonoBehaviour
                     playerMovement != null
                         ? playerMovement.GetMaximumJumpLaunchSpeed() : 18f,
                     playerMovement != null ? playerMovement.gravity : -60f,
-                    rules.LaunchDownFallSpeed,
-                    rules.CalculateLaunchForwardsForce(damageDealt),
+                    rules.MinimumLaunchForce,
+                    rules.CalculateLaunchForce(damageDealt),
                     rules.LaunchForwardsDeceleration,
                     rules.JuggleLiftSpeed,
                     rules.JuggleGravityMultiplier,

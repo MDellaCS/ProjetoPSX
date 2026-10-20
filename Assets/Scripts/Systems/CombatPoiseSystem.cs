@@ -6,9 +6,10 @@ public enum CombatReactionType
     Stagger,
     Juggle,
     LaunchUp,
-    LaunchUpForwards,
     LaunchDown,
-    LaunchForwards
+    LaunchForwards,
+    // Mantido no fim para não alterar os valores serializados das reações antigas.
+    LaunchUpForwards
 }
 
 public readonly struct CombatPoiseHitResult
@@ -130,15 +131,17 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     [Tooltip("Quantidade fixa de Poise regenerada por segundo, somada a parcela percentual.")]
     [Min(0f)] [SerializeField] private float poiseRegenFlatPerSecond = 5f;
 
-    [Header("Global Launch Forwards")]
-    [Tooltip("Velocidade de Launch Forwards gerada por cada ponto de dano realmente causado.")]
+    [Header("Global Launch Forwards e Down")]
+    [Tooltip("Forca de Launch Forwards e Launch Down gerada por cada ponto de dano realmente causado, antes dos limites minimo e maximo.")]
     [Min(0f)] [SerializeField] private float launchForwardsForcePerDamageDealt = .42f;
+    [Tooltip("Menor forca permitida para Launch Forwards e Launch Down. Tambem e usada por Self Launch Down, que nao depende de dano.")]
+    [Min(0f)] [SerializeField] private float minimumLaunchForce = 8f;
+    [Tooltip("Maior forca permitida para Launch Forwards e Launch Down, impedindo que golpes de dano extremo lancem longe demais.")]
+    [Min(0f)] [SerializeField] private float maximumLaunchForce = 35f;
     [Tooltip("Velocidade horizontal perdida por segundo durante Launch Forwards.")]
     [Min(.01f)] [SerializeField] private float launchForwardsDeceleration = 20f;
 
     [Header("Global Aerial Reactions")]
-    [Tooltip("Velocidade vertical para baixo aplicada por Launch Down.")]
-    [Min(0f)] [SerializeField] private float launchDownFallSpeed = 35f;
     [Tooltip("Velocidade vertical aplicada ao manter um alvo em Juggle.")]
     [Min(0f)] [SerializeField] private float juggleLiftSpeed = 2f;
     [Tooltip("Multiplicador temporario de gravidade usado durante Juggle.")]
@@ -150,7 +153,7 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     public float RegenMaxPercentPerSecond => poiseRegenMaxPercentPerSecond;
     public float RegenFlatPerSecond => poiseRegenFlatPerSecond;
     public float LaunchForwardsDeceleration => launchForwardsDeceleration;
-    public float LaunchDownFallSpeed => launchDownFallSpeed;
+    public float MinimumLaunchForce => Mathf.Min(minimumLaunchForce, maximumLaunchForce);
     public float JuggleLiftSpeed => juggleLiftSpeed;
     public float JuggleGravityMultiplier => juggleGravityMultiplier;
     public float JuggleDuration => juggleDuration;
@@ -169,8 +172,15 @@ public sealed class CombatPoiseSystem : MonoBehaviour
         }
     }
 
-    public float CalculateLaunchForwardsForce(int damageDealt) =>
-        Mathf.Max(0, damageDealt) * launchForwardsForcePerDamageDealt;
+    /// <summary>Calcula a forca compartilhada por Launch Forwards e Launch Down.</summary>
+    public float CalculateLaunchForce(int damageDealt)
+    {
+        float minimum = MinimumLaunchForce;
+        float maximum = Mathf.Max(minimum, maximumLaunchForce);
+        float damageForce = Mathf.Max(0, damageDealt) *
+            launchForwardsForcePerDamageDealt;
+        return Mathf.Clamp(damageForce, minimum, maximum);
+    }
 
     private void Awake()
     {

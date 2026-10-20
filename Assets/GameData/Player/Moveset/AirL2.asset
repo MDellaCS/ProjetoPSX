@@ -19,7 +19,7 @@ MonoBehaviour:
   windupDuration: 0.04
   activeDuration: 0.1
   recoveryDuration: 0.04
-  baseDamage: 6
+  baseDamage: 5
   basePoiseDamage: 9
   movement:
     forwardDistance: 0.4

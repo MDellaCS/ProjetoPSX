@@ -54,6 +54,7 @@ public sealed class EnemyMovement : MonoBehaviour
     private float knockbackTimer;
     private Vector3 slideLaunchHorizontalVelocity;
     private bool hasSlideLaunchHorizontalImpulse;
+    private float slideLaunchHorizontalDeceleration;
     private Vector3 playerHeadSeparationVelocity;
     private float playerHeadSeparationTimer;
     private float verticalVelocity;
@@ -124,6 +125,14 @@ public sealed class EnemyMovement : MonoBehaviour
             );
             if (launchForwardsVelocity.sqrMagnitude <= .0001f)
                 ResetLaunchForwards();
+        }
+        if (hasSlideLaunchHorizontalImpulse && slideLaunchHorizontalDeceleration > 0f)
+        {
+            slideLaunchHorizontalVelocity = Vector3.MoveTowards(
+                slideLaunchHorizontalVelocity, Vector3.zero,
+                slideLaunchHorizontalDeceleration * Time.deltaTime);
+            if (slideLaunchHorizontalVelocity.sqrMagnitude <= .0001f)
+                CancelSlideLaunchHorizontalImpulse();
         }
         if (isLaunched && verticalVelocity <= 0f &&
             (flags & CollisionFlags.Below) != 0)
@@ -218,17 +227,34 @@ public sealed class EnemyMovement : MonoBehaviour
 
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed)
     {
-        if (!isLaunched || owner.IsDead || speed <= 0f) return;
+        ApplyLaunchUpHorizontalImpulse(direction, speed, 0f);
+    }
+
+    /// <summary>Aplica Launch Up e Launch Forwards como uma unica reacao diagonal.</summary>
+    public void ApplyLaunchUpAndForwards(Vector3 attackerPosition,
+        float initialSpeed, float newGravity, float forwardsForce,
+        float forwardsDeceleration)
+    {
+        if (!canBeLaunchedUp || !canBeLaunchedForwards || owner.IsDead)
+            return;
+
+        ApplyLaunchUp(initialSpeed, newGravity);
+        if (forwardsForce <= 0f || forwardsDeceleration <= 0f)
+            return;
+
+        Vector3 direction = transform.position - attackerPosition;
         direction.y = 0f;
-        if (direction.sqrMagnitude <= .0001f) return;
-        slideLaunchHorizontalVelocity = direction.normalized * speed;
-        hasSlideLaunchHorizontalImpulse = true;
+        if (direction.sqrMagnitude <= .001f)
+            direction = transform.forward;
+        ApplyLaunchUpHorizontalImpulse(direction, forwardsForce,
+            forwardsDeceleration);
     }
 
     public void CancelSlideLaunchHorizontalImpulse()
     {
         slideLaunchHorizontalVelocity = Vector3.zero;
         hasSlideLaunchHorizontalImpulse = false;
+        slideLaunchHorizontalDeceleration = 0f;
     }
 
     internal void PrepareForDodge()
@@ -377,6 +403,17 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         juggleTimer = 0f;
         juggleGravityMultiplier = 1f;
+    }
+
+    private void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed,
+        float deceleration)
+    {
+        if (!isLaunched || owner.IsDead || speed <= 0f) return;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .0001f) return;
+        slideLaunchHorizontalVelocity = direction.normalized * speed;
+        slideLaunchHorizontalDeceleration = Mathf.Max(0f, deceleration);
+        hasSlideLaunchHorizontalImpulse = true;
     }
 
     private void ResetLaunchForwards()
