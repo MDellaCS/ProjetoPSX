@@ -58,7 +58,7 @@ MonoBehaviour:
     generatesHeatOnHit: 1
     effects:
       launchUp: 0
-      push: 1
+      launchForwards: 0
       juggle: 0
       selfLaunchUp: 0
     hitboxes:

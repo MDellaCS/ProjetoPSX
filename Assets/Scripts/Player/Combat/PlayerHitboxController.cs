@@ -40,8 +40,15 @@ public sealed class PlayerHitboxController : MonoBehaviour
         foreach (PlayerAttackStrikeDefinition strike in runtime.Definition.strikes)
         {
             if (strike == null || activeProgress < strike.activeStartNormalized || activeProgress > strike.activeEndNormalized) continue;
-            if (startedStrikes.Add(strike) && strike.effects.selfLaunchUp)
-                resolver.ApplySelfLaunchUp();
+            if (startedStrikes.Add(strike))
+            {
+                if (strike.effects.selfLaunchDown)
+                    resolver.ApplySelfLaunchDown();
+                if (strike.effects.selfLaunchUp)
+                    resolver.ApplySelfLaunchUp();
+                if (strike.effects.juggle)
+                    resolver.ApplyJuggleToPlayer();
+            }
             float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized, strike.activeEndNormalized, activeProgress);
             foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
                 EvaluateTrack(strike, track, strikeProgress);
@@ -58,6 +65,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
         int steps = 1;
         if (track.sweep && state.valid)
             steps = Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(state.position, center) / track.sweepStepDistance), 1, 24);
+        Vector3 previousSampleCenter = state.valid
+            ? state.position
+            : GetInitialImpactDirectionReference(track, progress, center, rotation);
         for (int i = 1; i <= steps; i++)
         {
             float t = (float)i / steps;
@@ -66,12 +76,16 @@ public sealed class PlayerHitboxController : MonoBehaviour
             float sampleRadius = state.valid
                 ? Mathf.Lerp(state.radius, effectiveRadius, t)
                 : effectiveRadius;
+            Vector3 impactDirection = sampleCenter - previousSampleCenter;
+            if (impactDirection.sqrMagnitude <= .0001f)
+                impactDirection = GetFallbackImpactDirection(track, progress, center, rotation);
             Query(strike, track, sampleCenter, sampleRotation,
                 a + (sampleCenter - center), b + (sampleCenter - center),
-                sampleRadius);
+                sampleRadius, impactDirection);
             if (runtime.ExtendedArmHitboxRadius > 0f)
                 QueryExtendedArm(strike, track, GetPlayerCenter(),
-                    sampleCenter, runtime.ExtendedArmHitboxRadius);
+                    sampleCenter, runtime.ExtendedArmHitboxRadius, impactDirection);
+            previousSampleCenter = sampleCenter;
         }
         state.position = center; state.rotation = rotation;
         state.radius = effectiveRadius; state.valid = true;
@@ -91,7 +105,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
 
     private void Query(PlayerAttackStrikeDefinition strike, PlayerHitboxTrackDefinition track,
         Vector3 center, Quaternion rotation, Vector3 a, Vector3 b,
-        float effectiveRadius)
+        float effectiveRadius, Vector3 impactDirection)
     {
         int count = track.shape switch
         {
@@ -101,20 +115,21 @@ public sealed class PlayerHitboxController : MonoBehaviour
         };
         float radius = track.shape == PlayerHitboxShape.Box
             ? Mathf.Max(track.boxSize.x, track.boxSize.z) * .5f : effectiveRadius;
-        ResolveHits(strike, track, count, radius);
+        ResolveHits(strike, track, count, radius, center, impactDirection);
     }
 
     private void QueryExtendedArm(PlayerAttackStrikeDefinition strike,
         PlayerHitboxTrackDefinition track, Vector3 playerCenter,
-        Vector3 hitboxCenter, float radius)
+        Vector3 hitboxCenter, float radius, Vector3 impactDirection)
     {
         int count = Physics.OverlapCapsuleNonAlloc(playerCenter,
             hitboxCenter, radius, overlapBuffer);
-        ResolveHits(strike, track, count, radius);
+        ResolveHits(strike, track, count, radius, hitboxCenter, impactDirection);
     }
 
     private void ResolveHits(PlayerAttackStrikeDefinition strike,
-        PlayerHitboxTrackDefinition track, int count, float attackRadius)
+        PlayerHitboxTrackDefinition track, int count, float attackRadius,
+        Vector3 hitboxCenter, Vector3 impactDirection)
     {
         var groupKey = (strike, track.hitGroup);
         if (!groupHits.TryGetValue(groupKey, out HashSet<EnemyBase> hitSet))
@@ -127,7 +142,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
             if (!track.allowRepeatHits && hitSet.Contains(enemy)) continue;
             if (track.allowRepeatHits && repeatTimes.TryGetValue(key, out float next) && Time.time < next) continue;
             hitSet.Add(enemy); repeatTimes[key] = Time.time + track.repeatHitInterval;
-            resolver.Resolve(runtime, strike, enemy, attackRadius);
+            Vector3 impactPosition = overlapBuffer[i].ClosestPoint(hitboxCenter);
+            resolver.Resolve(runtime, strike, enemy, attackRadius, impactPosition,
+                impactDirection);
         }
     }
 
@@ -135,6 +152,26 @@ public sealed class PlayerHitboxController : MonoBehaviour
         transform.rotation * (characterController != null
             ? characterController.center
             : Vector3.zero);
+
+    private Vector3 GetInitialImpactDirectionReference(
+        PlayerHitboxTrackDefinition track, float progress, Vector3 center,
+        Quaternion rotation)
+    {
+        GetPose(track, Mathf.Max(0f, progress - .02f), out Vector3 previous,
+            out _, out _, out _, out _);
+        return (previous - center).sqrMagnitude > .0001f
+            ? previous : center - GetFallbackImpactDirection(track, progress, center, rotation);
+    }
+
+    private Vector3 GetFallbackImpactDirection(PlayerHitboxTrackDefinition track,
+        float progress, Vector3 center, Quaternion rotation)
+    {
+        GetPose(track, Mathf.Min(1f, progress + .02f), out Vector3 next,
+            out _, out _, out _, out _);
+        Vector3 direction = next - center;
+        return direction.sqrMagnitude > .0001f
+            ? direction.normalized : rotation * Vector3.forward;
+    }
 
     private void GetPose(PlayerHitboxTrackDefinition track, float progress, out Vector3 center,
         out Quaternion rotation, out Vector3 a, out Vector3 b,

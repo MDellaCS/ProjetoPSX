@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>Locomocao, gravidade, Launch Up, Juggle, Push e colisao.</summary>
+/// <summary>Locomocao, gravidade, Launch Up, Juggle, Launch Forwards e colisao.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
 public sealed class EnemyMovement : MonoBehaviour
@@ -19,17 +19,31 @@ public sealed class EnemyMovement : MonoBehaviour
 
     [Header("Launch Up")]
     [Tooltip("Permite que ataques com Launch Up levantem este inimigo.")]
-    [SerializeField] private bool canBeLaunched = true;
+    [SerializeField] private bool canBeLaunchedUp = true;
+    [Tooltip("Permite que ataques com Launch Down lancem este inimigo para o chao enquanto ele estiver no ar.")]
+    [SerializeField] private bool canBeLaunchedDown = true;
+    [Tooltip("Permite que ataques com Launch Forwards lancem este inimigo horizontalmente.")]
+    [SerializeField] private bool canBeLaunchedForwards = true;
     [Tooltip("Permite que ataques de Juggle alterem o movimento vertical depois de Launch Up.")]
     [SerializeField] private bool canBeJuggled = true;
 
     [Header("Wall Splat")]
     [Tooltip("Velocidade horizontal minima ao colidir com parede para ativar Wall Splat.")]
     [Min(0f)] [SerializeField] private float wallSplatMinimumSpeed = 10f;
+    [Tooltip("Dano de Wall Splat causado para cada unidade de velocidade de impacto contra a parede.")]
+    [Min(0f)] [SerializeField] private float wallSplatDamagePerImpactSpeed = 2f;
     [Tooltip("Tempo de Stagger aplicado no Wall Splat.")]
     [Min(0f)] [SerializeField] private float wallSplatStunDuration = 1f;
     [Tooltip("Camadas do cenario que contam como parede para Wall Splat.")]
     [SerializeField] private LayerMask wallSplatLayers = ~0;
+
+    [Header("Floor Splat")]
+    [Tooltip("Velocidade vertical minima de queda para ativar Floor Splat ao atingir o chao durante um Launch ou Dive.")]
+    [Min(0f)] [SerializeField] private float floorSplatMinimumSpeed = 12f;
+    [Tooltip("Dano de Floor Splat causado para cada unidade de velocidade vertical de impacto no chao.")]
+    [Min(0f)] [SerializeField] private float floorSplatDamagePerImpactSpeed = 2f;
+    [Tooltip("Tempo de Stagger aplicado no Floor Splat.")]
+    [Min(0f)] [SerializeField] private float floorSplatStunDuration = 1f;
 
     private EnemyBase owner;
     private EnemyBrain brain;
@@ -40,22 +54,25 @@ public sealed class EnemyMovement : MonoBehaviour
     private float knockbackTimer;
     private Vector3 slideLaunchHorizontalVelocity;
     private bool hasSlideLaunchHorizontalImpulse;
-    private Vector3 playerHeadPushVelocity;
-    private float playerHeadPushTimer;
+    private Vector3 playerHeadSeparationVelocity;
+    private float playerHeadSeparationTimer;
     private float verticalVelocity;
     private float launchGravity;
     private float juggleTimer;
     private float juggleGravityMultiplier = 1f;
-    private Vector3 horizontalPushVelocity;
-    private float horizontalPushTimer;
+    private Vector3 launchForwardsVelocity;
+    private float launchForwardsDeceleration;
     private Vector3 lastMoveVelocity;
     private bool isLaunched;
-    private bool isPushed;
+    private bool isLaunchedForwards;
 
     public float MovementSpeed => movementSpeed;
-    public bool CanBeLaunched => canBeLaunched;
+    public bool CanBeLaunchedUp => canBeLaunchedUp;
+    public bool CanBeLaunchedDown => canBeLaunchedDown;
+    public bool CanBeLaunchedForwards => canBeLaunchedForwards;
+    public bool CanBeJuggled => canBeJuggled;
     public bool IsLaunched => isLaunched;
-    public bool IsPushed => isPushed;
+    public bool IsLaunchedForwards => isLaunchedForwards;
     /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
     public bool IsGrounded => controller != null && controller.isGrounded;
     public float VerticalVelocity => verticalVelocity;
@@ -80,39 +97,49 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         if (controller == null)
             return;
-        bool usesRequestedMovement = !isPushed &&
-            playerHeadPushTimer <= 0f && !hasSlideLaunchHorizontalImpulse &&
+        bool usesRequestedMovement = !isLaunchedForwards &&
+            playerHeadSeparationTimer <= 0f && !hasSlideLaunchHorizontalImpulse &&
             knockbackTimer <= 0f;
         if (usesRequestedMovement && horizontalVelocity.sqrMagnitude > .001f &&
             useTankControls && rotateTankControlsTowardMovement)
             FaceDirection(horizontalVelocity);
 
-        Vector3 velocity = isPushed ? horizontalPushVelocity :
-            playerHeadPushTimer > 0f ? playerHeadPushVelocity :
+        Vector3 velocity = isLaunchedForwards ? launchForwardsVelocity :
+            playerHeadSeparationTimer > 0f ? playerHeadSeparationVelocity :
             hasSlideLaunchHorizontalImpulse ? slideLaunchHorizontalVelocity :
             knockbackTimer > 0f ? knockbackVelocity : horizontalVelocity;
 
-        playerHeadPushTimer = Mathf.Max(0f, playerHeadPushTimer - Time.deltaTime);
+        playerHeadSeparationTimer = Mathf.Max(0f, playerHeadSeparationTimer - Time.deltaTime);
         knockbackTimer = Mathf.Max(0f, knockbackTimer - Time.deltaTime);
         velocity.y = verticalVelocity;
         lastMoveVelocity = velocity;
         CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
 
-        if (isPushed)
+        if (isLaunchedForwards)
         {
-            horizontalPushTimer -= Time.deltaTime;
-            if (horizontalPushTimer <= 0f)
-                ResetHorizontalPush();
+            launchForwardsVelocity = Vector3.MoveTowards(
+                launchForwardsVelocity,
+                Vector3.zero,
+                launchForwardsDeceleration * Time.deltaTime
+            );
+            if (launchForwardsVelocity.sqrMagnitude <= .0001f)
+                ResetLaunchForwards();
         }
         if (isLaunched && verticalVelocity <= 0f &&
             (flags & CollisionFlags.Below) != 0)
         {
+            float landingSpeed = Mathf.Max(0f, -verticalVelocity);
+            bool floorSplatted = TryApplyFloorSplat(landingSpeed);
             isLaunched = false;
             verticalVelocity = -2f;
             ResetJuggleMovement();
             CancelSlideLaunchHorizontalImpulse();
-            owner.CurrentState = EnemyBase.State.Combat;
-            brain.DecideImmediately();
+            ResetLaunchForwards();
+            if (!floorSplatted && !owner.IsDead)
+            {
+                owner.CurrentState = EnemyBase.State.Combat;
+                brain.DecideImmediately();
+            }
         }
     }
 
@@ -139,8 +166,8 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
-        playerHeadPushVelocity = Vector3.zero;
-        playerHeadPushTimer = 0f;
+        playerHeadSeparationVelocity = Vector3.zero;
+        playerHeadSeparationTimer = 0f;
         CancelSlideLaunchHorizontalImpulse();
     }
 
@@ -172,7 +199,7 @@ public sealed class EnemyMovement : MonoBehaviour
 
     public void ApplyLaunchUp(float initialSpeed, float newGravity)
     {
-        if (!canBeLaunched || owner.IsDead) return;
+        if (!canBeLaunchedUp || owner.IsDead) return;
         attacks.CancelAttack();
         owner.CancelDodge();
         owner.CancelTaunt();
@@ -181,7 +208,7 @@ public sealed class EnemyMovement : MonoBehaviour
         brain.CancelReposition();
         knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
-        ResetHorizontalPush();
+        ResetLaunchForwards();
         verticalVelocity = initialSpeed;
         launchGravity = newGravity;
         isLaunched = true;
@@ -210,14 +237,14 @@ public sealed class EnemyMovement : MonoBehaviour
         // velocidade vertical e o Launch Up continuam existindo no ar.
         knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
-        playerHeadPushVelocity = Vector3.zero;
-        playerHeadPushTimer = 0f;
+        playerHeadSeparationVelocity = Vector3.zero;
+        playerHeadSeparationTimer = 0f;
         CancelSlideLaunchHorizontalImpulse();
     }
 
-    public void ApplyPush(Vector3 attackerPosition, float force, float duration)
+    public void ApplyLaunchForwards(Vector3 attackerPosition, float force, float deceleration)
     {
-        if (!canBeLaunched || owner.IsDead || force <= 0f || duration <= 0f)
+        if (!canBeLaunchedForwards || owner.IsDead || force <= 0f || deceleration <= 0f)
             return;
         Vector3 direction = transform.position - attackerPosition;
         direction.y = 0f;
@@ -230,18 +257,19 @@ public sealed class EnemyMovement : MonoBehaviour
         brain.CancelReposition();
         knockbackVelocity = Vector3.zero;
         knockbackTimer = 0f;
-        horizontalPushVelocity = direction.normalized * force;
-        horizontalPushTimer = duration;
-        isPushed = true;
+        launchForwardsVelocity = direction.normalized * force;
+        launchForwardsDeceleration = deceleration;
+        isLaunchedForwards = true;
         CancelSlideLaunchHorizontalImpulse();
     }
 
     public void ApplyAerialJuggleLight(float liftSpeed, float newGravity,
         float gravityMultiplier, float duration)
     {
-        if (!canBeJuggled || !isLaunched || owner.IsDead) return;
+        if (!canBeJuggled || IsGrounded || owner.IsDead) return;
         attacks.CancelAttack();
         owner.CurrentState = EnemyBase.State.Combat;
+        isLaunched = true;
         verticalVelocity = liftSpeed;
         launchGravity = newGravity;
         juggleGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
@@ -250,9 +278,10 @@ public sealed class EnemyMovement : MonoBehaviour
 
     public void ApplyAerialDive(float fallSpeed)
     {
-        if (!canBeJuggled || !isLaunched || owner.IsDead) return;
+        if (!canBeLaunchedDown || IsGrounded || owner.IsDead) return;
         attacks.CancelAttack();
         owner.CurrentState = EnemyBase.State.Combat;
+        isLaunched = true;
         verticalVelocity = -Mathf.Max(0f, fallSpeed);
         ResetJuggleMovement();
     }
@@ -263,7 +292,7 @@ public sealed class EnemyMovement : MonoBehaviour
         PlayerMovement player = hit.collider.GetComponentInParent<PlayerMovement>();
         if (player != null && IsLandingOnPlayerTop(player))
         {
-            PushOffPlayerHead(player);
+            SeparateFromPlayerHead(player);
             return;
         }
         if (Mathf.Abs(hit.normal.y) > .5f) return;
@@ -275,9 +304,17 @@ public sealed class EnemyMovement : MonoBehaviour
             return;
         Vector3 horizontalVelocity = lastMoveVelocity;
         horizontalVelocity.y = 0f;
-        if (horizontalVelocity.magnitude < wallSplatMinimumSpeed)
+        Vector3 horizontalNormal = hit.normal;
+        horizontalNormal.y = 0f;
+        if (horizontalNormal.sqrMagnitude <= .0001f)
             return;
-        ApplyWallSplat();
+
+        horizontalNormal.Normalize();
+        float impactSpeed = Mathf.Max(0f,
+            -Vector3.Dot(horizontalVelocity, horizontalNormal));
+        if (impactSpeed < wallSplatMinimumSpeed)
+            return;
+        ApplyWallSplat(impactSpeed, horizontalVelocity);
     }
 
     private bool IsLandingOnPlayerTop(PlayerMovement player)
@@ -289,24 +326,51 @@ public sealed class EnemyMovement : MonoBehaviour
         return controller.bounds.min.y >= playerController.bounds.max.y - .15f;
     }
 
-    private void PushOffPlayerHead(PlayerMovement player)
+    private void SeparateFromPlayerHead(PlayerMovement player)
     {
         Vector3 direction = transform.position - player.transform.position;
         direction.y = 0f;
         if (direction.sqrMagnitude <= .0001f)
             direction = transform.right;
-        playerHeadPushVelocity = direction.normalized * player.enemyHeadPushSpeed;
-        playerHeadPushTimer = .1f;
+        playerHeadSeparationVelocity = direction.normalized * player.enemyHeadSeparationSpeed;
+        playerHeadSeparationTimer = .1f;
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
-    private void ApplyWallSplat()
+    private bool TryApplyFloorSplat(float impactSpeed)
     {
-        ResetHorizontalPush();
+        if (impactSpeed < floorSplatMinimumSpeed || health == null || owner.IsDead)
+            return false;
+
+        // A queda e vertical, portanto usamos a frente atual para dar uma
+        // direcao horizontal legivel ao shake de camera.
+        ApplySplat(impactSpeed, floorSplatDamagePerImpactSpeed,
+            floorSplatStunDuration, transform.forward);
+        return true;
+    }
+
+    private void ApplyWallSplat(float impactSpeed, Vector3 impactVelocity)
+    {
+        ApplySplat(impactSpeed, wallSplatDamagePerImpactSpeed,
+            wallSplatStunDuration, impactVelocity);
+    }
+
+    private void ApplySplat(float impactSpeed, float damagePerImpactSpeed,
+        float stunDuration, Vector3 impactDirection)
+    {
+        ResetLaunchForwards();
         CancelSlideLaunchHorizontalImpulse();
         attacks.CancelAttack();
         brain.CancelReposition();
-        health.ApplyWallSplatStagger(wallSplatStunDuration);
+        int damage = Mathf.Max(0, Mathf.RoundToInt(impactSpeed *
+            Mathf.Max(0f, damagePerImpactSpeed)));
+        int damageDealt = health.ApplySplatDamage(damage, impactDirection);
+        if (owner.IsDead)
+            return;
+
+        health.ApplySplatStagger(stunDuration);
+        CombatImpactSystem.ReportHeavyEnvironmentalImpact(transform,
+            impactDirection, damageDealt);
     }
 
     private void ResetJuggleMovement()
@@ -315,10 +379,10 @@ public sealed class EnemyMovement : MonoBehaviour
         juggleGravityMultiplier = 1f;
     }
 
-    private void ResetHorizontalPush()
+    private void ResetLaunchForwards()
     {
-        horizontalPushVelocity = Vector3.zero;
-        horizontalPushTimer = 0f;
-        isPushed = false;
+        launchForwardsVelocity = Vector3.zero;
+        launchForwardsDeceleration = 0f;
+        isLaunchedForwards = false;
     }
 }

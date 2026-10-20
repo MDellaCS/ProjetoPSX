@@ -3,10 +3,24 @@ using UnityEngine.InputSystem;
 
 public class PlayerHealth : MonoBehaviour
 {
-    public float staggerDuration = 0.8f;
+    [Header("Poise")]
+    [Tooltip("Poise maximo do player. Enquanto estiver acima de zero, golpes nao causam Stagger, Juggle ou Launches.")]
+    [Min(1)] public int maxPoise = 100;
+    [Tooltip("Tempo base em que o player fica sem agir ao sofrer Stagger. Superstagger usa o dobro.")]
+    [Min(0f)] public float staggerDuration = 0.8f;
+    [Tooltip("Permite que uma quebra de Poise lance o player para cima.")]
+    public bool canBeLaunchedUp = true;
+    [Tooltip("Permite que uma quebra de Poise lance o player para baixo enquanto estiver no ar.")]
+    public bool canBeLaunchedDown = true;
+    [Tooltip("Permite que uma quebra de Poise lance o player horizontalmente.")]
+    public bool canBeLaunchedForwards = true;
+    [Tooltip("Permite que uma quebra de Poise mantenha o player em Juggle no ar.")]
+    public bool canBeJuggled = true;
 
     [Header("Damage Numbers")]
+    [Tooltip("Deslocamento do numero de dano em relacao ao centro do player.")]
     [SerializeField] private Vector3 damageNumberOffset = new Vector3(0f, 2f, 0f);
+    [Tooltip("Cor dos numeros de dano recebido pelo player.")]
     [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
 
     private Renderer playerRenderer;
@@ -21,9 +35,13 @@ public class PlayerHealth : MonoBehaviour
     private bool godMode;
 
     private float staggerTimer;
+    private bool waitingForForcedReactionEnd;
+    private bool applySuperStaggerAfterForcedReaction;
+    private readonly CombatPoiseState poise = new();
     private Color normalColor;
 
     public bool IsGodMode => godMode;
+    public float CurrentPoise => poise.Current;
 
     void Start()
     {
@@ -36,6 +54,7 @@ public class PlayerHealth : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
         movesetController = GetComponent<PlayerMovesetController>();
         playerHeat = GetComponent<PlayerHeat>();
+        poise.Initialize(maxPoise);
 
         if (playerRenderer != null)
             normalColor = playerRenderer.material.color;
@@ -48,8 +67,32 @@ public class PlayerHealth : MonoBehaviour
 
         UpdateDebugShortcuts();
 
+        bool blocksPoiseRegen = playerState.IsStaggered() ||
+            playerState.IsBurnStunned() || playerState.IsBurnWalking() ||
+            playerMovement.IsLaunched;
+        poise.Tick(maxPoise, !blocksPoiseRegen);
+
         if (playerState.IsStaggered())
         {
+            if (waitingForForcedReactionEnd)
+            {
+                bool forcedReactionActive = !playerMovement.IsGrounded ||
+                    playerMovement.IsLaunched ||
+                    playerMovement.IsAerialDiving ||
+                    playerMovement.IsLaunchedForwards;
+                if (forcedReactionActive)
+                    return;
+
+                waitingForForcedReactionEnd = false;
+                bool applySuper = applySuperStaggerAfterForcedReaction;
+                applySuperStaggerAfterForcedReaction = false;
+                if (applySuper)
+                    StartStagger(true);
+                else
+                    EndStagger();
+                return;
+            }
+
             staggerTimer -= Time.deltaTime;
 
             if (staggerTimer <= 0f)
@@ -71,13 +114,13 @@ public class PlayerHealth : MonoBehaviour
             playerHeat?.FillHeatAndSuperheatForDebug();
     }
 
-    void StartStagger()
+    void StartStagger(bool superStagger = false)
     {
         playerState.ChangeState(
             PlayerState.State.Stagger
         );
 
-        staggerTimer = staggerDuration;
+        staggerTimer = staggerDuration * (superStagger ? 2f : 1f);
 
         if (playerRenderer != null)
             playerRenderer.material.color = Color.yellow;
@@ -104,8 +147,8 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(
         int damage,
         Vector3 attackerPosition,
-        float knockbackForce,
-        float knockbackDuration,
+        int poiseDamage,
+        CombatReactionType requestedReaction,
         bool causedByEnemy = false,
         Transform attacker = null
     )
@@ -128,6 +171,7 @@ public class PlayerHealth : MonoBehaviour
         );
 
         playerHeat.RemoveHeat(damage);
+        CombatPoiseHitResult poiseHit = poise.ReceiveHit(poiseDamage, maxPoise);
 
         // O impacto pertence ao dano confirmado, inclusive se ele levar o
         // player a Cold extremo ou ocorrer durante Burning. Knockback e
@@ -154,29 +198,72 @@ public class PlayerHealth : MonoBehaviour
         if (playerState.IsBurnStunned() || playerState.IsBurnWalking())
             return;
 
-        // =========================
-        // KNOCKBACK
-        // =========================
+        if (!poiseHit.CanReact)
+            return;
 
-        Vector3 knockbackDirection =
-            transform.position -
-            attackerPosition;
+        ApplyPoiseReaction(poiseHit, requestedReaction, attackerPosition, damage);
+    }
 
-        knockbackDirection.y = 0f;
+    private void ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
+        CombatReactionType requestedReaction, Vector3 attackerPosition,
+        int damageDealt)
+    {
+        bool airborne = !playerMovement.IsGrounded || playerMovement.IsLaunched;
+        CombatReactionType reaction = requestedReaction switch
+        {
+            CombatReactionType.LaunchUp when canBeLaunchedUp =>
+                CombatReactionType.LaunchUp,
+            CombatReactionType.LaunchDown when airborne && canBeLaunchedDown =>
+                CombatReactionType.LaunchDown,
+            CombatReactionType.LaunchForwards when canBeLaunchedForwards =>
+                CombatReactionType.LaunchForwards,
+            CombatReactionType.Juggle when airborne && canBeJuggled =>
+                CombatReactionType.Juggle,
+            CombatReactionType.Stagger => CombatReactionType.Stagger,
+            CombatReactionType.None when airborne && canBeJuggled =>
+                CombatReactionType.Juggle,
+            _ => CombatReactionType.Stagger
+        };
 
-        knockbackDirection.Normalize();
+        if (reaction == CombatReactionType.LaunchForwards && damageDealt <= 0)
+            reaction = CombatReactionType.Stagger;
 
-        playerMovement.ApplyKnockback(
-            knockbackDirection,
-            knockbackForce,
-            knockbackDuration
-        );
+        bool forcedReaction = reaction != CombatReactionType.Stagger;
+        StartStagger(poiseHit.IsSuperStagger && !forcedReaction);
+        switch (reaction)
+        {
+            case CombatReactionType.LaunchUp:
+                playerMovement.ApplySelfLaunchUp(
+                    playerMovement.GetMaximumJumpLaunchSpeed(),
+                    playerMovement.gravity);
+                break;
+            case CombatReactionType.LaunchDown:
+                playerMovement.BeginAerialDive(
+                    CombatPoiseSystem.Instance.LaunchDownFallSpeed);
+                break;
+            case CombatReactionType.LaunchForwards:
+                Vector3 direction = transform.position - attackerPosition;
+                direction.y = 0f;
+                if (direction.sqrMagnitude <= .0001f)
+                    direction = transform.forward;
+                CombatPoiseSystem rules = CombatPoiseSystem.Instance;
+                playerMovement.ApplyLaunchForwards(direction.normalized,
+                    rules.CalculateLaunchForwardsForce(damageDealt),
+                    rules.LaunchForwardsDeceleration);
+                break;
+            case CombatReactionType.Juggle:
+                CombatPoiseSystem juggleRules = CombatPoiseSystem.Instance;
+                playerMovement.BeginAerialLight(juggleRules.JuggleLiftSpeed,
+                    juggleRules.JuggleGravityMultiplier,
+                    juggleRules.JuggleDuration);
+                break;
+        }
 
-        // =========================
-        // STAGGER
-        // =========================
-
-        StartStagger();
+        if (forcedReaction)
+        {
+            waitingForForcedReactionEnd = true;
+            applySuperStaggerAfterForcedReaction = poiseHit.IsSuperStagger;
+        }
     }
 
 }

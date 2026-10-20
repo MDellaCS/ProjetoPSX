@@ -90,14 +90,18 @@ public class PlayerAttackMovementDefinition
 [Serializable]
 public class PlayerAttackEffectsDefinition
 {
+    [Tooltip("Lanca para baixo inimigos aereos que permitem Juggle.")]
+    public bool launchDown;
+    [Tooltip("Lanca o proprio player para baixo quando este Strike comeca e ele esta no ar.")]
+    public bool selfLaunchDown;
     [Tooltip("Lanca verticalmente inimigos que permitem Launch Up.")]
     public bool launchUp;
-    [Tooltip("Empurra horizontalmente o inimigo conforme o Poise final do golpe.")]
-    public bool push;
-    [Tooltip("Mantem no ar inimigos que permitem Juggle e ja estejam aereos.")]
-    public bool juggle;
     [Tooltip("Lanca verticalmente o proprio player quando este Strike comeca.")]
     public bool selfLaunchUp;
+    [Tooltip("Lanca o inimigo para frente com forca baseada no dano realmente causado pelo golpe.")]
+    public bool launchForwards;
+    [Tooltip("Mantem no ar inimigos que permitem Juggle e ja estejam aereos.")]
+    public bool juggle;
 }
 
 [Serializable]

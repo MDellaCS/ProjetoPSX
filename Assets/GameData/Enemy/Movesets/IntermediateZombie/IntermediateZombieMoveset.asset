@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000002, type: 3}
+  m_Name: IntermediateZombieMoveset
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMovesetDefinition
+  lightWindupActiveRotationSpeed: 240
+  heavyWindupActiveRotationSpeed: 180
+  specialWindupActiveRotationSpeed: 120
+  extendedArmHitboxRadius: 0.25
+  maximumAttacksPerSequence: 5
+  openings:
+  - targetNodeId: Z1
+    selectionWeight: 50
+    requiresDirectorAuthorization: 1
+  - targetNodeId: Z2
+    selectionWeight: 50
+    requiresDirectorAuthorization: 1
+  nodes:
+  - nodeId: Z1
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000003, type: 2}
+    transitions:
+    - targetNodeId: Z2
+      continuationChance: 50
+      selectionWeight: 100
+      minimumDelayAfterActive: 0.4
+      continuationWindow: 0
+      requiresHitConfirm: 0
+  - nodeId: Z2
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000004, type: 2}
+    transitions:
+    - targetNodeId: Z1
+      continuationChance: 50
+      selectionWeight: 100
+      minimumDelayAfterActive: 0.4
+      continuationWindow: 0
+      requiresHitConfirm: 0
+

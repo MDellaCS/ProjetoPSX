@@ -228,22 +228,22 @@ public sealed class EnemyBrain : MonoBehaviour
             return;
         if (taunt != null && taunt.TryStartFromDecision())
             return;
-        int attackIndex = attacks.SelectOpeningAttackIndex();
+        bool hasOpening = attacks.HasAvailableOpening();
         float aggression = EffectiveAggressionPercent / 100f;
         if (commitmentTimer > 0f)
         {
-            if (attackIndex >= 0)
+            if (hasOpening)
             {
-                if (!attacks.TryBeginAttack(attackIndex))
+                if (!attacks.TryBeginSelectedOpening())
                     BeginSupportReposition();
             }
             else
                 BeginChase(aggression);
             return;
         }
-        if (attackIndex >= 0)
+        if (hasOpening)
         {
-            if (attacks.TryBeginAttack(attackIndex))
+            if (attacks.TryBeginSelectedOpening())
                 TryStartCommitment();
             else
                 BeginSupportReposition();

@@ -94,7 +94,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Enemy Body Interaction")]
     [Tooltip("Impulso horizontal que tira o player de cima de um inimigo.")]
-    [Min(0f)] public float enemyHeadPushSpeed = 10f;
+    [Min(0f)] public float enemyHeadSeparationSpeed = 10f;
 
     [Header("References")]
     [Tooltip("Camera usada para converter o input de movimento em direcoes do mundo.")]
@@ -112,6 +112,7 @@ public class PlayerMovement : MonoBehaviour
         playerState.IsNormal();
     public bool IsCrouching => isCrouching;
     public bool IsLaunched => isLaunched;
+    public bool IsLaunchedForwards => launchForwardsVelocity.sqrMagnitude > .0001f;
     public bool IsAerialDiving => isAerialDiving;
     public bool IsGroundDash =>
         playerState != null &&
@@ -126,13 +127,13 @@ public class PlayerMovement : MonoBehaviour
     private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
-    private Vector3 knockbackVelocity;
+    private Vector3 launchForwardsVelocity;
     private Vector3 slideDirection;
     private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
     private float verticalVelocity;
     private float jumpHoldTimer;
-    private float knockbackTimer;
+    private float launchForwardsDeceleration;
     private float dashTimer;
     private float dashCooldownTimer;
     private float aerialLightTimer;
@@ -650,10 +651,13 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateHorizontalVelocity()
     {
-        if (knockbackTimer > 0f)
+        if (launchForwardsVelocity.sqrMagnitude > .0001f)
         {
-            knockbackTimer -= Time.deltaTime;
-            return knockbackVelocity;
+            Vector3 forcedVelocity = launchForwardsVelocity;
+            launchForwardsVelocity = Vector3.MoveTowards(
+                launchForwardsVelocity, Vector3.zero,
+                launchForwardsDeceleration * Time.deltaTime);
+            return forcedVelocity;
         }
 
         if (playerState.IsStaggered())
@@ -1088,13 +1092,13 @@ public class PlayerMovement : MonoBehaviour
         enemyGroundContactTimer = .1f;
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
 
-        Vector3 pushDirection = transform.position - enemy.transform.position;
-        pushDirection.y = 0f;
+        Vector3 separationDirection = transform.position - enemy.transform.position;
+        separationDirection.y = 0f;
 
-        if (pushDirection.sqrMagnitude <= .0001f)
-            pushDirection = transform.right;
+        if (separationDirection.sqrMagnitude <= .0001f)
+            separationDirection = transform.right;
 
-        horizontalVelocity = pushDirection.normalized * enemyHeadPushSpeed;
+        horizontalVelocity = separationDirection.normalized * enemyHeadSeparationSpeed;
     }
 
     private bool IsLandingOnEnemyTop(EnemyBase enemy)
@@ -1117,14 +1121,14 @@ public class PlayerMovement : MonoBehaviour
         return playerBottom >= enemyTop - topContactTolerance;
     }
 
-    public void ApplyKnockback(
+    public void ApplyLaunchForwards(
         Vector3 direction,
         float force,
-        float duration
+        float deceleration
     )
     {
-        knockbackVelocity = direction * force;
-        knockbackTimer = duration;
+        launchForwardsVelocity = direction * Mathf.Max(0f, force);
+        launchForwardsDeceleration = Mathf.Max(.01f, deceleration);
     }
 
     /// <summary>Interrompe traversal ao iniciar Burn, sem alterar o estado.</summary>
@@ -1138,8 +1142,8 @@ public class PlayerMovement : MonoBehaviour
         aerialGravityMultiplier = 1f;
         jumpHoldTimer = 0f;
         horizontalVelocity = Vector3.zero;
-        knockbackVelocity = Vector3.zero;
-        knockbackTimer = 0f;
+        launchForwardsVelocity = Vector3.zero;
+        launchForwardsDeceleration = 0f;
     }
 
     /// <summary>
@@ -1162,6 +1166,23 @@ public class PlayerMovement : MonoBehaviour
 
         if (playerState.IsSliding())
             EndSlide();
+    }
+
+    /// <summary>
+    /// Encerra exclusivamente um Dash terrestre para que um Dash Attack possa
+    /// assumir o controle no mesmo frame. Nao inicia nenhum ataque por conta
+    /// propria e nao interfere em Dash aereo.
+    /// </summary>
+    public bool InterruptGroundDashForAttack()
+    {
+        if (!IsGroundDash || playerState == null)
+            return false;
+
+        dashTimer = 0f;
+        dashStartedGrounded = false;
+        isDashJump = false;
+        playerState.ChangeState(PlayerState.State.Normal);
+        return true;
     }
 
     public void ApplyAttackMovement(Vector3 displacement)
@@ -1264,8 +1285,8 @@ public class PlayerMovement : MonoBehaviour
         // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
         // Launch Up e uma trajetoria vertical intencional: ele limpa qualquer momentum horizontal anterior antes de aplicar o impulso para cima.
         horizontalVelocity = Vector3.zero;
-        knockbackVelocity = Vector3.zero;
-        knockbackTimer = 0f;
+        launchForwardsVelocity = Vector3.zero;
+        launchForwardsDeceleration = 0f;
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
         jumpHoldTimer = 0f;

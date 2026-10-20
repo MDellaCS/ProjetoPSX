@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000002, type: 3}
+  m_Name: AdvancedZombieMoveset
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMovesetDefinition
+  lightWindupActiveRotationSpeed: 240
+  heavyWindupActiveRotationSpeed: 180
+  specialWindupActiveRotationSpeed: 120
+  extendedArmHitboxRadius: 0.25
+  maximumAttacksPerSequence: 5
+  openings:
+  - targetNodeId: ZombieStrike1
+    selectionWeight: 65
+    requiresDirectorAuthorization: 1
+  - targetNodeId: ZombieHeavy1
+    selectionWeight: 35
+    requiresDirectorAuthorization: 1
+  - targetNodeId: ZombieCharge
+    selectionWeight: 45
+    requiresDirectorAuthorization: 1
+  nodes:
+  - nodeId: ZombieStrike1
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000005, type: 2}
+    transitions:
+    - targetNodeId: ZombieStrike2
+      continuationChance: 65
+      selectionWeight: 100
+      minimumDelayAfterActive: 1
+      continuationWindow: 0
+      requiresHitConfirm: 0
+  - nodeId: ZombieStrike2
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000006, type: 2}
+    transitions:
+    - targetNodeId: ZombieStrike3
+      continuationChance: 65
+      selectionWeight: 100
+      minimumDelayAfterActive: 1
+      continuationWindow: 0
+      requiresHitConfirm: 0
+  - nodeId: ZombieStrike3
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000007, type: 2}
+    transitions: []
+  - nodeId: ZombieHeavy1
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000008, type: 2}
+    transitions:
+    - targetNodeId: ZombieHeavy2
+      continuationChance: 65
+      selectionWeight: 100
+      minimumDelayAfterActive: 0.85
+      continuationWindow: 0
+      requiresHitConfirm: 0
+  - nodeId: ZombieHeavy2
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000009, type: 2}
+    transitions: []
+  - nodeId: ZombieCharge
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000010, type: 2}
+    transitions: []
+

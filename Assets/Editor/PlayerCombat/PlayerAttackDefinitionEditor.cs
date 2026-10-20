@@ -20,7 +20,7 @@ public sealed class PlayerAttackDefinitionEditor : Editor
         previewSpeed = EditorPrefs.GetFloat(PreviewSpeedPreference, 1f);
         lastEditorTime = EditorApplication.timeSinceStartup;
         EditorApplication.update += UpdateAnimatedPreview;
-        PushPreview();
+        UpdatePreview();
     }
 
     private void OnDisable()
@@ -53,7 +53,7 @@ public sealed class PlayerAttackDefinitionEditor : Editor
                 EditorPrefs.SetFloat(PreviewSpeedPreference, previewSpeed);
             EditorGUI.BeginChangeCheck();
             previewProgress = EditorGUILayout.Slider("Active Progress", previewProgress, 0f, 1f);
-            if (EditorGUI.EndChangeCheck()) PushPreview();
+            if (EditorGUI.EndChangeCheck()) UpdatePreview();
             EditorGUILayout.HelpBox("O gizmo mostra somente os Strikes e Tracks ativos neste ponto da timeline.", MessageType.Info);
         }
 
@@ -63,17 +63,17 @@ public sealed class PlayerAttackDefinitionEditor : Editor
         if (EditorGUI.EndChangeCheck())
         {
             serializedObject.ApplyModifiedProperties();
-            PushPreview();
+            UpdatePreview();
         }
     }
 
     private void ResolvePreviewTarget()
     {
         previewTarget = Object.FindAnyObjectByType<PlayerAttackPreview>(FindObjectsInactive.Include);
-        PushPreview();
+        UpdatePreview();
     }
 
-    private void PushPreview()
+    private void UpdatePreview()
     {
         if (previewTarget != null)
             PlayerAttackPreview.SetEditorPreview(previewTarget, Attack, previewProgress);
@@ -88,7 +88,7 @@ public sealed class PlayerAttackDefinitionEditor : Editor
         if (!animatePreview || previewTarget == null) return;
         previewProgress = Mathf.Repeat(
             previewProgress + delta * previewSpeed, 1f);
-        PushPreview();
+        UpdatePreview();
         Repaint();
     }
 }

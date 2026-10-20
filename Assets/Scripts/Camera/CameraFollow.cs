@@ -55,7 +55,7 @@ public sealed class CameraFollow : MonoBehaviour
     [Min(0f)] [SerializeField] private float teleportSnapDistance = 12f;
 
     [Header("Collision")]
-    [Tooltip("Camadas exclusivas do cenario capazes de empurrar a camera. Use uma layer CameraObstacle e nao inclua Player, Enemy ou Projectile.")]
+    [Tooltip("Camadas exclusivas do cenario capazes de empurrar a camera. Use uma layer CameraObstacle e nao inclua Player nem Enemy.")]
     [SerializeField] private LayerMask cinemachineCollisionLayers;
     [Tooltip("Raio usado pelo Cinemachine para impedir que a camera atravesse paredes.")]
     [Min(.01f)] [SerializeField] private float collisionRadius = .2f;

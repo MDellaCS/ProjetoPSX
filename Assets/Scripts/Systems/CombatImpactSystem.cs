@@ -227,6 +227,40 @@ public class CombatImpactSystem : MonoBehaviour
         );
     }
 
+    /// <summary>
+    /// Impacto contra o cenario, como Wall Splat e Floor Splat. Usa
+    /// exatamente o perfil visual de um ataque pesado do player, mas congela
+    /// apenas a vitima porque nao existe um combatente atacante.
+    /// </summary>
+    public static void ReportHeavyEnvironmentalImpact(Transform target,
+        Vector3 impactDirection, int damageDealt)
+    {
+        if (target == null)
+            return;
+
+        CombatImpactSystem system = Instance;
+        impactDirection.y = 0f;
+        if (impactDirection.sqrMagnitude <= .0001f)
+        {
+            impactDirection = target.forward;
+            impactDirection.y = 0f;
+        }
+
+        if (impactDirection.sqrMagnitude <= .0001f)
+            impactDirection = Vector3.forward;
+
+        impactDirection.Normalize();
+        system.PlayImpact(
+            null,
+            target,
+            system.heavyAttackImpact,
+            damageDealt,
+            target.position - impactDirection,
+            null,
+            true
+        );
+    }
+
     private void PlayImpact(
         Transform attacker,
         Transform target,

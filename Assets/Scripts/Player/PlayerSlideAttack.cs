@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Hitbox sem dano do Slide. Inimigos atingidos recebem somente o Launch Up
-/// global do PlayerAttackResolver, no maximo uma vez por slide.
+/// Hitbox sem dano do Slide. Causa Poise Damage e solicita Launch Up no maximo
+/// uma vez por inimigo a cada slide.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerSlideAttack : MonoBehaviour
@@ -19,8 +19,10 @@ public class PlayerSlideAttack : MonoBehaviour
     [Min(0f)] public float launchedEnemyCollisionIgnoreDuration = .15f;
     [Tooltip("Converte a velocidade atual do Slide em impulso horizontal para o inimigo lancado.")]
     [Min(0f)] public float launchForwardConversion = 0f;
+    [Tooltip("Dano de Poise causado pelo impacto do Slide. O Launch Up acontece somente quando este golpe deixa o Poise do inimigo em zero ou menos.")]
+    [Min(0)] public int poiseDamage = 60;
 
-    private readonly HashSet<EnemyBase> enemiesLaunchedThisSlide = new();
+    private readonly HashSet<EnemyBase> enemiesHitThisSlide = new();
     private readonly List<IgnoredEnemyCollision> ignoredEnemyCollisions = new();
 
     private PlayerMovement playerMovement;
@@ -66,7 +68,7 @@ public class PlayerSlideAttack : MonoBehaviour
 
         bool isSliding = playerState != null && playerState.IsSliding();
         if (!isSliding && wasSliding)
-            enemiesLaunchedThisSlide.Clear();
+            enemiesHitThisSlide.Clear();
 
         wasSliding = isSliding;
 
@@ -87,25 +89,26 @@ public class PlayerSlideAttack : MonoBehaviour
         foreach (Collider hit in hits)
         {
             EnemyBase enemy = hit.GetComponentInParent<EnemyBase>();
-            if (enemy == null || !enemy.CanBeLaunched ||
-                enemiesLaunchedThisSlide.Contains(enemy))
+            if (enemy == null || enemiesHitThisSlide.Contains(enemy))
             {
                 continue;
             }
 
             if (enemy.TryAvoidPlayerAttack(horizontalAttackRadius))
             {
-                enemiesLaunchedThisSlide.Add(enemy);
+                enemiesHitThisSlide.Add(enemy);
                 continue;
             }
 
-            IgnoreEnemyCollisionTemporarily(enemy);
-            attackResolver.ApplyNonDamagingLaunchUp(
+            bool launched = attackResolver.ApplyNonDamagingLaunchUp(
                 enemy,
+                poiseDamage,
                 transform.forward,
                 playerMovement.HorizontalSpeed * launchForwardConversion
             );
-            enemiesLaunchedThisSlide.Add(enemy);
+            if (launched)
+                IgnoreEnemyCollisionTemporarily(enemy);
+            enemiesHitThisSlide.Add(enemy);
         }
     }
 

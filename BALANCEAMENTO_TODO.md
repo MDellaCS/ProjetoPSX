@@ -47,4 +47,3 @@ Exemplo inicial para testes futuros:
 - Criar um `EnemyAggroCoordinator` central para acompanhar inimigos em aggro no player e escolher um `Primary Aggressor`.
 - O agressor principal recebe bônus de agressividade e prioridade de perseguir/atacar; os demais recebem um teto ou penalidade de agressividade para orbitar, reposicionar e preparar a próxima troca.
 - Trocar o agressor quando ele terminar um combo, sofrer launch/stagger, morrer, perder distância relevante ou atingir um tempo máximo no papel.
-- Arqueiros e futuros inimigos de área devem poder ignorar parcialmente essa limitação, pois sua pressão é indireta.

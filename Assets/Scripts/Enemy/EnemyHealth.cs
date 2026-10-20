@@ -4,6 +4,8 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class EnemyHealth : MonoBehaviour
 {
+    private const float UnkillableHealthRegenPerSecond = 10000f;
+
     [Header("Health")]
     [Tooltip("Vida maxima do inimigo.")]
     [Min(1)] [SerializeField] private int maxHealth = 100;
@@ -13,10 +15,6 @@ public sealed class EnemyHealth : MonoBehaviour
     [Header("Poise")]
     [Tooltip("Poise necessario para causar Stagger.")]
     [Min(1)] [SerializeField] private int maxPoise = 60;
-    [Tooltip("Tempo sem receber dano de Poise antes de iniciar a recuperacao.")]
-    [Min(0f)] [SerializeField] private float poiseRecoveryDelay = 3f;
-    [Tooltip("Poise recuperado por segundo apos o atraso.")]
-    [Min(0f)] [SerializeField] private float poiseRecoveryPerSecond = 20f;
 
     [Header("Stagger")]
     [Tooltip("Tempo em que Stagger impede o inimigo de agir.")]
@@ -36,20 +34,21 @@ public sealed class EnemyHealth : MonoBehaviour
     private EnemyAttackController attacks;
     private EnemyGuard guard;
     private EnemyDodge dodge;
+    private EnemyGore gore;
     private Renderer enemyRenderer;
     private DamageNumberSpawner damageNumbers;
     private Color normalColor;
     private static readonly Color guardingColor = new(.55f, .2f, .8f, 1f);
-    private float currentPoise;
-    private float timeSinceLastPoiseDamage;
+    private readonly CombatPoiseState poise = new();
     private float staggerTimer;
     private bool isGuardBreakStagger;
     private bool isShowingGuardVisual;
+    private float unkillableHealthRegenRemainder;
 
     public bool IsDead { get; private set; }
     public int CurrentHealth { get; private set; }
     public int MaxHealth => maxHealth;
-    public float CurrentPoise => currentPoise;
+    public float CurrentPoise => poise.Current;
     public int MaxPoise => maxPoise;
     public float HealthPercent => maxHealth > 0
         ? Mathf.Clamp01((float)CurrentHealth / maxHealth) : 0f;
@@ -64,8 +63,9 @@ public sealed class EnemyHealth : MonoBehaviour
         attacks = attackController;
         guard = enemyGuard;
         dodge = enemyDodge;
+        gore = GetComponent<EnemyGore>();
         CurrentHealth = maxHealth;
-        currentPoise = maxPoise;
+        poise.Initialize(maxPoise);
         enemyRenderer = GetComponentInChildren<Renderer>();
         damageNumbers = GetComponent<DamageNumberSpawner>();
         if (damageNumbers == null)
@@ -76,20 +76,47 @@ public sealed class EnemyHealth : MonoBehaviour
 
     public void TickPoise()
     {
-        if (currentPoise >= maxPoise) return;
-        timeSinceLastPoiseDamage += Time.deltaTime;
-        if (timeSinceLastPoiseDamage >= poiseRecoveryDelay)
-            currentPoise = Mathf.Min(maxPoise,
-                currentPoise + poiseRecoveryPerSecond * Time.deltaTime);
+        bool reacting = owner.CurrentState == EnemyBase.State.Staggered ||
+            movement.IsLaunched || movement.IsLaunchedForwards;
+        poise.Tick(maxPoise, !reacting);
+    }
+
+    /// <summary>
+    /// Mantem bonecos marcados como invenciveis prontos para teste. A taxa e
+    /// fixa de 10.000 de vida por segundo e nunca ultrapassa a vida maxima.
+    /// </summary>
+    public void TickHealth()
+    {
+        if (!isUnkillable || IsDead || CurrentHealth >= maxHealth)
+        {
+            unkillableHealthRegenRemainder = 0f;
+            return;
+        }
+
+        float healingWithRemainder = UnkillableHealthRegenPerSecond *
+            Time.deltaTime + unkillableHealthRegenRemainder;
+        int healing = Mathf.FloorToInt(healingWithRemainder);
+        unkillableHealthRegenRemainder = healingWithRemainder - healing;
+        if (healing <= 0)
+            return;
+
+        int healthBeforeHealing = CurrentHealth;
+        CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + healing);
+        if (CurrentHealth != healthBeforeHealing)
+            owner.RaiseHealthChanged();
     }
 
     public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
-        out int damageDealt,
+        out int damageDealt, out CombatPoiseHitResult poiseResult,
         bool fromPlayerAttack = false,
         PlayerAttackType playerAttackType = PlayerAttackType.None,
-        float playerAttackRadius = 0f)
+        float playerAttackRadius = 0f,
+        Vector3 impactDirection = default,
+        Vector3 impactPosition = default,
+        bool hasImpactPosition = false)
     {
         damageDealt = 0;
+        poiseResult = default;
         if (IsDead) return false;
         if (fromPlayerAttack && dodge != null &&
             dodge.TryAvoidPlayerAttack(playerAttackRadius, damage))
@@ -98,12 +125,15 @@ public sealed class EnemyHealth : MonoBehaviour
             movement.CancelSlideLaunchHorizontalImpulse();
         guard?.TryBlock(playerAttackType, attackerPosition,
             ref damage, ref poiseDamage);
-        damageDealt = Mathf.Max(0, damage);
+        int healthBeforeDamage = CurrentHealth;
         CurrentHealth -= damage;
-        damageNumbers?.ShowDamage(damage);
+        if (damage > 0)
+            damageNumbers?.ShowDamage(damage);
         brain.OnDamaged();
         FlashDamage();
-        ApplyPoiseDamage(poiseDamage, attackerPosition);
+        poiseResult = poise.ReceiveHit(poiseDamage, maxPoise);
+        if (isGuardBreakStagger)
+            poiseResult = default;
 
         if (CurrentHealth <= 0)
         {
@@ -112,28 +142,27 @@ public sealed class EnemyHealth : MonoBehaviour
             else
             {
                 CurrentHealth = 0;
+                damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+                Vector3 resolvedDirection = ResolveImpactDirection(attackerPosition,
+                    impactDirection);
                 owner.RaiseHealthChanged();
-                Die();
+                CombatParticleSystem.ReportEnemyDamage(owner, damageDealt,
+                    true, resolvedDirection, impactPosition, hasImpactPosition, gore);
+                Die(damageDealt, resolvedDirection);
                 return true;
             }
         }
+        damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
         owner.RaiseHealthChanged();
+        CombatParticleSystem.ReportEnemyDamage(owner, damageDealt, false,
+            ResolveImpactDirection(attackerPosition, impactDirection),
+            impactPosition, hasImpactPosition, gore);
         return true;
     }
 
-    private void ApplyPoiseDamage(int amount, Vector3 attackerPosition)
+    public void ApplyPoiseStagger(Vector3 attackerPosition, bool superStagger)
     {
-        if (amount <= 0) return;
-        currentPoise -= amount;
-        timeSinceLastPoiseDamage = 0f;
-        if (currentPoise > 0f || isGuardBreakStagger) return;
-        ApplyStagger(attackerPosition);
-        currentPoise = maxPoise;
-    }
-
-    public void ApplyStagger(Vector3 attackerPosition)
-    {
-        if (IsDead || movement.IsLaunched) return;
+        if (IsDead) return;
         dodge?.CancelDodge();
         owner.CancelTaunt();
         bool wasAlreadyStaggered = owner.CurrentState == EnemyBase.State.Staggered;
@@ -142,7 +171,7 @@ public sealed class EnemyHealth : MonoBehaviour
             staggerKnockbackDuration);
         attacks.CancelAttack();
         brain.CancelReposition();
-        staggerTimer = staggerDuration;
+        staggerTimer = staggerDuration * (superStagger ? 2f : 1f);
         owner.CurrentState = EnemyBase.State.Staggered;
         if (!wasAlreadyStaggered)
             guard?.NotifyStaggerStarted();
@@ -175,11 +204,55 @@ public sealed class EnemyHealth : MonoBehaviour
             ? EnemyBase.State.Staggered : EnemyBase.State.Combat;
     }
 
-    internal void ApplyWallSplatStagger(float duration)
+    /// <summary>
+    /// Aplica dano ambiental de um Splat sem passar por guarda, esquiva ou
+    /// Poise. O Splat ja e a consequencia de uma reacao de combate anterior.
+    /// Retorna somente o dano que realmente reduziu a vida.
+    /// </summary>
+    internal int ApplySplatDamage(int damage, Vector3 impactDirection)
+    {
+        if (IsDead || damage <= 0)
+            return 0;
+
+        int healthBeforeDamage = CurrentHealth;
+        CurrentHealth -= damage;
+        damageNumbers?.ShowDamage(damage);
+        brain.OnDamaged();
+        FlashDamage();
+
+        if (CurrentHealth <= 0)
+        {
+            if (isUnkillable)
+                CurrentHealth = 1;
+            else
+            {
+                CurrentHealth = 0;
+                int lethalDamage = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+                owner.RaiseHealthChanged();
+                Vector3 resolvedDirection = ResolveImpactDirection(transform.position,
+                    impactDirection);
+                CombatParticleSystem.ReportEnemyDamage(owner, lethalDamage,
+                    true, resolvedDirection, transform.position, false, gore);
+                Die(lethalDamage, resolvedDirection);
+                return lethalDamage;
+            }
+        }
+
+        int damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+        owner.RaiseHealthChanged();
+        CombatParticleSystem.ReportEnemyDamage(owner, damageDealt, false,
+            ResolveImpactDirection(transform.position, impactDirection),
+            transform.position, false, gore);
+        return damageDealt;
+    }
+
+    internal void ApplySplatStagger(float duration)
     {
         if (IsDead) return;
         dodge?.CancelDodge();
         owner.CancelTaunt();
+        attacks.CancelAttack();
+        brain.CancelReposition();
         staggerTimer = duration;
         owner.CurrentState = duration > 0f
             ? EnemyBase.State.Staggered : EnemyBase.State.Combat;
@@ -201,7 +274,20 @@ public sealed class EnemyHealth : MonoBehaviour
         ResetVisualColor();
     }
 
-    private void Die()
+    private Vector3 ResolveImpactDirection(Vector3 attackerPosition,
+        Vector3 impactDirection)
+    {
+        impactDirection.y = 0f;
+        if (impactDirection.sqrMagnitude > .0001f)
+            return impactDirection.normalized;
+
+        Vector3 fallbackDirection = transform.position - attackerPosition;
+        fallbackDirection.y = 0f;
+        return fallbackDirection.sqrMagnitude > .0001f
+            ? fallbackDirection.normalized : transform.forward;
+    }
+
+    private void Die(int lethalDamage, Vector3 impactDirection)
     {
         if (IsDead) return;
         IsDead = true;

@@ -219,7 +219,7 @@ public class EnemyDirector : MonoBehaviour
     {
         if (enemy == null || !enemy.isActiveAndEnabled || enemy.IsDead ||
             enemy.CurrentState != EnemyBase.State.Combat ||
-            enemy.IsLaunched || enemy.IsPushed ||
+            enemy.IsLaunched || enemy.IsLaunchedForwards ||
             enemy.Target == null || enemy.IsSearchingLastKnownPosition ||
             activeAttackers.Contains(enemy))
             return false;

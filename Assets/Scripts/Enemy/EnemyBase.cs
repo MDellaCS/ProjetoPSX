@@ -12,6 +12,7 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyMovement))]
 [RequireComponent(typeof(EnemyHealth))]
 [RequireComponent(typeof(EnemyDebug))]
+[RequireComponent(typeof(EnemyReactionController))]
 public class EnemyBase : MonoBehaviour
 {
     public enum State { Idle, Combat, Windup, Active, Recovery, Guarding, Dodging, Taunting, Staggered }
@@ -29,6 +30,7 @@ public class EnemyBase : MonoBehaviour
     private EnemyGuard guard;
     private EnemyDodge dodge;
     private EnemyTaunt taunt;
+    private EnemyReactionController reactions;
     private CharacterController characterController;
     private bool initialized;
 
@@ -36,9 +38,8 @@ public class EnemyBase : MonoBehaviour
     public bool IsDead => health != null && health.IsDead;
     public bool IsInAttackSequence => CurrentState == State.Windup ||
         CurrentState == State.Active || CurrentState == State.Recovery;
-    public bool CanBeLaunched => movement != null && movement.CanBeLaunched && !IsDead;
     public bool IsLaunched => movement != null && movement.IsLaunched;
-    public bool IsPushed => movement != null && movement.IsPushed;
+    public bool IsLaunchedForwards => movement != null && movement.IsLaunchedForwards;
     public bool CanBeLockOnTarget => isActiveAndEnabled && !IsDead &&
         brain != null && !brain.IsWaitingForEncounter;
     public int CurrentHealth => health != null ? health.CurrentHealth : 0;
@@ -63,26 +64,12 @@ public class EnemyBase : MonoBehaviour
                 : transform.position;
         }
     }
-    protected EnemyAttackData CurrentAttack => attacks != null ? attacks.CurrentAttack : null;
+    protected EnemyAttackDefinition CurrentAttack =>
+        attacks != null ? attacks.CurrentAttack?.Definition : null;
     protected EnemyBrain Brain => brain;
     protected EnemyAttackController AttackController => attacks;
     protected EnemyMovement Movement => movement;
     protected EnemyHealth Health => health;
-
-    protected virtual EnemyAttackData[] CreateDefaultAttacks() =>
-        Array.Empty<EnemyAttackData>();
-
-    protected virtual void Reset()
-    {
-        PopulateDefaultAttacks();
-    }
-
-    [ContextMenu("Preencher ataques padrao")]
-    private void PopulateDefaultAttacks()
-    {
-        GetOrAdd<EnemyAttackController>().SetDefaultsIfEmpty(
-            CreateDefaultAttacks());
-    }
 
     private void Awake() => EnsureInitialized();
 
@@ -99,10 +86,12 @@ public class EnemyBase : MonoBehaviour
         guard = GetComponent<EnemyGuard>();
         dodge = GetComponent<EnemyDodge>();
         taunt = GetComponent<EnemyTaunt>();
+        reactions = GetOrAdd<EnemyReactionController>();
 
         movement.Initialize(this, health);
-        attacks.Initialize(this, brain, CreateDefaultAttacks());
+        attacks.Initialize(this, brain, movement);
         health.Initialize(this, brain, movement, attacks, guard, dodge);
+        reactions.Initialize(this, health, movement);
         brain.Initialize(this, movement, attacks, health, guard);
         guard?.Initialize(this, brain, health, attacks, movement);
         dodge?.Initialize(this, brain, movement, attacks);
@@ -147,11 +136,13 @@ public class EnemyBase : MonoBehaviour
         guard?.TickCooldown();
         dodge?.TickTimers();
         taunt?.TickCooldown();
+        health.TickHealth();
         health.TickPoise();
+        reactions.Tick();
         UpdateVerticalMovement(movement);
         brain.TickCommitment();
 
-        if ((movement.IsLaunched || movement.IsPushed) &&
+        if ((movement.IsLaunched || movement.IsLaunchedForwards) &&
             CurrentState != State.Dodging)
         {
             movement.Move(Vector3.zero);
@@ -168,17 +159,10 @@ public class EnemyBase : MonoBehaviour
                 brain.TickCombat();
                 break;
             case State.Windup:
-                movement.FaceTarget();
                 attacks.TickWindup();
-                movement.Move(Vector3.zero);
                 break;
             case State.Active:
-                EnemyAttackData activeAttack = attacks.CurrentAttack;
-                if (FaceTargetDuringActive(activeAttack))
-                    movement.FaceTarget();
-                movement.Move(GetActiveMovementVelocity(activeAttack));
-                if (CurrentState == State.Active)
-                    attacks.TickActive();
+                attacks.TickActive();
                 break;
             case State.Recovery:
                 attacks.TickRecovery();
@@ -216,46 +200,37 @@ public class EnemyBase : MonoBehaviour
     // Ganchos especificos: a base conserva o comportamento generico.
     protected virtual void UpdateVerticalMovement(EnemyMovement locomotion) =>
         locomotion.ApplyGravity();
-    protected virtual bool CanUseAttack(EnemyAttackData attack, int index) => true;
+    protected virtual bool CanUseAttack(EnemyAttackDefinition attack) => true;
     protected virtual bool TryChooseSpecialCombatAction() => false;
-    protected virtual void OnAttackStarted(EnemyAttackData attack) { }
-    protected virtual void OnAttackActiveStarted(EnemyAttackData attack) { }
-    protected virtual bool FaceTargetDuringActive(EnemyAttackData attack) => true;
-    protected virtual Vector3 GetActiveMovementVelocity(EnemyAttackData attack) =>
-        Vector3.zero;
-    protected virtual bool ExecuteAttack(EnemyAttackData attack) =>
-        attacks.ExecuteMeleeAttack(attack);
+    protected virtual void OnAttackStarted(EnemyAttackDefinition attack) { }
+    protected virtual void OnAttackActiveStarted(EnemyAttackDefinition attack) { }
 
-    internal bool CanSelectAttack(EnemyAttackData attack, int index) =>
-        CanUseAttack(attack, index);
+    internal bool CanSelectAttack(EnemyAttackDefinition attack) =>
+        CanUseAttack(attack);
     internal bool ChooseSpecialCombatAction() => TryChooseSpecialCombatAction();
-    internal void NotifyAttackStarted(EnemyAttackData attack) =>
+    internal void NotifyAttackStarted(EnemyAttackDefinition attack) =>
         OnAttackStarted(attack);
-    internal void NotifyAttackActive(EnemyAttackData attack) =>
+    internal void NotifyAttackActive(EnemyAttackDefinition attack) =>
         OnAttackActiveStarted(attack);
-    internal bool PerformAttack(EnemyAttackData attack) => ExecuteAttack(attack);
 
     public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
-        out int damageDealt,
+        out int damageDealt, out CombatPoiseHitResult poiseResult,
         bool fromPlayerAttack = false,
         PlayerAttackType playerAttackType = PlayerAttackType.None,
-        float playerAttackRadius = 0f) =>
+        float playerAttackRadius = 0f,
+        Vector3 impactDirection = default,
+        Vector3 impactPosition = default,
+        bool hasImpactPosition = false) =>
         health.TakeDamage(damage, attackerPosition, poiseDamage, out damageDealt,
-            fromPlayerAttack, playerAttackType, playerAttackRadius);
-    public void ApplyStagger(Vector3 attackerPosition) =>
-        health.ApplyStagger(attackerPosition);
-    public void ApplyLaunchUp(float initialSpeed, float gravity) =>
-        movement.ApplyLaunchUp(initialSpeed, gravity);
+            out poiseResult,
+            fromPlayerAttack, playerAttackType, playerAttackRadius,
+            impactDirection, impactPosition, hasImpactPosition);
+    public bool ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
+        CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>
         movement.ApplyLaunchUpHorizontalImpulse(direction, speed);
     public void CancelSlideLaunchHorizontalImpulse() =>
         movement.CancelSlideLaunchHorizontalImpulse();
-    public void ApplyPush(Vector3 attackerPosition, float force, float duration) =>
-        movement.ApplyPush(attackerPosition, force, duration);
-    public void ApplyAerialJuggleLight(float liftSpeed, float gravity,
-        float gravityMultiplier, float duration) =>
-        movement.ApplyAerialJuggleLight(liftSpeed, gravity, gravityMultiplier, duration);
-    public void ApplyAerialDive(float fallSpeed) => movement.ApplyAerialDive(fallSpeed);
     public void SetEncounterEngaged(Transform player)
     {
         EnsureInitialized();

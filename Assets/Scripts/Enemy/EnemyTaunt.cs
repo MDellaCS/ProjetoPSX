@@ -71,7 +71,7 @@ public sealed class EnemyTaunt : MonoBehaviour
     internal bool TryStartFromDecision()
     {
         if (!isActiveAndEnabled || owner == null || brain == null ||
-            movement == null || movement.IsLaunched || movement.IsPushed ||
+            movement == null || movement.IsLaunched || movement.IsLaunchedForwards ||
             owner.IsDead || owner.CurrentState != EnemyBase.State.Combat ||
             brain.Target == null || cooldownRemaining > 0f ||
             brain.EffectiveAggressionPercent < minimumAggressionPercent ||

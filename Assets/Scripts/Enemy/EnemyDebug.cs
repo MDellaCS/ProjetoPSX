@@ -116,12 +116,7 @@ public sealed class EnemyDebug : MonoBehaviour
         Gizmos.color = new Color(.2f, .85f, 1f, .7f);
         Gizmos.DrawWireSphere(transform.position, brain.DetectionRange);
 
-        EnemyAttackData attack = attacks.CurrentAttack;
-        if (owner.CurrentState != EnemyBase.State.Active || attack == null)
-            return;
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(owner.AttackOrigin +
-            transform.forward * attack.hitboxDistance, attack.hitboxRadius);
+        // As formas ativas sao desenhadas pelo EnemyAttackHitboxController.
     }
 
     public string GetStatusText()
@@ -129,14 +124,14 @@ public sealed class EnemyDebug : MonoBehaviour
         if (brain == null || attacks == null || movement == null || health == null)
             return "Enemy: aguardando inicializacao";
 
-        EnemyAttackData attack = attacks.CurrentAttack;
-        string attackName = attack != null ? attack.attackName : "-";
+        EnemyAttackDefinition attack = attacks.CurrentAttack?.Definition;
+        string attackName = attack != null ? attack.displayName : "-";
         string timings = attack != null
             ? attack.windupDuration.ToString("0.00") + " / " +
                 attack.activeDuration.ToString("0.00") + " / " +
                 attack.recoveryDuration.ToString("0.00")
             : "-";
-        string status = movement.IsPushed ? "PUSHED" :
+        string status = movement.IsLaunchedForwards ? "LAUNCHED FORWARDS" :
             movement.IsLaunched ? "LAUNCHED" :
             brain.IsSearchingLastKnownPosition ? "SEARCHING" : "GROUND";
         string cameraStatus = brain.IsCameraVisible ? "VISIBLE" : "HIDDEN";

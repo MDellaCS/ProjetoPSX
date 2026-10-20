@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -6,8 +5,8 @@ using UnityEngine;
 /// </summary>
 public class BasicFlyer : EnemyBase
 {
-    private const string SweepAttackId = "FlyerSweep";
-    private const string AirSpinAttackId = "FlyerAirSpin";
+    private const string SweepTag = "Sweep";
+    private const string AirSpinTag = "AirSpin";
 
     [Header("Flight")]
     [Tooltip("Altura que o inimigo busca manter acima do chao enquanto nao esta em sweep.")]
@@ -35,39 +34,6 @@ public class BasicFlyer : EnemyBase
     [Tooltip("Numero de voltas completas do visual durante Windup + Active de Air Spin.")]
     [Min(0f)] [SerializeField] private float airSpinVisualRotations = 2f;
 
-    protected override EnemyAttackData[] CreateDefaultAttacks() => new[]
-    {
-        new EnemyAttackData
-        {
-            attackName = "Flyer Sweep",
-            attackId = SweepAttackId,
-            damage = 14,
-            maximumRange = 1.5f,
-            windupDuration = .45f,
-            activeDuration = .55f,
-            recoveryDuration = .9f,
-            hitboxDistance = .65f,
-            hitboxRadius = .85f,
-            knockbackForce = 4f,
-            knockbackDuration = .18f
-        },
-        new EnemyAttackData
-        {
-            attackName = "Flyer Air Spin",
-            attackId = AirSpinAttackId,
-            damage = 16,
-            maximumRange = 2.4f,
-            windupDuration = .35f,
-            activeDuration = .65f,
-            recoveryDuration = 1f,
-            hitboxDistance = 0f,
-            hitboxRadius = 2.4f,
-            knockbackForce = 5f,
-            knockbackDuration = .2f
-        }
-    };
-
-    private readonly HashSet<PlayerHealth> sweepHitPlayers = new();
     private readonly RaycastHit[] groundHits = new RaycastHit[16];
     private float fallbackFlightHeight;
     private bool isAirSpinActive;
@@ -104,7 +70,8 @@ public class BasicFlyer : EnemyBase
             return;
         }
 
-        if (CurrentState == State.Active && !IsAirSpinAttack(CurrentAttack))
+        if (CurrentState == State.Active &&
+            CurrentAttack != null && CurrentAttack.HasTag(SweepTag))
         {
             movement.SetVerticalVelocity(-sweepDescentSpeed);
             return;
@@ -162,7 +129,7 @@ public class BasicFlyer : EnemyBase
         return foundGround;
     }
 
-    protected override void OnAttackStarted(EnemyAttackData attack)
+    protected override void OnAttackStarted(EnemyAttackDefinition attack)
     {
         if (!IsAirSpinAttack(attack))
             return;
@@ -173,75 +140,12 @@ public class BasicFlyer : EnemyBase
             airSpinBaseLocalRotation = visualRoot.localRotation;
     }
 
-    protected override void OnAttackActiveStarted(EnemyAttackData attack)
+    private bool IsAirSpinAttack(EnemyAttackDefinition attack)
     {
-        sweepHitPlayers.Clear();
+        return attack != null && attack.HasTag(AirSpinTag);
     }
 
-    protected override bool ExecuteAttack(EnemyAttackData attack)
-    {
-        Vector3 hitPosition = IsAirSpinAttack(attack)
-            ? AttackOrigin
-            : AttackOrigin + transform.forward * attack.hitboxDistance;
-
-        foreach (Collider hit in Physics.OverlapSphere(hitPosition, attack.hitboxRadius))
-        {
-            PlayerHealth playerHealth = hit.GetComponentInParent<PlayerHealth>();
-            if (playerHealth == null || !sweepHitPlayers.Add(playerHealth))
-                continue;
-
-            playerHealth.TakeDamage(
-                attack.damage,
-                AttackOrigin,
-                attack.knockbackForce,
-                attack.knockbackDuration,
-                true,
-                transform
-            );
-        }
-
-        // Retorna false para consultar a hitbox durante todo Active.
-        return false;
-    }
-
-    protected override bool CanUseAttack(EnemyAttackData attack, int attackIndex)
-    {
-        // Air Spin e a resposta especifica do Flyer ao jogador no ar; o
-        // Sweep ocupa o papel equivalente contra o jogador no chao.
-        return attack.attackId == AirSpinAttackId
-            ? IsTargetAirborne()
-            : attack.attackId != SweepAttackId || !IsTargetAirborne();
-    }
-
-    protected override void OnDrawGizmos()
-    {
-        base.OnDrawGizmos();
-
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
-            CurrentState != State.Active ||
-            !IsAirSpinAttack(CurrentAttack))
-        {
-            return;
-        }
-
-        Gizmos.color = new Color(1f, .35f, .1f, .9f);
-        Gizmos.DrawWireSphere(AttackOrigin, CurrentAttack.hitboxRadius);
-    }
-
-    private bool IsTargetAirborne()
-    {
-        PlayerMovement targetMovement = Target != null
-            ? Target.GetComponent<PlayerMovement>()
-            : null;
-        return targetMovement != null && !targetMovement.IsGrounded;
-    }
-
-    private bool IsAirSpinAttack(EnemyAttackData attack)
-    {
-        return attack != null && attack.attackId == AirSpinAttackId;
-    }
-
-    private void UpdateAirSpinVisual(EnemyAttackData attack)
+    private void UpdateAirSpinVisual(EnemyAttackDefinition attack)
     {
         if (visualRoot == null || attack == null)
             return;

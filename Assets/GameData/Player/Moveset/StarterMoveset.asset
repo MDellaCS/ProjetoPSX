@@ -21,7 +21,7 @@ MonoBehaviour:
   heavyTransitionTiming:
     minimumDelayAfterWindup: 0
     continuationWindow: 0.6
-  extendedArmHitboxRadius: 0.1
+  extendedArmHitboxRadius: 0.15
   lightCancelRules:
   - action: 2
     allowedPhases: 6
@@ -46,6 +46,15 @@ MonoBehaviour:
   - input: 1
     context: 0
     targetNodeId: H1
+  - input: 0
+    context: 2
+    targetNodeId: D1
+  - input: 0
+    context: 1
+    targetNodeId: AirL1
+  - input: 1
+    context: 1
+    targetNodeId: AirH1
   nodes:
   - nodeId: L1
     attack: {fileID: 11400000, guid: 54d1fc2271d160849b7c6cfc939fd6ef, type: 2}
@@ -74,10 +83,75 @@ MonoBehaviour:
       requiresHitConfirm: 0
   - nodeId: L3p
     attack: {fileID: 11400000, guid: 06ff9d088f5a4af4e90452ef7653392b, type: 2}
-    transitions: []
+    transitions:
+    - input: 0
+      targetNodeId: L4p
+      requiresPause: 0
+      requiresHitConfirm: 0
   - nodeId: L4
     attack: {fileID: 11400000, guid: 25871bd56eaedcc4da477ff5382d1d40, type: 2}
     transitions: []
+  - nodeId: L4p
+    attack: {fileID: 11400000, guid: 726d7b2a73827a149a94f2a00ac0fe3c, type: 2}
+    transitions: []
   - nodeId: H1
     attack: {fileID: 11400000, guid: 8a9407bd5f8cbaa45b8e5b21f924c8ea, type: 2}
+    transitions: []
+  - nodeId: D1
+    attack: {fileID: 11400000, guid: 89836aba85f921d4e8a7891a54c750ea, type: 2}
+    transitions: []
+  - nodeId: AirL1
+    attack: {fileID: 11400000, guid: e7b1b0ff71f7839479012180d069aa73, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL2
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL2
+    attack: {fileID: 11400000, guid: f56c932af45fe8d4ca6b29f134a6729c, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL3
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL3
+    attack: {fileID: 11400000, guid: dd2e98d891c8fb248b41a9d1e11a3e3c, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL4
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL4
+    attack: {fileID: 11400000, guid: a76ca13646650bf4a8f2755e05b49ea0, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL5
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL5
+    attack: {fileID: 11400000, guid: db9c9a2debc88fe4483eea2886b11e2c, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL6
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL6
+    attack: {fileID: 11400000, guid: 63d53eeab0e0ccb408aea992811ba72f, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL7
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL7
+    attack: {fileID: 11400000, guid: 3909ef340b25d574eb8199dfebb82677, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL8
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL8
+    attack: {fileID: 11400000, guid: df3b5c96e8b99da4e998203a701c3e53, type: 2}
+    transitions: []
+  - nodeId: AirH1
+    attack: {fileID: 11400000, guid: 2f2381b2b926b3644816e32e4242ce22, type: 2}
     transitions: []

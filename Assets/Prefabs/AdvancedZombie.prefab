@@ -44,6 +44,9 @@ GameObject:
   - component: {fileID: 8065122105029396497}
   - component: {fileID: 7038528183464375128}
   - component: {fileID: 485302232963280403}
+  - component: {fileID: 910000000000000001}
+  - component: {fileID: 910000000000000002}
+  - component: {fileID: 910000000000000003}
   - component: {fileID: 6292575565008901409}
   - component: {fileID: 212785566711577276}
   - component: {fileID: 6421883612428584792}
@@ -107,7 +110,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5ecf5f43e7b4edcb2a3b5e2f3129441, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
   detectionRange: 8
   combatDetectionRange: 14
@@ -160,113 +163,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 626817c8c5f64627a702307337b9c54f, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
-  useDefaultAttacksWhenEmpty: 1
-  attacks:
-  - attackName: Zombie Strike 1
-    attackId: 
-    canStartAttack: 1
-    openingWeight: 65
-    continuationChance: 65
-    continuations:
-    - nextAttackIndex: 1
-      selectionWeight: 100
-    isProjectileAttack: 0
-    damage: 20
-    maximumRange: 1.5
-    windupDuration: 1.5
-    activeDuration: 0.1
-    recoveryDuration: 1
-    hitboxDistance: 0.5
-    hitboxRadius: 1
-    knockbackForce: 3
-    knockbackDuration: 0.12
-  - attackName: Zombie Strike 2
-    attackId: 
-    canStartAttack: 0
-    openingWeight: 100
-    continuationChance: 65
-    continuations:
-    - nextAttackIndex: 2
-      selectionWeight: 100
-    isProjectileAttack: 0
-    damage: 20
-    maximumRange: 1.5
-    windupDuration: 1
-    activeDuration: 0.1
-    recoveryDuration: 1
-    hitboxDistance: 0.5
-    hitboxRadius: 1
-    knockbackForce: 3
-    knockbackDuration: 0.12
-  - attackName: Zombie Strike 3
-    attackId: 
-    canStartAttack: 0
-    openingWeight: 100
-    continuationChance: 65
-    continuations: []
-    isProjectileAttack: 0
-    damage: 20
-    maximumRange: 1.5
-    windupDuration: 0.5
-    activeDuration: 0.1
-    recoveryDuration: 1
-    hitboxDistance: 0.5
-    hitboxRadius: 1
-    knockbackForce: 3
-    knockbackDuration: 0.12
-  - attackName: Zombie Heavy 1
-    attackId: 
-    canStartAttack: 1
-    openingWeight: 35
-    continuationChance: 65
-    continuations:
-    - nextAttackIndex: 4
-      selectionWeight: 100
-    isProjectileAttack: 0
-    damage: 32
-    maximumRange: 1.8
-    windupDuration: 1.15
-    activeDuration: 0.16
-    recoveryDuration: 0.85
-    hitboxDistance: 0.7
-    hitboxRadius: 1.15
-    knockbackForce: 5
-    knockbackDuration: 0.2
-  - attackName: Zombie Heavy 2
-    attackId: 
-    canStartAttack: 0
-    openingWeight: 100
-    continuationChance: 65
-    continuations: []
-    isProjectileAttack: 0
-    damage: 38
-    maximumRange: 1.9
-    windupDuration: 0.75
-    activeDuration: 0.18
-    recoveryDuration: 1.25
-    hitboxDistance: 0.8
-    hitboxRadius: 1.25
-    knockbackForce: 7
-    knockbackDuration: 0.28
-  - attackName: Zombie Charge
-    attackId: AdvancedZombieCharge
-    canStartAttack: 1
-    openingWeight: 45
-    continuationChance: 0
-    continuations: []
-    isProjectileAttack: 0
-    damage: 30
-    maximumRange: 5.5
-    windupDuration: 0.8
-    activeDuration: 0.5
-    recoveryDuration: 1.2
-    hitboxDistance: 0.8
-    hitboxRadius: 1
-    knockbackForce: 5
-    knockbackDuration: 0.2
-  maximumAttacksPerSequence: 5
+  moveset: {fileID: 11400000, guid: c1000000000000000000000000000003, type: 2}
 --- !u!114 &6292575565008901409
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -277,14 +176,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
   movementSpeed: 3.2
   gravity: -60
   terminalFallSpeed: 30
   rotationSpeed: 210
   useTankControls: 1
-  canBeLaunched: 1
+  canBeLaunchedUp: 1
+  canBeLaunchedDown: 1
+  canBeLaunchedForwards: 1
   canBeJuggled: 1
   wallSplatMinimumSpeed: 13
   wallSplatStunDuration: 1.5
@@ -306,8 +207,6 @@ MonoBehaviour:
   maxHealth: 1500
   isUnkillable: 0
   maxPoise: 120
-  poiseRecoveryDelay: 3
-  poiseRecoveryPerSecond: 10
   staggerDuration: 1
   staggerKnockbackForce: 1
   staggerKnockbackDuration: 0.2
@@ -446,3 +345,42 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
   m_PrefabInstance: {fileID: 8321301459396382457}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &910000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000009, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackPreview
+  attack: {fileID: 0}
+  activePreviewProgress: 0
+  previewColor: {r: 1, g: 0.25, b: 0.1, a: 0.85}
+--- !u!114 &910000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000007, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackMovement
+--- !u!114 &910000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000008, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackHitboxController

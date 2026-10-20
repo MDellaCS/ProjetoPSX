@@ -181,6 +181,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(combatStatus.CombatTimer.ToString("F2") + " s");
         textBuilder.Append("GROUNDED: ")
             .AppendLine(playerMovement.IsGrounded ? "YES" : "NO");
+        textBuilder.Append("POISE: ")
+            .Append(Mathf.CeilToInt(playerHealth.CurrentPoise))
+            .Append(" / ")
+            .AppendLine(playerHealth.maxPoise.ToString());
         textBuilder.Append("CROUCHING: ")
             .AppendLine(playerMovement.IsCrouching ? "YES" : "NO");
         textBuilder.Append("SLIDING: ")

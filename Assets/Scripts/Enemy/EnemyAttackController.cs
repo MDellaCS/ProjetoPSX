@@ -1,143 +1,182 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Moveset, sorteios, fases de ataque e hitbox corpo a corpo.</summary>
+/// <summary>Orquestra o grafo, as fases e os sistemas desacoplados do ataque.</summary>
 [DisallowMultipleComponent]
+[RequireComponent(typeof(EnemyAttackMovement))]
+[RequireComponent(typeof(EnemyAttackHitboxController))]
+[RequireComponent(typeof(EnemyAttackPreview))]
 public sealed class EnemyAttackController : MonoBehaviour
 {
     [Header("Moveset")]
-    [Tooltip("Preenche a lista vazia com os ataques padrao do tipo de inimigo. Desligue para permitir um moveset vazio.")]
-    [SerializeField] private bool useDefaultAttacksWhenEmpty = true;
-    [Tooltip("Lista de ataques deste inimigo. Cada ataque pode iniciar uma acao, continuar combos e escolher caminhos com pesos.")]
-    [SerializeField] private EnemyAttackData[] attacks = System.Array.Empty<EnemyAttackData>();
-    [Tooltip("Numero maximo de golpes na mesma sequencia. Impede que caminhos de combo ciclicos mantenham o inimigo atacando para sempre.")]
-    [Min(1)] [SerializeField] private int maximumAttacksPerSequence = 5;
+    [Tooltip("Asset com aberturas, nodes, combos, mixups e configuracoes globais deste inimigo.")]
+    [SerializeField] private EnemyMovesetDefinition moveset;
 
+    private readonly Dictionary<EnemyAttackDefinition, float> cooldownEnds = new();
     private EnemyBase owner;
     private EnemyBrain brain;
-    private EnemyAttackData currentAttack;
-    private float stateTimer;
-    private bool hasDamagedDuringActive;
+    private EnemyMovement locomotion;
+    private EnemyAttackSelector selector;
+    private EnemyAttackMovement authoredMovement;
+    private EnemyAttackHitboxController hitboxes;
+    private float phaseTimer;
+    private float recoveryElapsed;
     private int attacksInSequence;
+    private EnemyMoveNode pendingContinuation;
+    private float pendingContinuationDelay;
 
-    public EnemyAttackData CurrentAttack => currentAttack;
-    public EnemyAttackData[] Attacks => attacks;
+    public EnemyMovesetDefinition Moveset => moveset;
+    public EnemyAttackRuntime CurrentAttack { get; private set; }
+    public EnemyAttackPhase CurrentPhase { get; private set; }
+    public event Action<EnemyAttackRuntime> AttackStarted;
+    public event Action<EnemyAttackRuntime, EnemyAttackPhase> PhaseChanged;
+    public event Action<EnemyAttackRuntime> AttackEnded;
+    public float PhaseProgress => CurrentAttack == null ? 0f :
+        1f - phaseTimer / Mathf.Max(.0001f, GetPhaseDuration(CurrentPhase));
 
     internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
-        EnemyAttackData[] defaults)
+        EnemyMovement enemyMovement)
     {
         owner = enemy;
         brain = enemyBrain;
-        SetDefaultsIfEmpty(defaults);
+        locomotion = enemyMovement;
+        authoredMovement = GetComponent<EnemyAttackMovement>() ??
+            gameObject.AddComponent<EnemyAttackMovement>();
+        hitboxes = GetComponent<EnemyAttackHitboxController>() ??
+            gameObject.AddComponent<EnemyAttackHitboxController>();
+        authoredMovement.Initialize(owner, brain, locomotion);
+        hitboxes.Initialize(owner);
+        selector = new EnemyAttackSelector(owner, brain, locomotion,
+            moveset, cooldownEnds);
     }
 
-    internal void SetDefaultsIfEmpty(EnemyAttackData[] defaults)
-    {
-        if (useDefaultAttacksWhenEmpty && (attacks == null || attacks.Length == 0))
-            attacks = defaults ?? System.Array.Empty<EnemyAttackData>();
-    }
+    public bool HasAvailableOpening() => selector != null && selector.HasOpening();
 
-    public EnemyAttackData GetAttack(int index) =>
-        attacks != null && index >= 0 && index < attacks.Length
-            ? attacks[index] : null;
-
-    public bool HasAvailableOpening()
+    public bool TryBeginSelectedOpening()
     {
-        if (brain == null || brain.Target == null || attacks == null)
+        if (selector == null || !selector.TrySelectOpening(out EnemyMoveNode node,
+            out bool needsDirector))
             return false;
-
-        for (int i = 0; i < attacks.Length; i++)
-            if (IsValidOpening(i))
-                return true;
-
-        return false;
-    }
-
-    public int SelectOpeningAttackIndex()
-    {
-        if (brain.Target == null || attacks == null)
-            return -1;
-        float totalWeight = 0f;
-        for (int i = 0; i < attacks.Length; i++)
-            if (IsValidOpening(i))
-                totalWeight += attacks[i].openingWeight;
-        if (totalWeight <= 0f)
-            return -1;
-
-        float roll = Random.value * totalWeight;
-        for (int i = 0; i < attacks.Length; i++)
-        {
-            if (!IsValidOpening(i)) continue;
-            roll -= attacks[i].openingWeight;
-            if (roll <= 0f)
-                return i;
-        }
-        return -1;
-    }
-
-    private bool IsValidOpening(int index)
-    {
-        EnemyAttackData attack = GetAttack(index);
-        return attack != null && attack.canStartAttack &&
-            attack.openingWeight > 0f &&
-            brain.DistanceToTarget() <= attack.maximumRange &&
-            owner.CanSelectAttack(attack, index);
-    }
-
-    public bool TryBeginAttack(int index)
-    {
-        if (GetAttack(index) == null || !EnemyDirector.RequestAttackTurn(owner))
+        if (needsDirector && !EnemyDirector.RequestAttackTurn(owner))
             return false;
         attacksInSequence = 0;
-        BeginAttack(index);
+        BeginAttack(node);
         return true;
     }
 
-    private void BeginAttack(int index)
+    private void BeginAttack(EnemyMoveNode node)
     {
-        currentAttack = GetAttack(index);
-        if (currentAttack == null)
+        if (node?.attack == null || moveset == null)
             return;
+        CurrentAttack = new EnemyAttackRuntime(node, moveset);
+        CurrentPhase = EnemyAttackPhase.Windup;
+        phaseTimer = Mathf.Max(0f, CurrentAttack.WindupDuration);
+        recoveryElapsed = 0f;
+        pendingContinuation = null;
+        pendingContinuationDelay = 0f;
         attacksInSequence++;
+        cooldownEnds[node.attack] = Time.time + Mathf.Max(0f,
+            node.attack.requirements != null
+                ? node.attack.requirements.cooldown : 0f);
+        authoredMovement.Begin(CurrentAttack);
+        hitboxes.Begin(CurrentAttack);
         brain.OnAttackStarted();
-        owner.NotifyAttackStarted(currentAttack);
-        stateTimer = Mathf.Max(0f, currentAttack.windupDuration);
-        hasDamagedDuringActive = false;
+        owner.NotifyAttackStarted(node.attack);
+        AttackStarted?.Invoke(CurrentAttack);
+        PhaseChanged?.Invoke(CurrentAttack, CurrentPhase);
         owner.CurrentState = EnemyBase.State.Windup;
+        SkipEmptyPhases();
     }
 
     public void TickWindup()
     {
-        stateTimer -= Time.deltaTime;
-        if (stateTimer > 0f)
-            return;
-        stateTimer = Mathf.Max(0f, currentAttack.activeDuration);
-        hasDamagedDuringActive = false;
-        owner.CurrentState = EnemyBase.State.Active;
-        owner.NotifyAttackActive(currentAttack);
+        if (CurrentAttack == null) return;
+        TickMovement();
+        phaseTimer -= Time.deltaTime;
+        if (phaseTimer <= 0f) EnterActive();
     }
 
     public void TickActive()
     {
-        if (!hasDamagedDuringActive && currentAttack != null &&
-            owner.PerformAttack(currentAttack))
-            hasDamagedDuringActive = true;
-        stateTimer -= Time.deltaTime;
-        if (stateTimer > 0f)
-            return;
-        stateTimer = currentAttack != null
-            ? Mathf.Max(0f, currentAttack.recoveryDuration) : 0f;
-        owner.CurrentState = EnemyBase.State.Recovery;
+        if (CurrentAttack == null) return;
+        TickMovement();
+        hitboxes.Tick(PhaseProgress);
+        phaseTimer -= Time.deltaTime;
+        if (phaseTimer <= 0f)
+        {
+            hitboxes.Tick(1f);
+            EnterRecovery();
+        }
     }
 
     public void TickRecovery()
     {
-        stateTimer -= Time.deltaTime;
-        if (stateTimer > 0f)
-            return;
-        int next = SelectContinuationAttackIndex();
-        if (next >= 0)
+        if (CurrentAttack == null) return;
+        authoredMovement.TickRecovery();
+        recoveryElapsed += Time.deltaTime;
+        phaseTimer -= Time.deltaTime;
+        if (pendingContinuation != null &&
+            recoveryElapsed >= pendingContinuationDelay)
         {
-            BeginAttack(next);
+            AttackEnded?.Invoke(CurrentAttack);
+            BeginAttack(pendingContinuation);
+            return;
+        }
+        if (phaseTimer <= 0f) FinishOrContinue();
+    }
+
+    private void TickMovement()
+    {
+        float windup = CurrentAttack.WindupDuration;
+        float active = CurrentAttack.ActiveDuration;
+        float elapsed = CurrentPhase == EnemyAttackPhase.Windup
+            ? windup * PhaseProgress : windup + active * PhaseProgress;
+        authoredMovement.Tick(CurrentPhase, PhaseProgress,
+            elapsed / Mathf.Max(.0001f, windup + active));
+    }
+
+    private void EnterActive()
+    {
+        CurrentPhase = EnemyAttackPhase.Active;
+        phaseTimer = Mathf.Max(0f, CurrentAttack.ActiveDuration);
+        owner.CurrentState = EnemyBase.State.Active;
+        owner.NotifyAttackActive(CurrentAttack.Definition);
+        PhaseChanged?.Invoke(CurrentAttack, CurrentPhase);
+        SkipEmptyPhases();
+    }
+
+    private void EnterRecovery()
+    {
+        CurrentPhase = EnemyAttackPhase.Recovery;
+        phaseTimer = Mathf.Max(0f, CurrentAttack.RecoveryDuration);
+        recoveryElapsed = 0f;
+        owner.CurrentState = EnemyBase.State.Recovery;
+        PhaseChanged?.Invoke(CurrentAttack, CurrentPhase);
+        pendingContinuation = null;
+        pendingContinuationDelay = 0f;
+        if (attacksInSequence < Mathf.Max(1,
+            moveset.maximumAttacksPerSequence))
+            selector.TrySelectContinuation(CurrentAttack,
+                out pendingContinuation, out pendingContinuationDelay);
+        SkipEmptyPhases();
+    }
+
+    private void SkipEmptyPhases()
+    {
+        if (CurrentAttack == null || phaseTimer > 0f) return;
+        if (CurrentPhase == EnemyAttackPhase.Windup) EnterActive();
+        else if (CurrentPhase == EnemyAttackPhase.Active) EnterRecovery();
+        else FinishOrContinue();
+    }
+
+    private void FinishOrContinue()
+    {
+        if (pendingContinuation != null &&
+            recoveryElapsed >= pendingContinuationDelay)
+        {
+            AttackEnded?.Invoke(CurrentAttack);
+            BeginAttack(pendingContinuation);
             return;
         }
         CancelAttack();
@@ -145,63 +184,32 @@ public sealed class EnemyAttackController : MonoBehaviour
         brain.ScheduleNextDecision();
     }
 
-    private int SelectContinuationAttackIndex()
-    {
-        if (currentAttack == null || brain.Target == null ||
-            attacksInSequence >= maximumAttacksPerSequence ||
-            currentAttack.continuations == null ||
-            currentAttack.continuations.Count == 0 ||
-            Random.value > currentAttack.continuationChance / 100f)
-            return -1;
-
-        float totalWeight = 0f;
-        foreach (EnemyAttackContinuation continuation in currentAttack.continuations)
-            if (IsValidContinuation(continuation))
-                totalWeight += continuation.selectionWeight;
-        if (totalWeight <= 0f)
-            return -1;
-
-        float roll = Random.value * totalWeight;
-        foreach (EnemyAttackContinuation continuation in currentAttack.continuations)
-        {
-            if (!IsValidContinuation(continuation)) continue;
-            roll -= continuation.selectionWeight;
-            if (roll <= 0f)
-                return continuation.nextAttackIndex;
-        }
-        return -1;
-    }
-
-    private bool IsValidContinuation(EnemyAttackContinuation continuation)
-    {
-        if (continuation == null || continuation.selectionWeight <= 0f)
-            return false;
-        EnemyAttackData attack = GetAttack(continuation.nextAttackIndex);
-        return attack != null &&
-            brain.DistanceToTarget() <= attack.maximumRange &&
-            owner.CanSelectAttack(attack, continuation.nextAttackIndex);
-    }
-
     public void CancelAttack()
     {
-        currentAttack = null;
-        stateTimer = 0f;
-        hasDamagedDuringActive = false;
+        EnemyAttackRuntime ended = CurrentAttack;
+        CurrentAttack = null;
+        CurrentPhase = EnemyAttackPhase.None;
+        phaseTimer = 0f;
+        recoveryElapsed = 0f;
         attacksInSequence = 0;
+        pendingContinuation = null;
+        pendingContinuationDelay = 0f;
+        authoredMovement?.End();
+        hitboxes?.End();
+        if (ended != null)
+            AttackEnded?.Invoke(ended);
     }
 
-    public bool ExecuteMeleeAttack(EnemyAttackData attack)
-    {
-        Vector3 center = owner.AttackOrigin +
-            transform.forward * attack.hitboxDistance;
-        foreach (Collider hit in Physics.OverlapSphere(center, attack.hitboxRadius))
+    private float GetPhaseDuration(EnemyAttackPhase phase) =>
+        CurrentAttack == null ? 0f : phase switch
         {
-            PlayerHealth player = hit.GetComponentInParent<PlayerHealth>();
-            if (player == null) continue;
-            player.TakeDamage(attack.damage, owner.AttackOrigin,
-                attack.knockbackForce, attack.knockbackDuration, true, transform);
-            return true;
-        }
-        return false;
-    }
+            EnemyAttackPhase.Windup => CurrentAttack.WindupDuration,
+            EnemyAttackPhase.Active => CurrentAttack.ActiveDuration,
+            EnemyAttackPhase.Recovery => CurrentAttack.RecoveryDuration,
+            _ => 0f
+        };
+
+#if UNITY_EDITOR
+    public void EditorAssignMoveset(EnemyMovesetDefinition value) => moveset = value;
+#endif
 }

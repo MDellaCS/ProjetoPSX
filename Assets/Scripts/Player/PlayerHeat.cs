@@ -34,8 +34,8 @@ public class PlayerHeat : MonoBehaviour
     [Min(0f)] public float heavyDamageAdditivePowerBonus = 5f;
 
     [Header("Light Attack Heat")]
-    [Tooltip("Heat gerado quando qualquer ataque leve do player acerta. Vale para leves terrestres, aereos e Dash L1; pesados nao geram Heat.")]
-    [Min(0f)] public float lightAttackHeatGeneratedOnHit = 5f;
+    [Tooltip("Heat gerado por cada ponto de dano realmente retirado da vida do inimigo por um ataque leve marcado para gerar Heat.")]
+    [Min(0f)] public float heatGeneratedPerDamageDealt = .3f;
 
     [Header("Superheat Notches")]
     [Tooltip("Capacidade maxima de Superheat. Ao encher, inicia o estado Burn.")]
@@ -88,11 +88,8 @@ public class PlayerHeat : MonoBehaviour
     [Min(.01f)] public float burnBlastActiveDuration = .7f;
     [Tooltip("Dano causado pela explosao de Burn em cada inimigo dentro do raio.")]
     [Min(0)] public int burnBlastDamage = 850;
-    [Tooltip("Forca horizontal de Push aplicada pela explosao de Burn.")]
-    [Min(0f)] public float burnBlastPushForce = 6f;
-    [Tooltip("Duracao do Push aplicado pela explosao de Burn.")]
-    [Min(0f)] public float burnBlastPushDuration = .25f;
-
+    [Tooltip("Dano de Poise causado pela explosao de Burn. O Launch Forwards so acontece quando este valor quebra o Poise do inimigo.")]
+    [Min(0)] public int burnBlastPoiseDamage = 100;
     [Header("Debug")]
     [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes. Esses atalhos alteram apenas o Heat e nao geram Superheat.")]
     [SerializeField] private bool debugHeatInputEnabled = true;
@@ -443,20 +440,33 @@ public class PlayerHeat : MonoBehaviour
             if (enemy == null || !burnBlastAffectedEnemies.Add(enemy))
                 continue;
 
-            if (burnBlastDamage > 0)
+            int damageDealt = 0;
+            CombatPoiseHitResult poiseHit = default;
+            bool connected = burnBlastDamage > 0 &&
                 enemy.TakeDamage(
                     burnBlastDamage,
                     origin,
-                    0,
-                    out _,
+                    burnBlastPoiseDamage,
+                    out damageDealt,
+                    out poiseHit,
                     true
                 );
 
-            enemy.ApplyPush(
-                origin,
-                burnBlastPushForce,
-                burnBlastPushDuration
-            );
+            if (connected)
+            {
+                CombatPoiseSystem rules = CombatPoiseSystem.Instance;
+                enemy.ApplyPoiseReaction(poiseHit, new CombatReactionRequest(
+                    CombatReactionType.LaunchForwards, origin,
+                    playerMovement != null
+                        ? playerMovement.GetMaximumJumpLaunchSpeed() : 18f,
+                    playerMovement != null ? playerMovement.gravity : -60f,
+                    rules.LaunchDownFallSpeed,
+                    rules.CalculateLaunchForwardsForce(damageDealt),
+                    rules.LaunchForwardsDeceleration,
+                    rules.JuggleLiftSpeed,
+                    rules.JuggleGravityMultiplier,
+                    rules.JuggleDuration));
+            }
         }
     }
 

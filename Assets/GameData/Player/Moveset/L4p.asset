@@ -1,0 +1,265 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b98f1fcdf334852af096c0b0bb97bcb, type: 3}
+  m_Name: L4p
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
+  attackId: L4p
+  displayName: L4p
+  kind: 0
+  context: 0
+  windupDuration: 0.1
+  activeDuration: 0.6
+  recoveryDuration: 0.2
+  baseDamage: 45
+  basePoiseDamage: 90
+  movement:
+    forwardDistance: 3
+    startNormalized: 0
+    endNormalized: 0.5
+    movementCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  strikes:
+  - strikeName: L4p
+    activeStartNormalized: 0
+    activeEndNormalized: 1
+    damageMultiplier: 1
+    poiseMultiplier: 1
+    generatesHeatOnHit: 1
+    effects:
+      launchUp: 1
+      launchForwards: 1
+      juggle: 0
+      selfLaunchUp: 0
+    hitboxes:
+    - trackName: L4p_Gira
+      shape: 0
+      anchorMode: 0
+      trajectoryMode: 1
+      primaryAnchorId: 
+      secondaryAnchorId: 
+      startLocalPosition: {x: -0.36, y: 0.36, z: 0.2}
+      endLocalPosition: {x: 0, y: 0.36, z: 5.5}
+      startLocalEuler: {x: 0, y: 0, z: 0}
+      endLocalEuler: {x: 0, y: 0, z: 0}
+      orbitStartAngleDegrees: 180
+      orbitEndAngleDegrees: 450
+      orbitStartDistance: 0.25
+      orbitEndDistance: 5.5
+      orbitHeight: 0.36
+      orbitAngleCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      orbitDistanceCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 1
+          outSlope: 1
+          tangentMode: 34
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 1
+          tangentMode: 34
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      orbitStartRadius: 0.25
+      orbitEndRadius: 1.5
+      orbitRadiusCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      radius: 0.5
+      capsuleHeight: 3.12
+      capsuleAxis: 2
+      boxSize: {x: 1, y: 1, z: 1}
+      activeStartNormalized: 0
+      activeEndNormalized: 0.9
+      sweep: 1
+      sweepStepDistance: 0.18
+      hitGroup: 0
+      allowRepeatHits: 1
+      repeatHitInterval: 0.075
+    - trackName: L3p_Volta
+      shape: 0
+      anchorMode: 0
+      trajectoryMode: 0
+      primaryAnchorId: 
+      secondaryAnchorId: 
+      startLocalPosition: {x: 5.74, y: 0.36, z: -0.43}
+      endLocalPosition: {x: 0, y: 0.36, z: 0.2}
+      startLocalEuler: {x: 0, y: 0, z: 0}
+      endLocalEuler: {x: 0, y: 0, z: 0}
+      orbitStartAngleDegrees: 180
+      orbitEndAngleDegrees: 400
+      orbitStartDistance: 0.25
+      orbitEndDistance: 3.5
+      orbitHeight: 0.36
+      orbitAngleCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      orbitDistanceCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      orbitStartRadius: 0.5
+      orbitEndRadius: 1
+      orbitRadiusCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      radius: 0.8
+      capsuleHeight: 3.12
+      capsuleAxis: 2
+      boxSize: {x: 1, y: 1, z: 1}
+      activeStartNormalized: 0.9
+      activeEndNormalized: 1
+      sweep: 1
+      sweepStepDistance: 0.18
+      hitGroup: 0
+      allowRepeatHits: 1
+      repeatHitInterval: 0.075
+  usesExtendedArmHitbox: 1

@@ -25,8 +25,16 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     [SerializeField] private float maximumHeatPitchOffset;
     [Tooltip("Graus somados ao campo de visao quando o Heat positivo chega ao maximo. Valores positivos ampliam a visao; negativos aproximam visualmente.")]
     [SerializeField] private float maximumHeatFieldOfViewOffset;
+    [Tooltip("Forca maxima do blur periférico quando o Heat positivo chega ao maximo. Zero desliga o efeito; 1 ja e visivel e valores maiores tornam os cantos muito desfocados.")]
+    [Range(0f, 8f)] [SerializeField] private float maximumHeatPeripheralBlur = 1f;
+    [Tooltip("Curva compartilhada pelos efeitos visuais de Heat. X representa Heat positivo normalizado (0 a 1); Y representa a parcela aplicada a distancia, Pitch, FOV e blur.")]
+    [SerializeField] private AnimationCurve positiveHeatEffectsCurve =
+        AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [Tooltip("Tempo de suavizacao da influencia do Heat na camera.")]
     [Min(0f)] [SerializeField] private float heatBlendTime = .2f;
+
+    private static readonly int HeatPeripheralBlurId =
+        Shader.PropertyToID("_HeatPeripheralBlur");
 
     private Transform player;
     private CameraEffectStack effects;
@@ -57,6 +65,16 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     {
         effects?.RemoveModifier(CombatModifierId);
         effects?.RemoveModifier(HeatModifierId);
+        Shader.SetGlobalFloat(HeatPeripheralBlurId, 0f);
+    }
+
+    private void OnValidate()
+    {
+        if (positiveHeatEffectsCurve == null ||
+            positiveHeatEffectsCurve.length == 0)
+        {
+            positiveHeatEffectsCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        }
     }
 
     private void ResolvePlayerComponents()
@@ -81,8 +99,11 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
     private void UpdateHeatEffect()
     {
-        float targetWeight = playerHeat != null && playerHeat.MaxHeat > 0f
+        float normalizedHeat = playerHeat != null && playerHeat.MaxHeat > 0f
             ? Mathf.Clamp01(playerHeat.CurrentHeat / playerHeat.MaxHeat) : 0f;
+        float targetWeight = Mathf.Clamp01(positiveHeatEffectsCurve != null
+            ? positiveHeatEffectsCurve.Evaluate(normalizedHeat)
+            : normalizedHeat);
         heatWeight = Damp(heatWeight, targetWeight,
             ref heatVelocity, heatBlendTime);
         CameraModifier modifier = CameraModifier.Identity;
@@ -91,6 +112,8 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         modifier.fieldOfViewOffset =
             maximumHeatFieldOfViewOffset * heatWeight;
         effects.SetModifier(HeatModifierId, modifier);
+        Shader.SetGlobalFloat(HeatPeripheralBlurId,
+            maximumHeatPeripheralBlur * heatWeight);
     }
 
     private static float Damp(float current, float target,

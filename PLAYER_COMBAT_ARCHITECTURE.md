@@ -10,7 +10,7 @@ O gameplay dos ataques nao depende do `Animator`. Animacoes leem o estado do ata
 4. `PlayerAttackController`: autoridade da timeline `Windup -> Active -> Recovery`; cria um snapshot imutavel do poder do golpe.
 5. `PlayerAttackMovement`: aplica avanco e giro durante Windup + Active sem depender da animacao. A direcao trava ao entrar em Recovery.
 6. `PlayerHitboxController`: avalia Sphere, Capsule e Box, incluindo Sweep, Anchors, grupos e repeticao de acertos.
-7. `PlayerAttackResolver`: converte uma deteccao em dano, Poise, Heat, Impact, Launch Up, Push e Juggle.
+7. `PlayerAttackResolver`: converte uma deteccao em dano, Poise, Heat, Impact, Launch Up, Launch Forwards e Juggle.
 8. `PlayerCombatStatus`: controla exclusivamente dentro/fora de combate e o override de F6.
 9. `PlayerAttackPreview`: permite inspecionar volumes no Scene View sem entrar em Play Mode.
 10. `PlayerAnimationPresenter`: continua somente como apresentacao; recebe ID, fase e progresso do ataque.
@@ -24,6 +24,10 @@ Tracks procedurais possuem dois modos de trajetoria. `Linear` interpola entre St
 Tracks do mesmo Strike e com o mesmo `Hit Group` causam apenas um acerto por inimigo. Strikes diferentes podem atingir o mesmo inimigo novamente, permitindo um clique produzir varios golpes distintos. `Sweep` cria amostras entre frames para uma arma rapida nao atravessar o alvo sem detectar colisao.
 
 Um ataque pode ativar `Extended Arm Hitbox`. Nesse caso, cada Track ativa recebe uma Capsule adicional entre o centro real do player e o centro atual da hitbox. A grossura e global no moveset e a Capsule compartilha o Hit Group da Track, portanto nao duplica dano.
+
+O efeito `Juggle` pertence ao Strike e usa uma unica configuracao global no `PlayerAttackResolver`. Ao iniciar o Strike, o player aereo recebe Lift, multiplicador de gravidade e duracao; ao conectar, o inimigo lancado recebe exatamente os mesmos valores. Isso mantem os dois corpos na mesma trajetoria vertical relativa.
+
+Os efeitos verticais ficam agrupados em pares. `Launch Down` e `Self Launch Down` usam a mesma velocidade global de queda; `Launch Up` e `Self Launch Up` usam os valores padronizados do pulo maximo. Efeitos `Self` comecam junto do Strike, enquanto os equivalentes sem `Self` sao aplicados ao inimigo atingido.
 
 ## Moveset inicial
 

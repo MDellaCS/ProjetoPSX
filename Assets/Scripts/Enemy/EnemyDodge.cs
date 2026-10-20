@@ -75,7 +75,7 @@ public sealed class EnemyDodge : MonoBehaviour
         if (IsAvoidingPlayerAttacks)
             return true;
         if (owner == null || owner.IsDead || brain == null ||
-            movement == null || movement.IsPushed ||
+            movement == null || movement.IsLaunchedForwards ||
             !CanInterruptCurrentState() ||
             brain.Target == null || cooldownRemaining > 0f ||
             brain.EffectiveAggressionPercent < minimumAggressionPercentToDodge ||

@@ -22,6 +22,7 @@ public class PlayerInputBuffer : MonoBehaviour
 
     private PlayerBufferedInput bufferedInput;
     private float expirationTime = -1f;
+    private float capturedTime = -1f;
     private int lastCapturedFrame = -1;
 
     public bool HasMouseDevice => Mouse.current != null;
@@ -49,6 +50,20 @@ public class PlayerInputBuffer : MonoBehaviour
             return false;
 
         expirationTime = -1f;
+        capturedTime = -1f;
+        return true;
+    }
+
+    public bool TryGetBufferedTimestamp(PlayerBufferedInput input,
+        out float timestamp)
+    {
+        if (!HasBuffered(input))
+        {
+            timestamp = -1f;
+            return false;
+        }
+
+        timestamp = capturedTime;
         return true;
     }
 
@@ -108,12 +123,16 @@ public class PlayerInputBuffer : MonoBehaviour
             return;
 
         bufferedInput = input;
+        capturedTime = Time.time;
         expirationTime = Time.time + bufferDuration;
     }
 
     private void ClearExpiredInput()
     {
         if (expirationTime < Time.time)
+        {
             expirationTime = -1f;
+            capturedTime = -1f;
+        }
     }
 }
