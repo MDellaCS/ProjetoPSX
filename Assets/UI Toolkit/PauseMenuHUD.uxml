@@ -1,0 +1,11 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="PauseMenuHUD.uss" />
+    <ui:VisualElement name="pause-menu-overlay">
+        <ui:VisualElement name="pause-menu-content">
+            <ui:Label name="pause-menu-title" text="PAUSADO" />
+            <ui:Button name="pause-resume-button" text="CONTINUAR" />
+            <ui:Button name="pause-settings-button" text="CONFIGURAÇÕES" />
+            <ui:Button name="pause-quit-button" text="SAIR" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

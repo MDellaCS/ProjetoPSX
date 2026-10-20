@@ -9,17 +9,14 @@ public sealed class EnemyAttackSelector
     private readonly EnemyBrain brain;
     private readonly EnemyMovement movement;
     private readonly EnemyMovesetDefinition moveset;
-    private readonly Dictionary<EnemyAttackDefinition, float> cooldownEnds;
 
     public EnemyAttackSelector(EnemyBase owner, EnemyBrain brain,
-        EnemyMovement movement, EnemyMovesetDefinition moveset,
-        Dictionary<EnemyAttackDefinition, float> cooldownEnds)
+        EnemyMovement movement, EnemyMovesetDefinition moveset)
     {
         this.owner = owner;
         this.brain = brain;
         this.movement = movement;
         this.moveset = moveset;
-        this.cooldownEnds = cooldownEnds;
     }
 
     public bool HasOpening() => SelectOpening(false, out _, out _);
@@ -104,8 +101,7 @@ public sealed class EnemyAttackSelector
 
     public bool IsValid(EnemyAttackDefinition attack)
     {
-        if (attack == null || brain.Target == null ||
-            cooldownEnds.TryGetValue(attack, out float end) && Time.time < end)
+        if (attack == null || brain.Target == null)
             return false;
         EnemyAttackRequirements rules = attack.requirements;
         float distance = brain.DistanceToTarget();

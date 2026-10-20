@@ -18,29 +18,40 @@ MonoBehaviour:
   extendedArmHitboxRadius: 0.25
   maximumAttacksPerSequence: 5
   openings:
-  - targetNodeId: Z1
-    selectionWeight: 50
+  - targetNodeId: Push
+    selectionWeight: 20
     requiresDirectorAuthorization: 1
-  - targetNodeId: Z2
+  - targetNodeId: ArmSwing1
+    selectionWeight: 80
+    requiresDirectorAuthorization: 1
+  - targetNodeId: Run
     selectionWeight: 50
     requiresDirectorAuthorization: 1
   nodes:
-  - nodeId: Z1
+  - nodeId: Push
     attack: {fileID: 11400000, guid: b1000000000000000000000000000003, type: 2}
+    transitions: []
+  - nodeId: ArmSwing1
+    attack: {fileID: 11400000, guid: ea2fa8d32776a9d4b96d70e82c8d53b9, type: 2}
     transitions:
-    - targetNodeId: Z2
-      continuationChance: 50
+    - targetNodeId: ArmSwing2
+      continuationChance: 100
       selectionWeight: 100
-      minimumDelayAfterActive: 0.4
+      minimumDelayAfterActive: 0
       continuationWindow: 0
       requiresHitConfirm: 0
-  - nodeId: Z2
-    attack: {fileID: 11400000, guid: b1000000000000000000000000000004, type: 2}
+  - nodeId: ArmSwing2
+    attack: {fileID: 11400000, guid: 8292101807e7c6340bd05f4ac462fcf2, type: 2}
     transitions:
-    - targetNodeId: Z1
-      continuationChance: 50
+    - targetNodeId: ArmSwing3
+      continuationChance: 100
       selectionWeight: 100
-      minimumDelayAfterActive: 0.4
+      minimumDelayAfterActive: 0
       continuationWindow: 0
       requiresHitConfirm: 0
-
+  - nodeId: ArmSwing3
+    attack: {fileID: 11400000, guid: d12f7d6036c31d442b8550ad8673aa2b, type: 2}
+    transitions: []
+  - nodeId: Run
+    attack: {fileID: 11400000, guid: 023a93620778a3a4d865fa670e163eac, type: 2}
+    transitions: []

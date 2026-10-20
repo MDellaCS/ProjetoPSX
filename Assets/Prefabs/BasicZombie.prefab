@@ -167,7 +167,7 @@ MonoBehaviour:
     max: 0.5
   chaseCommitmentDuration: 5
   chaseCommitmentCooldown: 5
-  directorWeight: 30
+  directorWeight: 10
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -235,8 +235,9 @@ MonoBehaviour:
   movementSpeed: 2
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 70
+  rotationSpeed: 60
   useTankControls: 1
+  tankControlsAdvanceAlignment: 0
   canBeLaunchedUp: 1
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
@@ -262,7 +263,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 900
+  maxHealth: 1000
   isUnkillable: 0
   maxPoise: 50
   staggerDuration: 1
@@ -307,6 +308,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyFragmentDeath
   damageProfile: {fileID: 11400000, guid: 0467eb97ccca3ce449f59592207d4658, type: 2}
   deathProfile: {fileID: 11400000, guid: 3124fe2430a717f4da45771b47a5e9b3, type: 2}
+  particleCountMultiplier: 0.8
 --- !u!114 &8679773078252638314
 MonoBehaviour:
   m_ObjectHideFlags: 0

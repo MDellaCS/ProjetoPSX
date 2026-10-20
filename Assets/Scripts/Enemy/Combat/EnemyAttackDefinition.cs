@@ -45,8 +45,6 @@ public sealed class EnemyAttackRequirements
     public bool requiresLineOfSight;
     [Tooltip("Camadas que podem bloquear a linha de visao deste ataque.")]
     public LayerMask lineOfSightBlockingLayers = ~0;
-    [Tooltip("Espera minima antes que o mesmo ataque possa ser escolhido novamente.")]
-    [Min(0f)] public float cooldown;
     [Tooltip("Agressividade efetiva minima necessaria para selecionar o ataque.")]
     [Range(0f, 100f)] public float minimumAggressionPercent;
     [Tooltip("Agressividade efetiva maxima permitida para selecionar o ataque.")]

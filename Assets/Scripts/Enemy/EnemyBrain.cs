@@ -4,6 +4,14 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class EnemyBrain : MonoBehaviour
 {
+    private enum RepositionMode
+    {
+        None,
+        Retreat,
+        StrafeLeft,
+        StrafeRight
+    }
+
     private static int cachedVisibilityFrame = -1;
     private static Camera cachedVisibilityCamera;
     private static Plane[] cachedVisibilityPlanes;
@@ -95,8 +103,8 @@ public sealed class EnemyBrain : MonoBehaviour
     private PlayerMovement playerMovement;
     private float decisionTimer;
     private float repositionTimer;
-    private Vector3 repositionDirection;
     private float repositionSpeed;
+    private RepositionMode repositionMode;
     private bool isChasing;
     private float commitmentTimer;
     private float commitmentCooldownTimer;
@@ -201,7 +209,6 @@ public sealed class EnemyBrain : MonoBehaviour
         }
 
         RememberPlayerPosition();
-        movement.FaceTarget();
         decisionTimer -= Time.deltaTime;
         if (decisionTimer <= 0f)
             ChooseCombatAction();
@@ -211,10 +218,10 @@ public sealed class EnemyBrain : MonoBehaviour
         if (repositionTimer > 0f)
         {
             repositionTimer -= Time.deltaTime;
-            movement.Move(repositionDirection * repositionSpeed, false);
+            TickReposition();
         }
         else if (commitmentTimer > 0f || isChasing)
-            movement.Move(DirectionToTarget() * repositionSpeed);
+            movement.MoveTowardTarget(repositionSpeed);
         else
             movement.Move(Vector3.zero);
     }
@@ -250,33 +257,32 @@ public sealed class EnemyBrain : MonoBehaviour
             return;
         }
 
-        Vector3 toTarget = DirectionToTarget();
-        if (toTarget.sqrMagnitude > .001f && Random.value <= aggression)
+        if (DirectionToTarget().sqrMagnitude > .001f && Random.value <= aggression)
         {
             TryStartCommitment();
             BeginChase(aggression);
             return;
         }
-        Vector3 side = Random.value < .5f
-            ? Vector3.Cross(Vector3.up, toTarget)
-            : Vector3.Cross(toTarget, Vector3.up);
-        BeginReposition(Random.value < .35f ? -toTarget : side);
+        BeginReposition(Random.value < .35f
+            ? RepositionMode.Retreat
+            : Random.value < .5f
+                ? RepositionMode.StrafeLeft
+                : RepositionMode.StrafeRight);
     }
 
     private void BeginSupportReposition()
     {
-        Vector3 towardTarget = DirectionToTarget();
-        Vector3 side = Random.value < .5f
-            ? Vector3.Cross(Vector3.up, towardTarget)
-            : Vector3.Cross(towardTarget, Vector3.up);
-        BeginReposition(Random.value < .25f ? -towardTarget : side);
+        BeginReposition(Random.value < .25f
+            ? RepositionMode.Retreat
+            : Random.value < .5f
+                ? RepositionMode.StrafeLeft
+                : RepositionMode.StrafeRight);
     }
 
-    private void BeginReposition(Vector3 direction)
+    private void BeginReposition(RepositionMode mode)
     {
         isChasing = false;
-        repositionDirection = direction.sqrMagnitude > .001f
-            ? direction.normalized : Vector3.zero;
+        repositionMode = mode;
         repositionSpeed = movement.MovementSpeed *
             Mathf.Max(0f, repositionSpeedMultiplier.RandomValue());
         repositionTimer = Mathf.Max(0f, repositionDuration.RandomValue());
@@ -285,9 +291,32 @@ public sealed class EnemyBrain : MonoBehaviour
     private void BeginChase(float aggression)
     {
         isChasing = true;
-        repositionDirection = DirectionToTarget();
+        repositionMode = RepositionMode.None;
         repositionSpeed = movement.MovementSpeed * Mathf.Lerp(.2f, 1f, aggression);
         repositionTimer = 0f;
+    }
+
+    /// <summary>
+    /// Converte uma decisao tática em locomocao. EnemyMovement e a unica
+    /// camada que traduz essas intencoes para Tank Controls ou movimento livre.
+    /// </summary>
+    private void TickReposition()
+    {
+        switch (repositionMode)
+        {
+            case RepositionMode.Retreat:
+                movement.RetreatFromTarget(repositionSpeed);
+                break;
+            case RepositionMode.StrafeLeft:
+                movement.StrafeTarget(-1f, repositionSpeed);
+                break;
+            case RepositionMode.StrafeRight:
+                movement.StrafeTarget(1f, repositionSpeed);
+                break;
+            default:
+                movement.Move(Vector3.zero);
+                break;
+        }
     }
 
     private bool TryStartCommitment()
@@ -327,8 +356,7 @@ public sealed class EnemyBrain : MonoBehaviour
         if (distance > lastKnownArrivalDistance)
         {
             direction /= distance;
-            movement.FaceDirection(direction);
-            movement.Move(direction * movement.MovementSpeed * .5f);
+            movement.MoveTowardDirection(direction, movement.MovementSpeed * .5f);
         }
         else
             movement.Move(Vector3.zero);
@@ -338,6 +366,7 @@ public sealed class EnemyBrain : MonoBehaviour
     {
         isChasing = false;
         repositionTimer = 0f;
+        repositionMode = RepositionMode.None;
     }
 
     internal void ScheduleNextDecision() =>
@@ -345,7 +374,11 @@ public sealed class EnemyBrain : MonoBehaviour
 
     internal void DecideImmediately() => decisionTimer = 0f;
 
-    internal void CancelReposition() => repositionTimer = 0f;
+    internal void CancelReposition()
+    {
+        repositionTimer = 0f;
+        repositionMode = RepositionMode.None;
+    }
 
     public void SetEncounterEngaged(Transform encounterPlayer)
     {

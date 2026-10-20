@@ -57,7 +57,7 @@ public sealed class EnemyAttackMovement : MonoBehaviour
             transform.right * authored.lateralDistance * delta;
         Vector3 velocity = Time.deltaTime > 0f
             ? displacement / Time.deltaTime : Vector3.zero;
-        movement.Move(velocity, false);
+        movement.Move(velocity);
     }
 
     public void TickRecovery() => movement.Move(Vector3.zero);

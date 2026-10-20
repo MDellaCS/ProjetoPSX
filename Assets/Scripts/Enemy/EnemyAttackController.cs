@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Orquestra o grafo, as fases e os sistemas desacoplados do ataque.</summary>
@@ -13,7 +12,6 @@ public sealed class EnemyAttackController : MonoBehaviour
     [Tooltip("Asset com aberturas, nodes, combos, mixups e configuracoes globais deste inimigo.")]
     [SerializeField] private EnemyMovesetDefinition moveset;
 
-    private readonly Dictionary<EnemyAttackDefinition, float> cooldownEnds = new();
     private EnemyBase owner;
     private EnemyBrain brain;
     private EnemyMovement locomotion;
@@ -47,8 +45,7 @@ public sealed class EnemyAttackController : MonoBehaviour
             gameObject.AddComponent<EnemyAttackHitboxController>();
         authoredMovement.Initialize(owner, brain, locomotion);
         hitboxes.Initialize(owner);
-        selector = new EnemyAttackSelector(owner, brain, locomotion,
-            moveset, cooldownEnds);
+        selector = new EnemyAttackSelector(owner, brain, locomotion, moveset);
     }
 
     public bool HasAvailableOpening() => selector != null && selector.HasOpening();
@@ -76,9 +73,6 @@ public sealed class EnemyAttackController : MonoBehaviour
         pendingContinuation = null;
         pendingContinuationDelay = 0f;
         attacksInSequence++;
-        cooldownEnds[node.attack] = Time.time + Mathf.Max(0f,
-            node.attack.requirements != null
-                ? node.attack.requirements.cooldown : 0f);
         authoredMovement.Begin(CurrentAttack);
         hitboxes.Begin(CurrentAttack);
         brain.OnAttackStarted();

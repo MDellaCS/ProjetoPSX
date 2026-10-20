@@ -46,27 +46,38 @@ public sealed class CombatParticleSystem : MonoBehaviour
             ? impactPosition
             : renderer != null ? renderer.bounds.center : enemy.AttackOrigin;
         system.Emit(gore != null ? gore.DamageProfile : null, system.defaultHit,
-            position, direction, damageDealt, renderer);
+            position, direction, damageDealt, renderer,
+            gore != null ? gore.ParticleCountMultiplier : 1f);
         if (lethal)
             system.Emit(gore != null ? gore.DeathProfile : null, system.defaultGore,
-                position, direction, damageDealt, renderer);
+                position, direction, damageDealt, renderer,
+                gore != null ? gore.ParticleCountMultiplier : 1f);
     }
 
     public void EmitTestDeath(CombatParticleProfile overrideProfile,
-        Vector3 position, Vector3 direction, int damageDealt, Renderer source)
+        Vector3 position, Vector3 direction, int damageDealt, Renderer source,
+        float particleCountMultiplier = 1f)
     {
         EnsureDefaults();
-        Emit(overrideProfile, defaultGore, position, direction, damageDealt, source);
+        Emit(overrideProfile, defaultGore, position, direction, damageDealt,
+            source, particleCountMultiplier);
     }
 
     public void Emit(CombatParticleProfile overrideProfile,
         CombatParticleProfile fallbackProfile, Vector3 position, Vector3 direction,
-        int damageDealt, Renderer sourceRenderer)
+        int damageDealt, Renderer sourceRenderer,
+        float particleCountMultiplier = 1f)
     {
         EnsureDefaults();
         CombatParticleProfile profile = overrideProfile != null ? overrideProfile : fallbackProfile;
-        int count = Mathf.Clamp(Mathf.RoundToInt(profile.countByDamage.Evaluate(damageDealt)),
+        int profileCount = Mathf.Clamp(
+            Mathf.RoundToInt(profile.countByDamage.Evaluate(damageDealt)),
             profile.minimumCount, profile.maximumCount);
+        // O multiplicador do EnemyGore e propositalmente posterior ao clamp
+        // do profile: ele personaliza a densidade deste inimigo sem mudar os
+        // limites compartilhados pelo perfil.
+        int count = Mathf.Max(0, Mathf.RoundToInt(profileCount *
+            Mathf.Max(0f, particleCountMultiplier)));
         Material material = ResolveMaterial(profile, sourceRenderer);
         Vector3 baseDirection = direction.sqrMagnitude > .0001f ? direction.normalized : Vector3.forward;
         for (int index = 0; index < count; index++)

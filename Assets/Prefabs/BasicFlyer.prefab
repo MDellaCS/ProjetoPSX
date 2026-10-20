@@ -51,6 +51,7 @@ GameObject:
   - component: {fileID: 6292575565008901409}
   - component: {fileID: 212785566711577276}
   - component: {fileID: 6421883612428584792}
+  - component: {fileID: 2658722192233227514}
   m_Layer: 0
   m_Name: BasicFlyer
   m_TagString: Untagged
@@ -109,7 +110,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 21882b701d20d8448b0e1fb973e82c57, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicFlyer
   groundFlightHeight: 3.5
   flightGroundLayers:
@@ -133,7 +134,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5ecf5f43e7b4edcb2a3b5e2f3129441, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
   detectionRange: 8
   combatDetectionRange: 14
@@ -176,7 +177,7 @@ MonoBehaviour:
     max: 0.5
   chaseCommitmentDuration: 5
   chaseCommitmentCooldown: 5
-  directorWeight: 30
+  directorWeight: 40
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -187,9 +188,48 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 626817c8c5f64627a702307337b9c54f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
   moveset: {fileID: 11400000, guid: c1000000000000000000000000000004, type: 2}
+--- !u!114 &910000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000009, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackPreview
+  attack: {fileID: 0}
+  activePreviewProgress: 0
+  previewColor: {r: 1, g: 0.25, b: 0.1, a: 0.85}
+--- !u!114 &910000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000007, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackMovement
+--- !u!114 &910000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000008, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackHitboxController
 --- !u!114 &6292575565008901409
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,15 +247,20 @@ MonoBehaviour:
   terminalFallSpeed: 30
   rotationSpeed: 70
   useTankControls: 1
+  tankControlsAdvanceAlignment: 0.85
   canBeLaunchedUp: 0
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 0
   canBeJuggled: 1
   wallSplatMinimumSpeed: 10
+  wallSplatDamagePerImpactSpeed: 2
   wallSplatStunDuration: 3
   wallSplatLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  floorSplatMinimumSpeed: 12
+  floorSplatDamagePerImpactSpeed: 2
+  floorSplatStunDuration: 1
 --- !u!114 &212785566711577276
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -228,7 +273,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 500
+  maxHealth: 750
   isUnkillable: 0
   maxPoise: 30
   staggerDuration: 1
@@ -247,6 +292,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e231fc2ed4184c2489929e6187df4fb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDebug
+--- !u!114 &2658722192233227514
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d2fd0501a5b4d24a9ff12bccd9fc963, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyReactionController
 --- !u!1001 &8321301459396382457
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -337,42 +394,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
   m_PrefabInstance: {fileID: 8321301459396382457}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &910000000000000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000009, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackPreview
-  attack: {fileID: 0}
-  activePreviewProgress: 0
-  previewColor: {r: 1, g: 0.25, b: 0.1, a: 0.85}
---- !u!114 &910000000000000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000007, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackMovement
---- !u!114 &910000000000000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000008, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackHitboxController

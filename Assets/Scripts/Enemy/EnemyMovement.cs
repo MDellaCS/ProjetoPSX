@@ -16,6 +16,8 @@ public sealed class EnemyMovement : MonoBehaviour
     [Min(0f)] [SerializeField] private float rotationSpeed = 240f;
     [Tooltip("Ao perseguir, gira antes de avancar; ainda permite strafe e recuo no reposicionamento.")]
     [SerializeField] private bool useTankControls;
+    [Tooltip("Alinhamento minimo entre a frente do inimigo e o alvo antes de Tank Controls permitir avanco. 1 exige alinhamento perfeito.")]
+    [Range(0f, 1f)] [SerializeField] private float tankControlsAdvanceAlignment = .85f;
 
     [Header("Launch Up")]
     [Tooltip("Permite que ataques com Launch Up levantem este inimigo.")]
@@ -93,18 +95,14 @@ public sealed class EnemyMovement : MonoBehaviour
             gravity = -gravity;
     }
 
-    public void Move(Vector3 horizontalVelocity,
-        bool rotateTankControlsTowardMovement = true)
+    /// <summary>
+    /// Move por uma velocidade em coordenadas de mundo. Sistemas especiais
+    /// (ataques, guarda, esquiva e forças) usam esta camada sem decidir giro.
+    /// </summary>
+    public void Move(Vector3 horizontalVelocity)
     {
         if (controller == null)
             return;
-        bool usesRequestedMovement = !isLaunchedForwards &&
-            playerHeadSeparationTimer <= 0f && !hasSlideLaunchHorizontalImpulse &&
-            knockbackTimer <= 0f;
-        if (usesRequestedMovement && horizontalVelocity.sqrMagnitude > .001f &&
-            useTankControls && rotateTankControlsTowardMovement)
-            FaceDirection(horizontalVelocity);
-
         Vector3 velocity = isLaunchedForwards ? launchForwardsVelocity :
             playerHeadSeparationTimer > 0f ? playerHeadSeparationVelocity :
             hasSlideLaunchHorizontalImpulse ? slideLaunchHorizontalVelocity :
@@ -180,12 +178,61 @@ public sealed class EnemyMovement : MonoBehaviour
         CancelSlideLaunchHorizontalImpulse();
     }
 
+    /// <summary>Move em direcao ao alvo. Tank Controls gira antes de avancar.</summary>
+    public void MoveTowardTarget(float speed) =>
+        MoveTowardDirection(GetTargetDirection(), speed);
+
+    /// <summary>
+    /// Move em uma direcao de mundo. Com Tank Controls, a translacao acontece
+    /// apenas pela frente local depois que o corpo esta alinhado.
+    /// </summary>
+    public void MoveTowardDirection(Vector3 direction, float speed)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .001f || speed <= 0f)
+        {
+            Move(Vector3.zero);
+            return;
+        }
+
+        direction.Normalize();
+        FaceDirection(direction);
+        if (!useTankControls)
+        {
+            Move(direction * speed);
+            return;
+        }
+
+        float alignment = Vector3.Dot(transform.forward, direction);
+        if (alignment < tankControlsAdvanceAlignment)
+        {
+            Move(Vector3.zero);
+            return;
+        }
+
+        float advanceFactor = Mathf.InverseLerp(tankControlsAdvanceAlignment,
+            1f, alignment);
+        Move(transform.forward * speed * advanceFactor);
+    }
+
+    /// <summary>Orbita o alvo pelos eixos locais, mantendo-o a frente.</summary>
+    public void StrafeTarget(float side, float speed)
+    {
+        FaceTarget();
+        Move(transform.right * Mathf.Sign(side) * Mathf.Max(0f, speed));
+    }
+
+    /// <summary>Recua pelos eixos locais, mantendo o corpo voltado ao alvo.</summary>
+    public void RetreatFromTarget(float speed)
+    {
+        FaceTarget();
+        Move(-transform.forward * Mathf.Max(0f, speed));
+    }
+
+    /// <summary>Gira o corpo para o alvo atual, independente de Tank Controls.</summary>
     public void FaceTarget()
     {
-        if (useTankControls || brain.Target == null) return;
-        Vector3 direction = brain.Target.position - transform.position;
-        direction.y = 0f;
-        FaceDirection(direction);
+        FaceDirection(GetTargetDirection());
     }
 
     public void FaceDirection(Vector3 direction)
@@ -195,6 +242,15 @@ public sealed class EnemyMovement : MonoBehaviour
         if (direction.sqrMagnitude <= .001f) return;
         transform.rotation = Quaternion.RotateTowards(transform.rotation,
             Quaternion.LookRotation(direction), rotationSpeed * Time.deltaTime);
+    }
+
+    private Vector3 GetTargetDirection()
+    {
+        if (brain == null || brain.Target == null)
+            return Vector3.zero;
+        Vector3 direction = brain.Target.position - transform.position;
+        direction.y = 0f;
+        return direction.sqrMagnitude > .001f ? direction.normalized : Vector3.zero;
     }
 
     public void ApplyKnockback(Vector3 attackerPosition, float force, float duration)

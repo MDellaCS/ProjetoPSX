@@ -172,13 +172,11 @@ public class EnemyBase : MonoBehaviour
             case State.Guarding:
                 guard?.TickGuard();
                 movement.Move(guard != null
-                    ? guard.GetGuardRetreatVelocity() : Vector3.zero,
-                    rotateTankControlsTowardMovement: false);
+                    ? guard.GetGuardRetreatVelocity() : Vector3.zero);
                 break;
             case State.Dodging:
                 movement.Move(dodge != null
-                    ? dodge.TickDodge() : Vector3.zero,
-                    rotateTankControlsTowardMovement: false);
+                    ? dodge.TickDodge() : Vector3.zero);
                 break;
             case State.Taunting:
                 taunt?.TickTaunt();

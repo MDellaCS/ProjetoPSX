@@ -1,0 +1,49 @@
+#pause-menu-overlay {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.72);
+}
+
+#pause-menu-content {
+    width: 380px;
+    padding: 28px;
+    background-color: rgba(15, 17, 24, 0.96);
+    border-left-width: 3px;
+    border-top-width: 3px;
+    border-right-width: 3px;
+    border-bottom-width: 3px;
+    border-left-color: rgb(118, 190, 205);
+    border-top-color: rgb(118, 190, 205);
+    border-right-color: rgb(118, 190, 205);
+    border-bottom-color: rgb(118, 190, 205);
+}
+
+#pause-menu-title {
+    color: rgb(225, 245, 250);
+    font-size: 34px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: 22px;
+}
+
+#pause-menu-content Button {
+    height: 42px;
+    margin-bottom: 10px;
+    color: rgb(235, 240, 242);
+    font-size: 17px;
+    -unity-font-style: bold;
+    background-color: rgb(39, 51, 61);
+    border-left-color: rgb(118, 190, 205);
+    border-top-color: rgb(118, 190, 205);
+    border-right-color: rgb(118, 190, 205);
+    border-bottom-color: rgb(118, 190, 205);
+}
+
+#pause-menu-content Button:hover {
+    background-color: rgb(70, 106, 119);
+}
