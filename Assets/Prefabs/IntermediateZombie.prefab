@@ -248,7 +248,7 @@ MonoBehaviour:
   wallSplatLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  floorSplatMinimumSpeed: 22
+  floorSplatMinimumSpeed: 23
   floorSplatDamagePerImpactSpeed: 18
   floorSplatStunDuration: 1
 --- !u!114 &212785566711577276

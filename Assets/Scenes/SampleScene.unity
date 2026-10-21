@@ -15090,63 +15090,6 @@ MonoBehaviour:
   worldCollisionLayers:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!1001 &968055851
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -1.881413
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -0.000000049828458
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 7.1576924
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7502535439468429065, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
-      propertyPath: m_Name
-      value: BasicZombie
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
 --- !u!1001 &1025511160
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15464,6 +15407,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1170707652}
   - component: {fileID: 1170707653}
+  - component: {fileID: 1170707654}
   m_Layer: 0
   m_Name: PauseMenuUI
   m_TagString: Untagged
@@ -15544,6 +15488,19 @@ PanelRenderer:
   m_PivotReferenceSize: 0
   m_Pivot: 0
   m_Position: 0
+--- !u!114 &1170707654
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1170707651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9000000000000000000000000000009, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseMenuHUD
+  panelRenderer: {fileID: 1170707653}
 --- !u!1001 &1212307254
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15743,63 +15700,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
---- !u!1001 &1306139070
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -5.3736877
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -0.00000067006704
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 7.3751597
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7231791797390308556, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7502535439468429065, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
-      propertyPath: m_Name
-      value: IntermediateZombie
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
 --- !u!1001 &1327872742
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -17933,5 +17833,3 @@ SceneRoots:
   - {fileID: 860775662}
   - {fileID: 1170707652}
   - {fileID: 1836985210}
-  - {fileID: 1306139070}
-  - {fileID: 968055851}
