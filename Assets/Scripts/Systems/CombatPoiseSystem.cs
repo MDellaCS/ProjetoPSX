@@ -59,6 +59,25 @@ public readonly struct CombatReactionRequest
     }
 }
 
+/// <summary>Resultado fisico simplificado de uma colisao entre duas massas.</summary>
+public readonly struct CombatMassImpact
+{
+    public readonly float SourcePostImpactSpeed;
+    public readonly float TargetPostImpactSpeed;
+    public readonly float SourceImpactIntensity;
+    public readonly float TargetImpactIntensity;
+
+    public CombatMassImpact(float sourcePostImpactSpeed,
+        float targetPostImpactSpeed, float sourceImpactIntensity,
+        float targetImpactIntensity)
+    {
+        SourcePostImpactSpeed = sourcePostImpactSpeed;
+        TargetPostImpactSpeed = targetPostImpactSpeed;
+        SourceImpactIntensity = sourceImpactIntensity;
+        TargetImpactIntensity = targetImpactIntensity;
+    }
+}
+
 /// <summary>Estado reutilizavel de Poise para Player e inimigos.</summary>
 public sealed class CombatPoiseState
 {
@@ -121,6 +140,8 @@ public sealed class CombatPoiseState
 [DisallowMultipleComponent]
 public sealed class CombatPoiseSystem : MonoBehaviour
 {
+    /// <summary>Massa virtual de paredes e chao: superficies imoveis.</summary>
+    public const float StaticSurfaceMass = 999999f;
     private static CombatPoiseSystem instance;
 
     [Header("Global Poise Regeneration")]
@@ -140,6 +161,22 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     [Min(0f)] [SerializeField] private float maximumLaunchForce = 35f;
     [Tooltip("Velocidade horizontal perdida por segundo durante Launch Forwards.")]
     [Min(.01f)] [SerializeField] private float launchForwardsDeceleration = 20f;
+    [Tooltip("Desvio angular maximo, em graus, que a assistencia global pode aplicar ao Launch Forwards inicial do player para alinhar o inimigo arremessado a outro inimigo.")]
+    [Range(0f, 90f)] [SerializeField] private float playerLaunchBodyImpactAssistAngle = 20f;
+    [Tooltip("Distancia maxima em que a assistencia global de Launch Forwards do player procura outro inimigo dentro do cone angular.")]
+    [Min(0f)] [SerializeField] private float playerLaunchBodyImpactAssistRange = 12f;
+
+    [Header("Impactos e Splats Globais")]
+    [Tooltip("Velocidade relativa minima para uma colisao causar dano, Poise e Stagger. Vale para parede, chao e inimigos arremessados.")]
+    [Min(0f)] [SerializeField] private float minimumImpactSpeed = 10f;
+    [Tooltip("Dano causado por cada unidade de intensidade de impacto calculada pela massa e velocidade relativa.")]
+    [Min(0f)] [SerializeField] private float impactDamagePerIntensity = 15f;
+    [Tooltip("Poise causado por cada unidade de intensidade de impacto calculada pela massa e velocidade relativa.")]
+    [Min(0f)] [SerializeField] private float impactPoisePerIntensity = 20f;
+    [Tooltip("Tempo de Stagger aplicado apos um Wall Splat ou Floor Splat. Colisoes entre inimigos usam a reacao de Poise normal.")]
+    [Min(0f)] [SerializeField] private float staticImpactStunDuration = 3f;
+    [Tooltip("Camadas que contam como superficies estaticas para Wall Splat. O chao usa a mesma fisica ao pousar apos um Launch.")]
+    [SerializeField] private LayerMask staticImpactLayers = ~0;
 
     [Header("Global Aerial Reactions")]
     [Tooltip("Velocidade vertical aplicada ao manter um alvo em Juggle.")]
@@ -153,6 +190,13 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     public float RegenMaxPercentPerSecond => poiseRegenMaxPercentPerSecond;
     public float RegenFlatPerSecond => poiseRegenFlatPerSecond;
     public float LaunchForwardsDeceleration => launchForwardsDeceleration;
+    public float PlayerLaunchBodyImpactAssistAngle =>
+        playerLaunchBodyImpactAssistAngle;
+    public float PlayerLaunchBodyImpactAssistRange =>
+        playerLaunchBodyImpactAssistRange;
+    public float MinimumImpactSpeed => minimumImpactSpeed;
+    public float StaticImpactStunDuration => staticImpactStunDuration;
+    public LayerMask StaticImpactLayers => staticImpactLayers;
     public float MinimumLaunchForce => Mathf.Min(minimumLaunchForce, maximumLaunchForce);
     public float JuggleLiftSpeed => juggleLiftSpeed;
     public float JuggleGravityMultiplier => juggleGravityMultiplier;
@@ -180,6 +224,42 @@ public sealed class CombatPoiseSystem : MonoBehaviour
         float damageForce = Mathf.Max(0, damageDealt) *
             launchForwardsForcePerDamageDealt;
         return Mathf.Clamp(damageForce, minimum, maximum);
+    }
+
+    /// <summary>
+    /// Resolve uma colisao elastica 1D. A intensidade recebida e o impulso
+    /// dividido pela massa de quem recebeu.
+    /// </summary>
+    public CombatMassImpact ResolveMassImpact(float sourceMass,
+        float targetMass, float sourceSpeed, float targetSpeed = 0f)
+    {
+        float safeSourceMass = Mathf.Max(.01f, sourceMass);
+        float safeTargetMass = Mathf.Max(.01f, targetMass);
+        float sourceVelocity = Mathf.Max(0f, sourceSpeed);
+        // O alvo pode estar vindo na direcao contraria; nesse caso a
+        // velocidade assinada aumenta corretamente a colisao frontal.
+        float targetVelocity = targetSpeed;
+        float totalMass = safeSourceMass + safeTargetMass;
+        float relativeSpeed = Mathf.Max(0f, sourceVelocity - targetVelocity);
+        float impulse = relativeSpeed * safeSourceMass * safeTargetMass /
+            totalMass;
+        return new CombatMassImpact(
+            ((safeSourceMass - safeTargetMass) * sourceVelocity +
+             2f * safeTargetMass * targetVelocity) / totalMass,
+            (2f * safeSourceMass * sourceVelocity +
+             (safeTargetMass - safeSourceMass) * targetVelocity) / totalMass,
+            impulse / safeSourceMass, impulse / safeTargetMass);
+    }
+
+    /// <summary>Converte intensidade de impacto em dano e Poise globais.</summary>
+    public void CalculateImpactDamage(float intensity, out int damage,
+        out int poiseDamage)
+    {
+        float safeIntensity = Mathf.Max(0f, intensity);
+        damage = Mathf.Max(0, Mathf.RoundToInt(safeIntensity *
+            impactDamagePerIntensity));
+        poiseDamage = Mathf.Max(0, Mathf.RoundToInt(safeIntensity *
+            impactPoisePerIntensity));
     }
 
     private void Awake()

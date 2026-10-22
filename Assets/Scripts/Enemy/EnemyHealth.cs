@@ -204,49 +204,8 @@ public sealed class EnemyHealth : MonoBehaviour
             ? EnemyBase.State.Staggered : EnemyBase.State.Combat;
     }
 
-    /// <summary>
-    /// Aplica dano ambiental de um Splat sem passar por guarda, esquiva ou
-    /// Poise. O Splat ja e a consequencia de uma reacao de combate anterior.
-    /// Retorna somente o dano que realmente reduziu a vida.
-    /// </summary>
-    internal int ApplySplatDamage(int damage, Vector3 impactDirection)
-    {
-        if (IsDead || damage <= 0)
-            return 0;
-
-        int healthBeforeDamage = CurrentHealth;
-        CurrentHealth -= damage;
-        damageNumbers?.ShowDamage(damage);
-        brain.OnDamaged();
-        FlashDamage();
-
-        if (CurrentHealth <= 0)
-        {
-            if (isUnkillable)
-                CurrentHealth = 1;
-            else
-            {
-                CurrentHealth = 0;
-                int lethalDamage = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
-                owner.RaiseHealthChanged();
-                Vector3 resolvedDirection = ResolveImpactDirection(transform.position,
-                    impactDirection);
-                CombatParticleSystem.ReportEnemyDamage(owner, lethalDamage,
-                    true, resolvedDirection, transform.position, false, gore);
-                Die(lethalDamage, resolvedDirection);
-                return lethalDamage;
-            }
-        }
-
-        int damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
-        owner.RaiseHealthChanged();
-        CombatParticleSystem.ReportEnemyDamage(owner, damageDealt, false,
-            ResolveImpactDirection(transform.position, impactDirection),
-            transform.position, false, gore);
-        return damageDealt;
-    }
-
-    internal void ApplySplatStagger(float duration)
+    /// <summary>Aplica o Stagger fixo de uma colisao contra superficie.</summary>
+    internal void ApplyStaticImpactStagger(float duration)
     {
         if (IsDead) return;
         dodge?.CancelDodge();

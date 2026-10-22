@@ -115,8 +115,60 @@ public sealed class EnemyDebug : MonoBehaviour
 
         Gizmos.color = new Color(.2f, .85f, 1f, .7f);
         Gizmos.DrawWireSphere(transform.position, brain.DetectionRange);
+        DrawPlayerFarAggressionDistance();
 
         // As formas ativas sao desenhadas pelo EnemyAttackHitboxController.
+    }
+
+    /// <summary>
+    /// Mostra a leitura espacial do modificador "Player Far": verde dentro
+    /// do alcance configurado e laranja depois dele. Gizmos nao possuem
+    /// espessura, por isso cada trecho e desenhado em linhas paralelas.
+    /// </summary>
+    private void DrawPlayerFarAggressionDistance()
+    {
+        if (brain.Target == null)
+            return;
+
+        Vector3 enemyCenter = characterController != null
+            ? characterController.bounds.center
+            : transform.position;
+        CharacterController playerController =
+            brain.Target.GetComponent<CharacterController>();
+        Vector3 playerCenter = playerController != null
+            ? playerController.bounds.center
+            : brain.Target.position;
+        Vector3 horizontal = playerCenter - enemyCenter;
+        horizontal.y = 0f;
+        float distance = horizontal.magnitude;
+        if (distance <= .001f)
+            return;
+
+        float greenFraction = Mathf.Clamp01(
+            brain.PlayerFarAggressionDistance / distance);
+        Vector3 split = Vector3.Lerp(enemyCenter, playerCenter, greenFraction);
+        DrawThickGizmoLine(enemyCenter, split, new Color(.15f, 1f, .2f, .95f));
+        if (greenFraction < 1f)
+            DrawThickGizmoLine(split, playerCenter,
+                new Color(1f, .45f, .05f, .95f));
+    }
+
+    private static void DrawThickGizmoLine(Vector3 from, Vector3 to,
+        Color color)
+    {
+        Vector3 direction = to - from;
+        if (direction.sqrMagnitude <= .000001f)
+            return;
+
+        Vector3 side = Vector3.Cross(direction.normalized, Vector3.up);
+        if (side.sqrMagnitude <= .000001f)
+            side = Vector3.right;
+        side.Normalize();
+        const float halfThickness = .035f;
+        Gizmos.color = color;
+        Gizmos.DrawLine(from, to);
+        Gizmos.DrawLine(from + side * halfThickness, to + side * halfThickness);
+        Gizmos.DrawLine(from - side * halfThickness, to - side * halfThickness);
     }
 
     public string GetStatusText()

@@ -42,6 +42,7 @@ public sealed class PlayerAttackController : MonoBehaviour
     private void Update()
     {
         if (!IsAttacking || GamePauseController.IsPaused ||
+            CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
         attackMovement.Tick(CurrentPhase, Time.deltaTime);
         if (CurrentPhase == PlayerAttackPhase.Active)
@@ -61,7 +62,8 @@ public sealed class PlayerAttackController : MonoBehaviour
 
     public bool TryStartAttack(PlayerAttackDefinition definition)
     {
-        if (definition == null || IsAttacking || playerState == null || !playerState.IsNormal()) return false;
+        if (definition == null || IsAttacking || playerState == null ||
+            CutsceneController.IsPlayerControlLocked || !playerState.IsNormal()) return false;
         PlayerMovement movement = GetComponent<PlayerMovement>();
         if (definition.context == PlayerAttackContext.Ground && movement != null && !movement.IsGrounded) return false;
         PlayerMovesetDefinition moveset = movesetController != null

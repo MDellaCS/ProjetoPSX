@@ -1,507 +1,316 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum EnemyEncounterWaveSpawnMode
+/// <summary>Orquestra as ondas filhas, o player e as barreiras da arena.</summary>
+[DisallowMultipleComponent]
+public sealed class EnemyEncounter : MonoBehaviour
 {
-    Sequential,
-    Overlap,
-    Sustain
-}
+    private static readonly HashSet<EnemyEncounter> active = new();
+    public enum EncounterState { Inactive, Active, Completed }
 
-[System.Serializable]
-public class EnemyEncounterWave
-{
-    public string waveName = "Wave";
-
-    [Tooltip("Pai cujos filhos diretos sao os inimigos desta onda. Tem prioridade sobre Enemies e respeita a ordem na Hierarchy.")]
-    public Transform enemiesParent;
-
-    [Tooltip(
-        "Sequential: nasce somente quando todas as ondas anteriores forem derrotadas.\n" +
-        "Overlap: nasce apos Spawn Delay mesmo com inimigos de ondas anteriores vivos.\n" +
-        "Sustain: nasce ate Max Alive inimigos; cada morte repoe um apos Spawn Delay, ate acabar a lista."
-    )]
-    public EnemyEncounterWaveSpawnMode spawnMode =
-        EnemyEncounterWaveSpawnMode.Sequential;
-
-    [Min(0f)]
-    [Tooltip("Espera antes desta onda nascer. Em Sustain, tambem e a espera para repor inimigos mortos.")]
-    public float spawnDelay;
-
-    [Min(1)]
-    [Tooltip("Maximo de inimigos vivos simultaneos. Usado apenas por Sustain.")]
-    public int maxAlive = 4;
-
-    [Tooltip("Lista manual usada apenas quando Enemies Parent estiver vazio.")]
-    public EnemyBase[] enemies;
-}
-
-/// <summary>
-/// Controla um encontro configuravel por ondas: bloqueia a arena, ativa
-/// inimigos por politicas de spawn e conclui ao derrotar todos os participantes.
-/// </summary>
-public class EnemyEncounter : MonoBehaviour
-{
-    private static readonly HashSet<EnemyEncounter> activeEncounters =
-        new HashSet<EnemyEncounter>();
-
-    public enum EncounterState
-    {
-        Inactive,
-        Active,
-        Completed
-    }
-
-    [Header("Waves")]
-    [SerializeField] private EnemyEncounterWave[] waves;
-
-    [Header("Barriers")]
+    [Header("Arena")]
+    [Tooltip("Barreiras fechadas ao iniciar e abertas ao concluir o encontro.")]
     [SerializeField] private EncounterBarrier[] barriers;
-
-    [Header("Player")]
+    [Tooltip("Player do encontro. Se vazio, usa a tag Player.")]
     [SerializeField] private Transform player;
 
-    [SerializeField] private EncounterState currentState =
-        EncounterState.Inactive;
+    [Header("Spawn Global - Chao")]
+    [Tooltip("Altura acima da area para procurar o chao.")]
+    [Min(0f)] [SerializeField] private float spawnRayHeight = 10f;
+    [Tooltip("Distancia maxima do raycast ate o chao.")]
+    [Min(.1f)] [SerializeField] private float groundRayDistance = 30f;
+    [Tooltip("Altura adicional aplicada ao inimigo criado.")]
+    [Min(0f)] [SerializeField] private float groundOffset = .05f;
+    [Tooltip("Camadas aceitas como chao.")]
+    [SerializeField] private LayerMask groundLayers = Physics.DefaultRaycastLayers;
 
-    private readonly HashSet<EnemyBase> participants =
-        new HashSet<EnemyBase>();
-    private readonly Dictionary<EnemyEncounterWave, EnemyBase[]> waveEnemyCache =
-        new Dictionary<EnemyEncounterWave, EnemyBase[]>();
+    [Header("Spawn Global - Seguranca")]
+    [Tooltip("Distancia horizontal minima entre o spawn e o player.")]
+    [Min(0f)] [SerializeField] private float playerExclusionRadius = 3f;
+    [Tooltip("Raio da zona circular preferida para nascer ao redor do player. O encontro tenta esta zona antes da area total da onda, sempre respeitando Player Exclusion Radius. Use 0 para desativar a preferencia.")]
+    [Min(0f)] [SerializeField] private float preferredSpawnRadius = 8f;
+    [Tooltip("Distancia horizontal minima entre o spawn e qualquer inimigo ativo.")]
+    [Min(0f)] [SerializeField] private float enemyExclusionRadius = 1.5f;
+    [Tooltip("Raio da capsula de espaco livre para spawn.")]
+    [Min(.01f)] [SerializeField] private float spawnClearanceRadius = .6f;
+    [Tooltip("Altura da capsula de espaco livre para spawn.")]
+    [Min(.02f)] [SerializeField] private float spawnClearanceHeight = 2f;
+    [Tooltip("Camadas que bloqueiam um ponto de spawn.")]
+    [SerializeField] private LayerMask spawnBlockingLayers = Physics.DefaultRaycastLayers;
 
+    [Header("Spawn Global - Tentativas")]
+    [Tooltip("Pontos testados antes de expandir a area.")]
+    [Min(1)] [SerializeField] private int spawnAttemptsPerArea = 12;
+    [Tooltip("Fracao do tamanho inicial somada a area a cada rodada sem sucesso.")]
+    [Min(.01f)] [SerializeField] private float spawnAreaGrowthPerRetry = .5f;
+    [Tooltip("Espera entre rodadas de tentativas.")]
+    [Min(0f)] [SerializeField] private float spawnRetryDelay = .05f;
+
+    private readonly List<EnemyEncounterWave> waves = new();
+    private EncounterState state;
     private int currentWaveIndex = -1;
     private int nextWaveIndex;
-    private float nextWaveSpawnTimer;
-    private bool isWaitingToSpawnWave;
+    private float nextWaveTimer;
+    private bool nextWaveScheduled;
 
-    private int maintainCapWaveIndex = -1;
-    private int nextCapEnemyIndex;
-    private float capRefillTimer;
-    private bool isWaitingToRefillCap;
-
-    public EncounterState CurrentState => currentState;
+    public EncounterState CurrentState => state;
     public int CurrentWaveIndex => currentWaveIndex;
-    public int WaveCount => waves != null ? waves.Length : 0;
-    public int LivingEnemyCount => CountLivingEnemiesInStartedWaves();
-
-    public static bool IsPlayerInActiveEncounter(Transform player)
+    public int WaveCount => waves.Count;
+    public int LivingEnemyCount
     {
-        if (player == null)
-            return false;
-
-        foreach (EnemyEncounter encounter in activeEncounters)
+        get
         {
-            if (encounter != null &&
-                encounter.currentState == EncounterState.Active &&
-                encounter.player == player)
-            {
-                return true;
-            }
+            int count = 0;
+            foreach (EnemyEncounterWave wave in waves)
+                if (wave.HasStarted) count += wave.LivingCount;
+            return count;
         }
+    }
+    internal float AreaGrowthPerRetry => Mathf.Max(.01f, spawnAreaGrowthPerRetry);
+    internal float RetryDelay => Mathf.Max(0f, spawnRetryDelay);
 
+    public static bool IsPlayerInActiveEncounter(Transform target)
+    {
+        if (target == null) return false;
+        foreach (EnemyEncounter encounter in active)
+            if (encounter != null && encounter.state == EncounterState.Active &&
+                encounter.player == target) return true;
         return false;
     }
 
     private void Awake()
     {
-        CacheWaveEnemies();
-
-        for (int waveIndex = 0; waveIndex < WaveCount; waveIndex++)
+        // Filhos diretos, exatamente na ordem da Hierarchy.
+        for (int i = 0; i < transform.childCount; i++)
         {
-            foreach (EnemyBase enemy in GetWaveEnemies(waveIndex))
-                PrepareEnemyForEncounter(enemy);
+            EnemyEncounterWave wave = transform.GetChild(i).GetComponent<EnemyEncounterWave>();
+            if (wave == null) continue;
+            waves.Add(wave);
+            wave.Prepare(this);
         }
     }
 
     private void OnEnable()
     {
-        activeEncounters.Add(this);
-        EnemyBase.EnemyDied += HandleEnemyDied;
+        active.Add(this);
+        EnemyBase.EnemyDied += OnEnemyDied;
     }
 
     private void OnDisable()
     {
-        activeEncounters.Remove(this);
-        EnemyBase.EnemyDied -= HandleEnemyDied;
+        active.Remove(this);
+        EnemyBase.EnemyDied -= OnEnemyDied;
     }
 
-    private void Start()
-    {
-        ResolvePlayer();
-    }
+    private void Start() => ResolvePlayer();
 
     private void Update()
     {
-        if (GamePauseController.IsPaused)
-            return;
-        if (currentState != EncounterState.Active)
-            return;
-
-        KeepEnemiesEngaged();
-        UpdateWaveSpawning();
-        UpdateCapRefill();
-        TryScheduleEligibleNextWave();
-        TryCompleteEncounter();
+        if (state != EncounterState.Active || GamePauseController.IsPaused) return;
+        ResolvePlayer();
+        foreach (EnemyEncounterWave wave in waves)
+            if (wave.HasStarted) wave.Tick(Time.deltaTime, player);
+        if (nextWaveScheduled)
+        {
+            nextWaveTimer -= Time.deltaTime;
+            if (nextWaveTimer <= 0f) StartNextWave();
+        }
+        ScheduleNextWave();
+        TryComplete();
     }
 
     public void TryStartEncounter(Transform enteringPlayer)
     {
-        if (currentState != EncounterState.Inactive)
-            return;
-
-        if (enteringPlayer != null)
-            player = enteringPlayer;
-
+        if (state != EncounterState.Inactive) return;
+        if (enteringPlayer != null) player = enteringPlayer;
         ResolvePlayer();
-        currentState = EncounterState.Active;
-        LockBarriers();
-        currentWaveIndex = -1;
-        nextWaveIndex = 0;
-        isWaitingToSpawnWave = false;
-        maintainCapWaveIndex = -1;
-        isWaitingToRefillCap = false;
-
-        TryScheduleEligibleNextWave();
+        state = EncounterState.Active;
+        foreach (EncounterBarrier barrier in barriers) barrier?.Lock();
+        ScheduleNextWave();
+        TryComplete();
     }
 
-    private void HandleEnemyDied(EnemyBase enemy)
+    private void OnEnemyDied(EnemyBase enemy)
     {
-        if (currentState != EncounterState.Active ||
-            enemy == null ||
-            !participants.Contains(enemy))
-        {
-            return;
-        }
-
-        if (IsEnemyInMaintainCapWave(enemy))
-            RequestCapRefill();
-
-        TryFinishMaintainCapWave();
-        TryScheduleEligibleNextWave();
-        TryCompleteEncounter();
-    }
-
-    private void CompleteEncounter()
-    {
-        if (currentState != EncounterState.Active)
-            return;
-
-        currentState = EncounterState.Completed;
-        UnlockBarriers();
-    }
-
-    private void KeepEnemiesEngaged()
-    {
-        if (player == null)
-            ResolvePlayer();
-
-        if (player == null)
-            return;
-
-        foreach (EnemyBase enemy in participants)
-        {
-            if (enemy == null || !enemy.gameObject.activeInHierarchy)
-                continue;
-
-            enemy.SetEncounterEngaged(player);
-        }
-    }
-
-    private void TryScheduleEligibleNextWave()
-    {
-        if (isWaitingToSpawnWave || nextWaveIndex >= WaveCount)
-            return;
-
-        EnemyEncounterWave nextWave = waves[nextWaveIndex];
-        bool isFirstWave = nextWaveIndex == 0;
-        bool canOverlap = nextWave != null &&
-            nextWave.spawnMode == EnemyEncounterWaveSpawnMode.Overlap &&
-            maintainCapWaveIndex < 0;
-
-        if (isFirstWave || canOverlap || CanAdvanceSequentially())
-            ScheduleNextWave();
-    }
-
-    private bool CanAdvanceSequentially()
-    {
-        return !HasPendingMaintainCapEnemies() &&
-            CountLivingEnemiesInStartedWaves() == 0;
+        if (state != EncounterState.Active || enemy == null) return;
+        foreach (EnemyEncounterWave wave in waves)
+            if (wave.HasStarted) wave.NotifyEnemyDied(enemy);
+        ScheduleNextWave();
+        TryComplete();
     }
 
     private void ScheduleNextWave()
     {
-        if (nextWaveIndex >= WaveCount)
-            return;
-
-        EnemyEncounterWave nextWave = waves[nextWaveIndex];
-        nextWaveSpawnTimer = nextWave != null
-            ? Mathf.Max(0f, nextWave.spawnDelay)
-            : 0f;
-        isWaitingToSpawnWave = true;
-
-        if (nextWaveSpawnTimer <= 0f)
-            SpawnNextWave();
+        if (nextWaveScheduled || nextWaveIndex >= waves.Count) return;
+        EnemyEncounterWave next = waves[nextWaveIndex];
+        if (nextWaveIndex > 0 && next.SpawnMode != EnemyEncounterWaveSpawnMode.Overlap &&
+            !AllStartedWavesComplete()) return;
+        if (nextWaveIndex > 0 && next.SpawnMode == EnemyEncounterWaveSpawnMode.Overlap &&
+            HasUnfinishedSustainWave()) return;
+        nextWaveTimer = next.StartDelay;
+        nextWaveScheduled = true;
+        if (nextWaveTimer <= 0f) StartNextWave();
     }
 
-    private void UpdateWaveSpawning()
+    private void StartNextWave()
     {
-        if (!isWaitingToSpawnWave)
-            return;
-
-        nextWaveSpawnTimer -= Time.deltaTime;
-        if (nextWaveSpawnTimer <= 0f)
-            SpawnNextWave();
+        nextWaveScheduled = false;
+        if (nextWaveIndex >= waves.Count) return;
+        currentWaveIndex = nextWaveIndex++;
+        waves[currentWaveIndex].Begin(player);
+        ScheduleNextWave();
+        TryComplete();
     }
 
-    private void SpawnNextWave()
+    private bool AllStartedWavesComplete()
     {
-        isWaitingToSpawnWave = false;
-
-        if (nextWaveIndex >= WaveCount)
-            return;
-
-        currentWaveIndex = nextWaveIndex;
-        nextWaveIndex++;
-
-        EnemyEncounterWave wave = waves[currentWaveIndex];
-        if (wave == null)
-            return;
-
-        if (wave.spawnMode == EnemyEncounterWaveSpawnMode.Sustain)
-        {
-            BeginMaintainCapWave(currentWaveIndex);
-        }
-        else
-        {
-            ActivateAllEnemiesInWave(currentWaveIndex);
-        }
-
-        KeepEnemiesEngaged();
+        for (int i = 0; i < nextWaveIndex; i++)
+            if (!waves[i].IsComplete) return false;
+        return true;
     }
 
-    private void ActivateAllEnemiesInWave(int waveIndex)
+    private bool HasUnfinishedSustainWave()
     {
-        foreach (EnemyBase enemy in GetWaveEnemies(waveIndex))
-        {
-            if (enemy != null && !enemy.IsDead)
-                enemy.gameObject.SetActive(true);
-        }
-    }
-
-    private void BeginMaintainCapWave(int waveIndex)
-    {
-        maintainCapWaveIndex = waveIndex;
-        nextCapEnemyIndex = 0;
-        isWaitingToRefillCap = false;
-        ActivateMaintainCapSlots();
-        TryFinishMaintainCapWave();
-    }
-
-    private void RequestCapRefill()
-    {
-        if (!HasPendingMaintainCapEnemies() || isWaitingToRefillCap)
-            return;
-
-        EnemyEncounterWave wave = waves[maintainCapWaveIndex];
-        capRefillTimer = Mathf.Max(0f, wave.spawnDelay);
-        isWaitingToRefillCap = true;
-
-        if (capRefillTimer <= 0f)
-            RefillMaintainCapSlots();
-    }
-
-    private void UpdateCapRefill()
-    {
-        if (!isWaitingToRefillCap)
-            return;
-
-        capRefillTimer -= Time.deltaTime;
-        if (capRefillTimer <= 0f)
-            RefillMaintainCapSlots();
-    }
-
-    private void RefillMaintainCapSlots()
-    {
-        isWaitingToRefillCap = false;
-        ActivateMaintainCapSlots();
-        KeepEnemiesEngaged();
-        TryFinishMaintainCapWave();
-    }
-
-    private void ActivateMaintainCapSlots()
-    {
-        if (maintainCapWaveIndex < 0 || maintainCapWaveIndex >= WaveCount)
-            return;
-
-        EnemyEncounterWave wave = waves[maintainCapWaveIndex];
-        EnemyBase[] waveEnemies = GetWaveEnemies(maintainCapWaveIndex);
-        int maxAlive = Mathf.Max(1, wave.maxAlive);
-        int livingEnemies = CountLivingActiveEnemiesInWave(maintainCapWaveIndex);
-
-        while (livingEnemies < maxAlive && nextCapEnemyIndex < waveEnemies.Length)
-        {
-            EnemyBase enemy = waveEnemies[nextCapEnemyIndex++];
-            if (enemy == null || enemy.IsDead)
-                continue;
-
-            enemy.gameObject.SetActive(true);
-            livingEnemies++;
-        }
-    }
-
-    private void TryFinishMaintainCapWave()
-    {
-        if (maintainCapWaveIndex < 0 ||
-            HasPendingMaintainCapEnemies() ||
-            isWaitingToRefillCap ||
-            CountLivingActiveEnemiesInWave(maintainCapWaveIndex) > 0)
-        {
-            return;
-        }
-
-        maintainCapWaveIndex = -1;
-    }
-
-    private bool IsEnemyInMaintainCapWave(EnemyBase enemy)
-    {
-        if (maintainCapWaveIndex < 0)
-            return false;
-
-        foreach (EnemyBase waveEnemy in GetWaveEnemies(maintainCapWaveIndex))
-        {
-            if (waveEnemy == enemy)
-                return true;
-        }
-
+        for (int i = 0; i < nextWaveIndex; i++)
+            if (waves[i].SpawnMode == EnemyEncounterWaveSpawnMode.Sustain &&
+                !waves[i].IsComplete) return true;
         return false;
     }
 
-    private bool HasPendingMaintainCapEnemies()
+    private void TryComplete()
     {
-        return maintainCapWaveIndex >= 0 &&
-            nextCapEnemyIndex < GetWaveEnemies(maintainCapWaveIndex).Length;
+        if (state != EncounterState.Active || nextWaveScheduled ||
+            nextWaveIndex < waves.Count || !AllStartedWavesComplete()) return;
+        state = EncounterState.Completed;
+        foreach (EncounterBarrier barrier in barriers) barrier?.Unlock();
     }
 
-    private void PrepareEnemyForEncounter(EnemyBase enemy)
+    internal bool TryFindSpawnPosition(EnemyEncounterWave wave, float multiplier,
+        out Vector3 position)
     {
-        if (enemy == null || !participants.Add(enemy))
-            return;
-
-        enemy.SetWaitingForEncounter();
-        enemy.gameObject.SetActive(false);
-    }
-
-    private int CountLivingEnemiesInStartedWaves()
-    {
-        int livingEnemies = 0;
-
-        for (int waveIndex = 0; waveIndex < nextWaveIndex; waveIndex++)
-            livingEnemies += CountLivingActiveEnemiesInWave(waveIndex);
-
-        return livingEnemies;
-    }
-
-    private int CountLivingActiveEnemiesInWave(int waveIndex)
-    {
-        int livingEnemies = 0;
-
-        foreach (EnemyBase enemy in GetWaveEnemies(waveIndex))
+        // Primeiro procura perto do player, mas nunca dentro da zona segura e
+        // nunca fora da area configurada da wave. A preferencia nao bloqueia
+        // a onda: sem ponto valido, o metodo tenta a area completa abaixo.
+        if (preferredSpawnRadius > 0f && player != null)
         {
-            if (enemy != null &&
-                enemy.gameObject.activeInHierarchy &&
-                !enemy.IsDead)
+            for (int i = 0; i < Mathf.Max(1, spawnAttemptsPerArea); i++)
             {
-                livingEnemies++;
+                Vector2 offset = Random.insideUnitCircle * preferredSpawnRadius;
+                Vector3 preferred = player.position + new Vector3(offset.x,
+                    spawnRayHeight, offset.y);
+                if (!IsInsideWaveArea(wave, preferred, multiplier))
+                    continue;
+                if (TryUseSpawnCandidate(preferred, out position))
+                    return true;
             }
         }
 
-        return livingEnemies;
+        for (int i = 0; i < Mathf.Max(1, spawnAttemptsPerArea); i++)
+        {
+            Vector2 half = wave.AreaSize * (.5f * multiplier);
+            Vector3 local = new(Random.Range(-half.x, half.x), spawnRayHeight,
+                Random.Range(-half.y, half.y));
+            Vector3 origin = wave.transform.TransformPoint(local);
+            if (TryUseSpawnCandidate(origin, out position))
+                return true;
+        }
+        position = default;
+        return false;
     }
 
-    private void TryCompleteEncounter()
+    private bool TryUseSpawnCandidate(Vector3 rayOrigin, out Vector3 position)
     {
-        if (nextWaveIndex < WaveCount ||
-            isWaitingToSpawnWave ||
-            HasPendingMaintainCapEnemies() ||
-            isWaitingToRefillCap ||
-            CountLivingEnemiesInStartedWaves() > 0)
+        if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit,
+            groundRayDistance, groundLayers, QueryTriggerInteraction.Ignore))
         {
-            return;
+            position = default;
+            return false;
         }
 
-        CompleteEncounter();
+        Vector3 candidate = hit.point + Vector3.up * groundOffset;
+        if (TooCloseToPlayer(candidate) || TooCloseToEnemy(candidate) ||
+            IsBlocked(candidate))
+        {
+            position = default;
+            return false;
+        }
+
+        position = candidate;
+        return true;
     }
 
-    private EnemyBase[] GetWaveEnemies(int waveIndex)
+    private static bool IsInsideWaveArea(EnemyEncounterWave wave,
+        Vector3 worldPosition, float multiplier)
     {
-        if (waves == null || waveIndex < 0 || waveIndex >= waves.Length)
-            return System.Array.Empty<EnemyBase>();
-
-        EnemyEncounterWave wave = waves[waveIndex];
         if (wave == null)
-            return System.Array.Empty<EnemyBase>();
+            return false;
 
-        if (waveEnemyCache.TryGetValue(wave, out EnemyBase[] cachedEnemies))
-            return cachedEnemies;
-
-        return GetConfiguredWaveEnemies(wave);
+        Vector3 local = wave.transform.InverseTransformPoint(worldPosition);
+        Vector2 half = wave.AreaSize * (.5f * Mathf.Max(1f, multiplier));
+        return Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.z) <= half.y;
     }
 
-    private void CacheWaveEnemies()
+    private bool TooCloseToPlayer(Vector3 position)
     {
-        waveEnemyCache.Clear();
-
-        if (waves == null)
-            return;
-
-        foreach (EnemyEncounterWave wave in waves)
-        {
-            if (wave != null)
-                waveEnemyCache[wave] = GetConfiguredWaveEnemies(wave);
-        }
+        if (player == null || playerExclusionRadius <= 0f) return false;
+        Vector3 offset = player.position - position;
+        offset.y = 0f;
+        return offset.sqrMagnitude < playerExclusionRadius * playerExclusionRadius;
     }
 
-    private static EnemyBase[] GetConfiguredWaveEnemies(EnemyEncounterWave wave)
+    private bool TooCloseToEnemy(Vector3 position)
     {
-        if (wave.enemiesParent == null)
-            return wave.enemies ?? System.Array.Empty<EnemyBase>();
-
-        // GetChild segue exatamente a ordem visivel da Hierarchy. Buscamos
-        // apenas filhos diretos para um pai de onda nao absorver inimigos de
-        // subgrupos/ondas vizinhas por acidente.
-        List<EnemyBase> enemiesFromParent = new List<EnemyBase>();
-        for (int childIndex = 0;
-             childIndex < wave.enemiesParent.childCount;
-             childIndex++)
+        if (enemyExclusionRadius <= 0f) return false;
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
         {
-            Transform child = wave.enemiesParent.GetChild(childIndex);
-            EnemyBase enemy = child.GetComponent<EnemyBase>();
-            if (enemy != null)
-                enemiesFromParent.Add(enemy);
+            if (enemy == null || enemy.IsDead || !enemy.gameObject.activeInHierarchy) continue;
+            Vector3 offset = enemy.AttackOrigin - position;
+            offset.y = 0f;
+            if (offset.sqrMagnitude < enemyExclusionRadius * enemyExclusionRadius)
+                return true;
         }
+        return false;
+    }
 
-        return enemiesFromParent.ToArray();
+    private bool IsBlocked(Vector3 position)
+    {
+        float radius = Mathf.Max(.01f, spawnClearanceRadius);
+        Vector3 bottom = position + Vector3.up * radius;
+        Vector3 top = position + Vector3.up * Mathf.Max(radius, spawnClearanceHeight - radius);
+        return Physics.CheckCapsule(bottom, top, radius, spawnBlockingLayers,
+            QueryTriggerInteraction.Ignore);
     }
 
     private void ResolvePlayer()
     {
-        if (player != null)
-            return;
-
-        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-        if (playerObject != null)
-            player = playerObject.transform;
+        if (player != null) return;
+        GameObject found = GameObject.FindGameObjectWithTag("Player");
+        if (found != null) player = found.transform;
     }
 
-    private void LockBarriers()
+    private void OnValidate()
     {
-        foreach (EncounterBarrier barrier in barriers)
-            barrier?.Lock();
+        spawnClearanceRadius = Mathf.Max(.01f, spawnClearanceRadius);
+        spawnClearanceHeight = Mathf.Max(spawnClearanceHeight, spawnClearanceRadius * 2f);
     }
 
-    private void UnlockBarriers()
+    private void OnDrawGizmos()
     {
-        foreach (EncounterBarrier barrier in barriers)
-            barrier?.Unlock();
+        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible) return;
+        if (player != null && playerExclusionRadius > 0f)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(player.position, playerExclusionRadius);
+        }
+        if (player != null && preferredSpawnRadius > 0f)
+        {
+            Gizmos.color = new Color(.2f, .9f, 1f, .8f);
+            Gizmos.DrawWireSphere(player.position, preferredSpawnRadius);
+        }
+        if (enemyExclusionRadius <= 0f) return;
+        Gizmos.color = Color.yellow;
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
+            if (enemy != null && !enemy.IsDead && enemy.gameObject.activeInHierarchy)
+                Gizmos.DrawWireSphere(enemy.AttackOrigin, enemyExclusionRadius);
     }
 }

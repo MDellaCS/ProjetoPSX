@@ -69,6 +69,46 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         return true;
     }
 
+    /// <summary>Aplica o dano final do golpe a objetos interativos do mundo.</summary>
+    public bool ResolveUtilityTarget(PlayerAttackRuntime runtime,
+        PlayerAttackStrikeDefinition strike, IPlayerAttackTarget target,
+        Vector3 impactPosition, Vector3 impactDirection)
+    {
+        if (target == null)
+            return false;
+
+        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier);
+        bool connected = target.ReceivePlayerAttack(damage, impactPosition,
+            impactDirection);
+        if (!connected)
+            return false;
+
+        runtime.HitConfirmed = true;
+
+        // Alvos interativos, como StrengthLevers, devem responder ao golpe
+        // com o mesmo impacto basico de acertar uma entidade: hitstop local e
+        // tremor unico por ataque. O alvo e necessariamente um Component na
+        // implementacao Unity atual, mas a interface mantem a hitbox livre de
+        // depender de um tipo concreto.
+        if (target is Component targetComponent)
+        {
+            CombatImpactSystem.ReportPlayerAttackImpact(transform,
+                targetComponent.transform,
+                runtime.Definition.kind == PlayerAttackKind.Heavy,
+                damage,
+                !cameraShakeReported);
+            cameraShakeReported = true;
+        }
+
+        if (runtime.Definition.kind == PlayerAttackKind.Light &&
+            strike.generatesHeatOnHit && heat != null)
+        {
+            heat.AddHeat(damage * heat.heatGeneratedPerDamageDealt);
+        }
+
+        return true;
+    }
+
     public void ApplySelfLaunchUp() => movement?.ApplySelfLaunchUp(
         movement.GetMaximumJumpLaunchSpeed(), movement.gravity);
 

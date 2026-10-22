@@ -75,6 +75,9 @@ public class PlayerHUDToolkit : MonoBehaviour
         {
             VisualElement notch = new VisualElement();
             notch.AddToClassList(className);
+            VisualElement fill = new VisualElement();
+            fill.AddToClassList("notch-fill");
+            notch.Add(fill);
             parent.Add(notch);
             output.Add(notch);
         }
@@ -94,17 +97,23 @@ public class PlayerHUDToolkit : MonoBehaviour
 
     private void UpdateHeatNotches()
     {
-        int heatNotch = playerHeat.CurrentHeatNotch;
-        int coldCount = Mathf.Clamp(-heatNotch, 0, 10);
-        int hotCount = Mathf.Clamp(heatNotch, 0, 10);
-        int superheatCount = playerHeat.CurrentSuperheatNotch;
-
         for (int index = 0; index < coldNotches.Count; index++)
-            SetNotchColor(coldNotches[index], ColdColor(index / 9f), index >= coldNotches.Count - coldCount);
+        {
+            float filled = GetColdNotchFill(index, coldNotches.Count);
+            SetNotchFill(coldNotches[index], ColdColor(index / 9f), filled);
+        }
         for (int index = 0; index < hotNotches.Count; index++)
-            SetNotchColor(hotNotches[index], HotColor(index / 9f), index < hotCount);
+        {
+            float filled = GetPositiveNotchFill(playerHeat.CurrentHeat,
+                playerHeat.MaxHeat, index, hotNotches.Count);
+            SetNotchFill(hotNotches[index], HotColor(index / 9f), filled);
+        }
         for (int index = 0; index < superheatNotches.Count; index++)
-            SetNotchColor(superheatNotches[index], SuperheatColor(index / 4f), index < superheatCount);
+        {
+            float filled = GetPositiveNotchFill(playerHeat.CurrentSuperheat,
+                playerHeat.MaxSuperheat, index, superheatNotches.Count);
+            SetNotchFill(superheatNotches[index], SuperheatColor(index / 4f), filled);
+        }
 
         if (heatValueText != null) heatValueText.text = "HEAT " + FormatSigned(playerHeat.CurrentHeat) + " / " + playerHeat.MaxHeat.ToString("0");
         if (heatPowerText != null) heatPowerText.text = playerHeat.HeavyDamageMultiplier.ToString("0.#") + "x";
@@ -126,9 +135,41 @@ public class PlayerHUDToolkit : MonoBehaviour
             "  |  DASH " + GameInputBindings.GetDisplayString("Dash");
     }
 
-    private static void SetNotchColor(VisualElement notch, Color color, bool active)
+    private float GetColdNotchFill(int index, int count)
     {
-        if (notch != null) notch.style.backgroundColor = active ? color : new Color(.12f, .14f, .17f, 1f);
+        if (count <= 0 || playerHeat == null)
+            return 0f;
+
+        float coldUnits = Mathf.Clamp01(-playerHeat.CurrentHeat /
+            Mathf.Max(.001f, playerHeat.MaxHeat)) * count;
+        // A lista Cold e desenhada da esquerda (Cold maximo) para a direita
+        // (zero), entao o notch proximo do zero e preenchido primeiro.
+        return Mathf.Clamp01(coldUnits - (count - 1 - index));
+    }
+
+    private static float GetPositiveNotchFill(float value, float maximum,
+        int index, int count)
+    {
+        if (count <= 0 || maximum <= 0f)
+            return 0f;
+
+        float units = Mathf.Clamp01(value / maximum) * count;
+        return Mathf.Clamp01(units - index);
+    }
+
+    private static void SetNotchFill(VisualElement notch, Color color,
+        float fillAmount)
+    {
+        if (notch == null)
+            return;
+
+        notch.style.backgroundColor = new Color(.12f, .14f, .17f, 1f);
+        VisualElement fill = notch.Q<VisualElement>(className: "notch-fill");
+        if (fill == null)
+            return;
+
+        fill.style.backgroundColor = color;
+        fill.style.width = Length.Percent(Mathf.Clamp01(fillAmount) * 100f);
     }
 
     private static Color ColdColor(float amount) => Color.Lerp(new Color(.04f, .13f, .35f), new Color(.2f, .85f, 1f), amount);

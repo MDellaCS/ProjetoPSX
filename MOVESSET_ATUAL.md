@@ -28,7 +28,9 @@ Heat, Poise e reações funcionam independentemente do Animator.
 ## Pipeline real de dano
 
 1. O `PlayerAttackRuntime` cria uma fotografia do ataque ao iniciá-lo.
-2. Pesados gastam todo o Heat positivo **no início**, inclusive se errarem.
+2. Pesados gastam, no início e inclusive se errarem, apenas blocos completos
+   de `10 Heat` que contribuem para o notch usado. O restante fracionário fica
+   no Heat para o próximo golpe.
 3. Cada hitbox ativa chama o Strike correspondente. O dano é
    `RoundToInt(dano do runtime × multiplicador do Strike)`.
 4. O inimigo pode esquivar: nesse caso o ataque não conecta e não há dano,
@@ -84,7 +86,10 @@ Assim, `H1` e `AirH1` (base `120 dano / 80 Poise`) têm estes marcos:
 
 O notch `0` já é `1x`; por isso o cálculo atual também adiciona `6` ao dano
 base de um pesado sem Heat. Em Cold, o multiplicador cai gradualmente; em
-`-10` o dano pesado chega a `0`.
+`-10` o dano pesado chega a `0`. Um H1 em `49.9 Heat`, por exemplo, usa o
+notch 4, consome `40` e deixa `9.9 Heat`; em `50`, usa o notch 5 e consome
+`50`. Superheat repõe no máximo a quantidade efetivamente gasta, nunca o
+resto fracionário.
 
 ## Tabela resumida de ataques
 

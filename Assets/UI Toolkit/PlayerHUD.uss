@@ -46,10 +46,17 @@
 
 .heat-notch,
 .superheat-notch {
+    position: relative;
     width: 12px;
     height: 16px;
     margin-right: 2px;
     background-color: rgb(34, 39, 49);
+    overflow: hidden;
+}
+
+.notch-fill {
+    height: 100%;
+    width: 0%;
 }
 
 #heat-zero-notch {

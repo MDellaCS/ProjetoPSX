@@ -140,7 +140,7 @@ public class PlayerHeat : MonoBehaviour
 
     private void Update()
     {
-        if (GamePauseController.IsPaused ||
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
@@ -270,22 +270,31 @@ public class PlayerHeat : MonoBehaviour
     /// </summary>
     public HeavyAttackCharge ConsumeHeatForHeavyAttack()
     {
-        float heatConsumed = Mathf.Max(0f, currentHeat);
-        int consumedNotch = GetSignedNotch(heatConsumed, maxHeat, maxColdMagnitude);
+        float availablePositiveHeat = Mathf.Max(0f, currentHeat);
+        int consumedNotch = GetSignedNotch(availablePositiveHeat, maxHeat,
+            maxColdMagnitude);
         float damageMultiplier = GetHeavyDamageMultiplier(consumedNotch);
         float poiseMultiplier = GetHeavyPoiseMultiplier(consumedNotch);
+        // O poder ainda e discreto por notch, mas o gasto tambem: um pesado
+        // consome apenas os blocos completos de 10 Heat que de fato mudaram
+        // seu multiplicador. O restante fica disponivel para o proximo golpe.
+        float heatConsumed = Mathf.Max(0, consumedNotch) * HeatPerNotch;
 
         if (heatConsumed <= 0f)
             return new HeavyAttackCharge(0f, damageMultiplier, poiseMultiplier);
 
-        currentHeat = 0f;
-        RefillHeatFromSuperheat();
+        currentHeat = Mathf.Max(0f, currentHeat - heatConsumed);
+        RefillHeatFromSuperheat(heatConsumed);
         return new HeavyAttackCharge(heatConsumed, damageMultiplier, poiseMultiplier);
     }
 
-    private void RefillHeatFromSuperheat()
+    private void RefillHeatFromSuperheat(float maximumRefill)
     {
-        float refill = Mathf.Min(currentSuperheat, maxHeat - currentHeat);
+        // Superheat recompõe somente a carga que o pesado acabou de gastar.
+        // Assim, tanto o resto fracionario quanto a reserva de Superheat
+        // permanecem legiveis e o ataque nao "arredonda para cima" o Heat.
+        float refill = Mathf.Min(currentSuperheat, maxHeat - currentHeat,
+            Mathf.Max(0f, maximumRefill));
         if (refill <= 0f)
             return;
 

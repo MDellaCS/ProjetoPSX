@@ -30,7 +30,7 @@ public class PlayerLockOn : MonoBehaviour
     {
         ValidateLockedTarget();
 
-        if (GamePauseController.IsPaused)
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked)
             return;
 
         if (GameInput.LockOnPressed)

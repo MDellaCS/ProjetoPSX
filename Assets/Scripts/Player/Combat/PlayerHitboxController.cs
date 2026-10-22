@@ -8,6 +8,8 @@ public sealed class PlayerHitboxController : MonoBehaviour
     private readonly Dictionary<string, PlayerHitboxAnchor> anchors = new();
     private readonly Dictionary<PlayerHitboxTrackDefinition, TrackState> trackStates = new();
     private readonly Dictionary<(PlayerAttackStrikeDefinition, int), HashSet<EnemyBase>> groupHits = new();
+    private readonly Dictionary<(PlayerAttackStrikeDefinition, int), HashSet<IPlayerAttackTarget>> utilityGroupHits = new();
+    private readonly Dictionary<(PlayerHitboxTrackDefinition, IPlayerAttackTarget), float> utilityRepeatTimes = new();
     private readonly HashSet<PlayerAttackStrikeDefinition> startedStrikes = new();
     private readonly Dictionary<(PlayerHitboxTrackDefinition, EnemyBase), float> repeatTimes = new();
     private readonly Collider[] overlapBuffer = new Collider[64];
@@ -28,7 +30,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
 
     public void Begin(PlayerAttackRuntime attack)
     {
-        runtime = attack; trackStates.Clear(); groupHits.Clear(); repeatTimes.Clear();
+        runtime = attack; trackStates.Clear(); groupHits.Clear(); utilityGroupHits.Clear(); repeatTimes.Clear(); utilityRepeatTimes.Clear();
         startedStrikes.Clear(); debugVolumes.Clear();
     }
     public void End() { runtime = null; debugVolumes.Clear(); trackStates.Clear(); }
@@ -137,15 +139,64 @@ public sealed class PlayerHitboxController : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             EnemyBase enemy = overlapBuffer[i] != null ? overlapBuffer[i].GetComponentInParent<EnemyBase>() : null;
-            if (enemy == null) continue;
+            if (enemy == null)
+            {
+                IPlayerAttackTarget target = FindUtilityTarget(overlapBuffer[i]);
+                if (target == null) continue;
+                if (!utilityGroupHits.TryGetValue(groupKey,
+                    out HashSet<IPlayerAttackTarget> utilityHitSet))
+                {
+                    utilityHitSet = new HashSet<IPlayerAttackTarget>();
+                    utilityGroupHits.Add(groupKey, utilityHitSet);
+                }
+                if (!track.allowRepeatHits && utilityHitSet.Contains(target)) continue;
+                var utilityKey = (track, target);
+                if (track.allowRepeatHits &&
+                    utilityRepeatTimes.TryGetValue(utilityKey, out float utilityNext) &&
+                    Time.time < utilityNext) continue;
+                utilityHitSet.Add(target);
+                utilityRepeatTimes[utilityKey] = Time.time + track.repeatHitInterval;
+                Vector3 utilityImpact = GetSafeImpactPoint(overlapBuffer[i],
+                    hitboxCenter);
+                resolver.ResolveUtilityTarget(runtime, strike, target,
+                    utilityImpact, impactDirection);
+                continue;
+            }
             var key = (track, enemy);
             if (!track.allowRepeatHits && hitSet.Contains(enemy)) continue;
             if (track.allowRepeatHits && repeatTimes.TryGetValue(key, out float next) && Time.time < next) continue;
             hitSet.Add(enemy); repeatTimes[key] = Time.time + track.repeatHitInterval;
-            Vector3 impactPosition = overlapBuffer[i].ClosestPoint(hitboxCenter);
+            Vector3 impactPosition = GetSafeImpactPoint(overlapBuffer[i],
+                hitboxCenter);
             resolver.Resolve(runtime, strike, enemy, attackRadius, impactPosition,
                 impactDirection);
         }
+    }
+
+    private static IPlayerAttackTarget FindUtilityTarget(Collider collider)
+    {
+        if (collider == null) return null;
+        foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
+            if (behaviour is IPlayerAttackTarget target) return target;
+        return null;
+    }
+
+    /// <summary>
+    /// MeshColliders nao convexos nao permitem Collider.ClosestPoint. Eles
+    /// sao apropriados para geometria estatica de mundo, como uma alavanca
+    /// modelada, portanto usa-se o ponto mais proximo dos bounds como uma
+    /// aproximacao segura para efeitos de impacto.
+    /// </summary>
+    private static Vector3 GetSafeImpactPoint(Collider collider,
+        Vector3 referencePoint)
+    {
+        if (collider == null)
+            return referencePoint;
+
+        if (collider is MeshCollider meshCollider && !meshCollider.convex)
+            return meshCollider.bounds.ClosestPoint(referencePoint);
+
+        return collider.ClosestPoint(referencePoint);
     }
 
     private Vector3 GetPlayerCenter() => transform.position +

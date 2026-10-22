@@ -46,6 +46,10 @@ public sealed class EnemyBrain : MonoBehaviour
     [SerializeField] private float outOfCameraAggressionLoss = 16f;
     [Tooltip("Margem ao redor da camera antes de considerar o inimigo fora da visao.")]
     [Min(0f)] [SerializeField] private float cameraVisibilityPadding = 3f;
+    [Tooltip("Distancia horizontal a partir da qual o jogador e considerado longe para este modificador. Use 0 para desativar.")]
+    [Min(0f)] [SerializeField] private float playerFarAggressionDistance;
+    [Tooltip("Variacao de agressividade por segundo enquanto o jogador estiver longe. Valor positivo incentiva perseguicao; negativo torna o inimigo mais passivo a distancia.")]
+    [SerializeField] private float playerFarAggressionChangePerSecond;
 
     [Header("Aggression Combat Reactions")]
     [Tooltip("Agressividade perdida imediatamente ao receber dano.")]
@@ -136,6 +140,7 @@ public sealed class EnemyBrain : MonoBehaviour
     public float CurrentAggressionVelocity => GetCurrentAggressionVelocity();
     public bool IsPlayerBackTurned => IsPlayerBackTurnedToEnemy();
     public bool IsCameraVisible => IsInsideCameraVisibilityPadding();
+    public float PlayerFarAggressionDistance => playerFarAggressionDistance;
     public float DirectorWeight => Mathf.Clamp(directorWeight, 1f, 100f);
 
     internal void Initialize(EnemyBase enemy, EnemyMovement locomotion,
@@ -173,6 +178,8 @@ public sealed class EnemyBrain : MonoBehaviour
         lowPlayerHealthPercent = Mathf.Clamp01(lowPlayerHealthPercent);
         highPlayerHealthPercent = Mathf.Clamp(highPlayerHealthPercent,
             lowPlayerHealthPercent, 1f);
+        playerFarAggressionDistance = Mathf.Max(0f,
+            playerFarAggressionDistance);
     }
 
     internal void ResolvePlayer()
@@ -482,8 +489,13 @@ public sealed class EnemyBrain : MonoBehaviour
             velocity -= highPlayerHealthAggressionLossPerSecond;
         if (playerMovement != null && !playerMovement.IsGrounded)
             velocity += playerAirborneAggressionChangePerSecond;
+        if (IsPlayerFarAway())
+            velocity += playerFarAggressionChangePerSecond;
         return velocity;
     }
+
+    private bool IsPlayerFarAway() => playerFarAggressionDistance > 0f &&
+        DistanceToTarget() >= playerFarAggressionDistance;
 
     private bool IsPlayerBackTurnedToEnemy()
     {

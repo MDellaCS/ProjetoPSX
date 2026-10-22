@@ -20,7 +20,7 @@ MonoBehaviour:
   activeDuration: 0.15
   recoveryDuration: 0.225
   baseDamage: 32
-  basePoiseDamage: 60
+  basePoiseDamage: 50
   movement:
     forwardDistance: 0.8
     startNormalized: 0

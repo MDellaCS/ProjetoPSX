@@ -51,6 +51,8 @@ public static class GameInput
     {
         get
         {
+            if (CutsceneController.IsPlaying)
+                return false;
             EnsureInitialized();
             return CurrentMap()?.FindAction("Pause")?.WasPressedThisFrame() == true;
         }
@@ -101,18 +103,24 @@ public static class GameInput
 
     private static bool Pressed(string actionName)
     {
+        if (CutsceneController.IsPlayerControlLocked)
+            return false;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.WasPressedThisFrame() == true;
     }
 
     private static bool Held(string actionName)
     {
+        if (CutsceneController.IsPlayerControlLocked)
+            return false;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.IsPressed() == true;
     }
 
     private static Vector2 ReadVector2(string actionName)
     {
+        if (CutsceneController.IsPlayerControlLocked)
+            return Vector2.zero;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.ReadValue<Vector2>() ?? Vector2.zero;
     }

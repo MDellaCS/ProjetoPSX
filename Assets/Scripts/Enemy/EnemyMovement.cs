@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>Locomocao, gravidade, Launch Up, Juggle, Launch Forwards e colisao.</summary>
 [DisallowMultipleComponent]
@@ -29,23 +31,12 @@ public sealed class EnemyMovement : MonoBehaviour
     [Tooltip("Permite que ataques de Juggle alterem o movimento vertical depois de Launch Up.")]
     [SerializeField] private bool canBeJuggled = true;
 
-    [Header("Wall Splat")]
-    [Tooltip("Velocidade horizontal minima ao colidir com parede para ativar Wall Splat.")]
-    [Min(0f)] [SerializeField] private float wallSplatMinimumSpeed = 10f;
-    [Tooltip("Dano de Wall Splat causado para cada unidade de velocidade de impacto contra a parede.")]
-    [Min(0f)] [SerializeField] private float wallSplatDamagePerImpactSpeed = 2f;
-    [Tooltip("Tempo de Stagger aplicado no Wall Splat.")]
-    [Min(0f)] [SerializeField] private float wallSplatStunDuration = 1f;
-    [Tooltip("Camadas do cenario que contam como parede para Wall Splat.")]
-    [SerializeField] private LayerMask wallSplatLayers = ~0;
-
-    [Header("Floor Splat")]
-    [Tooltip("Velocidade vertical minima de queda para ativar Floor Splat ao atingir o chao durante um Launch ou Dive.")]
-    [Min(0f)] [SerializeField] private float floorSplatMinimumSpeed = 12f;
-    [Tooltip("Dano de Floor Splat causado para cada unidade de velocidade vertical de impacto no chao.")]
-    [Min(0f)] [SerializeField] private float floorSplatDamagePerImpactSpeed = 2f;
-    [Tooltip("Tempo de Stagger aplicado no Floor Splat.")]
-    [Min(0f)] [SerializeField] private float floorSplatStunDuration = 1f;
+    [Header("Impacto Fisico")]
+    [Tooltip("Massa relativa deste inimigo em impactos. Mais massa reduz dano, Poise e deslocamento recebidos; quando arremessado, transfere mais forca para outros inimigos.")]
+    [FormerlySerializedAs("bodyImpactWeight")]
+    [Min(.01f)] [SerializeField] private float impactWeight = 1f;
+    [Tooltip("Aumento percentual do raio e da altura da capsula invisivel que detecta inimigos durante Launch Forwards. Nao altera o CharacterController normal.")]
+    [Range(0f, 300f)] [SerializeField] private float launchedBodyImpactHitboxSizeIncreasePercent = 50f;
 
     private EnemyBase owner;
     private EnemyBrain brain;
@@ -68,16 +59,20 @@ public sealed class EnemyMovement : MonoBehaviour
     private Vector3 lastMoveVelocity;
     private bool isLaunched;
     private bool isLaunchedForwards;
+    private readonly HashSet<EnemyBase> bodyImpactTargets = new();
+    private readonly Collider[] bodyImpactOverlapBuffer = new Collider[64];
 
     public float MovementSpeed => movementSpeed;
+    public float ImpactWeight => Mathf.Max(.01f, impactWeight);
     public bool CanBeLaunchedUp => canBeLaunchedUp;
     public bool CanBeLaunchedDown => canBeLaunchedDown;
     public bool CanBeLaunchedForwards => canBeLaunchedForwards;
     public bool CanBeJuggled => canBeJuggled;
     public bool IsLaunched => isLaunched;
     public bool IsLaunchedForwards => isLaunchedForwards;
+    public Vector3 LaunchForwardsVelocity => launchForwardsVelocity;
     /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
-    public bool IsGrounded => controller != null && controller.isGrounded;
+    public bool IsGrounded => IsControllerUsable && controller.isGrounded;
     public float VerticalVelocity => verticalVelocity;
 
     internal void Initialize(EnemyBase enemy, EnemyHealth enemyHealth)
@@ -101,7 +96,11 @@ public sealed class EnemyMovement : MonoBehaviour
     /// </summary>
     public void Move(Vector3 horizontalVelocity)
     {
-        if (controller == null)
+        // A apresentacao de spawn desativa temporariamente o controller para
+        // impedir colisao antes de o inimigo nascer. Nunca chame Move nesse
+        // intervalo: o Unity registra um erro mesmo que o GameObject siga
+        // ativo e o Brain ainda tenha um Tick pendente naquele frame.
+        if (!IsControllerUsable)
             return;
         Vector3 velocity = isLaunchedForwards ? launchForwardsVelocity :
             playerHeadSeparationTimer > 0f ? playerHeadSeparationVelocity :
@@ -116,6 +115,7 @@ public sealed class EnemyMovement : MonoBehaviour
 
         if (isLaunchedForwards)
         {
+            ScanThrownBodyImpactHitbox();
             launchForwardsVelocity = Vector3.MoveTowards(
                 launchForwardsVelocity,
                 Vector3.zero,
@@ -136,7 +136,7 @@ public sealed class EnemyMovement : MonoBehaviour
             (flags & CollisionFlags.Below) != 0)
         {
             float landingSpeed = Mathf.Max(0f, -verticalVelocity);
-            bool floorSplatted = TryApplyFloorSplat(landingSpeed);
+            bool floorSplatted = TryApplyStaticSplat(landingSpeed, Vector3.down);
             isLaunched = false;
             verticalVelocity = -2f;
             ResetJuggleMovement();
@@ -152,7 +152,7 @@ public sealed class EnemyMovement : MonoBehaviour
 
     public void ApplyGravity()
     {
-        if (controller == null) return;
+        if (!IsControllerUsable) return;
         if (!isLaunched && controller.isGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
         if (juggleTimer > 0f)
@@ -168,6 +168,9 @@ public sealed class EnemyMovement : MonoBehaviour
     }
 
     public void SetVerticalVelocity(float value) => verticalVelocity = value;
+
+    private bool IsControllerUsable => controller != null &&
+        controller.enabled && controller.gameObject.activeInHierarchy;
 
     internal void StopForTaunt()
     {
@@ -332,6 +335,34 @@ public sealed class EnemyMovement : MonoBehaviour
         direction.y = 0f;
         if (direction.sqrMagnitude <= .001f)
             direction = transform.forward;
+        direction = GetAssistedLaunchDirection(direction);
+        BeginLaunchForwards(direction, force, deceleration);
+    }
+
+    /// <summary>
+    /// Recebe a velocidade transferida por outro inimigo arremessado. Nao e
+    /// um ataque do player: guarda e esquiva nao participam deste impacto.
+    /// </summary>
+    public bool ApplyBodyImpactLaunch(Vector3 direction, float speed,
+        float deceleration)
+    {
+        if (!canBeLaunchedForwards || owner == null || owner.IsDead ||
+            speed <= 0f || deceleration <= 0f)
+        {
+            return false;
+        }
+
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .001f)
+            return false;
+
+        BeginLaunchForwards(direction, speed, deceleration);
+        return true;
+    }
+
+    private void BeginLaunchForwards(Vector3 direction, float force,
+        float deceleration)
+    {
         attacks.CancelAttack();
         owner.CancelDodge();
         owner.CancelTaunt();
@@ -342,6 +373,7 @@ public sealed class EnemyMovement : MonoBehaviour
         launchForwardsVelocity = direction.normalized * force;
         launchForwardsDeceleration = deceleration;
         isLaunchedForwards = true;
+        bodyImpactTargets.Clear();
         CancelSlideLaunchHorizontalImpulse();
     }
 
@@ -377,12 +409,19 @@ public sealed class EnemyMovement : MonoBehaviour
             SeparateFromPlayerHead(player);
             return;
         }
-        if (Mathf.Abs(hit.normal.y) > .5f) return;
         Collider obstacle = hit.collider;
-        if (obstacle.GetComponentInParent<EnemyBase>() != null ||
-            obstacle.GetComponentInParent<PlayerMovement>() != null)
+        EnemyBase impactedEnemy = obstacle.GetComponentInParent<EnemyBase>();
+        if (impactedEnemy != null)
+        {
+            TryApplyThrownBodyImpact(impactedEnemy);
             return;
-        if ((wallSplatLayers.value & (1 << obstacle.gameObject.layer)) == 0)
+        }
+        if (obstacle.GetComponentInParent<PlayerMovement>() != null)
+            return;
+        if (Mathf.Abs(hit.normal.y) > .5f) return;
+        CombatPoiseSystem rules = CombatPoiseSystem.Instance;
+        if ((rules.StaticImpactLayers.value &
+            (1 << obstacle.gameObject.layer)) == 0)
             return;
         Vector3 horizontalVelocity = lastMoveVelocity;
         horizontalVelocity.y = 0f;
@@ -394,9 +433,153 @@ public sealed class EnemyMovement : MonoBehaviour
         horizontalNormal.Normalize();
         float impactSpeed = Mathf.Max(0f,
             -Vector3.Dot(horizontalVelocity, horizontalNormal));
-        if (impactSpeed < wallSplatMinimumSpeed)
+        if (impactSpeed < rules.MinimumImpactSpeed)
             return;
-        ApplyWallSplat(impactSpeed, horizontalVelocity);
+        TryApplyStaticSplat(impactSpeed, horizontalVelocity);
+    }
+
+    private void TryApplyThrownBodyImpact(EnemyBase impactedEnemy)
+    {
+        if (!isLaunchedForwards || owner == null || impactedEnemy == null ||
+            impactedEnemy == owner || impactedEnemy.IsDead || health == null)
+        {
+            return;
+        }
+
+        Vector3 impactVelocity = launchForwardsVelocity;
+        impactVelocity.y = 0f;
+        float impactSpeed = impactVelocity.magnitude;
+        if (impactSpeed <= .0001f)
+            return;
+
+        Vector3 impactDirection = impactVelocity.normalized;
+        CombatPoiseSystem rules = CombatPoiseSystem.Instance;
+        float targetSpeed = Vector3.Dot(impactedEnemy.LaunchForwardsVelocity,
+            impactDirection);
+        float relativeSpeed = Mathf.Max(0f, impactSpeed - targetSpeed);
+        if (relativeSpeed < rules.MinimumImpactSpeed ||
+            !bodyImpactTargets.Add(impactedEnemy))
+            return;
+
+        CombatMassImpact massImpact = rules.ResolveMassImpact(ImpactWeight,
+            impactedEnemy.ImpactWeight, impactSpeed, targetSpeed);
+        rules.CalculateImpactDamage(massImpact.TargetImpactIntensity,
+            out int damage, out int poiseDamage);
+        bool connected = impactedEnemy.TakeDamage(damage, owner.AttackOrigin,
+            poiseDamage, out _,
+            out CombatPoiseHitResult poiseHit, false,
+            PlayerAttackType.None, 0f, impactDirection,
+            impactedEnemy.AttackOrigin, true);
+        if (!connected)
+            return;
+
+        // Colisao 1D elástica simplificada contra um alvo inicialmente
+        // parado. Assim, somente as massas relativas e a velocidade atual
+        // definem o quanto cada corpo continua (ou ricocheteia) apos bater.
+        bool chainLaunched = impactedEnemy.ApplyBodyImpactLaunch(
+            impactDirection, massImpact.TargetPostImpactSpeed,
+            launchForwardsDeceleration);
+        if (!chainLaunched)
+        {
+            impactedEnemy.ApplyPoiseReaction(poiseHit,
+                new CombatReactionRequest(CombatReactionType.None,
+                    owner.AttackOrigin, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 0f));
+        }
+
+        // Um alvo que nao aceita Launch Forwards e tratado como obstaculo
+        // imovel: o arremesso nao atravessa nem continua por ele.
+        launchForwardsVelocity = chainLaunched
+            ? impactDirection * massImpact.SourcePostImpactSpeed : Vector3.zero;
+        if (launchForwardsVelocity.sqrMagnitude <= .0001f)
+            ResetLaunchForwards();
+    }
+
+    private Vector3 GetAssistedLaunchDirection(Vector3 originalDirection)
+    {
+        originalDirection.y = 0f;
+        CombatPoiseSystem rules = CombatPoiseSystem.Instance;
+        float assistAngle = rules.PlayerLaunchBodyImpactAssistAngle;
+        float assistRange = rules.PlayerLaunchBodyImpactAssistRange;
+        if (originalDirection.sqrMagnitude <= .001f || assistAngle <= 0f ||
+            assistRange <= 0f)
+        {
+            return originalDirection;
+        }
+
+        Vector3 origin = GetBodyImpactOrigin();
+        Vector3 forward = originalDirection.normalized;
+        EnemyBase bestTarget = null;
+        float bestAngle = float.MaxValue;
+        float bestDistance = float.MaxValue;
+        foreach (EnemyBase candidate in EnemyBase.ActiveEnemies)
+        {
+            if (candidate == null || candidate == owner || candidate.IsDead ||
+                !candidate.isActiveAndEnabled)
+            {
+                continue;
+            }
+
+            Vector3 towardCandidate = candidate.AttackOrigin - origin;
+            towardCandidate.y = 0f;
+            float distance = towardCandidate.magnitude;
+            if (distance <= .001f || distance > assistRange)
+                continue;
+
+            float angle = Vector3.Angle(forward, towardCandidate);
+            if (angle > assistAngle ||
+                angle > bestAngle + .001f ||
+                (Mathf.Abs(angle - bestAngle) <= .001f &&
+                    distance >= bestDistance))
+            {
+                continue;
+            }
+
+            bestTarget = candidate;
+            bestAngle = angle;
+            bestDistance = distance;
+        }
+
+        if (bestTarget == null)
+            return forward;
+
+        Vector3 assistedDirection = bestTarget.AttackOrigin - origin;
+        assistedDirection.y = 0f;
+        return assistedDirection.sqrMagnitude > .001f
+            ? assistedDirection.normalized : forward;
+    }
+
+    private void ScanThrownBodyImpactHitbox()
+    {
+        if (!isLaunchedForwards || controller == null)
+            return;
+
+        GetBodyImpactCapsule(out Vector3 first, out Vector3 second,
+            out float radius);
+        int count = Physics.OverlapCapsuleNonAlloc(first, second, radius,
+            bodyImpactOverlapBuffer);
+        for (int index = 0; index < count; index++)
+        {
+            Collider hit = bodyImpactOverlapBuffer[index];
+            EnemyBase impactedEnemy = hit != null
+                ? hit.GetComponentInParent<EnemyBase>() : null;
+            TryApplyThrownBodyImpact(impactedEnemy);
+        }
+    }
+
+    private Vector3 GetBodyImpactOrigin() => controller != null
+        ? transform.TransformPoint(controller.center) : transform.position;
+
+    private void GetBodyImpactCapsule(out Vector3 first, out Vector3 second,
+        out float radius)
+    {
+        float sizeMultiplier = 1f + Mathf.Max(0f,
+            launchedBodyImpactHitboxSizeIncreasePercent) / 100f;
+        radius = Mathf.Max(.01f, controller.radius * sizeMultiplier);
+        float halfLine = Mathf.Max(0f,
+            controller.height * sizeMultiplier * .5f - radius);
+        Vector3 center = GetBodyImpactOrigin();
+        first = center + Vector3.up * halfLine;
+        second = center - Vector3.up * halfLine;
     }
 
     private bool IsLandingOnPlayerTop(PlayerMovement player)
@@ -419,40 +602,48 @@ public sealed class EnemyMovement : MonoBehaviour
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
-    private bool TryApplyFloorSplat(float impactSpeed)
+    /// <summary>
+    /// Parede e chao sao o mesmo tipo de alvo: uma massa estatica virtual.
+    /// A massa enorme faz o inimigo perder o movimento, mas a intensidade
+    /// recebida continua proporcional a sua velocidade de impacto.
+    /// </summary>
+    private bool TryApplyStaticSplat(float impactSpeed, Vector3 impactDirection)
     {
-        if (impactSpeed < floorSplatMinimumSpeed || health == null || owner.IsDead)
+        CombatPoiseSystem rules = CombatPoiseSystem.Instance;
+        if (impactSpeed < rules.MinimumImpactSpeed || health == null ||
+            owner == null || owner.IsDead)
+        {
             return false;
+        }
 
-        // A queda e vertical, portanto usamos a frente atual para dar uma
-        // direcao horizontal legivel ao shake de camera.
-        ApplySplat(impactSpeed, floorSplatDamagePerImpactSpeed,
-            floorSplatStunDuration, transform.forward);
-        return true;
-    }
+        CombatMassImpact impact = rules.ResolveMassImpact(ImpactWeight,
+            CombatPoiseSystem.StaticSurfaceMass, impactSpeed);
+        rules.CalculateImpactDamage(impact.SourceImpactIntensity,
+            out int damage, out int poiseDamage);
 
-    private void ApplyWallSplat(float impactSpeed, Vector3 impactVelocity)
-    {
-        ApplySplat(impactSpeed, wallSplatDamagePerImpactSpeed,
-            wallSplatStunDuration, impactVelocity);
-    }
+        impactDirection.y = 0f;
+        if (impactDirection.sqrMagnitude <= .0001f)
+            impactDirection = transform.forward;
+        impactDirection.Normalize();
 
-    private void ApplySplat(float impactSpeed, float damagePerImpactSpeed,
-        float stunDuration, Vector3 impactDirection)
-    {
         ResetLaunchForwards();
         CancelSlideLaunchHorizontalImpulse();
         attacks.CancelAttack();
         brain.CancelReposition();
-        int damage = Mathf.Max(0, Mathf.RoundToInt(impactSpeed *
-            Mathf.Max(0f, damagePerImpactSpeed)));
-        int damageDealt = health.ApplySplatDamage(damage, impactDirection);
-        if (owner.IsDead)
-            return;
 
-        health.ApplySplatStagger(stunDuration);
+        bool connected = owner.TakeDamage(damage,
+            owner.AttackOrigin - impactDirection, poiseDamage,
+            out int damageDealt, out _, false, PlayerAttackType.None, 0f,
+            impactDirection, owner.AttackOrigin, true);
+        if (!connected || owner.IsDead)
+            return true;
+
+        // Superficies estaticas sempre encerram o arremesso em Stagger;
+        // o Poise recebido continua contabilizado para recuperacao futura.
+        health.ApplyStaticImpactStagger(rules.StaticImpactStunDuration);
         CombatImpactSystem.ReportHeavyEnvironmentalImpact(transform,
             impactDirection, damageDealt);
+        return true;
     }
 
     private void ResetJuggleMovement()
@@ -477,5 +668,29 @@ public sealed class EnemyMovement : MonoBehaviour
         launchForwardsVelocity = Vector3.zero;
         launchForwardsDeceleration = 0f;
         isLaunchedForwards = false;
+        bodyImpactTargets.Clear();
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
+            !isLaunchedForwards || controller == null)
+        {
+            return;
+        }
+
+        GetBodyImpactCapsule(out Vector3 first, out Vector3 second,
+            out float radius);
+        Gizmos.color = new Color(1f, .55f, .05f, .9f);
+        Gizmos.DrawWireSphere(first, radius);
+        Gizmos.DrawWireSphere(second, radius);
+        Gizmos.DrawLine(first + Vector3.right * radius,
+            second + Vector3.right * radius);
+        Gizmos.DrawLine(first - Vector3.right * radius,
+            second - Vector3.right * radius);
+        Gizmos.DrawLine(first + Vector3.forward * radius,
+            second + Vector3.forward * radius);
+        Gizmos.DrawLine(first - Vector3.forward * radius,
+            second - Vector3.forward * radius);
     }
 }

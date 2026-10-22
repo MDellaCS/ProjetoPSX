@@ -172,7 +172,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (GamePauseController.IsPaused ||
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
 

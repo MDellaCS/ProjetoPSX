@@ -37,7 +37,7 @@ public class PlayerInputBuffer : MonoBehaviour
 
     private void Update()
     {
-        if (GamePauseController.IsPaused)
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked)
         {
             ClearBufferedInputs();
             return;
@@ -50,7 +50,7 @@ public class PlayerInputBuffer : MonoBehaviour
 
     public bool HasBuffered(PlayerBufferedInput input)
     {
-        if (GamePauseController.IsPaused)
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked)
         {
             ClearBufferedInputs();
             return false;
@@ -109,7 +109,8 @@ public class PlayerInputBuffer : MonoBehaviour
 
     private void CaptureInputsForCurrentFrame()
     {
-        if (GamePauseController.IsPaused || Time.frameCount <= ignoreInputThroughFrame)
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
+            Time.frameCount <= ignoreInputThroughFrame)
             return;
         if (lastCapturedFrame == Time.frameCount)
             return;

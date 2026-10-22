@@ -1,5 +1,15 @@
 # TODO
 
+## Próximas expansões de colisão de inimigo arremessado
+
+- Combate (Pending): avaliar pesos específicos para classes (brute/boss), em vez do peso configurável atual por inimigo.
+- Combate (Pending): avaliar interação da colisão de corpos com guarda, esquiva e imunidade curta a novo Body Impact.
+- Combate (Pending): avaliar dano no próprio inimigo arremessado e feedback audiovisual dedicado para colisões de corpos.
+
+## Colisão de inimigo arremessado
+
+- Combate (Pending): expandir a colisão de inimigo arremessado. V1 entrega dano/Poise por velocidade, um acerto por alvo no mesmo Launch Forwards e perda de velocidade. Avaliar depois: peso por inimigo (brute/boss), Chain Launch opcional, interação com guarda, imunidade curta a Body Impact, dano no inimigo arremessado e efeitos/sons específicos.
+
 ## Sistema de animação desacoplado
 
 ### Iteração 4 — Reações e interrupções

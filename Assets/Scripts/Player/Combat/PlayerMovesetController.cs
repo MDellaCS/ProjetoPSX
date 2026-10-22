@@ -31,6 +31,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private void Update()
     {
         if (moveset == null || GamePauseController.IsPaused ||
+            CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
         if (inputBuffer.HasBuffered(PlayerBufferedInput.HeavyAttack)) TryInput(PlayerAttackInput.Heavy);
         else if (inputBuffer.HasBuffered(PlayerBufferedInput.LightAttack)) TryInput(PlayerAttackInput.Light);

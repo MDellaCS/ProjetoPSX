@@ -33,6 +33,7 @@ public class EnemyBase : MonoBehaviour
     private EnemyReactionController reactions;
     private CharacterController characterController;
     private bool initialized;
+    private bool isSpawning;
 
     public State CurrentState { get; internal set; } = State.Idle;
     public bool IsDead => health != null && health.IsDead;
@@ -42,8 +43,13 @@ public class EnemyBase : MonoBehaviour
     public bool IsLaunchedForwards => movement != null && movement.IsLaunchedForwards;
     public bool CanBeLockOnTarget => isActiveAndEnabled && !IsDead &&
         brain != null && !brain.IsWaitingForEncounter;
+    public bool IsSpawning => isSpawning;
     public int CurrentHealth => health != null ? health.CurrentHealth : 0;
     public int MaxHealth => health != null ? health.MaxHealth : 0;
+    public float ImpactWeight => movement != null
+        ? movement.ImpactWeight : 1f;
+    public Vector3 LaunchForwardsVelocity => movement != null
+        ? movement.LaunchForwardsVelocity : Vector3.zero;
     public float CurrentAggressionPercent => brain != null ? brain.CurrentAggressionPercent : 0f;
     public float DirectorWeight => brain != null ? brain.DirectorWeight : 100f;
     public Transform Target => brain != null ? brain.Target : null;
@@ -127,7 +133,9 @@ public class EnemyBase : MonoBehaviour
 
     private void Update()
     {
-        if (GamePauseController.IsPaused || IsDead || brain.IsWaitingForEncounter ||
+        if (GamePauseController.IsPaused || CutsceneController.AreEnemiesFrozen ||
+            IsDead || isSpawning ||
+            brain.IsWaitingForEncounter ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
@@ -227,6 +235,9 @@ public class EnemyBase : MonoBehaviour
         CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>
         movement.ApplyLaunchUpHorizontalImpulse(direction, speed);
+    public bool ApplyBodyImpactLaunch(Vector3 direction, float speed,
+        float deceleration) => movement != null &&
+        movement.ApplyBodyImpactLaunch(direction, speed, deceleration);
     public void CancelSlideLaunchHorizontalImpulse() =>
         movement.CancelSlideLaunchHorizontalImpulse();
     public void SetEncounterEngaged(Transform player)
@@ -238,6 +249,12 @@ public class EnemyBase : MonoBehaviour
     {
         EnsureInitialized();
         brain.SetWaitingForEncounter();
+    }
+    /// <summary>Impede IA, colisao e lock-on enquanto o efeito de spawn toca.</summary>
+    public void SetSpawning(bool value)
+    {
+        EnsureInitialized();
+        isSpawning = value;
     }
     public void SetUnkillable(bool value)
     {

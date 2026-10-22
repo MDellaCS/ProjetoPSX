@@ -61,7 +61,7 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private void Update()
     {
-        if (GamePauseController.IsPaused ||
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
