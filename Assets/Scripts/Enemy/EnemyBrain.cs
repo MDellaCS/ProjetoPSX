@@ -52,8 +52,8 @@ public sealed class EnemyBrain : MonoBehaviour
     [SerializeField] private float playerFarAggressionChangePerSecond;
 
     [Header("Aggression Combat Reactions")]
-    [Tooltip("Agressividade perdida imediatamente ao receber dano.")]
-    [Min(0f)] [SerializeField] private float damageTakenAggressionReduction = 12f;
+    [Tooltip("Variacao de agressividade para cada 1 por cento da vida maxima realmente perdida ao receber dano. Valor negativo reduz agressividade; positivo a aumenta. Ex.: -1 reduz 50 pontos ao perder 50 por cento da vida maxima.")]
+    [SerializeField] private float damageTakenAggressionChangePerMaxHealthPercent = -1f;
     [Tooltip("Porcentagem de vida abaixo da qual o humor tende a diminuir agressividade.")]
     [Range(0f, 1f)] [SerializeField] private float lowEnemyHealthPercent = .35f;
     [Tooltip("Chance de reduzir agressividade na proxima mudanca de humor com pouca vida.")]
@@ -526,9 +526,18 @@ public sealed class EnemyBrain : MonoBehaviour
         return GeometryUtility.TestPlanesAABB(cachedVisibilityPlanes, bounds);
     }
 
-    internal void OnDamaged() =>
-        currentAggressionPercent = Mathf.Max(minimumAggressionPercent,
-            currentAggressionPercent - damageTakenAggressionReduction);
+    internal void OnDamaged(int damageDealt)
+    {
+        if (damageDealt <= 0)
+            return;
+
+        float maxHealth = Mathf.Max(1f, owner != null ? owner.MaxHealth : 1f);
+        float lostMaxHealthPercent = damageDealt / maxHealth * 100f;
+        float change = lostMaxHealthPercent *
+            damageTakenAggressionChangePerMaxHealthPercent;
+        currentAggressionPercent = Mathf.Clamp(currentAggressionPercent + change,
+            minimumAggressionPercent, maximumAggressionPercent);
+    }
 
     internal void ReactToPlayerDamagedByEnemy()
     {

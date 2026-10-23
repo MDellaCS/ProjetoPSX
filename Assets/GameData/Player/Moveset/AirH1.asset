@@ -17,7 +17,7 @@ MonoBehaviour:
   kind: 1
   context: 1
   windupDuration: 0.5
-  activeDuration: 0.08
+  activeDuration: 0.03
   recoveryDuration: 0.35
   baseDamage: 120
   basePoiseDamage: 80
@@ -58,7 +58,7 @@ MonoBehaviour:
     generatesHeatOnHit: 0
     effects:
       launchDown: 1
-      selfLaunchDown: 0
+      selfLaunchDown: 1
       launchUp: 0
       selfLaunchUp: 0
       launchForwards: 0

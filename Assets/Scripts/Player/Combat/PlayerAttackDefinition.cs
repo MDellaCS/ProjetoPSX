@@ -104,6 +104,33 @@ public class PlayerAttackEffectsDefinition
     public bool juggle;
 }
 
+/// <summary>Curva opcional que reduz o dano de um impacto conforme ele se afasta de sua origem.</summary>
+[Serializable]
+public class PlayerAttackDamageFalloffDefinition
+{
+    [Tooltip("Ativa a reducao de dano por distancia para este impacto.")]
+    public bool enabled;
+    [Tooltip("Distancia da origem em que o falloff comeca. Ate este ponto o dano permanece no multiplicador inicial da curva.")]
+    [Min(0f)] public float startDistance;
+    [Tooltip("Distancia da origem em que o fim da curva de falloff e alcancado.")]
+    [Min(.01f)] public float endDistance = 1f;
+    [Tooltip("Multiplicador de dano por distancia normalizada. X=0 representa Start Distance; X=1 representa End Distance.")]
+    public AnimationCurve damageMultiplier = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+
+    public float Evaluate(float distance)
+    {
+        if (!enabled)
+            return 1f;
+
+        float normalizedDistance = Mathf.InverseLerp(startDistance,
+            Mathf.Max(startDistance + .001f, endDistance), distance);
+        return Mathf.Max(0f, damageMultiplier == null ||
+            damageMultiplier.length == 0
+            ? 1f
+            : damageMultiplier.Evaluate(normalizedDistance));
+    }
+}
+
 [Serializable]
 public class PlayerHitboxTrackDefinition
 {
@@ -188,8 +215,12 @@ public class PlayerAttackStrikeDefinition
     [Min(0f)] public float damageMultiplier = 1f;
     [Tooltip("Multiplicador aplicado ao Poise final do ataque neste Strike.")]
     [Min(0f)] public float poiseMultiplier = 1f;
+    [Tooltip("Reducao opcional do dano conforme o alvo se afasta da origem do Strike.")]
+    public PlayerAttackDamageFalloffDefinition damageFalloff = new();
     [Tooltip("Leves geram o Heat global ao conectar quando esta opcao esta ativa.")]
     public bool generatesHeatOnHit = true;
+    [Tooltip("Faz as particulas voarem radialmente do centro da hitbox ate o inimigo. Use em explosoes e ondas de impacto; nao altera knockback nem outras reacoes.")]
+    public bool particlesUseRadialImpactDirection;
     [Tooltip("Efeitos adicionais aplicados por este Strike.")]
     public PlayerAttackEffectsDefinition effects = new();
     [Tooltip("Volumes que formam este Strike.")]

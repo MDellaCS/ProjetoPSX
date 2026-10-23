@@ -42,9 +42,20 @@ public sealed class CutsceneController : MonoBehaviour
     private bool isRunning;
 
     public static bool IsPlaying => active != null && active.isRunning;
+    public static CutsceneController Active => IsPlaying ? active : null;
     public static bool IsPlayerControlLocked => IsPlaying && active.lockPlayerControl;
     public static bool AreEnemiesFrozen => IsPlaying && active.freezeEnemies;
     public bool IsRunning => isRunning;
+    public string TimelineName => director != null && director.playableAsset != null
+        ? director.playableAsset.name : "None";
+    public double TimelineTime => director != null ? director.time : 0d;
+    public double TimelineDuration => director != null ? director.duration : 0d;
+    public float TimelineProgress => TimelineDuration <= 0d ? 0f :
+        Mathf.Clamp01((float)(TimelineTime / TimelineDuration));
+    public DirectorUpdateMode TimelineUpdateMode => director != null
+        ? director.timeUpdateMode : DirectorUpdateMode.GameTime;
+    public bool CanSkip => allowSkip;
+    public string SkipKeyName => skipKey.ToString();
 
     private void Awake()
     {

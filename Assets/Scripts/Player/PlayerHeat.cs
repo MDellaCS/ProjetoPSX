@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -44,8 +43,8 @@ public class PlayerHeat : MonoBehaviour
     [Min(0f)] public float excessHeatToSuperheatMultiplier = .5f;
 
     [Header("Passive Heat Cooling")]
-    [Tooltip("Tempo fora de combate antes de o resfriamento passivo de Heat positivo comecar.")]
-    [Min(0f)] public float passiveHeatCoolingStartDelay = 5f;
+    [Tooltip("Tempo minimo desde o ultimo ganho de Heat, ou desde sair de combate, antes que o resfriamento passivo possa comecar. Enquanto em combate, este tempo fica travado e nao comeca a contar.")]
+    [Min(0f)] public float passiveHeatCoolingAfterGainDelay = 3f;
     [Tooltip("Heat removido por segundo no inicio do resfriamento, apos o Start Delay.")]
     [Min(0f)] public float initialPassiveHeatCoolingPerSecond = .2f;
     [Tooltip("Heat removido por segundo quando a rampa de resfriamento chega ao fim.")]
@@ -82,14 +81,8 @@ public class PlayerHeat : MonoBehaviour
     [Range(0f, 1f)] public float burnFinalColdPercent = .7f;
 
     [Header("Burn Blast")]
-    [Tooltip("Raio da explosao disparada a partir do centro do player quando o primeiro stun de Burn comeca.")]
-    [Min(0f)] public float burnBlastRadius = 6f;
-    [Tooltip("Tempo em que a hitbox da explosao de Burn permanece ativa. Cada inimigo pode ser atingido uma unica vez nessa janela.")]
-    [Min(.01f)] public float burnBlastActiveDuration = .7f;
-    [Tooltip("Dano causado pela explosao de Burn em cada inimigo dentro do raio.")]
-    [Min(0)] public int burnBlastDamage = 850;
-    [Tooltip("Dano de Poise causado pela explosao de Burn. O Launch Forwards so acontece quando este valor quebra o Poise do inimigo.")]
-    [Min(0)] public int burnBlastPoiseDamage = 100;
+    [Tooltip("Asset de ataque executado automaticamente quando o Burn explode. Controla dano, Poise, Strikes, hitboxes, falloff e efeitos como qualquer outro ataque do player.")]
+    [SerializeField] private PlayerAttackDefinition burnExplosionAttack;
     [Header("Debug")]
     [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes. Esses atalhos alteram apenas o Heat e nao geram Superheat.")]
     [SerializeField] private bool debugHeatInputEnabled = true;
@@ -98,21 +91,18 @@ public class PlayerHeat : MonoBehaviour
 
     private float currentHeat;
     private float currentSuperheat;
-    private float heatCoolingOutOfCombatElapsed;
     private float heatCoolingElapsed;
+    private float heatGainCoolingDelayRemaining;
     private float debugHeatAccumulator;
     private BurnPhase burnPhase;
     private float burnPhaseTimer;
     private float burnElapsed;
     private float burnStartHeat;
-    private float burnBlastActiveTimer;
-    private readonly HashSet<EnemyBase> burnBlastAffectedEnemies = new();
 
     private PlayerState playerState;
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
     private PlayerMovement playerMovement;
-    private CharacterController characterController;
 
     public float CurrentHeat => currentHeat;
     public float CurrentSuperheat => currentSuperheat;
@@ -135,8 +125,8 @@ public class PlayerHeat : MonoBehaviour
         combatStatus = GetComponent<PlayerCombatStatus>();
         attackController = GetComponent<PlayerAttackController>();
         playerMovement = GetComponent<PlayerMovement>();
-        characterController = GetComponent<CharacterController>();
     }
+
 
     private void Update()
     {
@@ -146,11 +136,22 @@ public class PlayerHeat : MonoBehaviour
 
         if (playerState == null || playerState.IsDead()) return;
         UpdateDebugHeatInput();
+        if (combatStatus == null || !combatStatus.IsOutOfCombat)
+        {
+            // Sair de combate sempre inicia uma janela completa de retencao.
+            // Enquanto houver combate, ela nao pode ser consumida.
+            heatGainCoolingDelayRemaining = Mathf.Max(0f,
+                passiveHeatCoolingAfterGainDelay);
+        }
+        else
+        {
+            heatGainCoolingDelayRemaining = Mathf.Max(0f,
+                heatGainCoolingDelayRemaining - Time.deltaTime);
+        }
 
         if (IsBurning)
         {
             UpdateBurn();
-            UpdateBurnBlast();
             CheckColdDeath();
             return;
         }
@@ -179,15 +180,14 @@ public class PlayerHeat : MonoBehaviour
             return;
         }
 
-        heatCoolingOutOfCombatElapsed += Time.deltaTime;
-        if (heatCoolingOutOfCombatElapsed < passiveHeatCoolingStartDelay) return;
+        if (heatGainCoolingDelayRemaining > 0f)
+            return;
         heatCoolingElapsed += Time.deltaTime;
         currentHeat = Mathf.Max(0f, currentHeat - GetPassiveHeatCoolingPerSecond() * Time.deltaTime);
     }
 
     private void ResetHeatCoolingRamp()
     {
-        heatCoolingOutOfCombatElapsed = 0f;
         heatCoolingElapsed = 0f;
     }
 
@@ -225,10 +225,12 @@ public class PlayerHeat : MonoBehaviour
         if (amount <= availableHeat)
         {
             currentHeat += amount;
+            RegisterHeatGain();
             return;
         }
         currentHeat = maxHeat;
         AddSuperheat((amount - availableHeat) * excessHeatToSuperheatMultiplier);
+        RegisterHeatGain();
     }
 
     public void RemoveHeat(float amount)
@@ -300,6 +302,7 @@ public class PlayerHeat : MonoBehaviour
 
         currentSuperheat -= refill;
         currentHeat += refill;
+        RegisterHeatGain();
     }
 
     public int CalculateHeavyDamage(int baseDamage, float damageMultiplier)
@@ -420,84 +423,8 @@ public class PlayerHeat : MonoBehaviour
 
     private void BeginBurnBlast()
     {
-        if (burnBlastRadius <= 0f || burnBlastActiveDuration <= 0f)
-            return;
-
-        burnBlastAffectedEnemies.Clear();
-        burnBlastActiveTimer = burnBlastActiveDuration;
-        ApplyBurnBlastHitbox();
-    }
-
-    private void UpdateBurnBlast()
-    {
-        if (burnBlastActiveTimer <= 0f)
-            return;
-
-        ApplyBurnBlastHitbox();
-        burnBlastActiveTimer = Mathf.Max(
-            0f,
-            burnBlastActiveTimer - Time.deltaTime
-        );
-    }
-
-    private void ApplyBurnBlastHitbox()
-    {
-        Vector3 origin = GetBurnBlastOrigin();
-
-        foreach (Collider hit in Physics.OverlapSphere(origin, burnBlastRadius))
-        {
-            EnemyBase enemy = hit.GetComponentInParent<EnemyBase>();
-            if (enemy == null || !burnBlastAffectedEnemies.Add(enemy))
-                continue;
-
-            int damageDealt = 0;
-            CombatPoiseHitResult poiseHit = default;
-            bool connected = burnBlastDamage > 0 &&
-                enemy.TakeDamage(
-                    burnBlastDamage,
-                    origin,
-                    burnBlastPoiseDamage,
-                    out damageDealt,
-                    out poiseHit,
-                    true
-                );
-
-            if (connected)
-            {
-                CombatPoiseSystem rules = CombatPoiseSystem.Instance;
-                enemy.ApplyPoiseReaction(poiseHit, new CombatReactionRequest(
-                    CombatReactionType.LaunchForwards, origin,
-                    playerMovement != null
-                        ? playerMovement.GetMaximumJumpLaunchSpeed() : 18f,
-                    playerMovement != null ? playerMovement.gravity : -60f,
-                    rules.MinimumLaunchForce,
-                    rules.CalculateLaunchForce(damageDealt),
-                    rules.LaunchForwardsDeceleration,
-                    rules.JuggleLiftSpeed,
-                    rules.JuggleGravityMultiplier,
-                    rules.JuggleDuration));
-            }
-        }
-    }
-
-    private Vector3 GetBurnBlastOrigin()
-    {
-        return characterController != null
-            ? characterController.bounds.center
-            : transform.position;
-    }
-
-    private void OnDrawGizmos()
-    {
-        if (!Application.isPlaying ||
-            !PlayerDebugToolkitHUD.IsVisible ||
-            burnBlastActiveTimer <= 0f)
-        {
-            return;
-        }
-
-        Gizmos.color = new Color(1f, .45f, 0f, .9f);
-        Gizmos.DrawWireSphere(GetBurnBlastOrigin(), burnBlastRadius);
+        if (burnExplosionAttack != null)
+            attackController?.TryStartExternalAttack(burnExplosionAttack);
     }
 
     private void UpdateDebugHeatInput()
@@ -522,7 +449,19 @@ public class PlayerHeat : MonoBehaviour
             MinHeat,
             maxHeat
         );
+        if (direction > 0f)
+            RegisterHeatGain();
         ResetHeatCoolingRamp();
+    }
+
+    private void RegisterHeatGain()
+    {
+        heatGainCoolingDelayRemaining = Mathf.Max(0f,
+            passiveHeatCoolingAfterGainDelay);
+        // Uma nova carga deve recomecar somente a rampa de intensidade. O
+        // tempo ja passado fora de combate continua valido: os dois atrasos
+        // sao regras independentes.
+        heatCoolingElapsed = 0f;
     }
 
     private void CheckColdDeath()

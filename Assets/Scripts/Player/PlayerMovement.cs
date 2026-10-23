@@ -118,6 +118,8 @@ public class PlayerMovement : MonoBehaviour
         playerState != null &&
         playerState.IsDashing() &&
         dashStartedGrounded;
+    /// <summary>CharacterController exposto apenas para a separacao central de entidades terrestres.</summary>
+    public CharacterController EntityCharacterController => controller;
 
     private CharacterController controller;
     private PlayerState playerState;
@@ -172,14 +174,17 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
-            CombatImpactSystem.IsGameplayFrozen(this))
-            return;
-
+        // Este temporizador precisa continuar avancando durante stagger e
+        // hitstop. Caso contrario o player pode ficar marcado como apoiado em
+        // um inimigo para sempre quando a simulacao for interrompida.
         enemyGroundContactTimer = Mathf.Max(
             0f,
             enemyGroundContactTimer - Time.deltaTime
         );
+
+        if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
+            CombatImpactSystem.IsGameplayFrozen(this))
+            return;
 
         DesiredDirection = ReadMovementDirection();
 
@@ -1057,6 +1062,30 @@ public class PlayerMovement : MonoBehaviour
             EndSlide();
         }
 
+    }
+
+    /// <summary>
+    /// Chamado pelo sistema global para remover sobreposicao horizontal com
+    /// entidades terrestres. Nao altera input, estado de ataque ou velocidade.
+    /// </summary>
+    public void ApplyGroundEntitySeparation(Vector3 displacement)
+    {
+        if (controller == null || !controller.enabled ||
+            !gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        displacement.y = 0f;
+        if (displacement.sqrMagnitude > .0000001f)
+            controller.Move(displacement);
+    }
+
+    /// <summary>Impede que um inimigo seja tratado como chao valido pelo player.</summary>
+    public void MarkEntityAsInvalidGround()
+    {
+        enemyGroundContactTimer = Mathf.Max(enemyGroundContactTimer, .12f);
+        verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit)

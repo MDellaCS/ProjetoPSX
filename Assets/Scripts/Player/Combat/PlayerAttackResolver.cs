@@ -22,10 +22,16 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     public void BeginAttack() => cameraShakeReported = false;
 
     public bool Resolve(PlayerAttackRuntime runtime, PlayerAttackStrikeDefinition strike,
-        EnemyBase enemy, float effectiveRadius, Vector3 impactPosition,
+        EnemyBase enemy, float attackReach, Vector3 impactPosition,
         Vector3 impactDirection)
     {
-        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier);
+        float distanceFromPlayer = Vector3.Distance(transform.position,
+            impactPosition);
+        float falloffMultiplier = strike.damageFalloff != null
+            ? strike.damageFalloff.Evaluate(distanceFromPlayer)
+            : 1f;
+        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier *
+            falloffMultiplier);
         int poise = Mathf.RoundToInt(runtime.PoiseDamage * strike.poiseMultiplier);
         PlayerAttackType type = runtime.Definition.context switch
         {
@@ -39,7 +45,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         };
         bool connected = enemy.TakeDamage(damage, transform.position, poise,
             out int dealt, out CombatPoiseHitResult poiseHit,
-            true, type, effectiveRadius, impactDirection, impactPosition, true);
+            true, type, attackReach, impactDirection, impactPosition, true,
+            strike.particlesUseRadialImpactDirection);
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
@@ -77,7 +84,13 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (target == null)
             return false;
 
-        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier);
+        float distanceFromPlayer = Vector3.Distance(transform.position,
+            impactPosition);
+        float falloffMultiplier = strike.damageFalloff != null
+            ? strike.damageFalloff.Evaluate(distanceFromPlayer)
+            : 1f;
+        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier *
+            falloffMultiplier);
         bool connected = target.ReceivePlayerAttack(damage, impactPosition,
             impactDirection);
         if (!connected)

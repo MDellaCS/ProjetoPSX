@@ -13,6 +13,7 @@ public sealed class PlayerAttackController : MonoBehaviour
     private PlayerMovesetController movesetController;
     private float phaseTimer;
     private bool finishAfterActive;
+    private bool isExternalAttack;
 
     public PlayerAttackRuntime CurrentAttack { get; private set; }
     public PlayerAttackPhase CurrentPhase { get; private set; }
@@ -77,11 +78,49 @@ public sealed class PlayerAttackController : MonoBehaviour
         CurrentAttack = new PlayerAttackRuntime(definition, heat,
             rotationSpeed, extendedArmRadius);
         CurrentPhase = PlayerAttackPhase.Windup; phaseTimer = CurrentAttack.WindupDuration;
-        finishAfterActive = false;
+        finishAfterActive = false; isExternalAttack = false;
         playerState.ChangeState(PlayerState.State.Attacking);
         attackMovement.Begin(CurrentAttack); hitboxes.Begin(CurrentAttack); resolver.BeginAttack();
         AttackStarted?.Invoke(CurrentAttack);
         if (phaseTimer <= 0f) ChangePhase(PlayerAttackPhase.Active);
+        return true;
+    }
+
+    /// <summary>
+    /// Executa uma definicao de ataque por um evento de gameplay, sem input,
+    /// sem checar contexto/chao e sem trocar o estado atual do player.
+    /// Burn, hazards e futuras habilidades usam a mesma timeline, Hitboxes e
+    /// resolver dos ataques normais sem interromper seus estados proprios.
+    /// </summary>
+    public bool TryStartExternalAttack(PlayerAttackDefinition definition)
+    {
+        if (definition == null || IsAttacking ||
+            CutsceneController.IsPlayerControlLocked)
+        {
+            return false;
+        }
+
+        PlayerMovesetDefinition moveset = movesetController != null
+            ? movesetController.Moveset : null;
+        float rotationSpeed = moveset != null
+            ? moveset.GetWindupActiveRotationSpeed(definition.kind)
+            : 0f;
+        float extendedArmRadius = moveset != null
+            ? moveset.extendedArmHitboxRadius : .25f;
+
+        // Eventos externos nao podem gastar Heat por serem marcados Heavy.
+        CurrentAttack = new PlayerAttackRuntime(definition, null,
+            rotationSpeed, extendedArmRadius);
+        CurrentPhase = PlayerAttackPhase.Windup;
+        phaseTimer = CurrentAttack.WindupDuration;
+        finishAfterActive = false;
+        isExternalAttack = true;
+        attackMovement.Begin(CurrentAttack);
+        hitboxes.Begin(CurrentAttack);
+        resolver.BeginAttack();
+        AttackStarted?.Invoke(CurrentAttack);
+        if (phaseTimer <= 0f)
+            ChangePhase(PlayerAttackPhase.Active);
         return true;
     }
 
@@ -130,9 +169,10 @@ public sealed class PlayerAttackController : MonoBehaviour
     private void FinishAttack(bool notify = true)
     {
         PlayerAttackRuntime finished = CurrentAttack;
-        CurrentAttack = null; CurrentPhase = PlayerAttackPhase.None; phaseTimer = 0f; finishAfterActive = false;
+        bool finishedExternalAttack = isExternalAttack;
+        CurrentAttack = null; CurrentPhase = PlayerAttackPhase.None; phaseTimer = 0f; finishAfterActive = false; isExternalAttack = false;
         hitboxes.End(); attackMovement.End();
-        if (playerState != null && playerState.IsAttacking()) playerState.ChangeState(PlayerState.State.Normal);
+        if (!finishedExternalAttack && playerState != null && playerState.IsAttacking()) playerState.ChangeState(PlayerState.State.Normal);
         if (notify && finished != null) AttackFinished?.Invoke(finished);
     }
 

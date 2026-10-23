@@ -17,8 +17,8 @@ MonoBehaviour:
   kind: 0
   context: 0
   windupDuration: 0.1
-  activeDuration: 0.4
-  recoveryDuration: 0.15
+  activeDuration: 0.45
+  recoveryDuration: 0.12
   baseDamage: 7
   basePoiseDamage: 8
   movement:
@@ -55,6 +55,34 @@ MonoBehaviour:
     activeEndNormalized: 1
     damageMultiplier: 1
     poiseMultiplier: 1
+    damageFalloff:
+      enabled: 0
+      startDistance: 0
+      endDistance: 1
+      damageMultiplier:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
     generatesHeatOnHit: 1
     effects:
       launchDown: 0

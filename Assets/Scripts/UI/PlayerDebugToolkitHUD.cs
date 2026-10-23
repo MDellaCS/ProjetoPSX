@@ -20,6 +20,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     [SerializeField] private bool visibleOnStart;
 
     private readonly StringBuilder textBuilder = new StringBuilder();
+    private readonly StringBuilder cutsceneTextBuilder = new StringBuilder();
 
     private PlayerMovement playerMovement;
     private PlayerState playerState;
@@ -33,6 +34,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private Label debugText;
     private VisualElement enemyDebugPanel;
     private Label enemyDebugText;
+    private VisualElement cutsceneDebugPanel;
+    private Label cutsceneDebugText;
+    private VisualElement cutsceneTimelineFill;
     private bool isVisible;
 
     private void Awake()
@@ -78,6 +82,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
         UpdateDebugText();
         UpdateLockedEnemyDebug();
+        UpdateCutsceneDebug();
     }
 
     private void HandleUIReload(
@@ -92,6 +97,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         debugText = rootVisualElement.Q<Label>("debug-text");
         enemyDebugPanel = rootVisualElement.Q<VisualElement>("enemy-debug-panel");
         enemyDebugText = rootVisualElement.Q<Label>("enemy-debug-text");
+        cutsceneDebugPanel = rootVisualElement.Q<VisualElement>("cutscene-debug-panel");
+        cutsceneDebugText = rootVisualElement.Q<Label>("cutscene-debug-text");
+        cutsceneTimelineFill = rootVisualElement.Q<VisualElement>("cutscene-timeline-fill");
 
         SetVisible(isVisible);
     }
@@ -143,6 +151,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
         if (enemyDebugPanel != null)
             enemyDebugPanel.style.display = DisplayStyle.None;
+        if (cutsceneDebugPanel != null)
+            cutsceneDebugPanel.style.display = DisplayStyle.None;
     }
 
     private void UpdateDebugText()
@@ -230,6 +240,48 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
         if (show)
             enemyDebugText.text = enemy.GetDebugStatusText();
+    }
+
+    private void UpdateCutsceneDebug()
+    {
+        if (cutsceneDebugPanel == null || cutsceneDebugText == null)
+            return;
+
+        CutsceneController cutscene = CutsceneController.Active;
+        bool show = cutscene != null;
+        cutsceneDebugPanel.style.display = show
+            ? DisplayStyle.Flex
+            : DisplayStyle.None;
+        if (!show)
+            return;
+
+        cutsceneTextBuilder.Clear();
+        cutsceneTextBuilder.AppendLine("CUTSCENE DEBUG");
+        cutsceneTextBuilder.Append("OBJECT: ")
+            .AppendLine(cutscene.name);
+        cutsceneTextBuilder.Append("TIMELINE: ")
+            .AppendLine(cutscene.TimelineName);
+        cutsceneTextBuilder.Append("STATE: ")
+            .AppendLine(cutscene.IsRunning ? "RUNNING" : "STOPPED");
+        cutsceneTextBuilder.Append("TIME: ")
+            .Append(cutscene.TimelineTime.ToString("0.00"))
+            .Append(" / ")
+            .Append(cutscene.TimelineDuration.ToString("0.00"))
+            .Append(" s (")
+            .Append((cutscene.TimelineProgress * 100f).ToString("0.0"))
+            .AppendLine("%)");
+        cutsceneTextBuilder.Append("UPDATE: ")
+            .AppendLine(cutscene.TimelineUpdateMode.ToString());
+        cutsceneTextBuilder.Append("PLAYER LOCK: ")
+            .AppendLine(CutsceneController.IsPlayerControlLocked ? "YES" : "NO");
+        cutsceneTextBuilder.Append("ENEMIES FROZEN: ")
+            .AppendLine(CutsceneController.AreEnemiesFrozen ? "YES" : "NO");
+        cutsceneTextBuilder.Append("SKIP: ")
+            .AppendLine(cutscene.CanSkip ? cutscene.SkipKeyName : "DISABLED");
+        cutsceneDebugText.text = cutsceneTextBuilder.ToString();
+        if (cutsceneTimelineFill != null)
+            cutsceneTimelineFill.style.width = Length.Percent(
+                cutscene.TimelineProgress * 100f);
     }
 
     private static string FormatSigned(float value)

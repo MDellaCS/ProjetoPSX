@@ -17,12 +17,12 @@ MonoBehaviour:
   kind: 1
   context: 0
   windupDuration: 0.5
-  activeDuration: 0.08
+  activeDuration: 0.03
   recoveryDuration: 0.35
   baseDamage: 120
   basePoiseDamage: 80
   movement:
-    forwardDistance: 1
+    forwardDistance: 2
     startNormalized: 0
     endNormalized: 1
     movementCurve:

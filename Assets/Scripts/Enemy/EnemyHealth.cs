@@ -110,16 +110,17 @@ public sealed class EnemyHealth : MonoBehaviour
         out int damageDealt, out CombatPoiseHitResult poiseResult,
         bool fromPlayerAttack = false,
         PlayerAttackType playerAttackType = PlayerAttackType.None,
-        float playerAttackRadius = 0f,
+        float playerAttackReach = 0f,
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
-        bool hasImpactPosition = false)
+        bool hasImpactPosition = false,
+        bool particlesUseRadialImpactDirection = false)
     {
         damageDealt = 0;
         poiseResult = default;
         if (IsDead) return false;
         if (fromPlayerAttack && dodge != null &&
-            dodge.TryAvoidPlayerAttack(playerAttackRadius, damage))
+            dodge.TryAvoidPlayerAttack(playerAttackReach, damage))
             return false;
         if (fromPlayerAttack)
             movement.CancelSlideLaunchHorizontalImpulse();
@@ -129,7 +130,6 @@ public sealed class EnemyHealth : MonoBehaviour
         CurrentHealth -= damage;
         if (damage > 0)
             damageNumbers?.ShowDamage(damage);
-        brain.OnDamaged();
         FlashDamage();
         poiseResult = poise.ReceiveHit(poiseDamage, maxPoise);
         if (isGuardBreakStagger)
@@ -143,19 +143,27 @@ public sealed class EnemyHealth : MonoBehaviour
             {
                 CurrentHealth = 0;
                 damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+                brain.OnDamaged(damageDealt);
                 Vector3 resolvedDirection = ResolveImpactDirection(attackerPosition,
                     impactDirection);
+                Vector3 particleDirection = ResolveParticleImpactDirection(
+                    resolvedDirection, impactPosition, hasImpactPosition,
+                    particlesUseRadialImpactDirection);
                 owner.RaiseHealthChanged();
                 CombatParticleSystem.ReportEnemyDamage(owner, damageDealt,
-                    true, resolvedDirection, impactPosition, hasImpactPosition, gore);
+                    true, particleDirection, impactPosition, hasImpactPosition, gore);
                 Die(damageDealt, resolvedDirection);
                 return true;
             }
         }
         damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+        brain.OnDamaged(damageDealt);
         owner.RaiseHealthChanged();
+        Vector3 resolvedHitDirection = ResolveImpactDirection(attackerPosition,
+            impactDirection);
         CombatParticleSystem.ReportEnemyDamage(owner, damageDealt, false,
-            ResolveImpactDirection(attackerPosition, impactDirection),
+            ResolveParticleImpactDirection(resolvedHitDirection, impactPosition,
+                hasImpactPosition, particlesUseRadialImpactDirection),
             impactPosition, hasImpactPosition, gore);
         return true;
     }
@@ -244,6 +252,19 @@ public sealed class EnemyHealth : MonoBehaviour
         fallbackDirection.y = 0f;
         return fallbackDirection.sqrMagnitude > .0001f
             ? fallbackDirection.normalized : transform.forward;
+    }
+
+    private Vector3 ResolveParticleImpactDirection(Vector3 fallbackDirection,
+        Vector3 impactPosition, bool hasImpactPosition, bool useRadialDirection)
+    {
+        if (!useRadialDirection || !hasImpactPosition)
+            return fallbackDirection;
+
+        Vector3 radialDirection = transform.position - impactPosition;
+        radialDirection.y = 0f;
+        return radialDirection.sqrMagnitude > .0001f
+            ? radialDirection.normalized
+            : fallbackDirection;
     }
 
     private void Die(int lethalDamage, Vector3 impactDirection)

@@ -51,10 +51,11 @@ GameObject:
   - component: {fileID: 6292575565008901409}
   - component: {fileID: 212785566711577276}
   - component: {fileID: 6421883612428584792}
-  - component: {fileID: -7745750461247089783}
   - component: {fileID: 2658722192233227514}
   - component: {fileID: 4740837926576013056}
   - component: {fileID: -3204485085092350537}
+  - component: {fileID: -7745750461247089783}
+  - component: {fileID: -2798535404865380423}
   m_Layer: 0
   m_Name: IntermediateZombie
   m_TagString: Untagged
@@ -135,32 +136,32 @@ MonoBehaviour:
     min: 30
     max: 90
   minimumAggressionPercent: 0
-  maximumAggressionPercent: 90
+  maximumAggressionPercent: 100
   aggressionChangeRatePerSecond:
     min: 1
     max: 3
   aggressionChangeInterval:
     min: 5
     max: 6
-  playerBackTurnedAggressionGain: 0
-  outOfCameraAggressionLoss: 1
+  playerBackTurnedAggressionGain: 5
+  outOfCameraAggressionLoss: -2
   cameraVisibilityPadding: 1
   playerFarAggressionDistance: 7
   playerFarAggressionChangePerSecond: 15
-  damageTakenAggressionReduction: 6
+  damageTakenAggressionChangePerMaxHealthPercent: -1.2
   lowEnemyHealthPercent: 0.3
   lowEnemyHealthDecreaseChance: 0.5
   lowPlayerHealthPercent: 0.5
   lowPlayerHealthAggressionGainPerSecond: 5
   highPlayerHealthPercent: 0.9
-  highPlayerHealthAggressionLossPerSecond: 10
+  highPlayerHealthAggressionLossPerSecond: 5
   playerAirborneAggressionChangePerSecond: -1
   retreatsWhenPlayerTakesEnemyDamage: 0
   gainsAggressionWhenPlayerTakesEnemyDamage: 1
   playerDamagedAggressionPercent: 0.1
   playerDamagedAggressionFlatChange: 2
   decisionInterval:
-    min: 0.1
+    min: 0.2
     max: 3
   repositionDuration:
     min: 1
@@ -170,7 +171,7 @@ MonoBehaviour:
     max: 0.5
   chaseCommitmentDuration: 6
   chaseCommitmentCooldown: 3
-  directorWeight: 30
+  directorWeight: 20
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -235,17 +236,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
-  movementSpeed: 3.2
+  movementSpeed: 3.4
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 210
+  rotationSpeed: 200
   useTankControls: 1
   tankControlsAdvanceAlignment: 0.85
   canBeLaunchedUp: 1
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
   canBeJuggled: 1
-  impactWeight: 2.3
+  impactWeight: 2
   launchedBodyImpactHitboxSizeIncreasePercent: 20
 --- !u!114 &212785566711577276
 MonoBehaviour:
@@ -262,10 +263,10 @@ MonoBehaviour:
   maxHealth: 2000
   isUnkillable: 0
   maxPoise: 90
-  staggerDuration: 1
-  staggerKnockbackForce: 1
-  staggerKnockbackDuration: 0.2
-  damageFlashDuration: 0.15
+  staggerDuration: 0.4
+  staggerKnockbackForce: 2
+  staggerKnockbackDuration: 0.07
+  damageFlashDuration: 0.4
 --- !u!114 &6421883612428584792
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,37 +279,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e231fc2ed4184c2489929e6187df4fb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDebug
---- !u!114 &-7745750461247089783
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b01c52c19385e494f8edc9031d13331d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyGuard
-  guardChancePerDecision: 15
-  maximumAggressionPercentToConsiderGuard: 20
-  guardStartMaximumRange: 3
-  minimumGuardDuration: 1.25
-  maximumGuardDuration: 5
-  guardCooldown: 6
-  lowAggressionGuardRetreatSpeedMultiplier: 0.6
-  highAggressionGuardRetreatSpeedMultiplier: 0.15
-  canGuardPlayerLightAttacks: 1
-  canGuardPlayerHeavyAttacks: 0
-  canGuardPlayerAerialAttacks: 1
-  canGuardPlayerDashAttacks: 1
-  guardAngle: 120
-  damageReduction: 0.7
-  poiseReduction: 0.5
-  maxGuardHealth: 180
-  heavyGuardDamageMultiplier: 5
-  breakStunDuration: 2
-  staggerGuardDelay: 0.4
 --- !u!114 &2658722192233227514
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -378,6 +348,61 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &-7745750461247089783
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b01c52c19385e494f8edc9031d13331d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyGuard
+  guardChancePerDecision: 15
+  maximumAggressionPercentToConsiderGuard: 30
+  guardStartMaximumRange: 3
+  minimumGuardDuration: 1.25
+  maximumGuardDuration: 5
+  guardCooldown: 6
+  lowAggressionGuardRetreatSpeedMultiplier: 0.6
+  highAggressionGuardRetreatSpeedMultiplier: 0.15
+  canGuardPlayerLightAttacks: 1
+  canGuardPlayerHeavyAttacks: 0
+  canGuardPlayerAerialAttacks: 1
+  canGuardPlayerDashAttacks: 1
+  guardAngle: 120
+  damageReduction: 0.7
+  poiseReduction: 0.5
+  maxGuardHealth: 180
+  heavyGuardDamageMultiplier: 3
+  breakStunDuration: 3
+  staggerGuardDelay: 0.2
+--- !u!114 &-2798535404865380423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1933a99ea4fb4b5e9e8154692eeb7c24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDodge
+  dodgeChanceOnHit: 3
+  maximumAggressionPercentToDodge: 2
+  aggressiveDodgeThreshold: 1
+  passiveExtraHopChance: 20
+  dodgeCooldown: 8
+  baseHopDistance: 0.6
+  attackReachDistanceMultiplier: 0.7
+  minimumLateralDodgeOffset: -2
+  maximumLateralDodgeOffset: 2
+  hopDuration: 0.3
+  hopVerticalSpeed: 2
+  protectionAfterDodge: 0.2
 --- !u!1001 &8321301459396382457
 PrefabInstance:
   m_ObjectHideFlags: 0

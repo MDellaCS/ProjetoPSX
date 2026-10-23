@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Esquiva reativa opcional. Um acerto do jogador pode iniciar uma retirada;
@@ -12,8 +13,9 @@ public sealed class EnemyDodge : MonoBehaviour
     [Header("Decision")]
     [Tooltip("Chance de esquivar ao ser alcancado por um ataque do jogador, caso a esquiva esteja disponivel.")]
     [Range(0f, 100f)] [SerializeField] private float dodgeChanceOnHit = 25f;
-    [Tooltip("Agressividade efetiva minima necessaria para considerar uma esquiva. Inclui o modificador do EnemyDirector.")]
-    [Range(0f, 100f)] [SerializeField] private float minimumAggressionPercentToDodge;
+    [Tooltip("Agressividade efetiva maxima para considerar uma esquiva. Com 5, o inimigo so pode desviar em 5 por cento ou menos. Inclui o modificador do EnemyDirector.")]
+    [FormerlySerializedAs("minimumAggressionPercentToDodge")]
+    [Range(0f, 100f)] [SerializeField] private float maximumAggressionPercentToDodge = 100f;
     [Tooltip("A partir desta agressividade, o inimigo faz somente um salto. Abaixo dela, pode encadear ate tres.")]
     [Range(0f, 100f)] [SerializeField] private float aggressiveDodgeThreshold = 60f;
     [Tooltip("Chance de um inimigo passivo fazer mais um salto apos o anterior, ate o limite de tres.")]
@@ -24,8 +26,13 @@ public sealed class EnemyDodge : MonoBehaviour
     [Header("Retreat")]
     [Tooltip("Distancia fixa adicionada a cada salto para tras.")]
     [Min(0f)] [SerializeField] private float baseHopDistance = .4f;
-    [Tooltip("Multiplica o raio real da hitbox do ataque do jogador para definir a distancia de cada salto.")]
-    [Min(0f)] [SerializeField] private float attackRadiusDistanceMultiplier = 1.5f;
+    [Tooltip("Multiplica o alcance horizontal real da hitbox do ataque do jogador, incluindo sua distancia ao centro do player, para definir a distancia de cada salto.")]
+    [FormerlySerializedAs("attackRadiusDistanceMultiplier")]
+    [Min(0f)] [SerializeField] private float attackReachDistanceMultiplier = 1.5f;
+    [Tooltip("Deslocamento lateral minimo, em metros, aplicado aleatoriamente a cada salto de esquiva. Valores negativos vao para a esquerda e positivos para a direita do inimigo.")]
+    [SerializeField] private float minimumLateralDodgeOffset = -.25f;
+    [Tooltip("Deslocamento lateral maximo, em metros, aplicado aleatoriamente a cada salto de esquiva. Valores negativos vao para a esquerda e positivos para a direita do inimigo.")]
+    [SerializeField] private float maximumLateralDodgeOffset = .25f;
     [Tooltip("Duracao de cada salto para tras. Distancia dividida por duracao determina a velocidade.")]
     [Min(.01f)] [SerializeField] private float hopDuration = .27f;
     [Tooltip("Velocidade vertical inicial do salto, aplicada apenas quando o inimigo esta apoiado no chao.")]
@@ -39,8 +46,10 @@ public sealed class EnemyDodge : MonoBehaviour
     private EnemyAttackController attacks;
     private float hopTimeRemaining;
     private float hopDistance;
+    private float currentHopTravelDistance;
     private float cooldownRemaining;
     private float protectionRemaining;
+    private Vector3 currentHopDirection;
     private int hopsCompleted;
     private bool canChainHops;
 
@@ -68,7 +77,7 @@ public sealed class EnemyDodge : MonoBehaviour
                 protectionRemaining - Time.deltaTime);
     }
 
-    internal bool TryAvoidPlayerAttack(float attackRadius, int incomingDamage)
+    internal bool TryAvoidPlayerAttack(float attackReach, int incomingDamage)
     {
         if (!isActiveAndEnabled)
             return false;
@@ -78,7 +87,7 @@ public sealed class EnemyDodge : MonoBehaviour
             movement == null || movement.IsLaunchedForwards ||
             !CanInterruptCurrentState() ||
             brain.Target == null || cooldownRemaining > 0f ||
-            brain.EffectiveAggressionPercent < minimumAggressionPercentToDodge ||
+            brain.EffectiveAggressionPercent > maximumAggressionPercentToDodge ||
             !EnemyDirector.CanDodgeIncomingDamage(
                 incomingDamage, owner.MaxHealth))
         {
@@ -93,7 +102,7 @@ public sealed class EnemyDodge : MonoBehaviour
             return false;
 
         hopDistance = baseHopDistance +
-            Mathf.Max(0f, attackRadius) * attackRadiusDistanceMultiplier;
+            Mathf.Max(0f, attackReach) * attackReachDistanceMultiplier;
         // A personalidade do inimigo define a quantidade de saltos; o
         // modificador temporario do Director nao a transforma em agressiva.
         canChainHops = brain.CurrentAggressionPercent <
@@ -140,8 +149,8 @@ public sealed class EnemyDodge : MonoBehaviour
         towardPlayer.Normalize();
         movement.FaceDirection(towardPlayer);
 
-        Vector3 retreatVelocity = -towardPlayer *
-            (hopDistance / Mathf.Max(.01f, hopDuration));
+        Vector3 retreatVelocity = currentHopDirection *
+            (currentHopTravelDistance / Mathf.Max(.01f, hopDuration));
         hopTimeRemaining -= Time.deltaTime;
         if (hopTimeRemaining <= 0f)
         {
@@ -170,6 +179,21 @@ public sealed class EnemyDodge : MonoBehaviour
     {
         hopsCompleted++;
         hopTimeRemaining = Mathf.Max(.01f, hopDuration);
+        Vector3 towardPlayer = brain.Target != null
+            ? brain.Target.position - transform.position : transform.forward;
+        towardPlayer.y = 0f;
+        if (towardPlayer.sqrMagnitude <= .0001f)
+            towardPlayer = transform.forward;
+        towardPlayer.Normalize();
+
+        float lateralOffset = Random.Range(
+            Mathf.Min(minimumLateralDodgeOffset, maximumLateralDodgeOffset),
+            Mathf.Max(minimumLateralDodgeOffset, maximumLateralDodgeOffset));
+        Vector3 hopOffset = -towardPlayer * hopDistance +
+            Vector3.Cross(Vector3.up, towardPlayer) * lateralOffset;
+        currentHopTravelDistance = hopOffset.magnitude;
+        currentHopDirection = currentHopTravelDistance > .0001f
+            ? hopOffset / currentHopTravelDistance : -towardPlayer;
         if (movement.IsGrounded)
             movement.SetVerticalVelocity(hopVerticalSpeed);
     }

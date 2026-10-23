@@ -98,7 +98,11 @@ public sealed class CombatParticleSystem : MonoBehaviour
     {
         if (instance != null && instance != this) { Destroy(gameObject); return; }
         instance = this;
-        DontDestroyOnLoad(gameObject);
+        // Quando e filho do GameRoot, a raiz ja e persistente. Unity so
+        // aceita DontDestroyOnLoad em objetos raiz; chamar aqui em um filho
+        // geraria o aviso e nao acrescentaria persistencia alguma.
+        if (GetComponentInParent<PersistentGameRoot>() == null)
+            DontDestroyOnLoad(gameObject);
         poolRoot = new GameObject("Combat Particle Pool").transform;
         poolRoot.SetParent(transform);
         particleLayer = LayerMask.NameToLayer("CombatParticle");

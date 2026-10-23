@@ -134,6 +134,18 @@ public class GameAudioSystem : MonoBehaviour
         Instance.Play(cue, Vector3.zero, false);
     }
 
+    /// <summary>
+    /// Toca uma voz/interface 2D simples, sem as variacoes aleatorias de um
+    /// AudioCue. Usado por dialogos, que precisam de volume previsivel.
+    /// </summary>
+    public static void Play2D(AudioClip clip, float volume)
+    {
+        if (clip == null)
+            return;
+
+        Instance.PlaySimple2D(clip, volume);
+    }
+
     private void EnsureInitialSources()
     {
         while (sources.Count < initialSourceCount)
@@ -165,6 +177,23 @@ public class GameAudioSystem : MonoBehaviour
             -cue.pitchVariation,
             cue.pitchVariation
         ));
+        source.Play();
+        pooledSource.startedAt = Time.unscaledTime;
+    }
+
+    private void PlaySimple2D(AudioClip clip, float volume)
+    {
+        PooledSource pooledSource = GetAvailableSource();
+        AudioSource source = pooledSource.source;
+        source.Stop();
+        source.clip = clip;
+        source.transform.position = Vector3.zero;
+        source.spatialBlend = 0f;
+        source.outputAudioMixerGroup = null;
+        pooledSource.baseVolume = Mathf.Clamp01(volume);
+        source.volume = pooledSource.baseVolume *
+            GameSettingsService.Applied.effectsVolume;
+        source.pitch = 1f;
         source.Play();
         pooledSource.startedAt = Time.unscaledTime;
     }

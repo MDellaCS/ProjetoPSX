@@ -9,6 +9,7 @@ public static class GameInput
 {
     private static InputActionMap gameplay;
     private static InputActionMap ui;
+    private static InputActionAsset sourceAsset;
     private static bool initialized;
     public static InputActionAsset Asset
     {
@@ -25,6 +26,7 @@ public static class GameInput
         GamePauseController.PauseChanged -= OnPauseChanged;
         gameplay = null;
         ui = null;
+        sourceAsset = null;
         initialized = false;
         EnsureInitialized();
     }
@@ -130,12 +132,19 @@ public static class GameInput
 
     private static void EnsureInitialized()
     {
-        if (initialized)
-            return;
-
         InputActionAsset asset = InputSystem.actions;
         if (asset == null)
             return;
+
+        // Com Enter Play Mode sem Domain Reload, mapas de uma execucao
+        // anterior podem sobreviver apontando para um asset antigo ou ficar
+        // desabilitados apos uma pausa/interrupcao. Revalidamos a origem em
+        // toda consulta e restauramos o mapa esperado para a sessao atual.
+        if (initialized && sourceAsset == asset && gameplay != null && ui != null)
+        {
+            EnsureExpectedMapIsEnabled();
+            return;
+        }
 
         gameplay = asset.FindActionMap("Gameplay");
         ui = asset.FindActionMap("UI");
@@ -143,10 +152,28 @@ public static class GameInput
             return;
 
         initialized = true;
+        sourceAsset = asset;
         GameInputBindings.InitializeSession(asset);
         GamePauseController.PauseChanged -= OnPauseChanged;
         GamePauseController.PauseChanged += OnPauseChanged;
         OnPauseChanged(GamePauseController.IsPaused);
+    }
+
+    private static void EnsureExpectedMapIsEnabled()
+    {
+        if (GamePauseController.IsPaused)
+        {
+            if (gameplay.enabled)
+                gameplay.Disable();
+            if (!ui.enabled)
+                ui.Enable();
+            return;
+        }
+
+        if (ui.enabled)
+            ui.Disable();
+        if (!gameplay.enabled)
+            gameplay.Enable();
     }
 
     private static void OnPauseChanged(bool paused)

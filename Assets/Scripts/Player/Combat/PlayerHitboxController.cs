@@ -38,8 +38,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
     public void Tick(float activeProgress)
     {
         if (runtime == null) return;
+        PlayerAttackRuntime activeRuntime = runtime;
         debugVolumes.Clear();
-        foreach (PlayerAttackStrikeDefinition strike in runtime.Definition.strikes)
+        foreach (PlayerAttackStrikeDefinition strike in activeRuntime.Definition.strikes)
         {
             if (strike == null || activeProgress < strike.activeStartNormalized || activeProgress > strike.activeEndNormalized) continue;
             if (startedStrikes.Add(strike))
@@ -53,13 +54,23 @@ public sealed class PlayerHitboxController : MonoBehaviour
             }
             float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized, strike.activeEndNormalized, activeProgress);
             foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
+            {
                 EvaluateTrack(strike, track, strikeProgress);
+                // Um alvo interativo pode iniciar uma cutscene e cancelar o
+                // ataque no meio desta consulta. Nao continue acessando o
+                // runtime que acabou de ser encerrado nesse mesmo frame.
+                if (runtime != activeRuntime)
+                    return;
+            }
         }
     }
 
     private void EvaluateTrack(PlayerAttackStrikeDefinition strike, PlayerHitboxTrackDefinition track, float strikeProgress)
     {
         if (track == null || strikeProgress < track.activeStartNormalized || strikeProgress > track.activeEndNormalized) return;
+        PlayerAttackRuntime activeRuntime = runtime;
+        if (activeRuntime == null)
+            return;
         float progress = Mathf.InverseLerp(track.activeStartNormalized, track.activeEndNormalized, strikeProgress);
         GetPose(track, progress, out Vector3 center, out Quaternion rotation,
             out Vector3 a, out Vector3 b, out float effectiveRadius);
@@ -84,15 +95,19 @@ public sealed class PlayerHitboxController : MonoBehaviour
             Query(strike, track, sampleCenter, sampleRotation,
                 a + (sampleCenter - center), b + (sampleCenter - center),
                 sampleRadius, impactDirection);
-            if (runtime.ExtendedArmHitboxRadius > 0f)
+            if (runtime != activeRuntime)
+                return;
+            if (activeRuntime.ExtendedArmHitboxRadius > 0f)
                 QueryExtendedArm(strike, track, GetPlayerCenter(),
-                    sampleCenter, runtime.ExtendedArmHitboxRadius, impactDirection);
+                    sampleCenter, activeRuntime.ExtendedArmHitboxRadius, impactDirection);
+            if (runtime != activeRuntime)
+                return;
             previousSampleCenter = sampleCenter;
         }
         state.position = center; state.rotation = rotation;
         state.radius = effectiveRadius; state.valid = true;
         debugVolumes.Add(new DebugVolume { shape = track.shape, center = center, rotation = rotation, a = a, b = b, radius = effectiveRadius, size = track.boxSize });
-        if (runtime.ExtendedArmHitboxRadius > 0f)
+        if (activeRuntime.ExtendedArmHitboxRadius > 0f)
         {
             debugVolumes.Add(new DebugVolume
             {
@@ -100,7 +115,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
                 a = GetPlayerCenter(),
                 b = center,
                 center = (GetPlayerCenter() + center) * .5f,
-                radius = runtime.ExtendedArmHitboxRadius
+                radius = activeRuntime.ExtendedArmHitboxRadius
             });
         }
     }
@@ -115,9 +130,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
             PlayerHitboxShape.Box => Physics.OverlapBoxNonAlloc(center, track.boxSize * .5f, overlapBuffer, rotation),
             _ => Physics.OverlapSphereNonAlloc(center, effectiveRadius, overlapBuffer)
         };
-        float radius = track.shape == PlayerHitboxShape.Box
-            ? Mathf.Max(track.boxSize.x, track.boxSize.z) * .5f : effectiveRadius;
-        ResolveHits(strike, track, count, radius, center, impactDirection);
+        float reach = CalculateHorizontalReach(track, center, rotation, a, b,
+            effectiveRadius);
+        ResolveHits(strike, track, count, reach, center, impactDirection);
     }
 
     private void QueryExtendedArm(PlayerAttackStrikeDefinition strike,
@@ -126,11 +141,13 @@ public sealed class PlayerHitboxController : MonoBehaviour
     {
         int count = Physics.OverlapCapsuleNonAlloc(playerCenter,
             hitboxCenter, radius, overlapBuffer);
-        ResolveHits(strike, track, count, radius, hitboxCenter, impactDirection);
+        float reach = Vector2.Distance(ToHorizontal(GetPlayerCenter()),
+            ToHorizontal(hitboxCenter)) + radius;
+        ResolveHits(strike, track, count, reach, hitboxCenter, impactDirection);
     }
 
     private void ResolveHits(PlayerAttackStrikeDefinition strike,
-        PlayerHitboxTrackDefinition track, int count, float attackRadius,
+        PlayerHitboxTrackDefinition track, int count, float attackReach,
         Vector3 hitboxCenter, Vector3 impactDirection)
     {
         var groupKey = (strike, track.hitGroup);
@@ -168,7 +185,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
             hitSet.Add(enemy); repeatTimes[key] = Time.time + track.repeatHitInterval;
             Vector3 impactPosition = GetSafeImpactPoint(overlapBuffer[i],
                 hitboxCenter);
-            resolver.Resolve(runtime, strike, enemy, attackRadius, impactPosition,
+            resolver.Resolve(runtime, strike, enemy, attackReach, impactPosition,
                 impactDirection);
         }
     }
@@ -203,6 +220,38 @@ public sealed class PlayerHitboxController : MonoBehaviour
         transform.rotation * (characterController != null
             ? characterController.center
             : Vector3.zero);
+
+    private float CalculateHorizontalReach(PlayerHitboxTrackDefinition track,
+        Vector3 center, Quaternion rotation, Vector3 capsuleA, Vector3 capsuleB,
+        float radius)
+    {
+        float distanceFromPlayer = Vector2.Distance(ToHorizontal(GetPlayerCenter()),
+            ToHorizontal(center));
+        float horizontalExtent = track.shape switch
+        {
+            PlayerHitboxShape.Capsule => Mathf.Max(
+                Vector2.Distance(ToHorizontal(center), ToHorizontal(capsuleA)),
+                Vector2.Distance(ToHorizontal(center), ToHorizontal(capsuleB))) + radius,
+            PlayerHitboxShape.Box => CalculateBoxHorizontalExtent(track.boxSize,
+                rotation),
+            _ => radius
+        };
+        return distanceFromPlayer + horizontalExtent;
+    }
+
+    private static float CalculateBoxHorizontalExtent(Vector3 size,
+        Quaternion rotation)
+    {
+        Vector3 half = size * .5f;
+        Vector3 x = rotation * Vector3.right * half.x;
+        Vector3 y = rotation * Vector3.up * half.y;
+        Vector3 z = rotation * Vector3.forward * half.z;
+        return new Vector2(x.x, x.z).magnitude +
+            new Vector2(y.x, y.z).magnitude +
+            new Vector2(z.x, z.z).magnitude;
+    }
+
+    private static Vector2 ToHorizontal(Vector3 value) => new(value.x, value.z);
 
     private Vector3 GetInitialImpactDirectionReference(
         PlayerHitboxTrackDefinition track, float progress, Vector3 center,

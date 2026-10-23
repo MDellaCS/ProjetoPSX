@@ -133,43 +133,43 @@ MonoBehaviour:
   initialAggressionPercent:
     min: 30
     max: 70
-  minimumAggressionPercent: 30
-  maximumAggressionPercent: 70
+  minimumAggressionPercent: 0
+  maximumAggressionPercent: 90
   aggressionChangeRatePerSecond:
     min: 2
     max: 5
   aggressionChangeInterval:
-    min: 3
-    max: 6
-  playerBackTurnedAggressionGain: 1
-  outOfCameraAggressionLoss: -1
+    min: 2
+    max: 5
+  playerBackTurnedAggressionGain: 5
+  outOfCameraAggressionLoss: -3
   cameraVisibilityPadding: 1
   playerFarAggressionDistance: 10
   playerFarAggressionChangePerSecond: 15
-  damageTakenAggressionReduction: 0
+  damageTakenAggressionChangePerMaxHealthPercent: -0.7
   lowEnemyHealthPercent: 0
   lowEnemyHealthDecreaseChance: 0
   lowPlayerHealthPercent: 0
   lowPlayerHealthAggressionGainPerSecond: 0
   highPlayerHealthPercent: 0
   highPlayerHealthAggressionLossPerSecond: 0
-  playerAirborneAggressionChangePerSecond: -2
+  playerAirborneAggressionChangePerSecond: 0
   retreatsWhenPlayerTakesEnemyDamage: 0
   gainsAggressionWhenPlayerTakesEnemyDamage: 0
   playerDamagedAggressionPercent: 0
   playerDamagedAggressionFlatChange: 0
   decisionInterval:
-    min: 1
-    max: 4
+    min: 0.2
+    max: 2
   repositionDuration:
-    min: 2
+    min: 1
     max: 4
   repositionSpeedMultiplier:
     min: 0.25
     max: 0.5
   chaseCommitmentDuration: 5
   chaseCommitmentCooldown: 5
-  directorWeight: 10
+  directorWeight: 12
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -234,10 +234,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
-  movementSpeed: 2
+  movementSpeed: 2.4
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 60
+  rotationSpeed: 25
   useTankControls: 1
   tankControlsAdvanceAlignment: 0
   canBeLaunchedUp: 1
@@ -246,6 +246,7 @@ MonoBehaviour:
   canBeJuggled: 1
   impactWeight: 1
   launchedBodyImpactHitboxSizeIncreasePercent: 20
+  ignoreGroundEntitySeparation: 0
 --- !u!114 &212785566711577276
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -260,11 +261,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 1000
   isUnkillable: 0
-  maxPoise: 50
-  staggerDuration: 1
-  staggerKnockbackForce: 1
-  staggerKnockbackDuration: 0.2
-  damageFlashDuration: 0.15
+  maxPoise: 20
+  staggerDuration: 0.7
+  staggerKnockbackForce: 4
+  staggerKnockbackDuration: 0.04
+  damageFlashDuration: 0.7
 --- !u!114 &6421883612428584792
 MonoBehaviour:
   m_ObjectHideFlags: 0

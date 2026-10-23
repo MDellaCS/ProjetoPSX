@@ -38,6 +38,10 @@ public sealed class EnemyMovement : MonoBehaviour
     [Tooltip("Aumento percentual do raio e da altura da capsula invisivel que detecta inimigos durante Launch Forwards. Nao altera o CharacterController normal.")]
     [Range(0f, 300f)] [SerializeField] private float launchedBodyImpactHitboxSizeIncreasePercent = 50f;
 
+    [Header("Separacao de Entidades")]
+    [Tooltip("Ignora a separacao horizontal entre entidades terrestres. Use para inimigos rastejadores ou outras criaturas que devem poder passar por baixo/de dentro de outras entidades. Flyers ja sao ignorados automaticamente.")]
+    [SerializeField] private bool ignoreGroundEntitySeparation;
+
     private EnemyBase owner;
     private EnemyBrain brain;
     private EnemyHealth health;
@@ -71,6 +75,11 @@ public sealed class EnemyMovement : MonoBehaviour
     public bool IsLaunched => isLaunched;
     public bool IsLaunchedForwards => isLaunchedForwards;
     public Vector3 LaunchForwardsVelocity => launchForwardsVelocity;
+    /// <summary>CharacterController exposto apenas para a separacao central de entidades terrestres.</summary>
+    public CharacterController EntityCharacterController => controller;
+    /// <summary>Flyers e inimigos marcados como rastejadores nao participam da separacao terrestre.</summary>
+    public bool ParticipatesInGroundEntitySeparation =>
+        !ignoreGroundEntitySeparation && GetComponent<BasicFlyer>() == null;
     /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
     public bool IsGrounded => IsControllerUsable && controller.isGrounded;
     public float VerticalVelocity => verticalVelocity;
@@ -148,6 +157,20 @@ public sealed class EnemyMovement : MonoBehaviour
                 brain.DecideImmediately();
             }
         }
+    }
+
+    /// <summary>
+    /// Chamado pelo sistema global para desfazer sobreposicao horizontal sem
+    /// depender da IA, do ataque atual ou do estado de stagger.
+    /// </summary>
+    public void ApplyGroundEntitySeparation(Vector3 displacement)
+    {
+        if (!IsControllerUsable)
+            return;
+
+        displacement.y = 0f;
+        if (displacement.sqrMagnitude > .0000001f)
+            controller.Move(displacement);
     }
 
     public void ApplyGravity()
@@ -263,6 +286,7 @@ public sealed class EnemyMovement : MonoBehaviour
         knockbackVelocity = direction.sqrMagnitude > .001f
             ? direction.normalized * force : Vector3.zero;
         knockbackTimer = duration;
+        FaceForceOrigin(attackerPosition);
     }
 
     public void ApplyLaunchUp(float initialSpeed, float newGravity)
@@ -307,6 +331,7 @@ public sealed class EnemyMovement : MonoBehaviour
             direction = transform.forward;
         ApplyLaunchUpHorizontalImpulse(direction, forwardsForce,
             forwardsDeceleration);
+        FaceForceOrigin(attackerPosition);
     }
 
     public void CancelSlideLaunchHorizontalImpulse()
@@ -337,6 +362,9 @@ public sealed class EnemyMovement : MonoBehaviour
             direction = transform.forward;
         direction = GetAssistedLaunchDirection(direction);
         BeginLaunchForwards(direction, force, deceleration);
+        // O assistente pode curvar o deslocamento para outro inimigo, mas o
+        // olhar ainda comunica corretamente de onde veio o golpe original.
+        FaceForceOrigin(attackerPosition);
     }
 
     /// <summary>
@@ -375,6 +403,7 @@ public sealed class EnemyMovement : MonoBehaviour
         isLaunchedForwards = true;
         bodyImpactTargets.Clear();
         CancelSlideLaunchHorizontalImpulse();
+        FaceAgainstHorizontalForce(direction);
     }
 
     public void ApplyAerialJuggleLight(float liftSpeed, float newGravity,
@@ -600,6 +629,7 @@ public sealed class EnemyMovement : MonoBehaviour
         playerHeadSeparationVelocity = direction.normalized * player.enemyHeadSeparationSpeed;
         playerHeadSeparationTimer = .1f;
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
+        FaceForceOrigin(player.transform.position);
     }
 
     /// <summary>
@@ -661,6 +691,35 @@ public sealed class EnemyMovement : MonoBehaviour
         slideLaunchHorizontalVelocity = direction.normalized * speed;
         slideLaunchHorizontalDeceleration = Mathf.Max(0f, deceleration);
         hasSlideLaunchHorizontalImpulse = true;
+        FaceAgainstHorizontalForce(direction);
+    }
+
+    /// <summary>
+    /// Forcas externas empurram o inimigo para longe da origem. O corpo olha
+    /// imediatamente para essa origem, deixando a reacao legivel mesmo antes
+    /// de a IA voltar a tomar decisao.
+    /// </summary>
+    private void FaceForceOrigin(Vector3 origin)
+    {
+        Vector3 directionToOrigin = origin - transform.position;
+        directionToOrigin.y = 0f;
+        FaceDirectionImmediately(directionToOrigin);
+    }
+
+    private void FaceAgainstHorizontalForce(Vector3 forceDirection)
+    {
+        forceDirection.y = 0f;
+        FaceDirectionImmediately(-forceDirection);
+    }
+
+    private void FaceDirectionImmediately(Vector3 direction)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .001f)
+            return;
+
+        transform.rotation = Quaternion.LookRotation(direction.normalized,
+            Vector3.up);
     }
 
     private void ResetLaunchForwards()

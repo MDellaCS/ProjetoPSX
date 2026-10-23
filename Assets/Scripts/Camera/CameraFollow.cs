@@ -85,6 +85,35 @@ public sealed class CameraFollow : MonoBehaviour
     public Vector3 TargetCenter => GetTargetCenter();
     public CinemachineCamera GameplayCamera => gameplayCamera;
 
+    /// <summary>
+    /// Reassocia a camera persistente ao Player depois de uma troca de cena e
+    /// invalida o estado anterior do Cinemachine para nao interpolar da fase
+    /// antiga ate a nova.
+    /// </summary>
+    public void RefreshAfterSceneLoad(Transform persistentPlayer = null)
+    {
+        if (persistentPlayer != null)
+            target = persistentPlayer;
+        if (target == null)
+        {
+            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject != null)
+                target = playerObject.transform;
+        }
+
+        // A Virtual Camera procedural e o pivot sao criados em runtime. Se a
+        // camera principal sobreviveu a uma troca de fase, mas esses objetos
+        // eram raiz da cena anterior, o Unity os destroi. Recrie-os antes de
+        // reinicializar o follow.
+        EnsureCinemachineRig();
+        targetController = target != null
+            ? target.GetComponent<CharacterController>() : null;
+        initialized = false;
+        Initialize();
+        if (gameplayCamera != null)
+            gameplayCamera.PreviousStateIsValid = false;
+    }
+
     private void Awake()
     {
         Instance = this;
@@ -154,6 +183,7 @@ public sealed class CameraFollow : MonoBehaviour
         if (gameplayCamera == null)
         {
             GameObject cameraObject = new("Gameplay Cinemachine Camera (Runtime)");
+            ParentRuntimeObjectToPersistentRoot(cameraObject);
             gameplayCamera = cameraObject.AddComponent<CinemachineCamera>();
             ownsGameplayCamera = true;
         }
@@ -196,6 +226,7 @@ public sealed class CameraFollow : MonoBehaviour
         if (trackingPivot == null)
         {
             GameObject pivotObject = new("Camera Tracking Pivot (Runtime)");
+            ParentRuntimeObjectToPersistentRoot(pivotObject);
             trackingPivot = pivotObject.transform;
             ownsTrackingPivot = true;
         }
@@ -212,6 +243,20 @@ public sealed class CameraFollow : MonoBehaviour
         gameplayEffects?.Initialize(target, effectStack);
         playerVisibility?.Initialize(target, GetComponent<Camera>());
         initialized = true;
+    }
+
+    private void ParentRuntimeObjectToPersistentRoot(GameObject runtimeObject)
+    {
+        PersistentGameRoot gameRoot = GetComponentInParent<PersistentGameRoot>();
+        if (gameRoot != null)
+        {
+            runtimeObject.transform.SetParent(gameRoot.transform, false);
+            return;
+        }
+
+        // Mantem o comportamento seguro tambem para cenas antigas que ainda
+        // usam CameraFollow sem um GameRoot.
+        DontDestroyOnLoad(runtimeObject);
     }
 
     private void UpdateTrackingPivot()

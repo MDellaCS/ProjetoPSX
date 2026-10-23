@@ -6,7 +6,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
 {
     private static PlayerAttackPreview editorTarget;
     private static PlayerAttackDefinition editorAttack;
-    private static float editorProgress;
+    private static float editorTime;
 
     [Tooltip("Ataque cujas Hitbox Tracks serao visualizadas na Scene View.")]
     [SerializeField] private PlayerAttackDefinition attack;
@@ -16,11 +16,11 @@ public sealed class PlayerAttackPreview : MonoBehaviour
     [SerializeField] private Color previewColor = new(1f, .65f, 0f, .8f);
 
     public static void SetEditorPreview(PlayerAttackPreview target,
-        PlayerAttackDefinition definition, float progress)
+        PlayerAttackDefinition definition, float time)
     {
         editorTarget = target;
         editorAttack = definition;
-        editorProgress = Mathf.Clamp01(progress);
+        editorTime = Mathf.Max(0f, time);
     }
 
     public static void ClearEditorPreview(PlayerAttackDefinition definition)
@@ -34,20 +34,36 @@ public sealed class PlayerAttackPreview : MonoBehaviour
     {
         if (Application.isPlaying || editorTarget != this || editorAttack == null)
             return;
-        DrawAttack(editorAttack, editorProgress);
+        DrawAttack(editorAttack, editorTime);
     }
 
     private void OnDrawGizmosSelected()
     {
         if (Application.isPlaying || editorTarget == this) return;
-        DrawAttack(attack, activePreviewProgress);
+        float activeTime = attack == null ? 0f : attack.windupDuration +
+            activePreviewProgress * attack.activeDuration;
+        DrawAttack(attack, activeTime);
     }
 
-    private void DrawAttack(PlayerAttackDefinition definition, float progress)
+    private void DrawAttack(PlayerAttackDefinition definition, float previewTime)
     {
         if (definition == null || definition.strikes == null) return;
         CharacterController controller = GetComponent<CharacterController>();
         Vector3 origin = transform.position + transform.rotation * (controller != null ? controller.center : Vector3.zero);
+        float windupEnd = definition.windupDuration;
+        float activeEnd = windupEnd + definition.activeDuration;
+        if (previewTime < windupEnd)
+        {
+            DrawPhaseRing(origin, controller, Color.green);
+            return;
+        }
+        if (previewTime >= activeEnd)
+        {
+            DrawPhaseRing(origin, controller, new Color(1f, .45f, 0f));
+            return;
+        }
+
+        float progress = Mathf.InverseLerp(windupEnd, activeEnd, previewTime);
         Gizmos.color = previewColor;
         float extendedArmRadius = definition.usesExtendedArmHitbox
             ? GetExtendedArmRadius()
@@ -77,6 +93,14 @@ public sealed class PlayerAttackPreview : MonoBehaviour
                 DrawWireCapsule(origin, center, extendedArmRadius);
             }
         }
+    }
+
+    private static void DrawPhaseRing(Vector3 origin, CharacterController controller,
+        Color color)
+    {
+        Gizmos.color = color;
+        float radius = controller != null ? Mathf.Max(.3f, controller.radius * 1.15f) : .65f;
+        Gizmos.DrawWireSphere(origin, radius);
     }
 
     private float GetExtendedArmRadius()

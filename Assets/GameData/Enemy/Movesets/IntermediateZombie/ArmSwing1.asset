@@ -56,7 +56,7 @@ MonoBehaviour:
     faceTargetDuringActive: 0
   requirements:
     minimumRange: 0
-    maximumRange: 2
+    maximumRange: 2.5
     selfContext: 2
     targetContext: 2
     maximumTargetAngle: 120
@@ -64,10 +64,9 @@ MonoBehaviour:
     lineOfSightBlockingLayers:
       serializedVersion: 2
       m_Bits: 4294967295
-    cooldown: 3
     minimumAggressionPercent: 0
     maximumAggressionPercent: 100
-    preferredRange: 0.5
+    preferredRange: 0.8
   strikes:
   - strikeName: ArmSwing1
     activeStartNormalized: 0

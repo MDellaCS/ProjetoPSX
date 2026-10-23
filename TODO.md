@@ -38,6 +38,8 @@
 
 ## Outros itens existentes
 
+- Dialogo/Cutscene (Pending): integrar DialogueController a Timeline. Um Signal deve abrir uma fala modal, pausar somente o PlayableDirector, retomar a Timeline ao confirmar e concluir corretamente quando a cutscene for pulada. Nao implementar ate a proxima iteracao de dialogos em cutscene.
+
 - Programação (Pending): refatorar `PlayerMovement` sem mudar gameplay. Manter `PlayerMovement` como fachada/orquestrador e único dono de `CharacterController.Move`; extrair responsabilidades para `PlayerMovementMotor`, `PlayerGrounding`, `PlayerLocomotion`, `PlayerDash`, `PlayerJump` e `PlayerCrouchSlide`. Migrar em etapas, preservando a API pública usada por combate e outros sistemas.
 - Combate (Pending): avaliar pisão/bounce na cabeça do inimigo, inspirado em Super Mario e Crash. Deve devolver o player para cima, causar muito Poise e pouco dano.
 - Combate (Pending): avaliar inimigos com ataque de grab anti-pisão, que prende o player pelo pé quando ele tenta cair sobre eles.

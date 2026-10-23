@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: IntermediateZombieMoveset
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovesetDefinition
   lightWindupActiveRotationSpeed: 240
-  heavyWindupActiveRotationSpeed: 180
+  heavyWindupActiveRotationSpeed: 80
   specialWindupActiveRotationSpeed: 120
   extendedArmHitboxRadius: 0.25
   maximumAttacksPerSequence: 5
@@ -25,7 +25,7 @@ MonoBehaviour:
     selectionWeight: 80
     requiresDirectorAuthorization: 1
   - targetNodeId: Run
-    selectionWeight: 50
+    selectionWeight: 20
     requiresDirectorAuthorization: 1
   nodes:
   - nodeId: Push
