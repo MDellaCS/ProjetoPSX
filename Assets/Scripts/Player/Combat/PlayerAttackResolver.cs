@@ -8,6 +8,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     private PlayerCombatStatus combatStatus;
     private PlayerDpsMeter dpsMeter;
     private bool cameraShakeReported;
+    private int lastSelfJuggleFrame = -1;
 
     private void Awake()
     {
@@ -19,7 +20,11 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             dpsMeter = gameObject.AddComponent<PlayerDpsMeter>();
     }
 
-    public void BeginAttack() => cameraShakeReported = false;
+    public void BeginAttack()
+    {
+        cameraShakeReported = false;
+        lastSelfJuggleFrame = -1;
+    }
 
     public bool Resolve(PlayerAttackRuntime runtime, PlayerAttackStrikeDefinition strike,
         EnemyBase enemy, float attackReach, Vector3 impactPosition,
@@ -45,11 +50,12 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         };
         bool connected = enemy.TakeDamage(damage, transform.position, poise,
             out int dealt, out CombatPoiseHitResult poiseHit,
-            true, type, attackReach, impactDirection, impactPosition, true,
-            strike.particlesUseRadialImpactDirection);
+            true, type, attackReach, impactDirection, impactPosition, true);
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
+        if (strike.effects.juggle)
+            ApplyJuggleToPlayer();
         dpsMeter?.ReportDamage(dealt);
         CombatImpactSystem.ReportPlayerAttackImpact(transform, enemy.transform,
             runtime.Definition.kind == PlayerAttackKind.Heavy, dealt, !cameraShakeReported);
@@ -128,10 +134,17 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     public void ApplySelfLaunchDown() =>
         movement?.BeginAerialDive(CombatPoiseSystem.Instance.MinimumLaunchForce);
 
+    /// <summary>
+    /// Aplica o impulso do player para cada impacto de Juggle confirmado,
+    /// mantendo-o sincronizado com o inimigo. Consultas duplicadas no mesmo
+    /// frame (por exemplo, volumes sobrepostos) contam apenas uma vez.
+    /// </summary>
     public void ApplyJuggleToPlayer()
     {
-        if (movement == null)
+        if (movement == null || lastSelfJuggleFrame == Time.frameCount)
             return;
+
+        lastSelfJuggleFrame = Time.frameCount;
 
         CombatPoiseSystem rules = CombatPoiseSystem.Instance;
         movement.BeginAerialLight(rules.JuggleLiftSpeed,

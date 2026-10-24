@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6c0923b5d764d3894c72c934ddb8589, type: 3}
   m_Name: StarterMoveset
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
-  globalPauseDelay: 0.4
+  globalPauseDelay: 0.5
   lightWindupActiveRotationSpeed: 1500
-  heavyWindupActiveRotationSpeed: 1500
+  heavyWindupActiveRotationSpeed: 800
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
     continuationWindow: 0.6
@@ -129,21 +129,21 @@ MonoBehaviour:
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL5
-    attack: {fileID: 11400000, guid: db9c9a2debc88fe4483eea2886b11e2c, type: 2}
+    attack: {fileID: 11400000, guid: 1b6c98b8d19cbfc4c8460f94a0388957, type: 2}
     transitions:
     - input: 0
       targetNodeId: AirL6
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL6
-    attack: {fileID: 11400000, guid: 63d53eeab0e0ccb408aea992811ba72f, type: 2}
+    attack: {fileID: 11400000, guid: 2c5cfa9cdb4398349858171fe4330323, type: 2}
     transitions:
     - input: 0
       targetNodeId: AirL7
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL7
-    attack: {fileID: 11400000, guid: 3909ef340b25d574eb8199dfebb82677, type: 2}
+    attack: {fileID: 11400000, guid: aaec7f07e29e7054c9651fa6014127bf, type: 2}
     transitions:
     - input: 0
       targetNodeId: AirL8

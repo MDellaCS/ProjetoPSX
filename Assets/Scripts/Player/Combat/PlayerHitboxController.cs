@@ -49,8 +49,6 @@ public sealed class PlayerHitboxController : MonoBehaviour
                     resolver.ApplySelfLaunchDown();
                 if (strike.effects.selfLaunchUp)
                     resolver.ApplySelfLaunchUp();
-                if (strike.effects.juggle)
-                    resolver.ApplyJuggleToPlayer();
             }
             float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized, strike.activeEndNormalized, activeProgress);
             foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)

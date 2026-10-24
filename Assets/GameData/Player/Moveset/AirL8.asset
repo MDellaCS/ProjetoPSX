@@ -19,6 +19,7 @@ MonoBehaviour:
   windupDuration: 0.08
   activeDuration: 0.2
   recoveryDuration: 0.08
+  holdActiveUntilGrounded: 1
   baseDamage: 30
   basePoiseDamage: 50
   movement:

@@ -226,13 +226,11 @@ public class EnemyBase : MonoBehaviour
         float playerAttackRadius = 0f,
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
-        bool hasImpactPosition = false,
-        bool particlesUseRadialImpactDirection = false) =>
+        bool hasImpactPosition = false) =>
         health.TakeDamage(damage, attackerPosition, poiseDamage, out damageDealt,
             out poiseResult,
             fromPlayerAttack, playerAttackType, playerAttackRadius,
-            impactDirection, impactPosition, hasImpactPosition,
-            particlesUseRadialImpactDirection);
+            impactDirection, impactPosition, hasImpactPosition);
     public bool ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
         CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>
@@ -294,11 +292,4 @@ public class EnemyBase : MonoBehaviour
         }
     }
 
-    protected virtual void OnDrawGizmos()
-    {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible)
-            return;
-        EnemyDebug view = debugView != null ? debugView : GetComponent<EnemyDebug>();
-        view?.DrawGizmos();
-    }
 }

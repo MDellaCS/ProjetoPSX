@@ -44,6 +44,18 @@ public sealed class PlayerMovesetController : MonoBehaviour
             out float inputTimestamp))
             return;
 
+        // pendingNode ja representa a unica acao de ataque armazenada para o
+        // termino do golpe atual. Sem esta protecao, outro clique leve rapido
+        // seria resolvido contra o Node anterior e poderia repetir ou quebrar
+        // a ordem do combo antes de a proxima etapa realmente iniciar.
+        // Pesados continuam livres para interromper o ataque quando suas
+        // regras globais de cancelamento permitirem.
+        if (input == PlayerAttackInput.Light && pendingNode != null)
+        {
+            inputBuffer.TryConsume(buffered);
+            return;
+        }
+
         bool isGroundDash = movement != null && movement.IsGroundDash;
         PlayerMoveNode continuation = isGroundDash
             ? null
@@ -84,17 +96,35 @@ public sealed class PlayerMovesetController : MonoBehaviour
         PlayerTransitionTimingSettings timing = moveset.GetTransitionTiming(
             current.attack.kind);
         if (timing == null) return null;
+
+        float sinceActive = inputTimestamp - activeStartedAt;
+        if (sinceActive < timing.minimumDelayAfterWindup ||
+            sinceActive > timing.continuationWindow)
+        {
+            return null;
+        }
+
+        bool isPauseInput = sinceActive >= moveset.globalPauseDelay;
+        PlayerMoveTransition normalFallback = null;
         foreach (PlayerMoveTransition transition in current.transitions)
         {
             if (transition == null || transition.input != input) continue;
-            float sinceActive = inputTimestamp - activeStartedAt;
-            if (sinceActive < timing.minimumDelayAfterWindup ||
-                sinceActive > timing.continuationWindow) continue;
-            bool isPauseInput = sinceActive >= moveset.globalPauseDelay;
-            if (transition.requiresPause != isPauseInput) continue;
-            return moveset.FindNode(transition.targetNodeId);
+            if (transition.requiresPause == isPauseInput)
+                return moveset.FindNode(transition.targetNodeId);
+
+            // Uma rota normal continua sendo valida depois de uma pausa se
+            // este Node nao tiver um caminho de Pause proprio. Assim L1 pode
+            // seguir para L2 em toda a Continuation Window, enquanto L2 ainda
+            // escolhe L3p quando sua transicao requiresPause existe.
+            if (isPauseInput && !transition.requiresPause &&
+                normalFallback == null)
+            {
+                normalFallback = transition;
+            }
         }
-        return null;
+        return normalFallback != null
+            ? moveset.FindNode(normalFallback.targetNodeId)
+            : null;
     }
 
     private PlayerMoveNode FindEntry(PlayerAttackInput input)
@@ -136,5 +166,24 @@ public sealed class PlayerMovesetController : MonoBehaviour
     {
         currentNodeId = null;
         pendingNode = null;
+    }
+
+    /// <summary>
+    /// O pouso encerra somente uma rota aerea: remove a continuacao pendente
+    /// e qualquer clique de ataque capturado no ar, sem tocar combos de chao.
+    /// </summary>
+    public void ResetAerialSequenceOnLanding()
+    {
+        PlayerMoveNode current = moveset != null
+            ? moveset.FindNode(currentNodeId) : null;
+        bool currentIsAir = current?.attack != null &&
+            current.attack.context == PlayerAttackContext.Air;
+        bool pendingIsAir = pendingNode?.attack != null &&
+            pendingNode.attack.context == PlayerAttackContext.Air;
+        if (!currentIsAir && !pendingIsAir)
+            return;
+
+        ResetSequence();
+        inputBuffer?.ClearBufferedAttackInputs();
     }
 }

@@ -25,7 +25,7 @@
 #enemy-debug-panel {
     position: absolute;
     right: 16px;
-    top: 16px;
+    top: 250px;
     min-width: 250px;
     padding: 12px;
     background-color: rgba(0, 0, 0, 0.78);
@@ -37,6 +37,30 @@
     border-top-color: rgb(130, 255, 160);
     border-right-color: rgb(130, 255, 160);
     border-bottom-color: rgb(130, 255, 160);
+}
+
+#test-shortcuts-panel {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    min-width: 250px;
+    padding: 12px;
+    background-color: rgba(0, 0, 0, 0.78);
+    border-left-width: 2px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgb(255, 215, 120);
+    border-top-color: rgb(255, 215, 120);
+    border-right-color: rgb(255, 215, 120);
+    border-bottom-color: rgb(255, 215, 120);
+}
+
+#test-shortcuts-text {
+    color: rgb(255, 240, 200);
+    font-size: 16px;
+    unity-font-style: normal;
+    white-space: normal;
 }
 
 #enemy-debug-text {

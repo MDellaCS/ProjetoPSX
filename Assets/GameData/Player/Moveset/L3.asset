@@ -16,23 +16,24 @@ MonoBehaviour:
   displayName: L3
   kind: 0
   context: 0
-  windupDuration: 0.1
-  activeDuration: 0.45
-  recoveryDuration: 0.12
+  windupDuration: 0.08
+  activeDuration: 0.4
+  recoveryDuration: 0.1
+  holdActiveUntilGrounded: 0
   baseDamage: 7
-  basePoiseDamage: 8
+  basePoiseDamage: 5
   movement:
-    forwardDistance: 1.2
+    forwardDistance: 1.1
     startNormalized: 0
-    endNormalized: 0.9
+    endNormalized: 0.3
     movementCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
         value: 0
-        inSlope: 0
-        outSlope: 0
+        inSlope: 2
+        outSlope: 2
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
@@ -40,8 +41,8 @@ MonoBehaviour:
       - serializedVersion: 3
         time: 1
         value: 1
-        inSlope: 2
-        outSlope: 2
+        inSlope: 0
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0

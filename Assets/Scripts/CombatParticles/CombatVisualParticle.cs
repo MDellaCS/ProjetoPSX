@@ -11,15 +11,25 @@ public sealed class CombatVisualParticle : MonoBehaviour
 
     public bool HasExpired => Time.time >= expiresAt;
 
+    /// <summary>Encerra a particula para que o pool a recicle no proximo frame.</summary>
+    public void ExpireNow()
+    {
+        expiresAt = 0f;
+    }
+
     public void Initialize(CombatParticleProfile newProfile, Vector3 position,
-        Vector3 initialVelocity, float size, Material material, int particleLayer)
+        Vector3 initialVelocity, float size, Material material, int particleLayer,
+        int currencyValue = 0, Material currencyMaterial = null,
+        float currencyLifetimeMultiplier = 1f, float minimumCurrencyLifetime = 0f)
     {
         profile = newProfile;
         gameObject.layer = particleLayer;
         transform.SetPositionAndRotation(position, Random.rotation);
         transform.localScale = Vector3.one * size;
         Renderer renderer = GetComponent<Renderer>();
-        if (renderer != null && material != null) renderer.sharedMaterial = material;
+        if (renderer != null)
+            renderer.sharedMaterial = currencyValue > 0 && currencyMaterial != null
+                ? currencyMaterial : material;
         body ??= GetComponent<Rigidbody>();
         body.mass = profile.mass;
         body.linearDamping = profile.linearDamping;
@@ -31,8 +41,13 @@ public sealed class CombatVisualParticle : MonoBehaviour
         body.linearVelocity = initialVelocity;
         body.angularVelocity = Random.insideUnitSphere * 8f;
         body.WakeUp();
-        expiresAt = Time.time + profile.lifetime;
+        float lifetime = currencyValue > 0
+            ? Mathf.Max(minimumCurrencyLifetime,
+                profile.lifetime * currencyLifetimeMultiplier)
+            : profile.lifetime;
+        expiresAt = Time.time + lifetime;
         noiseSeed = Random.value * 1000f;
+        GetComponent<CurrencyGorePickup>()?.Initialize(currencyValue);
     }
 
     private void FixedUpdate()

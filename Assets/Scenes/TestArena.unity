@@ -175,6 +175,114 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionDuration
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionMinimumTimeScale
+      value: 0.001
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[0].time
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[1].time
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[0].value
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[1].value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[0].inSlope
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[1].inSlope
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionSpeedCurve.m_Curve.Array.data[1].inSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[0].outSlope
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[1].outSlope
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[1].time
+      value: 0.2996475
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[2].time
+      value: 1.0208435
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionSpeedCurve.m_Curve.Array.data[0].outSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionSpeedCurve.m_Curve.Array.data[1].outSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[0].value
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[1].value
+      value: 0.9502373
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[2].value
+      value: 1.0071411
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[0].tangentMode
+      value: 34
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionTimeScale.m_Curve.Array.data[1].tangentMode
+      value: 34
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[0].inSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[1].inSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[0].outSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[1].outSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[0].tangentMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2045887879990331106, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: completionSlowMotionIntensityCurve.m_Curve.Array.data[1].tangentMode
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2841623933371988876, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.5782037
@@ -187,6 +295,10 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1115055766}
+    - target: {fileID: 5318782377259686372, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: m_VersionIndex
+      value: 5897
+      objectReference: {fileID: 0}
     - target: {fileID: 5337938448132209636, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -229,7 +341,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: spawnCount
-      value: 999
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: startDelay
@@ -251,6 +363,10 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1851934216}
+    - target: {fileID: 8718357877101864650, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: m_VersionIndex
+      value: 5893
+      objectReference: {fileID: 0}
     - target: {fileID: 9098914493532181134, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_Mesh
       value: 

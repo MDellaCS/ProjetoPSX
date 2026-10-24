@@ -11,6 +11,7 @@ public sealed class PlayerAttackController : MonoBehaviour
     private PlayerHitboxController hitboxes;
     private PlayerAttackResolver resolver;
     private PlayerMovesetController movesetController;
+    private PlayerMovement movement;
     private float phaseTimer;
     private bool finishAfterActive;
     private bool isExternalAttack;
@@ -38,6 +39,7 @@ public sealed class PlayerAttackController : MonoBehaviour
         attackMovement = GetComponent<PlayerAttackMovement>(); hitboxes = GetComponent<PlayerHitboxController>();
         resolver = GetComponent<PlayerAttackResolver>();
         movesetController = GetComponent<PlayerMovesetController>();
+        movement = GetComponent<PlayerMovement>();
     }
 
     private void Update()
@@ -52,6 +54,11 @@ public sealed class PlayerAttackController : MonoBehaviour
         }
         phaseTimer -= Time.deltaTime;
         if (phaseTimer > 0f) return;
+        if (CurrentPhase == PlayerAttackPhase.Active &&
+            ShouldHoldActiveUntilGrounded())
+        {
+            return;
+        }
         if (CurrentPhase == PlayerAttackPhase.Windup) ChangePhase(PlayerAttackPhase.Active);
         else if (CurrentPhase == PlayerAttackPhase.Active)
         {
@@ -65,7 +72,6 @@ public sealed class PlayerAttackController : MonoBehaviour
     {
         if (definition == null || IsAttacking || playerState == null ||
             CutsceneController.IsPlayerControlLocked || !playerState.IsNormal()) return false;
-        PlayerMovement movement = GetComponent<PlayerMovement>();
         if (definition.context == PlayerAttackContext.Ground && movement != null && !movement.IsGrounded) return false;
         PlayerMovesetDefinition moveset = movesetController != null
             ? movesetController.Moveset : null;
@@ -151,12 +157,17 @@ public sealed class PlayerAttackController : MonoBehaviour
     {
         CurrentPhase = phase; phaseTimer = GetPhaseDuration(phase);
         if (phase == PlayerAttackPhase.Recovery) hitboxes.End();
-        if (phaseTimer <= 0f)
+        if (phaseTimer <= 0f && !(phase == PlayerAttackPhase.Active &&
+            ShouldHoldActiveUntilGrounded()))
         {
             if (phase == PlayerAttackPhase.Active) ChangePhase(PlayerAttackPhase.Recovery);
             else if (phase == PlayerAttackPhase.Recovery) FinishAttack();
         }
     }
+
+    private bool ShouldHoldActiveUntilGrounded() => CurrentAttack != null &&
+        CurrentAttack.Definition.holdActiveUntilGrounded &&
+        movement != null && !movement.IsGrounded;
 
     private float GetPhaseDuration(PlayerAttackPhase phase) => CurrentAttack == null ? 0f : phase switch
     {

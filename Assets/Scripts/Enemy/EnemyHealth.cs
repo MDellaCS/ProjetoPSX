@@ -113,8 +113,7 @@ public sealed class EnemyHealth : MonoBehaviour
         float playerAttackReach = 0f,
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
-        bool hasImpactPosition = false,
-        bool particlesUseRadialImpactDirection = false)
+        bool hasImpactPosition = false)
     {
         damageDealt = 0;
         poiseResult = default;
@@ -126,6 +125,7 @@ public sealed class EnemyHealth : MonoBehaviour
             movement.CancelSlideLaunchHorizontalImpulse();
         guard?.TryBlock(playerAttackType, attackerPosition,
             ref damage, ref poiseDamage);
+        int finalHitDamage = Mathf.Max(0, damage);
         int healthBeforeDamage = CurrentHealth;
         CurrentHealth -= damage;
         if (damage > 0)
@@ -147,11 +147,11 @@ public sealed class EnemyHealth : MonoBehaviour
                 Vector3 resolvedDirection = ResolveImpactDirection(attackerPosition,
                     impactDirection);
                 Vector3 particleDirection = ResolveParticleImpactDirection(
-                    resolvedDirection, impactPosition, hasImpactPosition,
-                    particlesUseRadialImpactDirection);
+                    resolvedDirection, impactPosition, hasImpactPosition);
                 owner.RaiseHealthChanged();
                 CombatParticleSystem.ReportEnemyDamage(owner, damageDealt,
-                    true, particleDirection, impactPosition, hasImpactPosition, gore);
+                    true, particleDirection, impactPosition, hasImpactPosition, gore,
+                    finalHitDamage, maxHealth);
                 Die(damageDealt, resolvedDirection);
                 return true;
             }
@@ -163,7 +163,7 @@ public sealed class EnemyHealth : MonoBehaviour
             impactDirection);
         CombatParticleSystem.ReportEnemyDamage(owner, damageDealt, false,
             ResolveParticleImpactDirection(resolvedHitDirection, impactPosition,
-                hasImpactPosition, particlesUseRadialImpactDirection),
+                hasImpactPosition),
             impactPosition, hasImpactPosition, gore);
         return true;
     }
@@ -255,9 +255,9 @@ public sealed class EnemyHealth : MonoBehaviour
     }
 
     private Vector3 ResolveParticleImpactDirection(Vector3 fallbackDirection,
-        Vector3 impactPosition, bool hasImpactPosition, bool useRadialDirection)
+        Vector3 impactPosition, bool hasImpactPosition)
     {
-        if (!useRadialDirection || !hasImpactPosition)
+        if (!hasImpactPosition)
             return fallbackDirection;
 
         Vector3 radialDirection = transform.position - impactPosition;

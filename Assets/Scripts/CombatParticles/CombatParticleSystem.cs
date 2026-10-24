@@ -12,6 +12,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
     private Transform poolRoot;
     private Material hitMaterial;
     private Material goreMaterial;
+    private Material currencyGoreMaterial;
     private CombatParticleProfile defaultHit;
     private CombatParticleProfile defaultGore;
     private int particleLayer;
@@ -20,6 +21,13 @@ public sealed class CombatParticleSystem : MonoBehaviour
     [Min(1)] [SerializeField] private int maximumVisualParticles = 192;
     [Tooltip("Layers que representam chao e paredes. Particulas so colidem com Colliders nestas layers.")]
     [SerializeField] private LayerMask worldCollisionLayers = ~0;
+    [Header("Currency Gore")]
+    [Tooltip("Material opcional dos fragmentos de gore que carregam currency. Vazio usa um material dourado gerado pelo sistema.")]
+    [SerializeField] private Material currencyGoreVisualMaterial;
+    [Tooltip("Multiplica o tempo de vida normal dos fragmentos que carregam currency.")]
+    [Min(1f)] [SerializeField] private float currencyGoreLifetimeMultiplier = 5f;
+    [Tooltip("Tempo de vida minimo, em segundos, de um fragmento que carrega currency.")]
+    [Min(0f)] [SerializeField] private float minimumCurrencyGoreLifetime = 12f;
 
     public static CombatParticleSystem Instance
     {
@@ -37,7 +45,8 @@ public sealed class CombatParticleSystem : MonoBehaviour
 
     public static void ReportEnemyDamage(EnemyBase enemy, int damageDealt,
         bool lethal, Vector3 direction, Vector3 impactPosition,
-        bool hasImpactPosition, EnemyGore gore)
+        bool hasImpactPosition, EnemyGore gore, int finalHitDamage = 0,
+        int enemyMaxHealth = 0)
     {
         if (enemy == null || damageDealt <= 0) return;
         CombatParticleSystem system = Instance;
@@ -49,9 +58,15 @@ public sealed class CombatParticleSystem : MonoBehaviour
             position, direction, damageDealt, renderer,
             gore != null ? gore.ParticleCountMultiplier : 1f);
         if (lethal)
+        {
+            int currencyGorePieces = gore != null
+                ? gore.GetCurrencyGorePieceCount(finalHitDamage, enemyMaxHealth) : 0;
             system.Emit(gore != null ? gore.DeathProfile : null, system.defaultGore,
                 position, direction, damageDealt, renderer,
-                gore != null ? gore.ParticleCountMultiplier : 1f);
+                gore != null ? gore.ParticleCountMultiplier : 1f,
+                gore != null ? gore.CurrencyValueRange : default,
+                currencyGorePieces);
+        }
     }
 
     public void EmitTestDeath(CombatParticleProfile overrideProfile,
@@ -66,7 +81,8 @@ public sealed class CombatParticleSystem : MonoBehaviour
     public void Emit(CombatParticleProfile overrideProfile,
         CombatParticleProfile fallbackProfile, Vector3 position, Vector3 direction,
         int damageDealt, Renderer sourceRenderer,
-        float particleCountMultiplier = 1f)
+        float particleCountMultiplier = 1f, Vector2Int currencyValueRange = default,
+        int currencyGorePieces = 0)
     {
         EnsureDefaults();
         CombatParticleProfile profile = overrideProfile != null ? overrideProfile : fallbackProfile;
@@ -78,8 +94,17 @@ public sealed class CombatParticleSystem : MonoBehaviour
         // limites compartilhados pelo perfil.
         int count = Mathf.Max(0, Mathf.RoundToInt(profileCount *
             Mathf.Max(0f, particleCountMultiplier)));
+        bool emitCurrency = currencyGorePieces > 0 &&
+            Mathf.Max(currencyValueRange.x, currencyValueRange.y) > 0;
+        // Currency tem prioridade: cada pickup precisa de sua propria
+        // particula e currencyGorePieces tambem define o minimo visual.
+        if (emitCurrency)
+            count = Mathf.Max(count, currencyGorePieces);
         Material material = ResolveMaterial(profile, sourceRenderer);
         Vector3 baseDirection = direction.sqrMagnitude > .0001f ? direction.normalized : Vector3.forward;
+        int collectibleCount = emitCurrency ? currencyGorePieces : 0;
+        int minimumValue = Mathf.Min(currencyValueRange.x, currencyValueRange.y);
+        int maximumValue = Mathf.Max(currencyValueRange.x, currencyValueRange.y);
         for (int index = 0; index < count; index++)
         {
             Vector3 velocity = baseDirection * (profile.baseSpeed + damageDealt * profile.speedPerDamage) +
@@ -90,7 +115,9 @@ public sealed class CombatParticleSystem : MonoBehaviour
             Vector3 spawnPosition = position + scatter + Random.insideUnitSphere * size;
             if (scatter.sqrMagnitude > .0001f)
                 velocity += scatter.normalized * profile.randomSpeed;
-            SpawnVisual(profile, spawnPosition, velocity, size, material);
+            int value = index < collectibleCount
+                ? Random.Range(minimumValue, maximumValue + 1) : 0;
+            SpawnVisual(profile, spawnPosition, velocity, size, material, value);
         }
     }
 
@@ -130,11 +157,13 @@ public sealed class CombatParticleSystem : MonoBehaviour
     }
 
     private void SpawnVisual(CombatParticleProfile profile, Vector3 position,
-        Vector3 velocity, float size, Material material)
+        Vector3 velocity, float size, Material material, int currencyValue = 0)
     {
         CombatVisualParticle particle = freeVisual.Count > 0 ? freeVisual.Dequeue() :
             activeVisual.Count < maximumVisualParticles ? CreateVisual() : ReuseOldest(activeVisual, freeVisual);
-        particle.Initialize(profile, position, velocity, size, material, particleLayer);
+        particle.Initialize(profile, position, velocity, size, material, particleLayer,
+            currencyValue, CurrencyGoreMaterial, currencyGoreLifetimeMultiplier,
+            minimumCurrencyGoreLifetime);
         activeVisual.Add(particle);
     }
 
@@ -145,6 +174,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
         piece.transform.SetParent(poolRoot);
         piece.AddComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         piece.AddComponent<CombatParticleCollisionFilter>();
+        piece.AddComponent<CurrencyGorePickup>();
         CombatVisualParticle particle = piece.AddComponent<CombatVisualParticle>();
         piece.SetActive(false);
         return particle;
@@ -172,6 +202,12 @@ public sealed class CombatParticleSystem : MonoBehaviour
         if (defaultHit != null) return;
         hitMaterial = CreateMaterial(new Color(1f, .15f, .1f));
         goreMaterial = CreateMaterial(new Color(.75f, .05f, .05f));
+        currencyGoreMaterial = CreateMaterial(new Color(1f, .72f, .08f));
+        if (currencyGoreMaterial.HasProperty("_EmissionColor"))
+        {
+            currencyGoreMaterial.EnableKeyword("_EMISSION");
+            currencyGoreMaterial.SetColor("_EmissionColor", new Color(1f, .4f, .01f));
+        }
         defaultHit = ScriptableObject.CreateInstance<CombatParticleProfile>();
         defaultHit.displayName = "Default Damage Hit"; defaultHit.kind = CombatParticleKind.Mechanical;
         defaultHit.countByDamage = AnimationCurve.Linear(0, 1, 100, 12); defaultHit.maximumCount = 16;
@@ -189,6 +225,9 @@ public sealed class CombatParticleSystem : MonoBehaviour
         Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
         Material material = new(shader) { color = color }; return material;
     }
+
+    private Material CurrencyGoreMaterial => currencyGoreVisualMaterial != null
+        ? currencyGoreVisualMaterial : currencyGoreMaterial;
 
     private Material ResolveMaterial(CombatParticleProfile profile, Renderer source)
     {

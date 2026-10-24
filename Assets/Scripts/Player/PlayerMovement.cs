@@ -150,6 +150,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isLaunched;
     private bool isAerialDiving;
     private bool isDashJump;
+    private bool wasAirborne;
     private RecoveryCancelAction queuedRecoveryCancelAction;
 
     private float standingControllerHeight;
@@ -169,6 +170,7 @@ public class PlayerMovement : MonoBehaviour
         movesetController = GetComponent<PlayerMovesetController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
+        wasAirborne = !IsGrounded;
 
     }
 
@@ -368,6 +370,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!IsGrounded)
         {
+            wasAirborne = true;
             // Sair de uma borda nao concede dois pulos extras. Se o player
             // ja esta no ar sem ter pulado, consideramos o primeiro pulo
             // gasto e mantemos somente o pulo aereo disponivel.
@@ -381,7 +384,14 @@ public class PlayerMovement : MonoBehaviour
         // grounded por um frame. A velocidade vertical evita resetar o pulo
         // que acabou de começar.
         if (verticalVelocity > 0f)
+        {
+            wasAirborne = true;
             return;
+        }
+
+        if (wasAirborne)
+            movesetController?.ResetAerialSequenceOnLanding();
+        wasAirborne = false;
 
         jumpsUsed = 0;
         hasUsedAirDash = false;
@@ -1055,6 +1065,16 @@ public class PlayerMovement : MonoBehaviour
         CollisionFlags collisionFlags = controller.Move(
             velocity * Time.deltaTime
         );
+
+        // CharacterController so confirma o chao depois deste Move. Encerrar
+        // aqui evita que um clique capturado no mesmo frame do pouso seja
+        // usado para continuar uma rota aerea.
+        if (wasAirborne && verticalVelocity <= 0f &&
+            (collisionFlags & CollisionFlags.Below) != 0)
+        {
+            movesetController?.ResetAerialSequenceOnLanding();
+            wasAirborne = false;
+        }
 
         if (playerState.IsSliding() &&
             (collisionFlags & CollisionFlags.Sides) != 0)

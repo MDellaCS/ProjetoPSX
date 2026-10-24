@@ -122,14 +122,16 @@ public sealed class EnemyBrain : MonoBehaviour
     private float aggressionChangeDirection;
     private float aggressionChangeTimer;
     private float currentAggressionPercent;
+    private bool isAggressionSuppressedByBurn;
+    private float aggressionBeforeBurn;
 
     public Transform Target => target;
     public bool IsWaitingForEncounter => isWaitingForEncounter;
     public bool IsEncounterEngaged => isEncounterEngaged;
     public float CurrentAggressionPercent => currentAggressionPercent;
-    public float EffectiveAggressionPercent => Mathf.Clamp(
-        currentAggressionPercent + EnemyDirector.GetAggressionModifier(owner),
-        minimumAggressionPercent, maximumAggressionPercent);
+    public float EffectiveAggressionPercent => isAggressionSuppressedByBurn ? 0f :
+        Mathf.Clamp(currentAggressionPercent + EnemyDirector.GetAggressionModifier(owner),
+            minimumAggressionPercent, maximumAggressionPercent);
     public float AggressionChangeTimer => aggressionChangeTimer;
     public float CommitmentTimer => commitmentTimer;
     public float CommitmentCooldownTimer => commitmentCooldownTimer;
@@ -445,6 +447,9 @@ public sealed class EnemyBrain : MonoBehaviour
 
     internal void TickAggression()
     {
+        UpdateBurnAggressionSuppression();
+        if (isAggressionSuppressedByBurn)
+            return;
         if (owner.CurrentState == EnemyBase.State.Idle && !isEncounterEngaged)
             return;
         aggressionChangeTimer -= Time.deltaTime;
@@ -457,8 +462,32 @@ public sealed class EnemyBrain : MonoBehaviour
 
     private void ResetAggression()
     {
+        if (isAggressionSuppressedByBurn)
+            return;
         currentAggressionPercent = initialAggression;
         SelectAggressionChange();
+    }
+
+    /// <summary>
+    /// Burn e uma supressao temporaria, nao uma alteracao de humor. Cada
+    /// inimigo guarda seu valor individual e o restaura intacto ao termino.
+    /// </summary>
+    private void UpdateBurnAggressionSuppression()
+    {
+        bool playerIsBurning = playerHeat != null && playerHeat.IsBurning;
+        if (playerIsBurning == isAggressionSuppressedByBurn)
+            return;
+
+        isAggressionSuppressedByBurn = playerIsBurning;
+        if (playerIsBurning)
+        {
+            aggressionBeforeBurn = currentAggressionPercent;
+            currentAggressionPercent = 0f;
+            return;
+        }
+
+        currentAggressionPercent = Mathf.Clamp(aggressionBeforeBurn,
+            minimumAggressionPercent, maximumAggressionPercent);
     }
 
     private void SelectAggressionChange()
@@ -528,7 +557,7 @@ public sealed class EnemyBrain : MonoBehaviour
 
     internal void OnDamaged(int damageDealt)
     {
-        if (damageDealt <= 0)
+        if (damageDealt <= 0 || isAggressionSuppressedByBurn)
             return;
 
         float maxHealth = Mathf.Max(1f, owner != null ? owner.MaxHealth : 1f);
@@ -541,7 +570,7 @@ public sealed class EnemyBrain : MonoBehaviour
 
     internal void ReactToPlayerDamagedByEnemy()
     {
-        if (owner.IsDead || isWaitingForEncounter) return;
+        if (owner.IsDead || isWaitingForEncounter || isAggressionSuppressedByBurn) return;
         float change = currentAggressionPercent * playerDamagedAggressionPercent +
             playerDamagedAggressionFlatChange;
         if (retreatsWhenPlayerTakesEnemyDamage)

@@ -6,6 +6,9 @@
     <ui:VisualElement name="enemy-debug-panel">
         <ui:Label name="enemy-debug-text" text="ENEMY DEBUG" />
     </ui:VisualElement>
+    <ui:VisualElement name="test-shortcuts-panel">
+        <ui:Label name="test-shortcuts-text" text="TEST SHORTCUTS" />
+    </ui:VisualElement>
     <ui:VisualElement name="cutscene-debug-panel">
         <ui:Label name="cutscene-debug-text" text="CUTSCENE DEBUG" />
         <ui:VisualElement name="cutscene-timeline-bar">

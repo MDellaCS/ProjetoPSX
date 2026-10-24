@@ -405,6 +405,7 @@ GameObject:
   - component: {fileID: 825647892}
   - component: {fileID: 825647891}
   - component: {fileID: 825647890}
+  - component: {fileID: 825647909}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -1944,7 +1945,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 536ee412887f1af498cd4e6038c32726, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerLockOn
-  maximumLockDistance: 14
+  maximumLockDistance: 17
   markerScreenSize: 16
   markerColor: {r: 0.15, g: 1, b: 0.15, a: 1}
 --- !u!114 &825647892
@@ -2080,7 +2081,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35ea57bbfbc64d4084af0e9e68b4c535, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInputBuffer
-  bufferDuration: 0.22
+  bufferDuration: 0.5
 --- !u!114 &825647902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2122,7 +2123,7 @@ MonoBehaviour:
   maxHeat: 100
   maxColdMagnitude: 100
   heavyDamageAdditivePowerBonus: 7
-  heatGeneratedPerDamageDealt: 0.3
+  heatGeneratedPerDamageDealt: 0.28
   maxSuperheat: 50
   excessHeatToSuperheatMultiplier: 0.5
   passiveHeatCoolingAfterGainDelay: 5
@@ -2131,15 +2132,15 @@ MonoBehaviour:
   passiveHeatCoolingRampDuration: 15
   passiveHeatCoolingRampExponent: 1.4
   passiveColdRecoveryPerSecond: 1
-  coldRecoveryLimitPercent: 0.7
+  coldRecoveryLimitPercent: 0.8
   passiveSuperheatCoolingPerSecond: 1
   coldSuperheatCoolingPerSecond: 4
   burnPreExplosionDuration: 1.5
-  burnInitialStunDuration: 3
-  burningDuration: 6.66
-  burnFinalStunDuration: 1
-  burnMovementSpeedMultiplier: 0.3
-  burnFinalColdPercent: 0.7
+  burnInitialStunDuration: 0.4
+  burningDuration: 8
+  burnFinalStunDuration: 1.5
+  burnMovementSpeedMultiplier: 0.2
+  burnFinalColdPercent: 0.8
   burnExplosionAttack: {fileID: 11400000, guid: c43e4c5dbbe741f98d30da582a2619c9, type: 2}
   debugHeatInputEnabled: 1
   debugHeatPerSecond: 35
@@ -2257,6 +2258,24 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 1.25, z: 0}
+--- !u!114 &825647909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3612e2f0d9db0e14395c741c3f1702aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCurrencyWallet
+  collectRadius: 0.2
+  attractionRadius: 16
+  playerCurrencyCenterHeightOffset: 1.8
+  attractionDelay: 3
+  attractionAcceleration: 8
+  maximumAttractionSpeed: 16
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -2539,7 +2558,7 @@ MonoBehaviour:
   staticImpactLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  juggleLiftSpeed: 1.5
+  juggleLiftSpeed: 2
   juggleGravityMultiplier: 0.3
   juggleDuration: 0.15
 --- !u!1 &915318201
@@ -2728,6 +2747,9 @@ MonoBehaviour:
   worldCollisionLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  currencyGoreVisualMaterial: {fileID: 2100000, guid: c55cd5fd6b341314fabe59256f846435, type: 2}
+  currencyGoreLifetimeMultiplier: 6
+  minimumCurrencyGoreLifetime: 12
 --- !u!1 &1026784251
 GameObject:
   m_ObjectHideFlags: 0
@@ -3250,6 +3272,7 @@ GameObject:
   - component: {fileID: 1170707652}
   - component: {fileID: 1170707653}
   - component: {fileID: 1170707654}
+  - component: {fileID: 1170707655}
   m_Layer: 0
   m_Name: PauseMenuUI
   m_TagString: Untagged
@@ -3343,6 +3366,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PauseMenuHUD
   panelRenderer: {fileID: 1170707653}
+--- !u!114 &1170707655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1170707651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4b03ac45e40dce4395a6c6e37709d6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CurrencyShopHUD
+  panelRenderer: {fileID: 0}
 --- !u!1 &1260851599
 GameObject:
   m_ObjectHideFlags: 0
@@ -4934,7 +4970,39 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burningDuration
-      value: 6.66
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: burnFinalColdPercent
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: burnFinalStunDuration
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: burnInitialStunDuration
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: coldRecoveryLimitPercent
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: burnMovementSpeedMultiplier
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: heatGeneratedPerDamageDealt
+      value: 0.28
+      objectReference: {fileID: 0}
+    - target: {fileID: 8082442720026125689, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: bufferDuration
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9138424708753252038, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: maximumLockDistance
+      value: 17
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

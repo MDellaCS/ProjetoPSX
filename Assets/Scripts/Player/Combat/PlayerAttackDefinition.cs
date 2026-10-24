@@ -219,8 +219,6 @@ public class PlayerAttackStrikeDefinition
     public PlayerAttackDamageFalloffDefinition damageFalloff = new();
     [Tooltip("Leves geram o Heat global ao conectar quando esta opcao esta ativa.")]
     public bool generatesHeatOnHit = true;
-    [Tooltip("Faz as particulas voarem radialmente do centro da hitbox ate o inimigo. Use em explosoes e ondas de impacto; nao altera knockback nem outras reacoes.")]
-    public bool particlesUseRadialImpactDirection;
     [Tooltip("Efeitos adicionais aplicados por este Strike.")]
     public PlayerAttackEffectsDefinition effects = new();
     [Tooltip("Volumes que formam este Strike.")]
@@ -249,6 +247,8 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Min(.001f)] public float activeDuration = .1f;
     [Tooltip("Tempo de recuperacao depois do Active.")]
     [Min(0f)] public float recoveryDuration = .2f;
+    [Tooltip("Mantem o ataque na fase Active depois do tempo normal ate o player tocar o chao. Use em Dive para a hitbox e a queda terminarem juntas.")]
+    public bool holdActiveUntilGrounded;
 
     [Header("Power")]
     [Tooltip("Dano base antes das regras de Heat e dos multiplicadores de Strike.")]

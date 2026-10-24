@@ -48,6 +48,7 @@ public static class GameInput
     public static bool DebugCombatPressed => Pressed("DebugCombat");
     public static bool DebugGodModePressed => Pressed("DebugGodMode");
     public static bool DebugMaxHeatPressed => Pressed("DebugMaxHeat");
+    public static bool DebugSlowMotionPressed => Pressed("DebugSlowMotion");
 
     public static bool PausePressed
     {

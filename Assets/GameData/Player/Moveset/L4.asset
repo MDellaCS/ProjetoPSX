@@ -16,15 +16,15 @@ MonoBehaviour:
   displayName: L4
   kind: 0
   context: 0
-  windupDuration: 0.2
-  activeDuration: 0.2
+  windupDuration: 0.16
+  activeDuration: 0.18
   recoveryDuration: 0.3
   baseDamage: 25
   basePoiseDamage: 50
   movement:
-    forwardDistance: 0.8
+    forwardDistance: 1.05
     startNormalized: 0
-    endNormalized: 0.5
+    endNormalized: 0.85
     movementCurve:
       serializedVersion: 2
       m_Curve:

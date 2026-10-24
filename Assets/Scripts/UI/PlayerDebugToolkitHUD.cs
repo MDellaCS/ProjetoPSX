@@ -21,6 +21,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private readonly StringBuilder textBuilder = new StringBuilder();
     private readonly StringBuilder cutsceneTextBuilder = new StringBuilder();
+    private readonly StringBuilder testShortcutsTextBuilder = new StringBuilder();
 
     private PlayerMovement playerMovement;
     private PlayerState playerState;
@@ -29,6 +30,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
     private PlayerLockOn playerLockOn;
+    private PlayerCurrencyWallet playerCurrency;
 
     private VisualElement debugPanel;
     private Label debugText;
@@ -37,6 +39,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private VisualElement cutsceneDebugPanel;
     private Label cutsceneDebugText;
     private VisualElement cutsceneTimelineFill;
+    private VisualElement testShortcutsPanel;
+    private Label testShortcutsText;
     private bool isVisible;
 
     private void Awake()
@@ -71,16 +75,20 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             SetVisible(!isVisible);
         }
 
+        if (GameInput.DebugSlowMotionPressed)
+            GameDebugTimeScale.Toggle();
+
         if (!isVisible || debugText == null)
             return;
 
         // PlayerLockOn pode ser adicionado pelo sistema de ataques durante Awake.
         // A ordem de Awake entre objetos nao e garantida, entao tentamos
         // encontra-lo novamente enquanto o F3 estiver aberto.
-        if (!HasPlayerComponents() || playerLockOn == null)
+        if (!HasPlayerComponents() || playerLockOn == null || playerCurrency == null)
             ResolvePlayerComponents();
 
         UpdateDebugText();
+        UpdateTestShortcuts();
         UpdateLockedEnemyDebug();
         UpdateCutsceneDebug();
     }
@@ -100,6 +108,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         cutsceneDebugPanel = rootVisualElement.Q<VisualElement>("cutscene-debug-panel");
         cutsceneDebugText = rootVisualElement.Q<Label>("cutscene-debug-text");
         cutsceneTimelineFill = rootVisualElement.Q<VisualElement>("cutscene-timeline-fill");
+        testShortcutsPanel = rootVisualElement.Q<VisualElement>("test-shortcuts-panel");
+        testShortcutsText = rootVisualElement.Q<Label>("test-shortcuts-text");
 
         SetVisible(isVisible);
     }
@@ -125,6 +135,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         combatStatus = playerTransform.GetComponent<PlayerCombatStatus>();
         attackController = playerTransform.GetComponent<PlayerAttackController>();
         playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
+        playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
     }
 
     private bool HasPlayerComponents()
@@ -153,6 +164,32 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             enemyDebugPanel.style.display = DisplayStyle.None;
         if (cutsceneDebugPanel != null)
             cutsceneDebugPanel.style.display = DisplayStyle.None;
+        if (testShortcutsPanel != null)
+            testShortcutsPanel.style.display = value
+                ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    private void UpdateTestShortcuts()
+    {
+        if (testShortcutsPanel == null || testShortcutsText == null)
+            return;
+
+        testShortcutsPanel.style.display = DisplayStyle.Flex;
+        testShortcutsTextBuilder.Clear();
+        testShortcutsTextBuilder.AppendLine("TEST SHORTCUTS");
+        testShortcutsTextBuilder.AppendLine("F3  DEBUG HUD");
+        testShortcutsTextBuilder.AppendLine("F4  HEAT - (HOLD)");
+        testShortcutsTextBuilder.AppendLine("F5  HEAT + (HOLD)");
+        testShortcutsTextBuilder.AppendLine("F6  COMBAT OVERRIDE");
+        testShortcutsTextBuilder.Append("F7  GOD MODE: ")
+            .AppendLine(playerHealth != null && playerHealth.IsGodMode ? "ON" : "OFF");
+        testShortcutsTextBuilder.AppendLine("F8  MAX HEAT + SUPERHEAT");
+        testShortcutsTextBuilder.AppendLine("F9  LOAD TEST ARENA");
+        testShortcutsTextBuilder.AppendLine("F10 LOAD GAMEPLAY SCENE");
+        testShortcutsTextBuilder.Append("F11 TIME: ")
+            .AppendLine(GameDebugTimeScale.IsSlowMotion ? "0.25x" : "1x");
+        testShortcutsTextBuilder.AppendLine("R   RESTART");
+        testShortcutsText.text = testShortcutsTextBuilder.ToString();
     }
 
     private void UpdateDebugText()
@@ -206,6 +243,11 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(playerMovement.VerticalSpeed.ToString("F2"));
         textBuilder.Append("DASH: ")
             .AppendLine(playerMovement.DashCooldownRemaining.ToString("F2") + " s");
+        textBuilder.Append("TIME SCALE: ")
+            .AppendLine(Time.timeScale.ToString("0.###"));
+        textBuilder.Append("ENCOUNTER SLOWMO: ")
+            .AppendLine(GameTimeScaleEffects.IsCompletionSlowMotionActive
+                ? "YES" : "NO");
         textBuilder.Append("HEAT: ")
             .Append(FormatSigned(playerHeat.CurrentHeat))
             .Append(" / ")
@@ -222,6 +264,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(playerHeat.MaxSuperheat.ToString("0"));
         textBuilder.Append("BURN: ")
             .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
+        textBuilder.Append("CURRENCY: ")
+            .AppendLine((playerCurrency != null ? playerCurrency.Current : 0).ToString());
         textBuilder.Append("ATTACKING: ")
             .AppendLine(attackController.IsAttacking ? "YES" : "NO");
         debugText.text = textBuilder.ToString();

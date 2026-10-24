@@ -136,7 +136,7 @@ public sealed class EnemyEncounter : MonoBehaviour
         foreach (EnemyEncounterWave wave in waves)
             if (wave.HasStarted) wave.NotifyEnemyDied(enemy);
         ScheduleNextWave();
-        TryComplete();
+        TryComplete(true);
     }
 
     private void ScheduleNextWave()
@@ -177,12 +177,14 @@ public sealed class EnemyEncounter : MonoBehaviour
         return false;
     }
 
-    private void TryComplete()
+    private void TryComplete(bool completedByEnemyDeath = false)
     {
         if (state != EncounterState.Active || nextWaveScheduled ||
             nextWaveIndex < waves.Count || !AllStartedWavesComplete()) return;
         state = EncounterState.Completed;
         foreach (EncounterBarrier barrier in barriers) barrier?.Unlock();
+        if (completedByEnemyDeath)
+            GameTimeScaleEffects.PlayDefaultSlowMotion();
     }
 
     internal bool TryFindSpawnPosition(EnemyEncounterWave wave, float multiplier,
@@ -294,23 +296,4 @@ public sealed class EnemyEncounter : MonoBehaviour
         spawnClearanceHeight = Mathf.Max(spawnClearanceHeight, spawnClearanceRadius * 2f);
     }
 
-    private void OnDrawGizmos()
-    {
-        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible) return;
-        if (player != null && playerExclusionRadius > 0f)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(player.position, playerExclusionRadius);
-        }
-        if (player != null && preferredSpawnRadius > 0f)
-        {
-            Gizmos.color = new Color(.2f, .9f, 1f, .8f);
-            Gizmos.DrawWireSphere(player.position, preferredSpawnRadius);
-        }
-        if (enemyExclusionRadius <= 0f) return;
-        Gizmos.color = Color.yellow;
-        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
-            if (enemy != null && !enemy.IsDead && enemy.gameObject.activeInHierarchy)
-                Gizmos.DrawWireSphere(enemy.AttackOrigin, enemyExclusionRadius);
-    }
 }

@@ -19,6 +19,7 @@ public class PlayerHUDToolkit : MonoBehaviour
     private VisualElement dashIndicator;
     private Label dashText;
     private Label controlsHint;
+    private VisualElement hotNotchParent;
 
     private void Awake()
     {
@@ -62,7 +63,8 @@ public class PlayerHUDToolkit : MonoBehaviour
         controlsHint = root.Q<Label>("combat-controls-hint");
         UpdateControlsHint();
         BuildNotches(root.Q<VisualElement>("heat-cold-notches"), coldNotches, 10, "heat-notch");
-        BuildNotches(root.Q<VisualElement>("heat-hot-notches"), hotNotches, 10, "heat-notch");
+        hotNotchParent = root.Q<VisualElement>("heat-hot-notches");
+        BuildNotches(hotNotchParent, hotNotches, 10, "heat-notch");
         BuildNotches(root.Q<VisualElement>("superheat-notches"), superheatNotches, 5, "superheat-notch");
     }
 
@@ -97,6 +99,9 @@ public class PlayerHUDToolkit : MonoBehaviour
 
     private void UpdateHeatNotches()
     {
+        int requiredHotNotches = Mathf.Max(1, Mathf.CeilToInt(playerHeat.MaxHeat / 10f));
+        if (requiredHotNotches != hotNotches.Count)
+            BuildNotches(hotNotchParent, hotNotches, requiredHotNotches, "heat-notch");
         for (int index = 0; index < coldNotches.Count; index++)
         {
             float filled = GetColdNotchFill(index, coldNotches.Count);

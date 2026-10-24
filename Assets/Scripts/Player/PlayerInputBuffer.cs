@@ -107,6 +107,20 @@ public class PlayerInputBuffer : MonoBehaviour
             ignoreInputThroughFrame = Time.frameCount + 1;
     }
 
+    /// <summary>Remove somente ataques pendentes, preservando pulo e dash.</summary>
+    public void ClearBufferedAttackInputs()
+    {
+        ClearExpiredInput();
+        if (bufferedInput != PlayerBufferedInput.LightAttack &&
+            bufferedInput != PlayerBufferedInput.HeavyAttack)
+        {
+            return;
+        }
+
+        expirationTime = -1f;
+        capturedTime = -1f;
+    }
+
     private void CaptureInputsForCurrentFrame()
     {
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||

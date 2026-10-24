@@ -19,6 +19,7 @@ MonoBehaviour:
   windupDuration: 0.5
   activeDuration: 0.03
   recoveryDuration: 0.35
+  holdActiveUntilGrounded: 1
   baseDamage: 120
   basePoiseDamage: 80
   movement:
@@ -55,6 +56,34 @@ MonoBehaviour:
     activeEndNormalized: 1
     damageMultiplier: 1
     poiseMultiplier: 1
+    damageFalloff:
+      enabled: 0
+      startDistance: 0
+      endDistance: 1
+      damageMultiplier:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
     generatesHeatOnHit: 0
     effects:
       launchDown: 1
@@ -70,8 +99,8 @@ MonoBehaviour:
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
-      startLocalPosition: {x: 0.36, y: -0.36, z: 1.15}
-      endLocalPosition: {x: 0, y: 0, z: 1.75}
+      startLocalPosition: {x: 0.36, y: 0.4, z: 1.15}
+      endLocalPosition: {x: 0, y: -0.8, z: 1.15}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -153,7 +182,7 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 1.75
+      radius: 2
       capsuleHeight: 1
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}

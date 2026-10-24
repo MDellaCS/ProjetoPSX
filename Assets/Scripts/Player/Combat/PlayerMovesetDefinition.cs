@@ -15,7 +15,7 @@ public class PlayerMoveTransition
     public PlayerAttackInput input;
     [Tooltip("ID do Node de destino.")]
     public string targetNodeId;
-    [Tooltip("Exige que o input aconteca depois do Global Pause Delay.")]
+    [Tooltip("Exige que o input aconteca depois do Global Pause Delay. Se nao existir uma rota Pause para este input, a rota normal ainda funciona como fallback dentro da Continuation Window.")]
     public bool requiresPause;
     [Tooltip("Exige que ao menos um Strike tenha conectado em um inimigo.")]
     public bool requiresHitConfirm;

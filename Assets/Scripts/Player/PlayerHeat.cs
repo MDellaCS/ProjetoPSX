@@ -103,6 +103,7 @@ public class PlayerHeat : MonoBehaviour
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
     private PlayerMovement playerMovement;
+    private float baseMaxHeat;
 
     public float CurrentHeat => currentHeat;
     public float CurrentSuperheat => currentSuperheat;
@@ -119,12 +120,26 @@ public class PlayerHeat : MonoBehaviour
     public float HeavyPoiseMultiplier => GetHeavyPoiseMultiplier();
     private float BurnFinalHeatTarget => -maxColdMagnitude * burnFinalColdPercent;
 
+    private void Awake()
+    {
+        baseMaxHeat = Mathf.Max(1f, maxHeat);
+        SetChargeMaxHeatBonus(Mathf.Max(0f,
+            PlayerPrefs.GetFloat("ProjetoPSX.PlayerChargeHeatBonus.v1", 0f)));
+    }
+
     private void Start()
     {
         playerState = GetComponent<PlayerState>();
         combatStatus = GetComponent<PlayerCombatStatus>();
         attackController = GetComponent<PlayerAttackController>();
         playerMovement = GetComponent<PlayerMovement>();
+    }
+
+    /// <summary>Aplica o bonus persistente de Carga ao limite positivo de Heat.</summary>
+    public void SetChargeMaxHeatBonus(float bonus)
+    {
+        maxHeat = Mathf.Max(1f, baseMaxHeat + Mathf.Max(0f, bonus));
+        currentHeat = Mathf.Min(currentHeat, maxHeat);
     }
 
 
@@ -347,7 +362,7 @@ public class PlayerHeat : MonoBehaviour
         const float fullNotchTolerance = .01f;
 
         if (value >= positiveMaximum - fullNotchTolerance)
-            return 10;
+            return Mathf.FloorToInt(positiveMaximum / HeatPerNotch + fullNotchTolerance);
         if (value <= -negativeMagnitude + fullNotchTolerance)
             return -10;
 

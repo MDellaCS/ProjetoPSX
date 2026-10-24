@@ -84,7 +84,6 @@ MonoBehaviour:
         m_PostInfinity: 2
         m_RotationOrder: 4
     generatesHeatOnHit: 0
-    particlesUseRadialImpactDirection: 1
     effects:
       launchDown: 0
       selfLaunchDown: 0

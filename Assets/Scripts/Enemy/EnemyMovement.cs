@@ -730,26 +730,4 @@ public sealed class EnemyMovement : MonoBehaviour
         bodyImpactTargets.Clear();
     }
 
-    private void OnDrawGizmos()
-    {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
-            !isLaunchedForwards || controller == null)
-        {
-            return;
-        }
-
-        GetBodyImpactCapsule(out Vector3 first, out Vector3 second,
-            out float radius);
-        Gizmos.color = new Color(1f, .55f, .05f, .9f);
-        Gizmos.DrawWireSphere(first, radius);
-        Gizmos.DrawWireSphere(second, radius);
-        Gizmos.DrawLine(first + Vector3.right * radius,
-            second + Vector3.right * radius);
-        Gizmos.DrawLine(first - Vector3.right * radius,
-            second - Vector3.right * radius);
-        Gizmos.DrawLine(first + Vector3.forward * radius,
-            second + Vector3.forward * radius);
-        Gizmos.DrawLine(first - Vector3.forward * radius,
-            second - Vector3.forward * radius);
-    }
 }
