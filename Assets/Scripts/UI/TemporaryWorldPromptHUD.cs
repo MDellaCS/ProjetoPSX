@@ -32,6 +32,47 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     private float visibleTimer;
     private float completionTimer = -1f;
     private bool isPausedByPrompt;
+    private Object contextualOwner;
+    private string contextualKey;
+    private string contextualMessage;
+    private Sprite contextualIcon;
+
+    public void ShowContextualPrompt(Object owner, string key, string message, Sprite icon)
+    {
+        contextualOwner = owner;
+        contextualKey = key;
+        contextualMessage = message;
+        contextualIcon = icon;
+        DrawContextualPrompt();
+    }
+
+    public void HideContextualPrompt(Object owner)
+    {
+        if (contextualOwner != owner) return;
+        contextualOwner = null;
+        if (currentPrompt != null) SetPromptContent(currentPrompt);
+        SetVisible(currentPrompt != null);
+    }
+
+    private void DrawContextualPrompt()
+    {
+        if (promptKeys == null || promptBody == null) return;
+        promptKeys.Clear();
+        if (contextualIcon != null)
+        {
+            Image icon = new() { sprite = contextualIcon };
+            icon.AddToClassList("temporary-world-prompt__key-icon");
+            promptKeys.Add(icon);
+        }
+        else
+        {
+            Label key = new() { text = contextualKey };
+            key.AddToClassList("temporary-world-prompt__key-fallback");
+            promptKeys.Add(key);
+        }
+        promptBody.text = contextualMessage;
+        SetVisible(true);
+    }
 
     public float TriggerExpansionPercent => triggerExpansionPercent;
 
@@ -54,6 +95,11 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
 
     private void Update()
     {
+        if (contextualOwner != null)
+        {
+            if (GamePauseController.IsPaused) SetVisible(false);
+            return;
+        }
         if (PauseMenuHUD.IsOpen)
             return;
         if (currentPrompt == null)
@@ -144,6 +190,7 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
             SetPromptContent(currentPrompt);
 
         SetVisible(currentPrompt != null);
+        if (contextualOwner != null) DrawContextualPrompt();
     }
 
     private void SetPromptContent(TemporaryWorldPromptTrigger prompt)

@@ -42,6 +42,8 @@ public class PlayerInputBuffer : MonoBehaviour
             ClearBufferedInputs();
             return;
         }
+        if (DialogueController.BlocksPlayerAttacks)
+            ClearBufferedAttackInputs();
         if (CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
@@ -53,6 +55,13 @@ public class PlayerInputBuffer : MonoBehaviour
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked)
         {
             ClearBufferedInputs();
+            return false;
+        }
+        if ((input == PlayerBufferedInput.LightAttack ||
+            input == PlayerBufferedInput.HeavyAttack) &&
+            DialogueController.BlocksPlayerAttacks)
+        {
+            ClearBufferedAttackInputs();
             return false;
         }
         CaptureInputsForCurrentFrame();
@@ -131,13 +140,13 @@ public class PlayerInputBuffer : MonoBehaviour
 
         lastCapturedFrame = Time.frameCount;
 
-        if (GameInput.LightPressed)
+        if (!DialogueController.BlocksPlayerAttacks && GameInput.LightPressed)
         {
             LightPressesDetected++;
             Buffer(PlayerBufferedInput.LightAttack);
         }
 
-        if (GameInput.HeavyPressed)
+        if (!DialogueController.BlocksPlayerAttacks && GameInput.HeavyPressed)
         {
             HeavyPressesDetected++;
             Buffer(PlayerBufferedInput.HeavyAttack);

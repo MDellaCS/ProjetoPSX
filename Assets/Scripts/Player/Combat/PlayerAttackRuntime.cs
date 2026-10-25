@@ -13,10 +13,12 @@ public sealed class PlayerAttackRuntime
     public readonly float HeatConsumed;
     public readonly float WindupActiveRotationSpeed;
     public readonly float ExtendedArmHitboxRadius;
+    public readonly float ExtendedArmHitboxHeightOffset;
     public bool HitConfirmed;
 
     public PlayerAttackRuntime(PlayerAttackDefinition definition, PlayerHeat heat,
-        float windupActiveRotationSpeed, float extendedArmHitboxRadius)
+        float windupActiveRotationSpeed, float extendedArmHitboxRadius,
+        float extendedArmHitboxHeightOffset)
     {
         Definition = definition;
         int damage = definition.baseDamage;
@@ -41,6 +43,9 @@ public sealed class PlayerAttackRuntime
             windupActiveRotationSpeed);
         ExtendedArmHitboxRadius = definition.usesExtendedArmHitbox
             ? Mathf.Max(.01f, extendedArmHitboxRadius)
+            : 0f;
+        ExtendedArmHitboxHeightOffset = definition.usesExtendedArmHitbox
+            ? extendedArmHitboxHeightOffset
             : 0f;
     }
 }

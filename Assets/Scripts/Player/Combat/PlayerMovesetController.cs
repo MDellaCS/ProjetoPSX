@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerAttackController))]
@@ -9,16 +10,25 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private PlayerInputBuffer inputBuffer;
     private PlayerAttackController attacks;
     private PlayerMovement movement;
+    private PlayerMovesetCatalog catalog;
     private string currentNodeId;
     private float activeStartedAt;
     private PlayerMoveNode pendingNode;
 
     public PlayerMovesetDefinition Moveset => moveset;
+    public string CurrentMovesetName => moveset == null
+        ? "NONE"
+        : string.IsNullOrWhiteSpace(moveset.displayName)
+            ? moveset.name
+            : moveset.displayName;
 
     private void Awake()
     {
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         attacks = GetComponent<PlayerAttackController>(); movement = GetComponent<PlayerMovement>();
+        catalog = PlayerMovesetCatalog.Load();
+        if (catalog != null && catalog.startingMoveset != null)
+            moveset = catalog.startingMoveset;
         attacks.AttackStarted += OnAttackStarted;
         attacks.AttackFinished += OnAttackFinished;
     }
@@ -30,36 +40,64 @@ public sealed class PlayerMovesetController : MonoBehaviour
     }
     private void Update()
     {
-        if (moveset == null || GamePauseController.IsPaused ||
+        if (GamePauseController.IsPaused ||
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
+        if (Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
+            CycleMoveset();
+        if (moveset == null) return;
         if (inputBuffer.HasBuffered(PlayerBufferedInput.HeavyAttack)) TryInput(PlayerAttackInput.Heavy);
         else if (inputBuffer.HasBuffered(PlayerBufferedInput.LightAttack)) TryInput(PlayerAttackInput.Light);
     }
 
-    private void TryInput(PlayerAttackInput input)
+    private void CycleMoveset()
     {
-        PlayerBufferedInput buffered = input == PlayerAttackInput.Heavy ? PlayerBufferedInput.HeavyAttack : PlayerBufferedInput.LightAttack;
-        if (!inputBuffer.TryGetBufferedTimestamp(buffered,
-            out float inputTimestamp))
+        if (catalog == null)
+            catalog = PlayerMovesetCatalog.Load();
+        if (catalog?.availableMovesets == null || catalog.availableMovesets.Count == 0)
             return;
 
-        // pendingNode ja representa a unica acao de ataque armazenada para o
-        // termino do golpe atual. Sem esta protecao, outro clique leve rapido
-        // seria resolvido contra o Node anterior e poderia repetir ou quebrar
-        // a ordem do combo antes de a proxima etapa realmente iniciar.
-        // Pesados continuam livres para interromper o ataque quando suas
-        // regras globais de cancelamento permitirem.
-        if (input == PlayerAttackInput.Light && pendingNode != null)
+        int currentIndex = catalog.availableMovesets.IndexOf(moveset);
+        for (int offset = 1; offset <= catalog.availableMovesets.Count; offset++)
         {
-            inputBuffer.TryConsume(buffered);
+            int nextIndex = (currentIndex + offset) % catalog.availableMovesets.Count;
+            PlayerMovesetDefinition next = catalog.availableMovesets[nextIndex];
+            if (next == null || next == moveset)
+                continue;
+
+            // Limpa estado antes de cancelar, pois AttackFinished pode consumir
+            // um Node pendente imediatamente.
+            pendingNode = null;
+            currentNodeId = null;
+            inputBuffer?.ClearBufferedInputs(ignoreNextFrame: true);
+            attacks?.CancelAttack();
+            moveset = next;
             return;
         }
+    }
+
+    private void TryInput(PlayerAttackInput input)
+    {
+        if (DialogueController.BlocksPlayerAttacks)
+        {
+            inputBuffer?.ClearBufferedAttackInputs();
+            return;
+        }
+
+        PlayerBufferedInput buffered = input == PlayerAttackInput.Heavy ? PlayerBufferedInput.HeavyAttack : PlayerBufferedInput.LightAttack;
+        if (!inputBuffer.HasBuffered(buffered))
+            return;
+
+        // Enquanto um Node ja esta esperando o fim do ataque atual, deixa o
+        // buffer guardar uma acao para o proximo Node. Ela sera resolvida
+        // contra o ataque correto assim que este comecar.
+        if (input == PlayerAttackInput.Light && pendingNode != null)
+            return;
 
         bool isGroundDash = movement != null && movement.IsGroundDash;
         PlayerMoveNode continuation = isGroundDash
             ? null
-            : FindContinuation(input, inputTimestamp);
+            : FindContinuation(input);
         if (attacks.IsAttacking)
         {
             PlayerAttackCancelAction cancel = input == PlayerAttackInput.Heavy ? PlayerAttackCancelAction.HeavyAttack : PlayerAttackCancelAction.LightAttack;
@@ -88,8 +126,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
         inputBuffer.TryConsume(buffered);
     }
 
-    private PlayerMoveNode FindContinuation(PlayerAttackInput input,
-        float inputTimestamp)
+    private PlayerMoveNode FindContinuation(PlayerAttackInput input)
     {
         PlayerMoveNode current = moveset.FindNode(currentNodeId);
         if (current == null || current.attack == null) return null;
@@ -97,7 +134,10 @@ public sealed class PlayerMovesetController : MonoBehaviour
             current.attack.kind);
         if (timing == null) return null;
 
-        float sinceActive = inputTimestamp - activeStartedAt;
+        // O buffer pode ter capturado o clique durante o Windup ou enquanto
+        // o Node anterior ainda aguardava sua continuacao. Avalia a janela no
+        // instante em que o input pode ser resolvido contra o ataque atual.
+        float sinceActive = Time.time - activeStartedAt;
         if (sinceActive < timing.minimumDelayAfterWindup ||
             sinceActive > timing.continuationWindow)
         {

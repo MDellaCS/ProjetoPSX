@@ -1,0 +1,166 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6c0923b5d764d3894c72c934ddb8589, type: 3}
+  m_Name: HumanMoveset
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
+  displayName: Human
+  globalPauseDelay: 0.5
+  movementSpeedMultiplier: 0.85
+  allowDash: 0
+  allowAirJump: 0
+  allowAirDash: 0
+  jumpInitialSpeed: 14
+  dashImpulse: 11
+  dashCooldown: 1.3
+  lightWindupActiveRotationSpeed: 1500
+  heavyWindupActiveRotationSpeed: 800
+  lightTransitionTiming:
+    minimumDelayAfterWindup: 0
+    continuationWindow: 0.6
+  heavyTransitionTiming:
+    minimumDelayAfterWindup: 0
+    continuationWindow: 0.6
+  extendedArmHitboxRadius: 0.15
+  extendedArmHitboxHeightOffset: 0.45
+  lightCancelRules:
+  - action: 2
+    allowedPhases: 6
+    finishActiveBeforeCancelling: 1
+  - action: 3
+    allowedPhases: 6
+    finishActiveBeforeCancelling: 1
+  - action: 1
+    allowedPhases: 7
+    finishActiveBeforeCancelling: 0
+  heavyCancelRules:
+  - action: 2
+    allowedPhases: 4
+    finishActiveBeforeCancelling: 1
+  - action: 3
+    allowedPhases: 4
+    finishActiveBeforeCancelling: 1
+  entries:
+  - input: 0
+    context: 0
+    targetNodeId: L1
+  - input: 1
+    context: 0
+    targetNodeId: H1
+  - input: 0
+    context: 2
+    targetNodeId: D1
+  - input: 0
+    context: 1
+    targetNodeId: AirL1
+  - input: 1
+    context: 1
+    targetNodeId: AirH1
+  nodes:
+  - nodeId: L1
+    attack: {fileID: 11400000, guid: 895f992d1dbb8fa43bf23a28ef8c3c13, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L2
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: L2
+    attack: {fileID: 11400000, guid: 118d9b41db4de3246a77cbb35ac6f33f, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L3
+      requiresPause: 0
+      requiresHitConfirm: 0
+    - input: 0
+      targetNodeId: L3p
+      requiresPause: 1
+      requiresHitConfirm: 0
+  - nodeId: L3
+    attack: {fileID: 11400000, guid: 31c2010bba316b141823847018791753, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L4
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: L3p
+    attack: {fileID: 11400000, guid: ebcae8a04f5bb0844bae7fe97c6d897c, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L4p
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: L4
+    attack: {fileID: 11400000, guid: f880ab7b17f2eea459267ed79dc025cd, type: 2}
+    transitions: []
+  - nodeId: L4p
+    attack: {fileID: 11400000, guid: abbe91d9563134b419fb59634d46e1ed, type: 2}
+    transitions: []
+  - nodeId: H1
+    attack: {fileID: 11400000, guid: 95941554b61b46d45aa574e36b69c975, type: 2}
+    transitions: []
+  - nodeId: D1
+    attack: {fileID: 0}
+    transitions: []
+  - nodeId: AirL1
+    attack: {fileID: 11400000, guid: c10c703d59c260d4d8d92d1060e29a1f, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL2
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL2
+    attack: {fileID: 11400000, guid: 94f11a5cf075c8d4a9b656ad5fc3abc9, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: AirL3
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL3
+    attack: {fileID: 0}
+    transitions:
+    - input: 0
+      targetNodeId: AirL4
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL4
+    attack: {fileID: 0}
+    transitions:
+    - input: 0
+      targetNodeId: AirL5
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL5
+    attack: {fileID: 0}
+    transitions:
+    - input: 0
+      targetNodeId: AirL6
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL6
+    attack: {fileID: 0}
+    transitions:
+    - input: 0
+      targetNodeId: AirL7
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL7
+    attack: {fileID: 0}
+    transitions:
+    - input: 0
+      targetNodeId: AirL8
+      requiresPause: 0
+      requiresHitConfirm: 0
+  - nodeId: AirL8
+    attack: {fileID: 0}
+    transitions: []
+  - nodeId: AirH1
+    attack: {fileID: 11400000, guid: b6b8243c8fe6d6047b1498a87ac990f3, type: 2}
+    transitions: []

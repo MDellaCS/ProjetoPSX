@@ -341,7 +341,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: spawnCount
-      value: 1
+      value: 999
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: startDelay

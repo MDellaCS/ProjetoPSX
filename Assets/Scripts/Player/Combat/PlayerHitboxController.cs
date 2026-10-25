@@ -96,7 +96,8 @@ public sealed class PlayerHitboxController : MonoBehaviour
             if (runtime != activeRuntime)
                 return;
             if (activeRuntime.ExtendedArmHitboxRadius > 0f)
-                QueryExtendedArm(strike, track, GetPlayerCenter(),
+                QueryExtendedArm(strike, track, GetPlayerCenter() +
+                    transform.up * activeRuntime.ExtendedArmHitboxHeightOffset,
                     sampleCenter, activeRuntime.ExtendedArmHitboxRadius, impactDirection);
             if (runtime != activeRuntime)
                 return;
@@ -107,12 +108,14 @@ public sealed class PlayerHitboxController : MonoBehaviour
         debugVolumes.Add(new DebugVolume { shape = track.shape, center = center, rotation = rotation, a = a, b = b, radius = effectiveRadius, size = track.boxSize });
         if (activeRuntime.ExtendedArmHitboxRadius > 0f)
         {
+            Vector3 extendedArmOrigin = GetPlayerCenter() +
+                transform.up * activeRuntime.ExtendedArmHitboxHeightOffset;
             debugVolumes.Add(new DebugVolume
             {
                 shape = PlayerHitboxShape.Capsule,
-                a = GetPlayerCenter(),
+                a = extendedArmOrigin,
                 b = center,
-                center = (GetPlayerCenter() + center) * .5f,
+                center = (extendedArmOrigin + center) * .5f,
                 radius = activeRuntime.ExtendedArmHitboxRadius
             });
         }
@@ -139,7 +142,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
     {
         int count = Physics.OverlapCapsuleNonAlloc(playerCenter,
             hitboxCenter, radius, overlapBuffer);
-        float reach = Vector2.Distance(ToHorizontal(GetPlayerCenter()),
+        float reach = Vector2.Distance(ToHorizontal(playerCenter),
             ToHorizontal(hitboxCenter)) + radius;
         ResolveHits(strike, track, count, reach, hitboxCenter, impactDirection);
     }
@@ -153,6 +156,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
         { hitSet = new HashSet<EnemyBase>(); groupHits.Add(groupKey, hitSet); }
         for (int i = 0; i < count; i++)
         {
+            if (overlapBuffer[i] != null &&
+                overlapBuffer[i].GetComponent<CurrencyShopInteractionArea>() != null)
+                continue;
             EnemyBase enemy = overlapBuffer[i] != null ? overlapBuffer[i].GetComponentInParent<EnemyBase>() : null;
             if (enemy == null)
             {

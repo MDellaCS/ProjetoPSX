@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 652f2f9f493482a4f94d8672c622de03, type: 3}
+  m_Name: TBD1
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerUpgradeDefinition
+  id: tbd-1
+  displayName: TBD 1
+  description: Atributo ainda nao definido.
+  purchasable: 0
+  statId: tbd-1
+  levels:
+  - price: 0
+    gain: 0
+    retainedGain: 1
+    unlocks: []
+  - price: 20
+    gain: 0
+    retainedGain: 1
+    unlocks: []
+  - price: 40
+    gain: 0
+    retainedGain: 1
+    unlocks: []
+  - price: 60
+    gain: 0
+    retainedGain: 1
+    unlocks: []
+  - price: 80
+    gain: 0
+    retainedGain: 1
+    unlocks: []
+  - price: 100
+    gain: 0
+    retainedGain: 1
+    unlocks:
+    - id: tbd-1-special
+      displayName: Efeito especial TBD
+      description: Efeito especial TBD
+      effects: []

@@ -57,8 +57,26 @@ public class PlayerMovesetEntry
     menuName = "Projeto PSX/Player/Moveset Definition")]
 public sealed class PlayerMovesetDefinition : ScriptableObject
 {
+    [Tooltip("Nome curto exibido no F3 para identificar este moveset durante os testes.")]
+    public string displayName = "Moveset";
     [Tooltip("Tempo global sem novo input que classifica a proxima entrada como PAUSE.")]
     [Min(0f)] public float globalPauseDelay = .25f;
+
+    [Header("Movement Abilities")]
+    [Tooltip("Multiplicador da velocidade de caminhada base do PlayerMovement para este moveset. 1 mantem a velocidade base; valores menores ou maiores ajustam apenas este moveset.")]
+    [Min(0f)] public float movementSpeedMultiplier = 1f;
+    [Tooltip("Permite iniciar dash no chao ou no ar. Quando desativado, o input de dash nao inicia nem cancela ataques para executar um dash.")]
+    public bool allowDash = true;
+    [Tooltip("Permite um segundo pulo no ar. Desativado, o jogador só pode pular uma vez antes de tocar o chão.")]
+    public bool allowAirJump = true;
+    [Tooltip("Permite iniciar um dash enquanto o jogador está no ar.")]
+    public bool allowAirDash = true;
+    [Tooltip("Velocidade vertical inicial de cada pulo, em unidades por segundo. A altura final também depende da gravidade e da sustentação global ao segurar o botão.")]
+    [Min(0f)] public float jumpInitialSpeed = 14f;
+    [Tooltip("Impulso horizontal fixo aplicado pelo dash, em unidades por segundo. Soma-se ao momentum atual do jogador.")]
+    [Min(0f)] public float dashImpulse = 12.8f;
+    [Tooltip("Tempo, em segundos, até o próximo dash poder ser iniciado.")]
+    [Min(0f)] public float dashCooldown = 1.3f;
 
     [Header("Global Attack Rotation")]
     [Tooltip("Velocidade global de giro dos ataques leves durante Windup + Active, em graus por segundo. Zero impede o giro.")]
@@ -75,6 +93,8 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     [Header("Global Hitbox Extension")]
     [Tooltip("Raio global da linha de colisao criada entre o centro do player e a hitbox de ataques com Extended Arm Hitbox. Representa metade da grossura total.")]
     [Min(.01f)] public float extendedArmHitboxRadius = .25f;
+    [Tooltip("Deslocamento vertical global do ponto inicial da linha Extended Arm Hitbox em relação ao centro do jogador. Aplica-se a todos os ataques deste moveset que usam essa extensão.")]
+    public float extendedArmHitboxHeightOffset;
 
     [Header("Global Cancel Rules")]
     [Tooltip("Regras de cancelamento compartilhadas por todos os ataques leves deste moveset.")]

@@ -78,6 +78,15 @@ public sealed class CombatParticleSystem : MonoBehaviour
             source, particleCountMultiplier);
     }
 
+    public void EmitCurrencyDeath(CombatParticleProfile profile, Vector3 position,
+        Vector3 direction, int damage, Renderer source, float countMultiplier,
+        Vector2Int valueRange, int currencyPieces)
+    {
+        EnsureDefaults();
+        Emit(profile, defaultGore, position, direction, damage, source,
+            countMultiplier, valueRange, currencyPieces);
+    }
+
     public void Emit(CombatParticleProfile overrideProfile,
         CombatParticleProfile fallbackProfile, Vector3 position, Vector3 direction,
         int damageDealt, Renderer sourceRenderer,

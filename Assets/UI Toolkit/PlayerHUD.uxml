@@ -1,21 +1,18 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="PlayerHUD.uss" />
+    <Style src="PlayerHeatHUD.uss" />
     <ui:VisualElement name="player-hud">
-        <ui:VisualElement name="heat-header">
-            <ui:Label name="heat-value" text="HEAT 0.0 / 100" />
-            <ui:Label name="heat-power-value" text="1x" />
+        <ui:VisualElement name="heat-thermometer">
+            <ui:VisualElement name="thermometer-heading">
+                <ui:Label name="thermometer-title" text="TERMÔMETRO" />
+                <ui:Label name="heat-power-value" text="1x" />
+            </ui:VisualElement>
+            <ui:VisualElement name="thermometer-main-row">
+                <ui:VisualElement name="thermometer-cold-notches" class="thermometer-notch-group" />
+                <ui:VisualElement name="thermometer-zero-notch" />
+                <ui:VisualElement name="thermometer-hot-notches" class="thermometer-notch-group" />
+            </ui:VisualElement>
+            <ui:VisualElement name="thermometer-superheat-notches" class="thermometer-notch-group thermometer-superheat-row" />
         </ui:VisualElement>
-        <ui:VisualElement name="heat-notch-row">
-            <ui:VisualElement name="heat-cold-notches" class="notch-group" />
-            <ui:VisualElement name="heat-zero-notch" />
-            <ui:VisualElement name="heat-hot-notches" class="notch-group" />
-            <ui:VisualElement name="superheat-notches" class="notch-group superheat-notch-group" />
-        </ui:VisualElement>
-        <ui:Label name="superheat-value" text="SUPERHEAT 0.0 / 50" />
-        <ui:VisualElement name="dash-row">
-            <ui:VisualElement name="dash-indicator" />
-            <ui:Label name="dash-text" text="DASH READY" />
-        </ui:VisualElement>
-        <ui:Label name="combat-controls-hint" text="" />
     </ui:VisualElement>
 </ui:UXML>

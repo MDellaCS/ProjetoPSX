@@ -29,6 +29,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerHealth playerHealth;
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
+    private PlayerMovesetController movesetController;
     private PlayerLockOn playerLockOn;
     private PlayerCurrencyWallet playerCurrency;
 
@@ -84,7 +85,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         // PlayerLockOn pode ser adicionado pelo sistema de ataques durante Awake.
         // A ordem de Awake entre objetos nao e garantida, entao tentamos
         // encontra-lo novamente enquanto o F3 estiver aberto.
-        if (!HasPlayerComponents() || playerLockOn == null || playerCurrency == null)
+        if (!HasPlayerComponents() || playerLockOn == null || playerCurrency == null ||
+            movesetController == null)
             ResolvePlayerComponents();
 
         UpdateDebugText();
@@ -134,6 +136,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         playerHealth = playerTransform.GetComponent<PlayerHealth>();
         combatStatus = playerTransform.GetComponent<PlayerCombatStatus>();
         attackController = playerTransform.GetComponent<PlayerAttackController>();
+        movesetController = playerTransform.GetComponent<PlayerMovesetController>();
         playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
         playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
     }
@@ -184,10 +187,15 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         testShortcutsTextBuilder.Append("F7  GOD MODE: ")
             .AppendLine(playerHealth != null && playerHealth.IsGodMode ? "ON" : "OFF");
         testShortcutsTextBuilder.AppendLine("F8  MAX HEAT + SUPERHEAT");
-        testShortcutsTextBuilder.AppendLine("F9  LOAD TEST ARENA");
-        testShortcutsTextBuilder.AppendLine("F10 LOAD GAMEPLAY SCENE");
+        testShortcutsTextBuilder.AppendLine("F9  NEXT SCENE");
+        testShortcutsTextBuilder.AppendLine("U   NEXT PLAYER MOVESET");
         testShortcutsTextBuilder.Append("F11 TIME: ")
             .AppendLine(GameDebugTimeScale.IsSlowMotion ? "0.25x" : "1x");
+        testShortcutsTextBuilder.Append("HOLD Y RESET ALL SAVES: ")
+            .Append((playerHealth != null
+                ? playerHealth.ResetAllSavesHoldProgress * 100f
+                : 0f).ToString("0"))
+            .AppendLine("%");
         testShortcutsTextBuilder.AppendLine("R   RESTART");
         testShortcutsText.text = testShortcutsTextBuilder.ToString();
     }
@@ -204,6 +212,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.AppendLine("DEBUG HUD");
         textBuilder.Append("STATE: ")
             .AppendLine(playerState.CurrentState.ToString());
+        textBuilder.Append("MOVESET: ")
+            .AppendLine(movesetController != null
+                ? movesetController.CurrentMovesetName
+                : "NONE");
         textBuilder.Append("GOD MODE: ")
             .AppendLine(playerHealth.IsGodMode ? "ON" : "OFF");
         textBuilder.Append("COMBAT: ")
@@ -264,6 +276,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(playerHeat.MaxSuperheat.ToString("0"));
         textBuilder.Append("BURN: ")
             .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
+        textBuilder.Append("RAGE: ")
+            .AppendLine(playerHeat.IsRaging
+                ? playerHeat.RageTimeRemaining.ToString("0.0") + " s"
+                : playerHeat.HasRageUnlocked ? "UNLOCKED" : "LOCKED");
         textBuilder.Append("CURRENCY: ")
             .AppendLine((playerCurrency != null ? playerCurrency.Current : 0).ToString());
         textBuilder.Append("ATTACKING: ")

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
 public class PlayerHeat : MonoBehaviour
@@ -20,10 +21,10 @@ public class PlayerHeat : MonoBehaviour
         }
     }
 
-    private enum BurnPhase { None, PreExplosion, ExplosionStun, Burning, RecoveryStun }
+    private enum BurnPhase { None, PreExplosion, ExplosionStun, Rage, Burning, RecoveryStun }
 
     [Header("Heat Notches")]
-    [Tooltip("Limite positivo de Heat. De 0 ate este valor existem 10 notches; cada notch aumenta o poder dos pesados.")]
+    [Tooltip("Limite positivo inicial de Heat, antes dos upgrades. Cada 10 Heat equivale a um notch de poder; Carga adiciona capacidade acima deste limite.")]
     [Min(1f)] public float maxHeat = 100f;
     [Tooltip("Magnitude maxima de Cold. O limite real de Heat e o valor negativo deste campo; alcanca-lo mata o player.")]
     [Min(1f)] public float maxColdMagnitude = 100f;
@@ -39,7 +40,7 @@ public class PlayerHeat : MonoBehaviour
     [Header("Superheat Notches")]
     [Tooltip("Capacidade maxima de Superheat. Ao encher, inicia o estado Burn.")]
     [Min(1f)] public float maxSuperheat = 50f;
-    [Tooltip("Parte do Heat que excede 100 convertida em Superheat.")]
+    [Tooltip("Parte do Heat que excede o Max Heat atual, incluindo Carga, convertida em Superheat.")]
     [Min(0f)] public float excessHeatToSuperheatMultiplier = .5f;
 
     [Header("Passive Heat Cooling")]
@@ -73,6 +74,8 @@ public class PlayerHeat : MonoBehaviour
     [Min(0f)] public float burnInitialStunDuration = 3f;
     [Tooltip("Duracao do Burn depois da explosao. Durante esse tempo o player anda lentamente e perde Heat ate o alvo final.")]
     [Min(0f)] public float burningDuration = 5f;
+    [Tooltip("Controla como o Heat cai durante o tempo de Burning. O eixo X representa o tempo normalizado; Y representa a parte da queda de Heat ja aplicada. Uma curva linear distribui a queda uniformemente.")]
+    public AnimationCurve burningHeatDescentCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [Tooltip("Duracao do stun de Burn Recovery aplicado ao fim do Burn.")]
     [Min(0f)] public float burnFinalStunDuration = 1f;
     [Tooltip("Multiplicador da velocidade de movimento durante Pre-Explosion e Burn.")]
@@ -103,32 +106,33 @@ public class PlayerHeat : MonoBehaviour
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
     private PlayerMovement playerMovement;
-    private float baseMaxHeat;
+    private float chargeMaxHeatBonus;
+    private readonly Dictionary<Object, float> rageGrants = new();
+    private float rageDuration;
 
     public float CurrentHeat => currentHeat;
     public float CurrentSuperheat => currentSuperheat;
-    public float MaxHeat => maxHeat;
+    public float InitialMaxHeat => Mathf.Max(1f, maxHeat);
+    public float MaxHeat => Mathf.Max(1f, maxHeat + chargeMaxHeatBonus);
     public float MinHeat => -maxColdMagnitude;
     public float MaxSuperheat => maxSuperheat;
     // A pequena tolerancia evita que 100 armazenado como 99.99999 por
     // operacoes de ponto flutuante deixe o ultimo quadrado apagado.
-    public int CurrentHeatNotch => GetSignedNotch(currentHeat, maxHeat, maxColdMagnitude);
+    public int CurrentHeatNotch => GetSignedNotch(currentHeat, MaxHeat, maxColdMagnitude);
     public int CurrentSuperheatNotch => GetPositiveNotch(currentSuperheat, maxSuperheat, 5);
     public bool IsBurning => burnPhase != BurnPhase.None;
+    public bool IsRaging => burnPhase == BurnPhase.Rage;
+    public float RageTimeRemaining => IsRaging ? Mathf.Max(0f, burnPhaseTimer) : 0f;
+    public bool HasRageUnlocked => rageDuration > 0f;
     public float BurnMovementSpeedMultiplier => burnMovementSpeedMultiplier;
     public float HeavyDamageMultiplier => GetHeavyDamageMultiplier();
     public float HeavyPoiseMultiplier => GetHeavyPoiseMultiplier();
     private float BurnFinalHeatTarget => -maxColdMagnitude * burnFinalColdPercent;
 
-    private void Awake()
-    {
-        baseMaxHeat = Mathf.Max(1f, maxHeat);
-        SetChargeMaxHeatBonus(Mathf.Max(0f,
-            PlayerPrefs.GetFloat("ProjetoPSX.PlayerChargeHeatBonus.v1", 0f)));
-    }
 
     private void Start()
     {
+        PlayerProgression.GetOrAdd(gameObject).Initialize();
         playerState = GetComponent<PlayerState>();
         combatStatus = GetComponent<PlayerCombatStatus>();
         attackController = GetComponent<PlayerAttackController>();
@@ -138,8 +142,40 @@ public class PlayerHeat : MonoBehaviour
     /// <summary>Aplica o bonus persistente de Carga ao limite positivo de Heat.</summary>
     public void SetChargeMaxHeatBonus(float bonus)
     {
-        maxHeat = Mathf.Max(1f, baseMaxHeat + Mathf.Max(0f, bonus));
-        currentHeat = Mathf.Min(currentHeat, maxHeat);
+        chargeMaxHeatBonus = Mathf.Max(0f, bonus);
+        currentHeat = Mathf.Min(currentHeat, MaxHeat);
+    }
+
+    /// <summary>Concede ou remove Rage sem guardar estado mutavel no asset de upgrade.</summary>
+    public void SetRageGrant(Object source, float duration)
+    {
+        if (source == null) return;
+        if (duration > 0f) rageGrants[source] = duration;
+        else rageGrants.Remove(source);
+        rageDuration = 0f;
+        foreach (float grantedDuration in rageGrants.Values)
+            rageDuration = Mathf.Max(rageDuration, grantedDuration);
+    }
+
+    /// <summary>Retorna Heat, Superheat e fases de Burn/Rage ao estado inicial de uma nova campanha.</summary>
+    public void ResetForNewGame()
+    {
+        currentHeat = 0f;
+        currentSuperheat = 0f;
+        heatCoolingElapsed = 0f;
+        heatGainCoolingDelayRemaining = 0f;
+        debugHeatAccumulator = 0f;
+        burnPhase = BurnPhase.None;
+        burnPhaseTimer = 0f;
+        burnElapsed = 0f;
+        burnStartHeat = 0f;
+        rageGrants.Clear();
+        rageDuration = 0f;
+        attackController?.CancelAttack();
+        playerMovement?.InterruptForBurn();
+        GetComponent<PlayerMovesetController>()?.ResetSequence();
+        GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
+        playerState?.ResetForNewGame();
     }
 
 
@@ -236,21 +272,21 @@ public class PlayerHeat : MonoBehaviour
     public void AddHeat(float amount)
     {
         if (amount <= 0f || IsBurning) return;
-        float availableHeat = maxHeat - currentHeat;
+        float availableHeat = MaxHeat - currentHeat;
         if (amount <= availableHeat)
         {
             currentHeat += amount;
             RegisterHeatGain();
             return;
         }
-        currentHeat = maxHeat;
+        currentHeat = MaxHeat;
         AddSuperheat((amount - availableHeat) * excessHeatToSuperheatMultiplier);
         RegisterHeatGain();
     }
 
     public void RemoveHeat(float amount)
     {
-        if (amount <= 0f) return;
+        if (amount <= 0f || IsRaging) return;
         currentHeat = Mathf.Max(MinHeat, currentHeat - amount);
         CheckColdDeath();
     }
@@ -276,7 +312,7 @@ public class PlayerHeat : MonoBehaviour
         if (IsBurning)
             return;
 
-        currentHeat = maxHeat;
+        currentHeat = MaxHeat;
         currentSuperheat = maxSuperheat;
         BeginBurn();
     }
@@ -287,14 +323,20 @@ public class PlayerHeat : MonoBehaviour
     /// </summary>
     public HeavyAttackCharge ConsumeHeatForHeavyAttack()
     {
+        if (IsRaging)
+        {
+            currentHeat = MaxHeat;
+            float notches = MaxHeat / HeatPerNotch;
+            return new HeavyAttackCharge(0f, GetHeavyDamageMultiplier(notches),
+                GetHeavyPoiseMultiplier(notches));
+        }
         float availablePositiveHeat = Mathf.Max(0f, currentHeat);
-        int consumedNotch = GetSignedNotch(availablePositiveHeat, maxHeat,
-            maxColdMagnitude);
+        float consumedNotch = GetHeavyPowerNotches(availablePositiveHeat);
         float damageMultiplier = GetHeavyDamageMultiplier(consumedNotch);
         float poiseMultiplier = GetHeavyPoiseMultiplier(consumedNotch);
         // O poder ainda e discreto por notch, mas o gasto tambem: um pesado
-        // consome apenas os blocos completos de 10 Heat que de fato mudaram
-        // seu multiplicador. O restante fica disponivel para o proximo golpe.
+        // consome blocos completos de 10 Heat e a fracao extra de capacidade
+        // quando a barra estiver cheia. O restante fica para o proximo golpe.
         float heatConsumed = Mathf.Max(0, consumedNotch) * HeatPerNotch;
 
         if (heatConsumed <= 0f)
@@ -310,7 +352,7 @@ public class PlayerHeat : MonoBehaviour
         // Superheat recompõe somente a carga que o pesado acabou de gastar.
         // Assim, tanto o resto fracionario quanto a reserva de Superheat
         // permanecem legiveis e o ataque nao "arredonda para cima" o Heat.
-        float refill = Mathf.Min(currentSuperheat, maxHeat - currentHeat,
+        float refill = Mathf.Min(currentSuperheat, MaxHeat - currentHeat,
             Mathf.Max(0f, maximumRefill));
         if (refill <= 0f)
             return;
@@ -339,20 +381,20 @@ public class PlayerHeat : MonoBehaviour
 
     private float GetHeavyDamageMultiplier()
     {
-        return GetHeavyDamageMultiplier(CurrentHeatNotch);
+        return GetHeavyDamageMultiplier(GetHeavyPowerNotches(currentHeat));
     }
 
-    private static float GetHeavyDamageMultiplier(int notch)
+    private static float GetHeavyDamageMultiplier(float notch)
     {
         return notch >= 0 ? 1f + notch : Mathf.Max(0f, 1f + notch * .1f);
     }
 
     private float GetHeavyPoiseMultiplier()
     {
-        return GetHeavyPoiseMultiplier(CurrentHeatNotch);
+        return GetHeavyPoiseMultiplier(GetHeavyPowerNotches(currentHeat));
     }
 
-    private static float GetHeavyPoiseMultiplier(int notch)
+    private static float GetHeavyPoiseMultiplier(float notch)
     {
         return notch >= 0 ? 1f + notch * .5f : Mathf.Max(0f, 1f + notch * .05f);
     }
@@ -369,6 +411,15 @@ public class PlayerHeat : MonoBehaviour
         return value > 0f
             ? Mathf.FloorToInt(value / HeatPerNotch)
             : Mathf.CeilToInt(value / HeatPerNotch);
+    }
+
+    // Preserva os marcos completos de 10 Heat. Quando a capacidade maxima
+    // termina em meio notch, essa parte tambem concede poder e pode ser gasta.
+    private float GetHeavyPowerNotches(float value)
+    {
+        if (value > 0f && value >= MaxHeat - .01f)
+            return MaxHeat / HeatPerNotch;
+        return GetSignedNotch(value, MaxHeat, maxColdMagnitude);
     }
 
     private static int GetPositiveNotch(float value, float maximum, int notchCount)
@@ -393,13 +444,17 @@ public class PlayerHeat : MonoBehaviour
 
     private void UpdateBurn()
     {
+        if (IsRaging) currentHeat = MaxHeat;
         if (burnPhase == BurnPhase.Burning)
         {
             burnElapsed += Time.deltaTime;
             float progress = burningDuration <= 0f
                 ? 1f
                 : Mathf.Clamp01(burnElapsed / burningDuration);
-            currentHeat = Mathf.Lerp(burnStartHeat, BurnFinalHeatTarget, progress);
+            float heatProgress = burningHeatDescentCurve != null && burningHeatDescentCurve.length > 0
+                ? Mathf.Clamp01(burningHeatDescentCurve.Evaluate(progress))
+                : progress;
+            currentHeat = Mathf.Lerp(burnStartHeat, BurnFinalHeatTarget, heatProgress);
         }
 
         burnPhaseTimer -= Time.deltaTime;
@@ -415,11 +470,22 @@ public class PlayerHeat : MonoBehaviour
                 BeginBurnBlast();
                 break;
             case BurnPhase.ExplosionStun:
-                burnPhase = BurnPhase.Burning;
-                burnPhaseTimer = burningDuration;
-                burnElapsed = 0f;
-                burnStartHeat = currentHeat;
-                playerState.ChangeState(PlayerState.State.Burning);
+                // O asset da explosao deve terminar antes de liberar ataques normais.
+                if (attackController != null && attackController.IsAttacking &&
+                    attackController.CurrentAttack?.Definition == burnExplosionAttack)
+                    break;
+                if (HasRageUnlocked)
+                {
+                    burnPhase = BurnPhase.Rage;
+                    burnPhaseTimer = rageDuration;
+                    currentHeat = MaxHeat;
+                    currentSuperheat = 0f;
+                    playerState.ChangeState(PlayerState.State.Rage);
+                }
+                else BeginBurning();
+                break;
+            case BurnPhase.Rage:
+                BeginBurning();
                 break;
             case BurnPhase.Burning:
                 currentHeat = BurnFinalHeatTarget;
@@ -434,6 +500,19 @@ public class PlayerHeat : MonoBehaviour
                 playerState.ChangeState(PlayerState.State.Normal);
                 break;
         }
+    }
+
+    private void BeginBurning()
+    {
+        burnPhase = BurnPhase.Burning;
+        burnPhaseTimer = burningDuration;
+        burnElapsed = 0f;
+        burnStartHeat = currentHeat;
+        attackController?.CancelAttack();
+        GetComponent<PlayerMovesetController>()?.ResetSequence();
+        GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
+        playerMovement?.InterruptForBurn();
+        playerState.ChangeState(PlayerState.State.Burning);
     }
 
     private void BeginBurnBlast()
@@ -462,7 +541,7 @@ public class PlayerHeat : MonoBehaviour
         currentHeat = Mathf.Clamp(
             currentHeat + amount * direction,
             MinHeat,
-            maxHeat
+            MaxHeat
         );
         if (direction > 0f)
             RegisterHeatGain();

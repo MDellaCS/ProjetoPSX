@@ -81,8 +81,11 @@ public sealed class PlayerAttackController : MonoBehaviour
         float extendedArmRadius = moveset != null
             ? moveset.extendedArmHitboxRadius
             : .25f;
+        float extendedArmHeightOffset = moveset != null
+            ? moveset.extendedArmHitboxHeightOffset
+            : 0f;
         CurrentAttack = new PlayerAttackRuntime(definition, heat,
-            rotationSpeed, extendedArmRadius);
+            rotationSpeed, extendedArmRadius, extendedArmHeightOffset);
         CurrentPhase = PlayerAttackPhase.Windup; phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false; isExternalAttack = false;
         playerState.ChangeState(PlayerState.State.Attacking);
@@ -113,10 +116,12 @@ public sealed class PlayerAttackController : MonoBehaviour
             : 0f;
         float extendedArmRadius = moveset != null
             ? moveset.extendedArmHitboxRadius : .25f;
+        float extendedArmHeightOffset = moveset != null
+            ? moveset.extendedArmHitboxHeightOffset : 0f;
 
         // Eventos externos nao podem gastar Heat por serem marcados Heavy.
         CurrentAttack = new PlayerAttackRuntime(definition, null,
-            rotationSpeed, extendedArmRadius);
+            rotationSpeed, extendedArmRadius, extendedArmHeightOffset);
         CurrentPhase = PlayerAttackPhase.Windup;
         phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false;

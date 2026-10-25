@@ -4,6 +4,7 @@
         <ui:VisualElement name="pause-menu-content">
             <ui:VisualElement name="pause-main-view">
                 <ui:Label name="pause-menu-title" text="PAUSADO" />
+                <ui:Label name="main-menu-status" text="" />
                 <ui:Button name="pause-resume-button" text="CONTINUAR" />
                 <ui:Button name="pause-settings-button" text="CONFIGURAÇÕES" />
                 <ui:Button name="pause-quit-button" text="SAIR" />

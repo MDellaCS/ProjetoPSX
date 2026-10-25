@@ -40,15 +40,25 @@ public sealed class DialogueSequence : ScriptableObject
 {
     [Tooltip("Falas exibidas em ordem por esta sequencia.")]
     public List<DialogueLine> lines = new();
+    [Tooltip("Falas alternativas exibidas em ordem se o jogador sair da Leave Area enquanto Lines ainda estiverem sendo exibidas. Deixe vazio para nao usar essa opcao.")]
+    public List<DialogueLine> leaveEarlyLines = new();
 
     public bool HasLines => lines != null && lines.Count > 0;
+    public bool HasLeaveEarlyLines => leaveEarlyLines != null &&
+        leaveEarlyLines.Count > 0;
 
     private void OnValidate()
     {
-        if (lines == null)
+        ValidateLines(lines);
+        ValidateLines(leaveEarlyLines);
+    }
+
+    private static void ValidateLines(List<DialogueLine> dialogueLines)
+    {
+        if (dialogueLines == null)
             return;
 
-        foreach (DialogueLine line in lines)
+        foreach (DialogueLine line in dialogueLines)
         {
             if (line == null)
                 continue;

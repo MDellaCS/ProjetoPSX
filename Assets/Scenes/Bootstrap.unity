@@ -1141,6 +1141,145 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHUDToolkit
   panelRenderer: {fileID: 408286052}
   playerTransform: {fileID: 0}
+  multiplierChangeDelay: 0.2
+  thermometerVerticalPositionPercent: 64.2
+  thermometerPanelWidth: 520
+  thermometerMinimumPanelHeight: 64
+  multiplierBaseFontSize: 26
+  multiplierFontSizePerStep: 3.5
+  multiplierMaximumFontSize: 64
+  multiplierRotationPerStep: 2
+  multiplierMaximumHotRotation: 35
+  multiplierMaximumColdRotation: 25
+  multiplierColors:
+    serializedVersion: 2
+    key0: {r: 0.3, g: 0.75, b: 1, a: 1}
+    key1: {r: 1, g: 0.9, b: 0.58, a: 1}
+    key2: {r: 1, g: 0.48, b: 0.12, a: 0}
+    key3: {r: 1, g: 0.12, b: 0.06, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 6554
+    ctime2: 26214
+    ctime3: 65535
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 4
+    m_NumAlphaKeys: 2
+  notchesPerMajorDivider: 2
+  thermometerNotchWidth: 12
+  thermometerBarHeight: 9
+  superheatBarHeight: 9
+  emptyNotchColor: {r: 0.2735849, g: 0.2735849, b: 0.2735849, a: 1}
+  minorDividerColor: {r: 0.02, g: 0.03, b: 0.05, a: 0.9}
+  majorDividerColor: {r: 0.75, g: 0.78, b: 0.82, a: 0.9}
+  majorDividerWidth: 2
+  zeroMarkerColor: {r: 0.92, g: 0.94, b: 0.97, a: 1}
+  coldBarColors:
+    serializedVersion: 2
+    key0: {r: 0.04, g: 0.13, b: 0.35, a: 1}
+    key1: {r: 0.2, g: 0.85, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  heatBarColors:
+    serializedVersion: 2
+    key0: {r: 1, g: 0.75, b: 0.08, a: 1}
+    key1: {r: 1, g: 0.18, b: 0.02, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  superheatBarColors:
+    serializedVersion: 2
+    key0: {r: 0.45, g: 0, b: 0.02, a: 1}
+    key1: {r: 1, g: 0.08, b: 0.02, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
 --- !u!1931382934 &408286052
 PanelRenderer:
   m_ObjectHideFlags: 0
@@ -2138,6 +2277,30 @@ MonoBehaviour:
   burnPreExplosionDuration: 1.5
   burnInitialStunDuration: 0.4
   burningDuration: 8
+  burningHeatDescentCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   burnFinalStunDuration: 1.5
   burnMovementSpeedMultiplier: 0.2
   burnFinalColdPercent: 0.8
@@ -2186,6 +2349,8 @@ MonoBehaviour:
   canBeLaunchedForwards: 1
   canBeJuggled: 1
   incomingDamageNumberColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+  holdToResetAllSavesEnabled: 1
+  resetAllSavesHoldDuration: 3
 --- !u!114 &825647907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2202,7 +2367,7 @@ MonoBehaviour:
   acceleration: 120
   releaseDeceleration: 90
   reverseDeceleration: 220
-  momentumDeceleration: 61
+  momentumDeceleration: 39
   rotationSpeed: 17
   attackMomentumDeceleration: 80
   crouchSpeedMultiplier: 0.5
@@ -2222,15 +2387,12 @@ MonoBehaviour:
   steepSlopeMaximumSlideSpeed: 10
   gravity: -60
   terminalFallSpeed: 30
-  jumpInitialSpeed: 14
   jumpHoldAcceleration: 40
   maxJumpHoldDuration: 0.25
+  dashDuration: 0.3
   airControl: 40
   airMaxSpeedMultiplier: 1
   airDrag: 8
-  dashImpulseMultiplier: 1.6
-  dashDuration: 0.3
-  dashCooldown: 1.3
   enemyHeadSeparationSpeed: 10
   cameraTransform: {fileID: 330585546}
 --- !u!143 &825647908
@@ -4924,6 +5086,10 @@ PrefabInstance:
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 330585546}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: momentumDeceleration
+      value: 39
+      objectReference: {fileID: 0}
     - target: {fileID: 4893564215035896505, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: gameOverHUD
       value: 
@@ -4995,6 +5161,14 @@ PrefabInstance:
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: heatGeneratedPerDamageDealt
       value: 0.28
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: burningHeatDescentCurve.m_Curve.Array.data[1].inSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: burningHeatDescentCurve.m_Curve.Array.data[0].outSlope
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8082442720026125689, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: bufferDuration

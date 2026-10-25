@@ -1,0 +1,109 @@
+#heat-thermometer {
+    position: absolute;
+    left: 50%;
+    top: 57%;
+    width: 520px;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 8px;
+    padding-bottom: 9px;
+    background-color: rgba(8, 10, 14, 0.62);
+    border-left-width: 1px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(205, 212, 225, 0.55);
+    border-top-color: rgba(205, 212, 225, 0.55);
+    border-right-color: rgba(205, 212, 225, 0.55);
+    border-bottom-color: rgba(205, 212, 225, 0.55);
+}
+
+#thermometer-heading {
+    height: 27px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#thermometer-title {
+    color: rgb(198, 207, 220);
+    font-size: 10px;
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+}
+
+#heat-power-value {
+    min-width: 78px;
+    margin-left: 14px;
+    color: rgb(255, 225, 140);
+    font-size: 26px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    transform-origin: 50% 50%;
+}
+
+#thermometer-main-row {
+    height: 9px;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    overflow: visible;
+}
+
+.thermometer-notch-group {
+    flex-direction: row;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.thermometer-notch {
+    position: relative;
+    flex-shrink: 0;
+    width: 12px;
+    height: 9px;
+    background-color: rgb(28, 32, 39);
+    border-right-width: 1px;
+    border-right-color: rgba(4, 7, 12, 0.9);
+    overflow: hidden;
+}
+
+.thermometer-notch-major {
+    border-right-width: 3px;
+    border-right-color: rgba(190, 196, 204, 0.9);
+}
+
+.thermometer-notch-fill {
+    height: 100%;
+    width: 0%;
+}
+
+#thermometer-zero-notch {
+    flex-shrink: 0;
+    width: 3px;
+    height: 11px;
+    margin-left: 3px;
+    margin-right: 3px;
+    margin-top: -1px;
+    background-color: rgb(235, 239, 245);
+}
+
+.thermometer-superheat-row {
+    height: 3px;
+    margin-top: 6px;
+    justify-content: flex-end;
+}
+
+.thermometer-superheat-notch {
+    position: relative;
+    flex-shrink: 0;
+    width: 12px;
+    height: 3px;
+    margin-left: 1px;
+    background-color: rgb(38, 24, 26);
+    overflow: hidden;
+}
+
+.thermometer-superheat-notch .thermometer-notch-fill {
+    height: 100%;
+    width: 0%;
+}

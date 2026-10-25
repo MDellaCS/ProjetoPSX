@@ -68,6 +68,15 @@ public static class GameSettingsService
         PlayerPrefs.Save();
     }
 
+    /// <summary>Aplica as configuracoes padrao da sessao apos apagar todos os dados salvos.</summary>
+    public static void ResetToDefaults()
+    {
+        PlayerPrefs.DeleteKey(SaveKey);
+        applied = null;
+        EnsureLoaded();
+        Changed?.Invoke();
+    }
+
     private static void EnsureDefaults()
     {
         if (defaults != null)

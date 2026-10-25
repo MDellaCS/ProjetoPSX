@@ -184,8 +184,8 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
     private void UpdateHeatEffect()
     {
-        float normalizedHeat = playerHeat != null && playerHeat.MaxHeat > 0f
-            ? Mathf.Clamp01(playerHeat.CurrentHeat / playerHeat.MaxHeat) : 0f;
+        float normalizedHeat = playerHeat != null && playerHeat.InitialMaxHeat > 0f
+            ? Mathf.Clamp01(playerHeat.CurrentHeat / playerHeat.InitialMaxHeat) : 0f;
         float targetWeight = Mathf.Clamp01(positiveHeatEffectsCurve != null
             ? positiveHeatEffectsCurve.Evaluate(normalizedHeat)
             : normalizedHeat);

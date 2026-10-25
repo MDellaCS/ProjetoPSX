@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Controla um unico alvo travado pelo player. O alvo e escolhido entre os
-/// EnemyBase ativos, pode ser alternado pelo scroll e recebe um marcador verde.
+/// inimigos e objetos WorldLockOnTarget ativos, com scroll e marcador verde.
 /// </summary>
 public class PlayerLockOn : MonoBehaviour
 {
@@ -15,12 +15,12 @@ public class PlayerLockOn : MonoBehaviour
     [Min(1f)] [SerializeField] private float markerScreenSize = 16f;
     [SerializeField] private Color markerColor = new(.15f, 1f, .15f, 1f);
 
-    private readonly List<EnemyBase> candidates = new();
-    private EnemyBase lockedEnemy;
+    private readonly List<Component> candidates = new();
+    private Component lockedEnemy;
     private static Texture2D markerTexture;
 
-    public bool IsLockedOn => lockedEnemy != null && lockedEnemy.CanBeLockOnTarget;
-    public EnemyBase LockedEnemy => IsLockedOn ? lockedEnemy : null;
+    public bool IsLockedOn => lockedEnemy != null && CanTarget(lockedEnemy);
+    public EnemyBase LockedEnemy => IsLockedOn ? lockedEnemy as EnemyBase : null;
     public Transform LockedTarget => IsLockedOn ? lockedEnemy.transform : null;
     public Vector3 LockPoint => IsLockedOn
         ? GetEnemyCenter(lockedEnemy)
@@ -107,10 +107,10 @@ public class PlayerLockOn : MonoBehaviour
             return;
 
         Camera gameCamera = Camera.main;
-        EnemyBase bestTarget = null;
+        Component bestTarget = null;
         float bestScore = float.MaxValue;
 
-        foreach (EnemyBase candidate in candidates)
+        foreach (Component candidate in candidates)
         {
             float distance = Vector3.Distance(transform.position, candidate.transform.position);
             float score = distance;
@@ -181,6 +181,10 @@ public class PlayerLockOn : MonoBehaviour
             candidates.Add(enemy);
         }
 
+        foreach (WorldLockOnTarget target in Object.FindObjectsByType<WorldLockOnTarget>())
+            if (target.IsAvailable && Vector3.Distance(transform.position, target.Center) <= maximumLockDistance)
+                candidates.Add(target);
+
         candidates.Sort((first, second) =>
             Vector3.SqrMagnitude(first.transform.position - transform.position)
                 .CompareTo(Vector3.SqrMagnitude(
@@ -189,7 +193,7 @@ public class PlayerLockOn : MonoBehaviour
         );
     }
 
-    private void SetLock(EnemyBase enemy)
+    private void SetLock(Component enemy)
     {
         lockedEnemy = enemy;
     }
@@ -204,7 +208,7 @@ public class PlayerLockOn : MonoBehaviour
         if (lockedEnemy == null)
             return;
 
-        if (!lockedEnemy.CanBeLockOnTarget ||
+        if (!CanTarget(lockedEnemy) ||
             Vector3.Distance(transform.position, lockedEnemy.transform.position) >
                 maximumLockDistance)
         {
@@ -213,8 +217,9 @@ public class PlayerLockOn : MonoBehaviour
         }
     }
 
-    private static Vector3 GetEnemyCenter(EnemyBase enemy)
+    private static Vector3 GetEnemyCenter(Component enemy)
     {
+        if (enemy is WorldLockOnTarget worldTarget) return worldTarget.Center;
         Renderer enemyRenderer = enemy.GetComponentInChildren<Renderer>();
         if (enemyRenderer != null)
             return enemyRenderer.bounds.center;
@@ -224,6 +229,9 @@ public class PlayerLockOn : MonoBehaviour
             ? controller.bounds.center
             : enemy.transform.position + Vector3.up;
     }
+
+    private static bool CanTarget(Component target) => target is EnemyBase enemy
+        ? enemy.CanBeLockOnTarget : target is WorldLockOnTarget world && world.IsAvailable;
 
     private static Texture2D GetMarkerTexture()
     {

@@ -24,6 +24,7 @@ public sealed class DialogueController : MonoBehaviour
     private Label messageLabel;
     private Label advanceLabel;
     private DialogueSequence currentSequence;
+    private List<DialogueLine> currentLines;
     private int currentLineIndex;
     private float lineElapsed;
 
@@ -31,6 +32,16 @@ public sealed class DialogueController : MonoBehaviour
         ? instance : FindAnyObjectByType<DialogueController>();
     public static bool IsDisplaying => Instance != null &&
         Instance.currentSequence != null;
+    /// <summary>Indica que a fala atual aceita avanço manual e deve bloquear ataques do jogador.</summary>
+    public static bool BlocksPlayerAttacks
+    {
+        get
+        {
+            DialogueController controller = Instance;
+            return controller != null &&
+                controller.GetCurrentLine()?.allowEarlyAdvance == true;
+        }
+    }
     public DialogueSequence CurrentSequence => currentSequence;
     public int CurrentLineIndex => currentLineIndex;
 
@@ -95,6 +106,34 @@ public sealed class DialogueController : MonoBehaviour
         return true;
     }
 
+    /// <summary>Executa a resposta de Leave Area do dialogo atual.</summary>
+    public bool HandleLeaveArea(DialogueSequence sequence)
+    {
+        if (sequence == null || currentSequence != sequence)
+            return false;
+
+        queue.Clear();
+        if (sequence.HasLeaveEarlyLines)
+        {
+            currentLines = sequence.leaveEarlyLines;
+            currentLineIndex = 0;
+            BeginCurrentLine();
+        }
+        else
+        {
+            currentSequence = null;
+            currentLines = null;
+            currentLineIndex = 0;
+            lineElapsed = 0f;
+            BeginNextSequence();
+        }
+
+        return true;
+    }
+
+    public bool IsShowing(DialogueSequence sequence) =>
+        sequence != null && currentSequence == sequence;
+
     /// <summary>Versao sem retorno para UnityEvents de triggers e alavancas.</summary>
     public void ShowDialogue(DialogueSequence sequence) => TryShow(sequence);
 
@@ -118,6 +157,7 @@ public sealed class DialogueController : MonoBehaviour
                 continue;
 
             currentSequence = candidate;
+            currentLines = candidate.lines;
             BeginCurrentLine();
             return;
         }
@@ -132,14 +172,15 @@ public sealed class DialogueController : MonoBehaviour
         {
             // Uma entrada nula editada no Inspector nao deve prender a fila.
             currentLineIndex++;
-            if (currentSequence != null &&
-                currentLineIndex < currentSequence.lines.Count)
+            if (currentSequence != null && currentLines != null &&
+                currentLineIndex < currentLines.Count)
             {
                 BeginCurrentLine();
             }
             else
             {
                 currentSequence = null;
+                currentLines = null;
                 BeginNextSequence();
             }
             return;
@@ -156,13 +197,14 @@ public sealed class DialogueController : MonoBehaviour
             return;
 
         currentLineIndex++;
-        if (currentLineIndex < currentSequence.lines.Count)
+        if (currentLines != null && currentLineIndex < currentLines.Count)
         {
             BeginCurrentLine();
             return;
         }
 
         currentSequence = null;
+        currentLines = null;
         currentLineIndex = 0;
         lineElapsed = 0f;
         SetVisible(false);
@@ -171,10 +213,10 @@ public sealed class DialogueController : MonoBehaviour
 
     private DialogueLine GetCurrentLine()
     {
-        if (currentSequence == null || currentSequence.lines == null ||
-            currentLineIndex < 0 || currentLineIndex >= currentSequence.lines.Count)
+        if (currentLines == null || currentLineIndex < 0 ||
+            currentLineIndex >= currentLines.Count)
             return null;
-        return currentSequence.lines[currentLineIndex];
+        return currentLines[currentLineIndex];
     }
 
     private float GetMinimumDisplayDuration(DialogueLine line)

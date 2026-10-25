@@ -10,8 +10,6 @@ public class PlayerMovement : MonoBehaviour
         Dash
     }
 
-    private const int MaximumJumpCount = 2;
-
     [Header("Walking")]
     [Tooltip("Velocidade base maxima ao andar no chao.")]
     [Min(0f)] public float speed = 8f;
@@ -71,12 +69,14 @@ public class PlayerMovement : MonoBehaviour
     [Min(2f)] public float terminalFallSpeed = 30f;
 
     [Header("Jump")]
-    [Tooltip("Velocidade vertical aplicada ao iniciar um pulo.")]
-    [Min(0f)] public float jumpInitialSpeed = 14f;
     [Tooltip("Velocidade vertical adicional por segundo enquanto o botao de pulo permanece pressionado.")]
     [Min(0f)] public float jumpHoldAcceleration = 40f;
     [Tooltip("Tempo maximo em que segurar pulo aumenta sua altura.")]
     [Min(0f)] public float maxJumpHoldDuration = 0.25f;
+
+    [Header("Dash")]
+    [Tooltip("Duração global do estado de dash. Controla steering, dash-jump, cancelamentos e a troca para a animação seguinte; não altera o impulso inicial.")]
+    [Min(0f)] public float dashDuration = .3f;
 
     [Header("Air Movement")]
     [Tooltip("Aceleracao usada para mudar direcao e velocidade enquanto existe input no ar.")]
@@ -85,12 +85,6 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float airMaxSpeedMultiplier = 1f;
     [Tooltip("Desaceleracao passiva do momentum no ar quando nao existe input.")]
     [Min(0f)] public float airDrag = 8f;
-
-    [Header("Dash")]
-    [Tooltip("Impulso unico do Dash, calculado a partir da Speed base do jogador.")]
-    [Min(0f)] public float dashImpulseMultiplier = 1.6f;
-    [Min(0f)] public float dashDuration = 0.3f;
-    [Min(0f)] public float dashCooldown = 1.3f;
 
     [Header("Enemy Body Interaction")]
     [Tooltip("Impulso horizontal que tira o player de cima de um inimigo.")]
@@ -107,9 +101,11 @@ public class PlayerMovement : MonoBehaviour
         !IsStandingOnEnemy;
     public float DashCooldownRemaining => dashCooldownTimer;
     public bool IsDashReady =>
+        CanDash &&
         dashCooldownTimer <= 0f &&
         playerState != null &&
-        playerState.IsNormal();
+        playerState.IsNormal() &&
+        (IsGrounded || (CanAirDash && !hasUsedAirDash));
     public bool IsCrouching => isCrouching;
     public bool IsLaunched => isLaunched;
     public bool IsLaunchedForwards => launchForwardsVelocity.sqrMagnitude > .0001f;
@@ -159,6 +155,15 @@ public class PlayerMovement : MonoBehaviour
     private bool hasCachedStandingControllerShape;
 
     private bool IsStandingOnEnemy => enemyGroundContactTimer > 0f;
+    private bool CanAirJump => movesetController == null ||
+        movesetController.Moveset == null ||
+        movesetController.Moveset.allowAirJump;
+    private bool CanAirDash => movesetController == null ||
+        movesetController.Moveset == null ||
+        movesetController.Moveset.allowAirDash;
+    private bool CanDash => movesetController == null ||
+        movesetController.Moveset == null ||
+        movesetController.Moveset.allowDash;
 
     void Start()
     {
@@ -187,6 +192,13 @@ public class PlayerMovement : MonoBehaviour
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
+
+        if (!CanDash && playerState != null && playerState.IsDashing())
+        {
+            dashTimer = 0f;
+            dashStartedGrounded = false;
+            playerState.ChangeState(PlayerState.State.Normal);
+        }
 
         DesiredDirection = ReadMovementDirection();
 
@@ -227,10 +239,18 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartDash()
     {
+        if (!CanDash)
+        {
+            inputBuffer?.TryConsume(PlayerBufferedInput.Dash);
+            if (queuedRecoveryCancelAction == RecoveryCancelAction.Dash)
+                queuedRecoveryCancelAction = RecoveryCancelAction.None;
+            return;
+        }
+
         if (playerState.IsAttacking())
         {
             if (dashCooldownTimer <= 0f &&
-                (IsGrounded || !hasUsedAirDash) &&
+                (IsGrounded || (CanAirDash && !hasUsedAirDash)) &&
                 DesiredDirection.sqrMagnitude > 0.0001f)
             {
                 TryQueueRecoveryCancel(
@@ -249,7 +269,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (!canStartDash ||
             dashCooldownTimer > 0f ||
-            (!IsGrounded && hasUsedAirDash) ||
+            (!IsGrounded && (!CanAirDash || hasUsedAirDash)) ||
             DesiredDirection.sqrMagnitude < 0.0001f)
         {
             return;
@@ -264,7 +284,7 @@ public class PlayerMovement : MonoBehaviour
         dashStartedGrounded = IsGrounded;
         playerState.ChangeState(PlayerState.State.Dashing);
         dashTimer = dashDuration;
-        dashCooldownTimer = dashCooldown;
+        dashCooldownTimer = GetDashCooldown();
 
         if (!dashStartedGrounded)
             hasUsedAirDash = true;
@@ -293,7 +313,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (playerState.IsAttacking())
         {
-            if (jumpsUsed < MaximumJumpCount)
+            if (jumpsUsed < GetMaximumJumpCount())
             {
                 TryQueueRecoveryCancel(
                     PlayerBufferedInput.Jump,
@@ -313,7 +333,7 @@ public class PlayerMovement : MonoBehaviour
             !IsStandingOnEnemy;
 
         if (!canStartJump ||
-            jumpsUsed >= MaximumJumpCount)
+            jumpsUsed >= GetMaximumJumpCount())
         {
             return;
         }
@@ -344,7 +364,7 @@ public class PlayerMovement : MonoBehaviour
             isDashJump = false;
         }
 
-        verticalVelocity = jumpInitialSpeed;
+        verticalVelocity = GetJumpInitialSpeed();
         jumpHoldTimer = maxJumpHoldDuration;
         jumpsUsed++;
     }
@@ -422,7 +442,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartSlide()
     {
-        bool hasEnoughSpeed = horizontalVelocity.magnitude >= speed * slideStartSpeedPercent;
+        bool hasEnoughSpeed = horizontalVelocity.magnitude >=
+            GetMovementSpeed() * slideStartSpeedPercent;
         bool isMovingDownhill = IsMovingDownhill(horizontalVelocity);
 
         if (!playerState.IsNormal() ||
@@ -710,7 +731,7 @@ public class PlayerMovement : MonoBehaviour
         float multiplier = playerHeat != null
             ? playerHeat.BurnMovementSpeedMultiplier
             : 0f;
-        Vector3 targetVelocity = DesiredDirection * speed * multiplier;
+        Vector3 targetVelocity = DesiredDirection * GetMovementSpeed() * multiplier;
 
         return Vector3.MoveTowards(
             horizontalVelocity,
@@ -906,9 +927,10 @@ public class PlayerMovement : MonoBehaviour
         if (TryGetSteepSlopeDownhillDirection(out Vector3 downhillDirection))
             return CalculateSteepSlopeVelocity(downhillDirection);
 
+        float movementSpeed = GetMovementSpeed();
         float currentSpeed = isCrouching
-            ? speed * crouchSpeedMultiplier
-            : speed;
+            ? movementSpeed * crouchSpeedMultiplier
+            : movementSpeed;
         Vector3 targetVelocity = DesiredDirection * currentSpeed;
         float rate = GetGroundMovementRate(targetVelocity);
 
@@ -1000,7 +1022,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (DesiredDirection.sqrMagnitude > 0.0001f)
         {
-            float maximumAirSpeed = speed * airMaxSpeedMultiplier;
+            float maximumAirSpeed = GetMovementSpeed() * airMaxSpeedMultiplier;
             Vector3 targetVelocity =
                 DesiredDirection * maximumAirSpeed;
 
@@ -1033,8 +1055,28 @@ public class PlayerMovement : MonoBehaviour
 
     private float GetDashImpulse()
     {
-        return speed * dashImpulseMultiplier;
+        return movesetController != null &&
+            movesetController.Moveset != null
+            ? movesetController.Moveset.dashImpulse
+            : 12.8f;
     }
+
+    private float GetMovementSpeed() => speed *
+        (movesetController != null && movesetController.Moveset != null
+            ? movesetController.Moveset.movementSpeedMultiplier
+            : 1f);
+
+    private float GetJumpInitialSpeed() => movesetController != null &&
+        movesetController.Moveset != null
+        ? movesetController.Moveset.jumpInitialSpeed
+        : 14f;
+
+    private float GetDashCooldown() => movesetController != null &&
+        movesetController.Moveset != null
+        ? movesetController.Moveset.dashCooldown
+        : 1.3f;
+
+    private int GetMaximumJumpCount() => CanAirJump ? 2 : 1;
 
     private void RotateTowardsMovement()
     {
@@ -1283,7 +1325,8 @@ public class PlayerMovement : MonoBehaviour
 
     private float GetMaximumJumpHeight()
     {
-        if (jumpInitialSpeed <= 0f)
+        float initialJumpSpeed = GetJumpInitialSpeed();
+        if (initialJumpSpeed <= 0f)
             return 0f;
 
         float holdDuration = Mathf.Max(0f, maxJumpHoldDuration);
@@ -1291,17 +1334,17 @@ public class PlayerMovement : MonoBehaviour
 
         // O hold so fornece impulso enquanto o player ainda sobe. Se a
         // gravidade vencer antes do limite, usamos apenas esse trecho real.
-        if (accelerationDuringHold < 0f && jumpInitialSpeed > 0f)
+        if (accelerationDuringHold < 0f && initialJumpSpeed > 0f)
         {
             holdDuration = Mathf.Min(
                 holdDuration,
-                jumpInitialSpeed / -accelerationDuringHold
+                initialJumpSpeed / -accelerationDuringHold
             );
         }
 
-        float speedAfterHold = jumpInitialSpeed +
+        float speedAfterHold = initialJumpSpeed +
             accelerationDuringHold * holdDuration;
-        float heightDuringHold = jumpInitialSpeed * holdDuration +
+        float heightDuringHold = initialJumpSpeed * holdDuration +
             .5f * accelerationDuringHold * holdDuration * holdDuration;
         float gravityMagnitude = Mathf.Max(.001f, Mathf.Abs(gravity));
 

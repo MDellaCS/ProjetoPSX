@@ -21,6 +21,12 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Cor dos numeros de dano recebido pelo player.")]
     [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
 
+    [Header("Reset de Progresso")]
+    [Tooltip("Permite limpar todos os dados salvos mantendo Y pressionado. O progresso e apagado apenas ao completar o tempo configurado.")]
+    [SerializeField] private bool holdToResetAllSavesEnabled = true;
+    [Tooltip("Tempo em segundos que Y precisa ficar pressionado para apagar todos os saves, incluindo progresso, currency, opcoes e configuracoes de teclas.")]
+    [Min(.1f)] [SerializeField] private float resetAllSavesHoldDuration = 3f;
+
     private Renderer playerRenderer;
 
     private PlayerState playerState;
@@ -32,6 +38,8 @@ public class PlayerHealth : MonoBehaviour
     private PlayerHeat playerHeat;
     private DamageNumberSpawner damageNumbers;
     private bool godMode;
+    private float resetAllSavesHoldElapsed;
+    private bool resetAllSavesTriggered;
 
     private float staggerTimer;
     private bool waitingForForcedReactionEnd;
@@ -41,6 +49,10 @@ public class PlayerHealth : MonoBehaviour
 
     public bool IsGodMode => godMode;
     public float CurrentPoise => poise.Current;
+    public bool IsHoldingResetAllSaves => resetAllSavesHoldElapsed > 0f;
+    public float ResetAllSavesHoldProgress => holdToResetAllSavesEnabled
+        ? Mathf.Clamp01(resetAllSavesHoldElapsed / Mathf.Max(.1f, resetAllSavesHoldDuration))
+        : 0f;
 
     void Start()
     {
@@ -107,13 +119,56 @@ public class PlayerHealth : MonoBehaviour
     private void UpdateDebugShortcuts()
     {
         if (GamePauseController.IsPaused)
+        {
+            resetAllSavesHoldElapsed = 0f;
+            resetAllSavesTriggered = false;
             return;
+        }
+
+        UpdateResetAllSavesShortcut();
 
         if (GameInput.DebugGodModePressed)
             godMode = !godMode;
 
         if (GameInput.DebugMaxHeatPressed)
             playerHeat?.FillHeatAndSuperheatForDebug();
+    }
+
+    private void UpdateResetAllSavesShortcut()
+    {
+        if (!holdToResetAllSavesEnabled || CutsceneController.IsPlayerControlLocked ||
+            Keyboard.current == null ||
+            !Keyboard.current.yKey.isPressed)
+        {
+            resetAllSavesHoldElapsed = 0f;
+            resetAllSavesTriggered = false;
+            return;
+        }
+
+        if (resetAllSavesTriggered)
+            return;
+
+        resetAllSavesHoldElapsed += Time.unscaledDeltaTime;
+        if (resetAllSavesHoldElapsed < Mathf.Max(.1f, resetAllSavesHoldDuration))
+            return;
+
+        resetAllSavesTriggered = true;
+        GameSaveResetService.ResetAllSavesAndReload(gameObject);
+    }
+
+    /// <summary>Retorna estados temporarios de dano ao estado inicial de uma nova campanha.</summary>
+    public void ResetForNewGame()
+    {
+        godMode = false;
+        staggerTimer = 0f;
+        waitingForForcedReactionEnd = false;
+        applySuperStaggerAfterForcedReaction = false;
+        resetAllSavesHoldElapsed = 0f;
+        resetAllSavesTriggered = false;
+        poise.Initialize(maxPoise);
+        playerState?.ResetForNewGame();
+        if (playerRenderer != null)
+            playerRenderer.material.color = normalColor;
     }
 
     void StartStagger(bool superStagger = false)

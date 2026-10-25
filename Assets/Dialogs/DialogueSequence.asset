@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05e0fcf50c704c77a1fd86f4d3f0b231, type: 3}
+  m_Name: DialogueSequence
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueSequence
+  lines:
+  - text: Teste
+    speakerName: 1
+    voiceOverClip: {fileID: 0}
+    voiceOverVolume: 0
+    finishMode: 2
+    displayDuration: 4
+    allowEarlyAdvance: 1
+    minimumDisplayDuration: 0
+  - text: Teste Teste
+    speakerName: 2
+    voiceOverClip: {fileID: 0}
+    voiceOverVolume: 0
+    finishMode: 2
+    displayDuration: 4
+    allowEarlyAdvance: 1
+    minimumDisplayDuration: 0
+  - text: Teste Teste Teste
+    speakerName: 1
+    voiceOverClip: {fileID: 0}
+    voiceOverVolume: 0
+    finishMode: 2
+    displayDuration: 4
+    allowEarlyAdvance: 1
+    minimumDisplayDuration: 0
+  leaveEarlyLines:
+  - text: Bla
+    speakerName: 1
+    voiceOverClip: {fileID: 0}
+    voiceOverVolume: 0
+    finishMode: 0
+    displayDuration: 2
+    allowEarlyAdvance: 0
+    minimumDisplayDuration: 0

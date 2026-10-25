@@ -10,19 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5b98f1fcdf334852af096c0b0bb97bcb, type: 3}
-  m_Name: L3p
+  m_Name: AirH1
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
-  attackId: L3p
-  displayName: L3p
-  kind: 0
-  context: 0
-  windupDuration: 0.08
-  activeDuration: 0.8
-  recoveryDuration: 0.12
-  baseDamage: 35
-  basePoiseDamage: 55
+  attackId: AirH1
+  displayName: AirH1
+  kind: 1
+  context: 1
+  windupDuration: 0.5
+  activeDuration: 0.03
+  recoveryDuration: 0.35
+  holdActiveUntilGrounded: 1
+  baseDamage: 45
+  basePoiseDamage: 20
   movement:
-    forwardDistance: 2
+    forwardDistance: 1
     startNormalized: 0
     endNormalized: 1
     movementCurve:
@@ -50,7 +51,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   strikes:
-  - strikeName: L3p
+  - strikeName: AirH1
     activeStartNormalized: 0
     activeEndNormalized: 1
     damageMultiplier: 1
@@ -83,30 +84,30 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-    generatesHeatOnHit: 1
+    generatesHeatOnHit: 0
     effects:
-      launchDown: 0
-      selfLaunchDown: 0
+      launchDown: 1
+      selfLaunchDown: 1
       launchUp: 0
       selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
-    - trackName: L3p_Gira
+    - trackName: Heavy Sphere
       shape: 0
       anchorMode: 0
-      trajectoryMode: 1
+      trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
-      startLocalPosition: {x: -0.36, y: 0.36, z: 0.2}
-      endLocalPosition: {x: 0, y: 0.36, z: 4}
+      startLocalPosition: {x: 0.36, y: 0.4, z: 0.7}
+      endLocalPosition: {x: 0, y: -0.8, z: 0.7}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 180
+      orbitStartAngleDegrees: 0
       orbitEndAngleDegrees: 360
-      orbitStartDistance: 0.1
-      orbitEndDistance: 5
-      orbitHeight: 0.36
+      orbitStartDistance: 1
+      orbitEndDistance: 1
+      orbitHeight: 0
       orbitAngleCurve:
         serializedVersion: 2
         m_Curve:
@@ -114,7 +115,7 @@ MonoBehaviour:
           time: 0
           value: 0
           inSlope: 0
-          outSlope: 0
+          outSlope: 1
           tangentMode: 0
           weightedMode: 0
           inWeight: 0
@@ -122,8 +123,8 @@ MonoBehaviour:
         - serializedVersion: 3
           time: 1
           value: 1
-          inSlope: 2
-          outSlope: 2
+          inSlope: 1
+          outSlope: 0
           tangentMode: 0
           weightedMode: 0
           inWeight: 0
@@ -137,9 +138,9 @@ MonoBehaviour:
         - serializedVersion: 3
           time: 0
           value: 0
-          inSlope: 1
+          inSlope: 0
           outSlope: 1
-          tangentMode: 34
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
@@ -147,16 +148,16 @@ MonoBehaviour:
           time: 1
           value: 1
           inSlope: 1
-          outSlope: 1
-          tangentMode: 34
+          outSlope: 0
+          tangentMode: 0
           weightedMode: 0
           inWeight: 0
           outWeight: 0
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      orbitStartRadius: 0.6
-      orbitEndRadius: 0.6
+      orbitStartRadius: 0.5
+      orbitEndRadius: 0.5
       orbitRadiusCurve:
         serializedVersion: 2
         m_Curve:
@@ -181,115 +182,15 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 0.5
-      capsuleHeight: 3.12
+      radius: 1.2
+      capsuleHeight: 1
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}
       activeStartNormalized: 0
-      activeEndNormalized: 0.5
-      sweep: 1
-      sweepStepDistance: 0.18
-      hitGroup: 0
-      allowRepeatHits: 0
-      repeatHitInterval: 0.01
-    - trackName: L3p_Gira2
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 1
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.36, y: 0.36, z: 4}
-      endLocalPosition: {x: 0, y: 0.36, z: 0.2}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 360
-      orbitEndAngleDegrees: 560
-      orbitStartDistance: 5
-      orbitEndDistance: 0.1
-      orbitHeight: 0.36
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 2
-          outSlope: 2
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 1
-          outSlope: 1
-          tangentMode: 34
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.6
-      orbitEndRadius: 0.6
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 0
-          outSlope: 1
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 1
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.5
-      capsuleHeight: 3.12
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.5
       activeEndNormalized: 1
-      sweep: 1
-      sweepStepDistance: 0.18
+      sweep: 0
+      sweepStepDistance: 0.25
       hitGroup: 0
       allowRepeatHits: 0
-      repeatHitInterval: 0.01
-  usesExtendedArmHitbox: 1
+      repeatHitInterval: 0.1
+  usesExtendedArmHitbox: 0

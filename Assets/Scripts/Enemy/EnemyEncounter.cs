@@ -14,6 +14,10 @@ public sealed class EnemyEncounter : MonoBehaviour
     [Tooltip("Player do encontro. Se vazio, usa a tag Player.")]
     [SerializeField] private Transform player;
 
+    [Header("Conclusao")]
+    [Tooltip("Tempo em segundos entre a derrota dos ultimos inimigos e a conclusao do encontro. As barreiras permanecem fechadas durante esse intervalo.")]
+    [Min(0f)] [SerializeField] private float completionDelayAfterLastEnemyDeath = 2f;
+
     [Header("Spawn Global - Chao")]
     [Tooltip("Altura acima da area para procurar o chao.")]
     [Min(0f)] [SerializeField] private float spawnRayHeight = 10f;
@@ -52,6 +56,8 @@ public sealed class EnemyEncounter : MonoBehaviour
     private int nextWaveIndex;
     private float nextWaveTimer;
     private bool nextWaveScheduled;
+    private bool completionPending;
+    private float completionDelayRemaining;
 
     public EncounterState CurrentState => state;
     public int CurrentWaveIndex => currentWaveIndex;
@@ -115,6 +121,8 @@ public sealed class EnemyEncounter : MonoBehaviour
             nextWaveTimer -= Time.deltaTime;
             if (nextWaveTimer <= 0f) StartNextWave();
         }
+        if (completionPending)
+            completionDelayRemaining -= Time.unscaledDeltaTime;
         ScheduleNextWave();
         TryComplete();
     }
@@ -181,10 +189,21 @@ public sealed class EnemyEncounter : MonoBehaviour
     {
         if (state != EncounterState.Active || nextWaveScheduled ||
             nextWaveIndex < waves.Count || !AllStartedWavesComplete()) return;
+
+        if (!completionPending)
+        {
+            completionPending = true;
+            completionDelayRemaining = Mathf.Max(0f,
+                completionDelayAfterLastEnemyDeath);
+            if (completedByEnemyDeath)
+                GameTimeScaleEffects.PlayDefaultSlowMotion();
+        }
+
+        if (completionDelayRemaining > 0f)
+            return;
+
         state = EncounterState.Completed;
         foreach (EncounterBarrier barrier in barriers) barrier?.Unlock();
-        if (completedByEnemyDeath)
-            GameTimeScaleEffects.PlayDefaultSlowMotion();
     }
 
     internal bool TryFindSpawnPosition(EnemyEncounterWave wave, float multiplier,

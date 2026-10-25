@@ -47,6 +47,9 @@ public class PlayerAnimationPresenter : MonoBehaviour
 
     private void Update()
     {
+        if (CutsceneController.IsPlayerControlLocked)
+            return;
+
         ResolveGameplaySources();
         SetVisualState(ResolveVisualState());
         PresentCurrentMovement();

@@ -72,4 +72,11 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
         Changed?.Invoke(Current);
         return true;
     }
+
+    /// <summary>Limpa o saldo em memoria apos o servico apagar os dados persistentes.</summary>
+    public void ResetProgress()
+    {
+        Current = 0;
+        Changed?.Invoke(Current);
+    }
 }

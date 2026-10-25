@@ -12,6 +12,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private enum SettingsPage { Audio, Video, Camera, Controls, Accessibility }
 
     public static bool IsOpen { get; private set; }
+    internal VisualElement UIRoot => root;
 
     [Header("References")]
     [Tooltip("Panel Renderer que apresenta o UXML do menu de pausa e configurações.")]
@@ -25,6 +26,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private VisualElement mainView;
     private VisualElement settingsView;
     private ScrollView options;
+    private Label menuTitle;
+    private Label mainMenuStatus;
     private Label status;
     private Label keyHint;
     private GameSettingsData originalSettings;
@@ -34,6 +37,9 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private CursorLockMode cursorLockBeforePause;
     private bool cursorVisibleBeforePause;
     private bool settingsOpen;
+    private bool mainMenuMode;
+    private Action startGameAction;
+    private string mainMenuMessage;
     private int selectedIndex;
     private float nextNavigationAt;
 
@@ -44,6 +50,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
             panelRenderer = GetComponent<PanelRenderer>();
         panelRenderer?.RegisterUIReloadCallback(HandleUIReload);
         SetVisible(false);
+        if (GetComponent<CurrencyShopHUD>() == null)
+            gameObject.AddComponent<CurrencyShopHUD>();
     }
 
     private void OnEnable()
@@ -67,11 +75,12 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private void Update()
     {
+        if (CurrencyShopHUD.BlocksPauseInput) return;
         if (GameInputBindings.IsRebinding ||
             Time.frameCount <= GameInputBindings.LastRebindFrame + 1)
             return;
 
-        if (GameInput.PausePressed)
+        if (GameInput.PausePressed && !mainMenuMode)
         {
             if (settingsOpen)
                 CancelSettings();
@@ -87,7 +96,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
         if (GameInput.UICancelPressed)
         {
             if (settingsOpen) CancelSettings();
-            else Resume();
+            else if (!mainMenuMode) Resume();
             return;
         }
 
@@ -122,14 +131,18 @@ public sealed class PauseMenuHUD : MonoBehaviour
         root = visualRoot;
         if (root == null)
             return;
+        GetComponent<CurrencyShopHUD>()?.EnsureUI(root);
         overlay = root.Q<VisualElement>("pause-menu-overlay");
         content = root.Q<VisualElement>("pause-menu-content");
         mainView = root.Q<VisualElement>("pause-main-view");
         settingsView = root.Q<VisualElement>("pause-settings-view");
         options = root.Q<ScrollView>("settings-options");
+        menuTitle = root.Q<Label>("pause-menu-title");
+        mainMenuStatus = root.Q<Label>("main-menu-status");
         status = root.Q<Label>("settings-status");
         keyHint = root.Q<Label>("pause-key-hint");
         RebuildButtons();
+        ApplyMenuModePresentation();
         SetVisible(IsOpen);
         RefreshScale();
         RefreshHint();
@@ -143,9 +156,19 @@ public sealed class PauseMenuHUD : MonoBehaviour
             return;
         if (!settingsOpen)
         {
-            AddButton(root.Q<Button>("pause-resume-button"), Resume);
-            AddButton(root.Q<Button>("pause-settings-button"), OpenSettings);
-            AddButton(root.Q<Button>("pause-quit-button"), QuitPlaySession);
+            Button primaryButton = root.Q<Button>("pause-resume-button");
+            Button settingsButton = root.Q<Button>("pause-settings-button");
+            Button quitButton = root.Q<Button>("pause-quit-button");
+            if (primaryButton != null)
+                primaryButton.text = mainMenuMode ? "NOVO JOGO" : "CONTINUAR";
+            if (settingsButton != null)
+                settingsButton.text = "CONFIGURAÇÕES";
+            if (quitButton != null)
+                quitButton.text = "SAIR";
+            AddButton(primaryButton, mainMenuMode
+                ? new Action(StartNewGame) : new Action(Resume));
+            AddButton(settingsButton, OpenSettings);
+            AddButton(quitButton, QuitPlaySession);
         }
         else
         {
@@ -160,6 +183,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
             AddButton(root.Q<Button>("settings-cancel-button"), CancelSettings);
         }
         Select(0);
+        ApplyMenuModePresentation();
     }
 
     private void AddButton(Button button, Action command)
@@ -197,6 +221,42 @@ public sealed class PauseMenuHUD : MonoBehaviour
         RebuildButtons();
     }
 
+    public void ShowMainMenu(Action onStartGame)
+    {
+        mainMenuMode = true;
+        startGameAction = onStartGame;
+        mainMenuMessage = string.Empty;
+        settingsOpen = false;
+        if (!IsOpen)
+            Pause();
+        else
+        {
+            SetVisible(true);
+            RebuildButtons();
+        }
+        ApplyMenuModePresentation();
+    }
+
+    public void CloseMainMenu()
+    {
+        if (mainMenuMode)
+            Resume();
+    }
+
+    private void StartNewGame() => startGameAction?.Invoke();
+
+    public void SetMainMenuMessage(string message)
+    {
+        mainMenuMessage = message ?? string.Empty;
+        if (mainMenuStatus == null)
+            return;
+
+        mainMenuStatus.text = mainMenuMessage;
+        mainMenuStatus.style.display = mainMenuMode &&
+            !string.IsNullOrEmpty(mainMenuMessage)
+            ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
     public void Resume()
     {
         if (!IsOpen)
@@ -204,10 +264,13 @@ public sealed class PauseMenuHUD : MonoBehaviour
         if (settingsOpen)
             CancelSettings();
         IsOpen = false;
+        mainMenuMode = false;
+        startGameAction = null;
         GamePauseController.ReleasePause(this);
         SetVisible(false);
         UnityEngine.Cursor.lockState = cursorLockBeforePause;
         UnityEngine.Cursor.visible = cursorVisibleBeforePause;
+        ApplyMenuModePresentation();
     }
 
     private void OpenSettings()
@@ -410,6 +473,22 @@ public sealed class PauseMenuHUD : MonoBehaviour
             ? DisplayStyle.None : DisplayStyle.Flex;
         if (settingsView != null) settingsView.style.display = settingsOpen
             ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    private void ApplyMenuModePresentation()
+    {
+        if (menuTitle != null)
+            menuTitle.text = mainMenuMode ? "PROJETO PSX" : "PAUSADO";
+        if (overlay != null)
+            overlay.EnableInClassList("main-menu-mode", mainMenuMode);
+        if (keyHint != null)
+        {
+            keyHint.style.display = mainMenuMode
+                ? DisplayStyle.None : DisplayStyle.Flex;
+            if (!mainMenuMode)
+                RefreshHint();
+        }
+        SetMainMenuMessage(mainMenuMessage);
     }
 
     private void RefreshScale()

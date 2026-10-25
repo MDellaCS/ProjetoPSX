@@ -70,6 +70,10 @@ public sealed class CameraFollow : MonoBehaviour
 
     private CharacterController targetController;
     private CinemachineThirdPersonFollow thirdPersonFollow;
+    private CinemachineCamera menuCamera;
+    private bool ownsMenuCamera;
+    private CinemachineBlendDefinition gameplayDefaultBlend;
+    private bool hasSavedDefaultBlend;
     private CameraEffectStack effectStack;
     private CameraGameplayEffects gameplayEffects;
     private CameraPlayerVisibility playerVisibility;
@@ -144,6 +148,8 @@ public sealed class CameraFollow : MonoBehaviour
         if (Instance == this)
             Instance = null;
 
+        if (ownsMenuCamera && menuCamera != null)
+            Destroy(menuCamera.gameObject);
         if (ownsGameplayCamera && gameplayCamera != null)
             Destroy(gameplayCamera.gameObject);
         if (ownsTrackingPivot && trackingPivot != null)
@@ -194,6 +200,102 @@ public sealed class CameraFollow : MonoBehaviour
             thirdPersonFollow = gameplayCamera.gameObject.AddComponent<CinemachineThirdPersonFollow>();
 
         ConfigureCinemachineComponents();
+    }
+
+    /// <summary>Exibe a cena do menu por uma camera Cinemachine estatica.</summary>
+    public void EnterStaticMenuCamera(Vector3 worldPosition,
+        Vector3 worldEulerAngles)
+    {
+        EnsureCinemachineRig();
+        PrepareInstantCameraSwitch();
+
+        if (menuCamera != null && !ownsMenuCamera)
+        {
+            menuCamera.Priority = 0;
+            menuCamera = null;
+        }
+
+        if (menuCamera == null)
+        {
+            GameObject cameraObject = new("Main Menu Camera (Runtime)");
+            ParentRuntimeObjectToPersistentRoot(cameraObject);
+            menuCamera = cameraObject.AddComponent<CinemachineCamera>();
+            ownsMenuCamera = true;
+        }
+
+        menuCamera.Follow = null;
+        menuCamera.LookAt = null;
+        menuCamera.transform.SetPositionAndRotation(worldPosition,
+            Quaternion.Euler(worldEulerAngles));
+        menuCamera.Lens.FieldOfView = baseFieldOfView;
+        menuCamera.PreviousStateIsValid = false;
+        menuCamera.Priority = gameplayCameraPriority + 1;
+    }
+
+    /// <summary>Ativa uma CinemachineCamera da cena como camera estatica do menu.</summary>
+    public void EnterMenuCamera(CinemachineCamera sceneCamera)
+    {
+        if (sceneCamera == null)
+            return;
+
+        EnsureCinemachineRig();
+        PrepareInstantCameraSwitch();
+        if (menuCamera != null && menuCamera != sceneCamera)
+        {
+            if (ownsMenuCamera)
+                Destroy(menuCamera.gameObject);
+            else
+                menuCamera.Priority = 0;
+        }
+
+        menuCamera = sceneCamera;
+        ownsMenuCamera = false;
+        menuCamera.Follow = null;
+        menuCamera.LookAt = null;
+        menuCamera.PreviousStateIsValid = false;
+        menuCamera.Priority = gameplayCameraPriority + 1;
+    }
+
+    private void PrepareInstantCameraSwitch()
+    {
+        CinemachineBrain brain = GetComponent<CinemachineBrain>();
+        if (brain == null)
+            return;
+
+        if (!hasSavedDefaultBlend)
+        {
+            gameplayDefaultBlend = brain.DefaultBlend;
+            hasSavedDefaultBlend = true;
+        }
+
+        CinemachineBlendDefinition instantBlend = brain.DefaultBlend;
+        instantBlend.Time = 0f;
+        brain.DefaultBlend = instantBlend;
+    }
+
+    /// <summary>Retoma o follow do jogador depois de sair do menu.</summary>
+    public void ExitStaticMenuCamera(Transform persistentPlayer = null)
+    {
+        CinemachineBrain brain = GetComponent<CinemachineBrain>();
+        if (brain != null && hasSavedDefaultBlend)
+        {
+            brain.DefaultBlend = gameplayDefaultBlend;
+            hasSavedDefaultBlend = false;
+        }
+
+        if (menuCamera != null)
+        {
+            if (ownsMenuCamera)
+                Destroy(menuCamera.gameObject);
+            else
+                menuCamera.Priority = 0;
+            menuCamera = null;
+            ownsMenuCamera = false;
+        }
+
+        if (gameplayCamera != null)
+            gameplayCamera.Priority = gameplayCameraPriority;
+        RefreshAfterSceneLoad(persistentPlayer);
     }
 
     private void ConfigureCinemachineComponents()

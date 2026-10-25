@@ -50,6 +50,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
         if (definition == null || definition.strikes == null) return;
         CharacterController controller = GetComponent<CharacterController>();
         Vector3 origin = transform.position + transform.rotation * (controller != null ? controller.center : Vector3.zero);
+        Vector3 extendedArmOrigin = origin + transform.up * GetExtendedArmHeightOffset();
         float windupEnd = definition.windupDuration;
         float activeEnd = windupEnd + definition.activeDuration;
         if (previewTime < windupEnd)
@@ -90,7 +91,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
                 DrawWireCapsule(capsuleA, capsuleB, effectiveRadius);
             }
             if (extendedArmRadius > 0f)
-                DrawWireCapsule(origin, center, extendedArmRadius);
+                DrawWireCapsule(extendedArmOrigin, center, extendedArmRadius);
             }
         }
     }
@@ -111,6 +112,15 @@ public sealed class PlayerAttackPreview : MonoBehaviour
             ? Mathf.Max(.01f,
                 controller.Moveset.extendedArmHitboxRadius)
             : .25f;
+    }
+
+    private float GetExtendedArmHeightOffset()
+    {
+        PlayerMovesetController controller =
+            GetComponent<PlayerMovesetController>();
+        return controller != null && controller.Moveset != null
+            ? controller.Moveset.extendedArmHitboxHeightOffset
+            : 0f;
     }
 
     private void GetPose(PlayerHitboxTrackDefinition track, Vector3 origin, float progress,

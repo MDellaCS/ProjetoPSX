@@ -43,6 +43,15 @@ public sealed class EnemyGore : MonoBehaviour
     }
 
     public int CurrencyGorePieces => currencyGorePieces;
+    /// <summary>Emite a mesma recompensa de morte para objetos destrutiveis do mundo.</summary>
+    public void EmitCurrencyDeath(int lethalDamage, int maximumHealth,
+        Vector3 position, Vector3 direction)
+    {
+        CombatParticleSystem.Instance.EmitCurrencyDeath(deathProfile, position,
+            direction, lethalDamage, GetComponentInChildren<Renderer>(true),
+            particleCountMultiplier, CurrencyValueRange,
+            GetCurrencyGorePieceCount(lethalDamage, maximumHealth));
+    }
     public Vector2Int CurrencyValueRange => new(
         Mathf.Min(baseCurrencyValue.x, baseCurrencyValue.y),
         Mathf.Max(baseCurrencyValue.x, baseCurrencyValue.y));

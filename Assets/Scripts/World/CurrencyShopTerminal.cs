@@ -1,84 +1,60 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
-/// <summary>Area de mapa que abre uma loja de currency para melhorar Carga.</summary>
-[RequireComponent(typeof(Collider))]
-[DisallowMultipleComponent]
-public sealed class CurrencyShopTerminal : MonoBehaviour
+public enum ShopDestructionMode
 {
-    [Header("Loja")]
-    [Tooltip("Nome apresentado no topo da loja.")]
-    [SerializeField] private string shopTitle = "FORJA DE CARGA";
-    [Tooltip("Texto auxiliar exibido abaixo do titulo da loja.")]
-    [TextArea] [SerializeField] private string shopDescription = "Aumenta sua capacidade maxima de Heat.";
+    AccumulateWithinWindow,
+    SingleHitOnly
+}
 
-    [Header("Carga")]
-    [Tooltip("Nivel maximo que o jogador pode comprar para Carga nesta configuracao.")]
-    [Min(0)] [SerializeField] private int maximumChargeLevel = 10;
-    [Tooltip("Curva de preco da proxima Carga. X e o nivel que sera comprado; Y e a currency necessaria.")]
-    [SerializeField] private AnimationCurve currencyCostByNextLevel = AnimationCurve.Linear(1f, 10f, 10f, 100f);
-    [Tooltip("Curva do bonus de Max Heat. X e o nivel atual de Carga; Y e o Heat adicional total nesse nivel.")]
-    [SerializeField] private AnimationCurve maxHeatBonusByChargeLevel = AnimationCurve.Linear(0f, 0f, 10f, 100f);
-
-    private Transform playerInside;
-
-    public string ShopTitle => shopTitle;
-    public string ShopDescription => shopDescription;
-    public int MaximumChargeLevel => maximumChargeLevel;
-
-    private void Reset() => GetComponent<Collider>().isTrigger = true;
-
-    private void OnValidate()
+/// <summary>Terminal destrutivel; todos os terminais acessam o mesmo catalogo e progresso do Player.</summary>
+[RequireComponent(typeof(Collider), typeof(EnemyGore), typeof(WorldLockOnTarget))]
+[DisallowMultipleComponent]
+public sealed class CurrencyShopTerminal : MonoBehaviour, IPlayerAttackTarget
+{
+    [Header("Destruicao")]
+    [Tooltip("Acumula dano dentro da janela de tempo ou exige que um unico golpe alcance todo o dano necessario.")]
+    [SerializeField] private ShopDestructionMode destructionMode;
+    [InspectorName("Required Damage")]
+    [Tooltip("Dano necessario para destruir este terminal. Usado como limite acumulado ou minimo de um unico golpe, conforme o modo.")]
+    [Min(1)] [SerializeField] private int maximumHealth = 100;
+    [Tooltip("Intervalo maximo entre golpes para manter o dano acumulado. Apos esse tempo, o proximo golpe inicia uma nova soma. Ignorado no modo Single Hit Only.")]
+    [Min(0f)] [SerializeField] private float damageWindow = 1f;
+    [Tooltip("Filho que contem apenas o visual da loja, separado dos colliders.")]
+    [SerializeField] private GameObject visualRoot;
+    private int accumulatedDamage;
+    private float lastDamageTime = float.NegativeInfinity;
+    private EnemyGore gore;
+    public bool IsDestroyed { get; private set; }
+    private void Awake()
     {
-        maximumChargeLevel = Mathf.Max(0, maximumChargeLevel);
-        Collider area = GetComponent<Collider>();
-        if (area != null) area.isTrigger = true;
+        gore = GetComponent<EnemyGore>();
     }
-
-    private void Update()
+    public bool OpenShop(Transform player)
     {
-        if (playerInside == null || CurrencyShopHUD.IsOpen ||
-            GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked)
-            return;
-        if (Keyboard.current?.eKey.wasPressedThisFrame == true)
-            OpenShop();
+        return !IsDestroyed && player != null && CurrencyShopHUD.Open(this, player);
     }
-
-    private void OnTriggerEnter(Collider other)
+    public bool ReceivePlayerAttack(int damage, Vector3 impactPosition, Vector3 impactDirection)
     {
-        PlayerHeat heat = other.GetComponentInParent<PlayerHeat>();
-        if (heat != null) playerInside = heat.transform;
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (playerInside != null && other.GetComponentInParent<PlayerHeat>()?.transform == playerInside)
-            playerInside = null;
-    }
-
-    public int GetCostForNextLevel(int currentLevel)
-    {
-        return Mathf.Max(0, Mathf.RoundToInt(currencyCostByNextLevel.Evaluate(currentLevel + 1)));
-    }
-
-    public float GetMaxHeatBonusForLevel(int level) => Mathf.Max(0f,
-        maxHeatBonusByChargeLevel.Evaluate(level));
-
-    public void ConfigureCharge(PlayerChargeUpgrade charge) =>
-        charge?.Configure(maximumChargeLevel, maxHeatBonusByChargeLevel);
-
-    private void OpenShop()
-    {
-        PlayerChargeUpgrade charge = PlayerChargeUpgrade.FindOrCreate(playerInside);
-        ConfigureCharge(charge);
-        CurrencyShopHUD.Open(this, playerInside);
-    }
-
-    private void OnDrawGizmos()
-    {
-        Collider area = GetComponent<Collider>();
-        if (area == null) return;
-        Gizmos.color = new Color(.95f, .7f, .12f, .8f);
-        Gizmos.DrawWireCube(area.bounds.center, area.bounds.size);
+        if (IsDestroyed || damage <= 0) return false;
+        int threshold = Mathf.Max(1, maximumHealth);
+        if (destructionMode == ShopDestructionMode.SingleHitOnly)
+        {
+            if (damage < threshold) return true;
+        }
+        else
+        {
+            if (Time.time - lastDamageTime > Mathf.Max(0f, damageWindow))
+                accumulatedDamage = 0;
+            accumulatedDamage = (int)System.Math.Min(threshold, (long)accumulatedDamage + damage);
+            lastDamageTime = Time.time;
+            if (accumulatedDamage < threshold) return true;
+        }
+        IsDestroyed = true;
+        CurrencyShopHUD.CloseFor(this);
+        gore.EmitCurrencyDeath(damage, maximumHealth, impactPosition, impactDirection);
+        if (visualRoot != null) visualRoot.SetActive(false);
+        foreach (Collider collider in GetComponentsInChildren<Collider>()) collider.enabled = false;
+        gameObject.SetActive(false);
+        return true;
     }
 }

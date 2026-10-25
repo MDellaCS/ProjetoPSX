@@ -10,29 +10,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5b98f1fcdf334852af096c0b0bb97bcb, type: 3}
-  m_Name: L4
+  m_Name: L3
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
-  attackId: L4
-  displayName: L4
+  attackId: L3
+  displayName: L3
   kind: 0
   context: 0
-  windupDuration: 0.16
-  activeDuration: 0.18
-  recoveryDuration: 0.3
-  baseDamage: 25
-  basePoiseDamage: 50
+  windupDuration: 0.08
+  activeDuration: 0.4
+  recoveryDuration: 0.1
+  holdActiveUntilGrounded: 0
+  baseDamage: 7
+  basePoiseDamage: 3
   movement:
-    forwardDistance: 1.05
+    forwardDistance: 1.1
     startNormalized: 0
-    endNormalized: 0.85
+    endNormalized: 0.3
     movementCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
         value: 0
-        inSlope: 0
-        outSlope: 0
+        inSlope: 2
+        outSlope: 2
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
@@ -40,8 +41,8 @@ MonoBehaviour:
       - serializedVersion: 3
         time: 1
         value: 1
-        inSlope: 2
-        outSlope: 2
+        inSlope: 0
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
@@ -50,7 +51,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   strikes:
-  - strikeName: L4
+  - strikeName: L3
     activeStartNormalized: 0
     activeEndNormalized: 1
     damageMultiplier: 1
@@ -83,7 +84,7 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-    generatesHeatOnHit: 1
+    generatesHeatOnHit: 0
     effects:
       launchDown: 0
       selfLaunchDown: 0
@@ -92,14 +93,14 @@ MonoBehaviour:
       launchForwards: 0
       juggle: 0
     hitboxes:
-    - trackName: L4_Vai_Esquerda
+    - trackName: L3_1
       shape: 0
       anchorMode: 0
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
       startLocalPosition: {x: 0.36, y: 0.36, z: 0.2}
-      endLocalPosition: {x: 0.48, y: 0.36, z: 3.5}
+      endLocalPosition: {x: 0, y: 0.36, z: 1.8}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -181,25 +182,25 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 0.6
+      radius: 0.3
       capsuleHeight: 3.12
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}
       activeStartNormalized: 0
-      activeEndNormalized: 1
+      activeEndNormalized: 0.3333
       sweep: 1
       sweepStepDistance: 0.18
       hitGroup: 0
       allowRepeatHits: 0
       repeatHitInterval: 0.05
-    - trackName: L4_Vai_Direita
+    - trackName: L3_2
       shape: 0
       anchorMode: 0
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
       startLocalPosition: {x: -0.36, y: 0.36, z: 0.2}
-      endLocalPosition: {x: -0.48, y: 0.36, z: 3.5}
+      endLocalPosition: {x: 0, y: 0.36, z: 1.8}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -281,15 +282,115 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 0.6
+      radius: 0.3
       capsuleHeight: 3.12
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 1
+      activeStartNormalized: 0.3333
+      activeEndNormalized: 0.6666
       sweep: 1
       sweepStepDistance: 0.18
       hitGroup: 1
+      allowRepeatHits: 0
+      repeatHitInterval: 0.05
+    - trackName: L3_3
+      shape: 0
+      anchorMode: 0
+      trajectoryMode: 0
+      primaryAnchorId: 
+      secondaryAnchorId: 
+      startLocalPosition: {x: 0.36, y: 0.36, z: 0.2}
+      endLocalPosition: {x: 0, y: 0.36, z: 1.8}
+      startLocalEuler: {x: 0, y: 0, z: 0}
+      endLocalEuler: {x: 0, y: 0, z: 0}
+      orbitStartAngleDegrees: 0
+      orbitEndAngleDegrees: 360
+      orbitStartDistance: 1
+      orbitEndDistance: 1
+      orbitHeight: 0
+      orbitAngleCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      orbitDistanceCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      orbitStartRadius: 0.5
+      orbitEndRadius: 0.5
+      orbitRadiusCurve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 0
+          outSlope: 1
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+      radius: 0.3
+      capsuleHeight: 3.12
+      capsuleAxis: 2
+      boxSize: {x: 1, y: 1, z: 1}
+      activeStartNormalized: 0.6666
+      activeEndNormalized: 1
+      sweep: 1
+      sweepStepDistance: 0.18
+      hitGroup: 2
       allowRepeatHits: 0
       repeatHitInterval: 0.05
   usesExtendedArmHitbox: 1

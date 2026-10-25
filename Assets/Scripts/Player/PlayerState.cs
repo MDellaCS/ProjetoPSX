@@ -13,7 +13,8 @@ public class PlayerState : MonoBehaviour
         Sliding = 7,
         BurnStunned = 8,
         Burning = 9,
-        BurnPreExplosion = 10
+        BurnPreExplosion = 10,
+        Rage = 11
     }
 
     [Header("Debug - State Colors")]
@@ -31,13 +32,14 @@ public class PlayerState : MonoBehaviour
     [SerializeField] private Color deadColor = Color.gray;
 
     private Material debugMaterial;
+    private PlayerHeat playerHeat;
 
     [SerializeField]
     private State currentState = State.Normal;
 
     public State CurrentState => currentState;
 
-    public bool IsNormal() => currentState == State.Normal;
+    public bool IsNormal() => currentState == State.Normal || currentState == State.Rage;
     public bool IsAttacking() => currentState == State.Attacking;
     public bool IsDashing() => currentState == State.Dashing;
     public bool IsSliding() => currentState == State.Sliding;
@@ -53,6 +55,9 @@ public class PlayerState : MonoBehaviour
         if (currentState == State.Dead)
             return;
 
+        if (newState == State.Normal && playerHeat != null && playerHeat.IsRaging)
+            newState = State.Rage;
+
         if (currentState == newState)
             return;
 
@@ -60,8 +65,16 @@ public class PlayerState : MonoBehaviour
         UpdateStateColor();
     }
 
+    /// <summary>Forca o estado inicial ao iniciar uma campanha nova, inclusive apos morte permanente.</summary>
+    public void ResetForNewGame()
+    {
+        currentState = State.Normal;
+        UpdateStateColor();
+    }
+
     void Awake()
     {
+        playerHeat = GetComponent<PlayerHeat>();
         if (playerRenderer != null)
             debugMaterial = playerRenderer.material;
 
@@ -76,6 +89,7 @@ public class PlayerState : MonoBehaviour
         switch (currentState)
         {
             case State.Normal:
+            case State.Rage:
                 debugMaterial.color = normalColor;
                 break;
 
