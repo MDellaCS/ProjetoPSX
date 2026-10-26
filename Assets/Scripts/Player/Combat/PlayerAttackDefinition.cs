@@ -166,7 +166,7 @@ public class PlayerHitboxTrackDefinition
     [Min(0f)] public float orbitStartDistance = 1f;
     [Tooltip("Distancia horizontal do centro do player no fim da orbita.")]
     [Min(0f)] public float orbitEndDistance = 1f;
-    [Tooltip("Altura local da orbita em relacao ao centro real do CharacterController.")]
+    [Tooltip("Altura local da orbita em relacao ao centro real da capsula de colisao do jogador.")]
     public float orbitHeight;
     [Tooltip("Curva que distribui a progressao angular da orbita.")]
     public AnimationCurve orbitAngleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);

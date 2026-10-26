@@ -8,13 +8,13 @@ public sealed class PlayerAttackDebug : MonoBehaviour
     [Tooltip("Tamanho da fonte usada para mostrar o ataque atual com F3 ativo.")]
     [Min(1)] [SerializeField] private int fontSize = 24;
     private PlayerAttackController attacks;
-    private CharacterController controller;
+    private PlayerCharacterController controller;
     private GUIStyle style;
 
     private void Awake()
     {
         attacks = GetComponent<PlayerAttackController>();
-        controller = GetComponent<CharacterController>();
+        controller = GetComponent<PlayerCharacterController>();
     }
 
     private void OnGUI()

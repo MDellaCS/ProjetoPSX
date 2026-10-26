@@ -156,10 +156,10 @@ public sealed class EnemyAttackSelector
 
     private Vector3 GetTargetCenter()
     {
-        CharacterController targetController = brain.Target != null
-            ? brain.Target.GetComponent<CharacterController>() : null;
+        PlayerCharacterController targetController = brain.Target != null
+            ? brain.Target.GetComponent<PlayerCharacterController>() : null;
         return targetController != null
-            ? brain.Target.TransformPoint(targetController.center)
+            ? targetController.bounds.center
             : brain.Target.position;
     }
 

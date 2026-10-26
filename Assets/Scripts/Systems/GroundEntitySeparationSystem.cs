@@ -24,11 +24,16 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
 
     private struct GroundEntity
     {
-        public CharacterController controller;
+        public PlayerCharacterController playerController;
+        public CharacterController enemyController;
         public PlayerMovement player;
         public EnemyMovement enemy;
 
         public Transform Transform => player != null ? player.transform : enemy.transform;
+        public Bounds Bounds => player != null
+            ? playerController.bounds : enemyController.bounds;
+        public float Radius => player != null
+            ? playerController.radius : enemyController.radius;
         public float VerticalVelocity => player != null
             ? player.VerticalSpeed
             : enemy.VerticalVelocity;
@@ -66,16 +71,28 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
 
     private void TryAdd(PlayerMovement player, EnemyMovement enemy)
     {
-        CharacterController controller = player != null
-            ? player.EntityCharacterController
-            : enemy.EntityCharacterController;
-        if (controller == null || !controller.enabled || !controller.gameObject.activeInHierarchy)
+        if (player != null)
+        {
+            PlayerCharacterController controller = player.EntityCharacterController;
+            if (controller == null || !controller.enabled ||
+                !controller.IsColliderEnabled || !controller.gameObject.activeInHierarchy)
+                return;
+            entities.Add(new GroundEntity
+            {
+                playerController = controller,
+                player = player
+            });
             return;
+        }
 
+        CharacterController enemyController = enemy != null
+            ? enemy.EntityCharacterController : null;
+        if (enemyController == null || !enemyController.enabled ||
+            !enemyController.gameObject.activeInHierarchy)
+            return;
         entities.Add(new GroundEntity
         {
-            controller = controller,
-            player = player,
+            enemyController = enemyController,
             enemy = enemy
         });
     }
@@ -85,12 +102,12 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
         if (!HasRelevantVerticalContact(first, second))
             return;
 
-        Vector3 firstCenter = first.controller.bounds.center;
-        Vector3 secondCenter = second.controller.bounds.center;
+        Vector3 firstCenter = first.Bounds.center;
+        Vector3 secondCenter = second.Bounds.center;
         Vector3 offset = secondCenter - firstCenter;
         offset.y = 0f;
 
-        float requiredDistance = first.controller.radius + second.controller.radius + horizontalClearance;
+        float requiredDistance = first.Radius + second.Radius + horizontalClearance;
         float currentDistance = offset.magnitude;
         if (currentDistance >= requiredDistance)
             return;
@@ -129,8 +146,8 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
 
     private bool HasRelevantVerticalContact(GroundEntity first, GroundEntity second)
     {
-        Bounds firstBounds = first.controller.bounds;
-        Bounds secondBounds = second.controller.bounds;
+        Bounds firstBounds = first.Bounds;
+        Bounds secondBounds = second.Bounds;
         bool verticalOverlap = firstBounds.min.y <= secondBounds.max.y + verticalContactTolerance &&
             secondBounds.min.y <= firstBounds.max.y + verticalContactTolerance;
         if (!verticalOverlap)
@@ -167,7 +184,7 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
         if (top.player == null)
             return;
 
-        if (top.controller.bounds.min.y >= bottom.controller.bounds.max.y - verticalContactTolerance)
+        if (top.Bounds.min.y >= bottom.Bounds.max.y - verticalContactTolerance)
             top.player.MarkEntityAsInvalidGround();
     }
 }

@@ -386,7 +386,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 825647889}
-  - component: {fileID: 825647908}
+  - component: {fileID: 825647911}
+  - component: {fileID: 825647910}
   - component: {fileID: 825647907}
   - component: {fileID: 825647906}
   - component: {fileID: 825647905}
@@ -413,6 +414,133 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!1 &194061015
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 194061018}
+  - component: {fileID: 194061017}
+  - component: {fileID: 194061016}
+  m_Layer: 0
+  m_Name: Directional Light
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &194061016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194061015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
+--- !u!108 &194061017
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194061015}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 1
+  m_Color: {r: 1, g: 0.7204201, b: 0.5990566, a: 1}
+  m_Intensity: 2
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 1
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 2
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 0.5
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &194061018
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194061015}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalPosition: {x: -2.85744, y: 6.93148, z: 138.02599}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 311817224}
+  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
 --- !u!1 &237586981
 GameObject:
   m_ObjectHideFlags: 0
@@ -541,12 +669,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameSceneLoader
   player: {fileID: 825647889}
   defaultSpawnId: 0
-  loadGameplaySceneOnStart: 1
+  mainMenuSceneName: MainMenu
+  mainMenuCameraPosition: {x: 0, y: 5, z: -10}
+  mainMenuCameraEulerAngles: {x: 18, y: 0, z: 0}
+  mainMenuCameraObjectName: MenuCameraPose
+  newGameCutsceneObjectName: NewGameIntro
   enableDebugSceneShortcuts: 1
-  testArenaSceneName: TestArena
-  loadTestArenaKey: 102
   gameplaySceneName: Fase1
-  loadGameplaySceneKey: 103
 --- !u!114 &311817223
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -584,6 +713,7 @@ Transform:
   - {fileID: 1841670994}
   - {fileID: 832575519}
   - {fileID: 1302352074}
+  - {fileID: 194061018}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &313362714
@@ -2383,8 +2513,8 @@ MonoBehaviour:
   slideFriction: 16
   slideSlopeAcceleration: 24
   steeringStrength: 40
-  steepSlopeSlideAcceleration: 30
-  steepSlopeMaximumSlideSpeed: 10
+  steepSlopeSlideAcceleration: 45
+  steepSlopeMaximumSlideSpeed: 15
   gravity: -60
   terminalFallSpeed: 30
   jumpHoldAcceleration: 40
@@ -2395,31 +2525,6 @@ MonoBehaviour:
   airDrag: 8
   enemyHeadSeparationSpeed: 10
   cameraTransform: {fileID: 330585546}
---- !u!143 &825647908
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 6382434361883257593, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-  m_PrefabInstance: {fileID: 1676307159516073868}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 181039840}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 2.5
-  m_Radius: 0.55
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 1.25, z: 0}
 --- !u!114 &825647909
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2438,6 +2543,56 @@ MonoBehaviour:
   attractionDelay: 3
   attractionAcceleration: 8
   maximumAttractionSpeed: 16
+--- !u!136 &825647910
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.53
+  m_Height: 2.56
+  m_Direction: 1
+  m_Center: {x: 0, y: 1.25, z: 0}
+--- !u!114 &825647911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a252f5184a634bf6bafc467f5d7685bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCharacterController
+  capsuleHeight: 2.56
+  capsuleRadius: 0.53
+  capsuleCenter: {x: 0, y: 1.25, z: 0}
+  collisionLayers:
+    serializedVersion: 2
+    m_Bits: 243
+  skinWidth: 0.1
+  maxSweepIterations: 5
+  maxDepenetrationIterations: 4
+  queryBufferSize: 32
+  maximumWalkableSlope: 60
+  groundProbeDistance: 0.12
+  stepHeight: 0.3
+  groundSnapDistance: 0.18
+  copyLegacyControllerSettings: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -5090,6 +5245,14 @@ PrefabInstance:
       propertyPath: momentumDeceleration
       value: 39
       objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: steepSlopeMaximumSlideSpeed
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: steepSlopeSlideAcceleration
+      value: 45
+      objectReference: {fileID: 0}
     - target: {fileID: 4893564215035896505, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: gameOverHUD
       value: 
@@ -5133,6 +5296,10 @@ PrefabInstance:
     - target: {fileID: 5494030409911995304, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6382434361883257593, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: m_SlopeLimit
+      value: 40
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burningDuration
@@ -5178,7 +5345,8 @@ PrefabInstance:
       propertyPath: maximumLockDistance
       value: 17
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 0}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

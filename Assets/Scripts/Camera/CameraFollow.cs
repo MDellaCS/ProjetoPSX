@@ -68,7 +68,7 @@ public sealed class CameraFollow : MonoBehaviour
     [Tooltip("Campo de visao base. Modificadores podem somar alteracoes sem substituir este valor.")]
     [Range(1f, 179f)] [SerializeField] private float baseFieldOfView = 60f;
 
-    private CharacterController targetController;
+    private PlayerCharacterController targetController;
     private CinemachineThirdPersonFollow thirdPersonFollow;
     private CinemachineCamera menuCamera;
     private bool ownsMenuCamera;
@@ -111,7 +111,7 @@ public sealed class CameraFollow : MonoBehaviour
         // reinicializar o follow.
         EnsureCinemachineRig();
         targetController = target != null
-            ? target.GetComponent<CharacterController>() : null;
+            ? target.GetComponent<PlayerCharacterController>() : null;
         initialized = false;
         Initialize();
         if (gameplayCamera != null)
@@ -320,7 +320,7 @@ public sealed class CameraFollow : MonoBehaviour
         if (target == null || gameplayCamera == null || thirdPersonFollow == null)
             return;
 
-        targetController = target.GetComponent<CharacterController>();
+        targetController = target.GetComponent<PlayerCharacterController>();
         yaw = target.eulerAngles.y + initialYaw;
         pitch = Mathf.Clamp(initialPitch, minimumPitch, maximumPitch);
         previousTargetCenter = GetTargetCenter();
@@ -415,7 +415,7 @@ public sealed class CameraFollow : MonoBehaviour
         if (target == null)
             return transform.position;
         if (targetController == null)
-            targetController = target.GetComponent<CharacterController>();
+            targetController = target.GetComponent<PlayerCharacterController>();
         if (targetController != null)
         {
             Bounds bounds = targetController.bounds;

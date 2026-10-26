@@ -16,14 +16,14 @@ public sealed class PlayerHitboxController : MonoBehaviour
     private readonly List<DebugVolume> debugVolumes = new();
     private PlayerAttackRuntime runtime;
     private PlayerAttackResolver resolver;
-    private CharacterController characterController;
+    private PlayerCharacterController characterController;
 
     private struct DebugVolume { public PlayerHitboxShape shape; public Vector3 center, a, b, size; public Quaternion rotation; public float radius; }
 
     private void Awake()
     {
         resolver = GetComponent<PlayerAttackResolver>();
-        characterController = GetComponent<CharacterController>();
+        characterController = GetComponent<PlayerCharacterController>();
         foreach (PlayerHitboxAnchor anchor in GetComponentsInChildren<PlayerHitboxAnchor>(true))
             if (anchor != null && !string.IsNullOrWhiteSpace(anchor.AnchorId)) anchors[anchor.AnchorId] = anchor;
     }

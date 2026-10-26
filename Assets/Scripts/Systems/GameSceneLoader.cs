@@ -203,14 +203,26 @@ public sealed class GameSceneLoader : MonoBehaviour
             spawnId);
         if (player != null && spawn != null)
         {
-            CharacterController controller = player.GetComponent<CharacterController>();
-            bool controllerWasEnabled = controller != null && controller.enabled;
-            if (controllerWasEnabled)
-                controller.enabled = false;
-            player.SetPositionAndRotation(spawn.transform.position,
-                spawn.transform.rotation);
-            if (controllerWasEnabled)
-                controller.enabled = true;
+            PlayerCharacterController controller =
+                player.GetComponent<PlayerCharacterController>();
+            if (controller != null)
+            {
+                controller.Teleport(spawn.transform.position,
+                    spawn.transform.rotation);
+            }
+            else
+            {
+                CharacterController legacyController =
+                    player.GetComponent<CharacterController>();
+                bool wasEnabled = legacyController != null &&
+                    legacyController.enabled;
+                if (wasEnabled)
+                    legacyController.enabled = false;
+                player.SetPositionAndRotation(spawn.transform.position,
+                    spawn.transform.rotation);
+                if (wasEnabled)
+                    legacyController.enabled = true;
+            }
         }
 
         CameraFollow cameraFollow = CameraFollow.Instance != null

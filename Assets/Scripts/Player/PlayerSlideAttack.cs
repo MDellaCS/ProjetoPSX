@@ -28,7 +28,7 @@ public class PlayerSlideAttack : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerState playerState;
     private PlayerAttackResolver attackResolver;
-    private CharacterController controller;
+    private PlayerCharacterController controller;
     private bool wasSliding;
 
     private sealed class IgnoredEnemyCollision
@@ -56,7 +56,7 @@ public class PlayerSlideAttack : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
         playerState = GetComponent<PlayerState>();
         attackResolver = GetComponent<PlayerAttackResolver>();
-        controller = GetComponent<CharacterController>();
+        controller = GetComponent<PlayerCharacterController>();
     }
 
     private void Update()
@@ -128,10 +128,10 @@ public class PlayerSlideAttack : MonoBehaviour
 
         foreach (Collider enemyCollider in enemy.GetComponentsInChildren<Collider>())
         {
-            if (enemyCollider == null || enemyCollider == controller)
+            if (enemyCollider == null || enemyCollider == controller.Collider)
                 continue;
 
-            Physics.IgnoreCollision(controller, enemyCollider, true);
+            Physics.IgnoreCollision(controller.Collider, enemyCollider, true);
             ignored.colliders.Add(enemyCollider);
         }
 
@@ -168,7 +168,7 @@ public class PlayerSlideAttack : MonoBehaviour
         foreach (Collider enemyCollider in ignored.colliders)
         {
             if (enemyCollider != null)
-                Physics.IgnoreCollision(controller, enemyCollider, false);
+                Physics.IgnoreCollision(controller.Collider, enemyCollider, false);
         }
     }
 
@@ -204,9 +204,9 @@ public class PlayerSlideAttack : MonoBehaviour
             !IsActive)
             return;
 
-        CharacterController characterController = controller != null
+        PlayerCharacterController characterController = controller != null
             ? controller
-            : GetComponent<CharacterController>();
+            : GetComponent<PlayerCharacterController>();
         if (characterController == null)
             return;
 

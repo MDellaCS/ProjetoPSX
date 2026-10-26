@@ -18,7 +18,7 @@ public sealed class CameraPlayerVisibility : MonoBehaviour
 
     private Transform player;
     private Camera controlledCamera;
-    private CharacterController playerController;
+    private PlayerCharacterController playerController;
     private Renderer[] playerRenderers = System.Array.Empty<Renderer>();
     private bool[] previousForceRenderingOff = System.Array.Empty<bool>();
     private bool isHidden;
@@ -29,7 +29,7 @@ public sealed class CameraPlayerVisibility : MonoBehaviour
         player = playerTarget;
         controlledCamera = cameraComponent;
         playerController = player != null
-            ? player.GetComponent<CharacterController>()
+            ? player.GetComponent<PlayerCharacterController>()
             : null;
         RefreshRenderers();
     }
@@ -72,7 +72,7 @@ public sealed class CameraPlayerVisibility : MonoBehaviour
     private Vector3 GetPlayerCenter()
     {
         if (playerController == null && player != null)
-            playerController = player.GetComponent<CharacterController>();
+            playerController = player.GetComponent<PlayerCharacterController>();
         return playerController != null
             ? playerController.bounds.center
             : player.position;

@@ -614,8 +614,8 @@ public sealed class EnemyMovement : MonoBehaviour
     private bool IsLandingOnPlayerTop(PlayerMovement player)
     {
         if (controller == null || verticalVelocity > 0f) return false;
-        CharacterController playerController =
-            player.GetComponent<CharacterController>();
+        PlayerCharacterController playerController =
+            player.EntityCharacterController;
         if (playerController == null) return false;
         return controller.bounds.min.y >= playerController.bounds.max.y - .15f;
     }

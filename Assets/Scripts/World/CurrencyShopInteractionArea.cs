@@ -41,7 +41,7 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
         if (target == null || !isActiveAndEnabled) return false;
         areaCollider ??= GetComponent<Collider>();
         if (areaCollider == null || !areaCollider.enabled) return false;
-        CharacterController controller = target.GetComponent<CharacterController>();
+        PlayerCharacterController controller = target.GetComponent<PlayerCharacterController>();
         Vector3 center = controller != null ? controller.bounds.center : target.position;
         // ClosestPoint respeita o formato, transform e escala do trigger.
         // A verificacao funciona mesmo se o Player ja nasceu dentro da area

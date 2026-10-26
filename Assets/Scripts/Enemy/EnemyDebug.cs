@@ -133,8 +133,8 @@ public sealed class EnemyDebug : MonoBehaviour
         Vector3 enemyCenter = characterController != null
             ? characterController.bounds.center
             : transform.position;
-        CharacterController playerController =
-            brain.Target.GetComponent<CharacterController>();
+        PlayerCharacterController playerController =
+            brain.Target.GetComponent<PlayerCharacterController>();
         Vector3 playerCenter = playerController != null
             ? playerController.bounds.center
             : brain.Target.position;

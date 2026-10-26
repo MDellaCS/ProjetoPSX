@@ -48,19 +48,27 @@ public sealed class PlayerAttackPreview : MonoBehaviour
     private void DrawAttack(PlayerAttackDefinition definition, float previewTime)
     {
         if (definition == null || definition.strikes == null) return;
-        CharacterController controller = GetComponent<CharacterController>();
-        Vector3 origin = transform.position + transform.rotation * (controller != null ? controller.center : Vector3.zero);
+        PlayerCharacterController controller = GetComponent<PlayerCharacterController>();
+        CharacterController legacyController = controller == null
+            ? GetComponent<CharacterController>() : null;
+        Vector3 capsuleCenter = controller != null
+            ? controller.center
+            : legacyController != null ? legacyController.center : Vector3.zero;
+        float capsuleRadius = controller != null
+            ? controller.radius
+            : legacyController != null ? legacyController.radius : .5f;
+        Vector3 origin = transform.position + transform.rotation * capsuleCenter;
         Vector3 extendedArmOrigin = origin + transform.up * GetExtendedArmHeightOffset();
         float windupEnd = definition.windupDuration;
         float activeEnd = windupEnd + definition.activeDuration;
         if (previewTime < windupEnd)
         {
-            DrawPhaseRing(origin, controller, Color.green);
+            DrawPhaseRing(origin, capsuleRadius, Color.green);
             return;
         }
         if (previewTime >= activeEnd)
         {
-            DrawPhaseRing(origin, controller, new Color(1f, .45f, 0f));
+            DrawPhaseRing(origin, capsuleRadius, new Color(1f, .45f, 0f));
             return;
         }
 
@@ -96,12 +104,11 @@ public sealed class PlayerAttackPreview : MonoBehaviour
         }
     }
 
-    private static void DrawPhaseRing(Vector3 origin, CharacterController controller,
+    private static void DrawPhaseRing(Vector3 origin, float controllerRadius,
         Color color)
     {
         Gizmos.color = color;
-        float radius = controller != null ? Mathf.Max(.3f, controller.radius * 1.15f) : .65f;
-        Gizmos.DrawWireSphere(origin, radius);
+        Gizmos.DrawWireSphere(origin, Mathf.Max(.3f, controllerRadius * 1.15f));
     }
 
     private float GetExtendedArmRadius()

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[DefaultExecutionOrder(-1000)]
 public class PlayerMovement : MonoBehaviour
 {
     private enum RecoveryCancelAction
@@ -31,7 +32,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("Crouch")]
     [Tooltip("Botao lateral voltar do mouse. Deve permanecer pressionado para agachar.")]
     [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.5f;
-    [Tooltip("Multiplicador da altura do CharacterController ao agachar ou deslizar.")]
+    [Tooltip("Multiplicador da altura da capsula de colisao ao agachar ou deslizar.")]
     [Range(0.2f, 1f)] public float crouchingHeightMultiplier = 0.6f;
     [Tooltip("Largura da capsula agachada como porcentagem do maximo fisicamente possivel para sua altura. 1 = o mais largo permitido.")]
     [Range(0.1f, 1f)] public float crouchingRadiusPercentOfHeight = 0.815f;
@@ -57,7 +58,7 @@ public class PlayerMovement : MonoBehaviour
     [Min(0f)] public float steeringStrength = 40f;
 
     [Header("Steep Slopes")]
-    [Tooltip("Aceleracao que puxa o player para baixo em inclinacoes acima do Slope Limit do CharacterController.")]
+    [Tooltip("Aceleracao que puxa o player para baixo em inclinacoes acima do limite configurado no PlayerCharacterController.")]
     [Min(0f)] public float steepSlopeSlideAcceleration = 30f;
     [Tooltip("Velocidade maxima ao escorregar automaticamente por uma inclinacao muito alta.")]
     [Min(0f)] public float steepSlopeMaximumSlideSpeed = 10f;
@@ -114,10 +115,10 @@ public class PlayerMovement : MonoBehaviour
         playerState != null &&
         playerState.IsDashing() &&
         dashStartedGrounded;
-    /// <summary>CharacterController exposto apenas para a separacao central de entidades terrestres.</summary>
-    public CharacterController EntityCharacterController => controller;
+    /// <summary>Motor de colisao exposto para a separacao central de entidades terrestres.</summary>
+    public PlayerCharacterController EntityCharacterController => controller;
 
-    private CharacterController controller;
+    private PlayerCharacterController controller;
     private PlayerState playerState;
     private PlayerAttackController attackController;
     private PlayerHeat playerHeat;
@@ -127,7 +128,6 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 horizontalVelocity;
     private Vector3 launchForwardsVelocity;
     private Vector3 slideDirection;
-    private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
     private float verticalVelocity;
     private float jumpHoldTimer;
@@ -165,9 +165,14 @@ public class PlayerMovement : MonoBehaviour
         movesetController.Moveset == null ||
         movesetController.Moveset.allowDash;
 
+    private void Awake()
+    {
+        controller = PlayerCharacterController.GetOrAdd(gameObject);
+        controller.CollisionHit += HandleControllerHit;
+    }
+
     void Start()
     {
-        controller = GetComponent<CharacterController>();
         CacheStandingControllerShape();
         playerState = GetComponent<PlayerState>();
         attackController = GetComponent<PlayerAttackController>();
@@ -177,6 +182,12 @@ public class PlayerMovement : MonoBehaviour
         PlayerSlideAttack.GetOrAdd(gameObject);
         wasAirborne = !IsGrounded;
 
+    }
+
+    private void OnDestroy()
+    {
+        if (controller != null)
+            controller.CollisionHit -= HandleControllerHit;
     }
 
     void Update()
@@ -311,6 +322,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartJump()
     {
+        // Contato com uma rampa acima do limite nao conta como chão nem como
+        // oportunidade para consumir o pulo aéreo enquanto o jogador ainda
+        // está apoiado nela.
+        if (controller != null && controller.HasGroundContact && !IsGrounded)
+            return;
+
         if (playerState.IsAttacking())
         {
             if (jumpsUsed < GetMaximumJumpCount())
@@ -742,13 +759,19 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateSlideVelocity()
     {
-        if (!IsGrounded || !IsCrouchHeld())
+        bool onSteepSlope = TryGetSteepSlopeDownhillDirection(
+            out Vector3 steepDownhillDirection);
+        if ((!IsGrounded && !onSteepSlope) || !IsCrouchHeld())
         {
             EndSlide();
             return horizontalVelocity;
         }
 
-        if (DesiredDirection.sqrMagnitude > 0.0001f)
+        if (onSteepSlope)
+        {
+            slideDirection = steepDownhillDirection;
+        }
+        else if (DesiredDirection.sqrMagnitude > 0.0001f)
         {
             slideDirection = Vector3.RotateTowards(
                 slideDirection,
@@ -761,12 +784,6 @@ public class PlayerMovement : MonoBehaviour
         // Em uma inclinacao acima do limite, o Slide manual continua
         // permitido, mas a direcao e obrigatoriamente a da descida. Isso
         // impede subir a rampa usando momentum e garante a descida.
-        if (TryGetSteepSlopeDownhillDirection(
-            out Vector3 steepDownhillDirection))
-        {
-            slideDirection = steepDownhillDirection;
-        }
-
         float slideSpeed = horizontalVelocity.magnitude;
         slideSpeed = Mathf.Max(
             0f,
@@ -845,7 +862,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 GetGroundAlignedVelocity(Vector3 velocity)
     {
         if (velocity.sqrMagnitude <= 0.0001f ||
-            !IsGrounded ||
+            controller == null || !controller.HasGroundContact ||
             !TryGetGroundNormal(out Vector3 groundNormal))
         {
             return velocity;
@@ -864,40 +881,10 @@ public class PlayerMovement : MonoBehaviour
 
     private bool TryGetGroundNormal(out Vector3 groundNormal)
     {
-        groundNormal = Vector3.up;
-
-        if (controller == null)
-            return false;
-
-        int hitCount = Physics.RaycastNonAlloc(
-            controller.bounds.center,
-            Vector3.down,
-            groundHits,
-            controller.bounds.extents.y + 0.2f,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Ignore
-        );
-
-        float closestDistance = float.MaxValue;
-
-        for (int i = 0; i < hitCount; i++)
-        {
-            RaycastHit hit = groundHits[i];
-
-            if (hit.collider.transform == transform ||
-                hit.collider.transform.IsChildOf(transform))
-            {
-                continue;
-            }
-
-            if (hit.distance >= closestDistance)
-                continue;
-
-            closestDistance = hit.distance;
-            groundNormal = hit.normal;
-        }
-
-        return closestDistance < float.MaxValue;
+        groundNormal = controller != null
+            ? controller.GroundNormal
+            : Vector3.up;
+        return controller != null && controller.HasGroundContact;
     }
 
     private bool IsCrouchHeld()
@@ -916,7 +903,7 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateWalkVelocity()
     {
-        if (!IsGrounded || verticalVelocity > 0f)
+        if (verticalVelocity > 0f)
         {
             return CalculateAirVelocity();
         }
@@ -926,6 +913,9 @@ public class PlayerMovement : MonoBehaviour
         // nao consegue caminhar/subir e escorrega na direcao da descida.
         if (TryGetSteepSlopeDownhillDirection(out Vector3 downhillDirection))
             return CalculateSteepSlopeVelocity(downhillDirection);
+
+        if (!IsGrounded)
+            return CalculateAirVelocity();
 
         float movementSpeed = GetMovementSpeed();
         float currentSpeed = isCrouching
@@ -1150,12 +1140,12 @@ public class PlayerMovement : MonoBehaviour
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
-    private void OnControllerColliderHit(ControllerColliderHit hit)
+    private void HandleControllerHit(Collider hitCollider, Vector3 hitPoint,
+        Vector3 hitNormal)
     {
-        if (hit == null)
-            return;
-
-        EnemyBase enemy = hit.collider.GetComponentInParent<EnemyBase>();
+        EnemyBase enemy = hitCollider != null
+            ? hitCollider.GetComponentInParent<EnemyBase>()
+            : null;
         if (enemy == null || enemy.IsDead || !IsLandingOnEnemyTop(enemy))
             return;
 
