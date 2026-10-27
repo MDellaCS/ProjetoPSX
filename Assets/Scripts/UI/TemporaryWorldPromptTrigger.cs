@@ -99,6 +99,7 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
     [SerializeField] private bool keyboardInteractionFallback = true;
 
     private Collider triggerCollider;
+    private PlayerMovement playerMovement;
     private TemporaryWorldPromptHUD promptHUD;
     private bool isConsumed;
     private bool hasExpanded;
@@ -122,6 +123,10 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
     private void Update()
     {
         UpdateInputSequenceTimeout();
+        if (playerMovement == null)
+            playerMovement = FindAnyObjectByType<PlayerMovement>();
+        playerInside = PlayerAreaOverlap.ContainsPlayer(
+            triggerCollider, playerMovement);
 
         if (!isConsumed && playerInside)
         {
@@ -129,9 +134,14 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
             if (promptHUD != null && promptHUD.TryShow(this))
                 ExpandTriggerArea();
         }
+        else if (!playerInside)
+        {
+            promptHUD?.HidePrompt(this);
+        }
 
         if (isConsumed || promptType != TemporaryWorldPromptType.Interaction ||
-            !keyboardInteractionFallback || !WasConfiguredInputPressedThisFrame())
+            !playerInside || !keyboardInteractionFallback ||
+            !WasConfiguredInputPressedThisFrame())
         {
             return;
         }

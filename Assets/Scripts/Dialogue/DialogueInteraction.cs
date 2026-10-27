@@ -25,6 +25,8 @@ public sealed class DialogueInteraction : MonoBehaviour
     [SerializeField] private Sprite promptIcon;
 
     private Collider interactionCollider;
+    private Collider leaveAreaCollider;
+    private PlayerMovement playerMovement;
     private TemporaryWorldPromptHUD promptHUD;
     private bool playerInside;
     private bool hasInteracted;
@@ -57,10 +59,17 @@ public sealed class DialogueInteraction : MonoBehaviour
 
     private void Update()
     {
+        RefreshPlayerColliders();
+        UpdatePlayerPresence();
+
         if (dialogueStartedByInteraction &&
             (DialogueController.Instance == null ||
              !DialogueController.Instance.IsShowing(sequence)))
             dialogueStartedByInteraction = false;
+
+        if (dialogueStartedByInteraction && leaveAreaCollider != null &&
+            !IsPlayerOverlapping(leaveAreaCollider))
+            OnLeaveAreaExited();
 
         if (interactOnce && hasInteracted)
         {
@@ -101,17 +110,41 @@ public sealed class DialogueInteraction : MonoBehaviour
         areaObject.transform.localScale = Vector3.one *
             Mathf.Max(1f, leaveAreaPercent / 100f);
 
-        Collider copiedCollider = CopyCollider(interactionCollider, areaObject);
-        if (copiedCollider == null)
+        leaveAreaCollider = CopyCollider(interactionCollider, areaObject);
+        if (leaveAreaCollider == null)
         {
             Destroy(areaObject);
             return;
         }
 
-        copiedCollider.isTrigger = true;
-        copiedCollider.sharedMaterial = interactionCollider.sharedMaterial;
-        copiedCollider.enabled = interactionCollider.enabled;
+        leaveAreaCollider.isTrigger = true;
+        leaveAreaCollider.sharedMaterial = interactionCollider.sharedMaterial;
+        leaveAreaCollider.enabled = interactionCollider.enabled;
         areaObject.AddComponent<DialogueLeaveAreaTrigger>().Initialize(this);
+    }
+
+    private void RefreshPlayerColliders()
+    {
+        if (playerMovement == null)
+        {
+            playerMovement = FindAnyObjectByType<PlayerMovement>();
+        }
+    }
+
+    private void UpdatePlayerPresence()
+    {
+        bool isInsideNow = IsPlayerOverlapping(interactionCollider);
+        if (isInsideNow == playerInside)
+            return;
+
+        playerInside = isInsideNow;
+        if (!playerInside)
+            promptHUD?.HideContextualPrompt(this);
+    }
+
+    private bool IsPlayerOverlapping(Collider area)
+    {
+        return PlayerAreaOverlap.ContainsPlayer(area, playerMovement);
     }
 
     private static Collider CopyCollider(Collider source, GameObject target)

@@ -974,8 +974,25 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateSteepSlopeVelocity(Vector3 downhillDirection)
     {
-        Vector3 targetVelocity = downhillDirection *
-            steepSlopeMaximumSlideSpeed;
+        // O slide automatico precisa existir mesmo sem input. O limite e uma
+        // velocidade-alvo minima; um impulso de queda mais forte e preservado.
+        Vector3 downhillHorizontal = Vector3.ProjectOnPlane(
+            downhillDirection,
+            Vector3.up
+        );
+        if (downhillHorizontal.sqrMagnitude <= 0.0001f)
+            return horizontalVelocity;
+
+        downhillHorizontal.Normalize();
+        float currentDownhillSpeed = Mathf.Max(
+            0f,
+            Vector3.Dot(horizontalVelocity, downhillHorizontal)
+        );
+        float targetSpeed = Mathf.Max(
+            steepSlopeMaximumSlideSpeed,
+            currentDownhillSpeed
+        );
+        Vector3 targetVelocity = downhillHorizontal * targetSpeed;
 
         return Vector3.MoveTowards(
             horizontalVelocity,

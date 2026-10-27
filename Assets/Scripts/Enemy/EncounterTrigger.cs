@@ -7,6 +7,8 @@ using UnityEngine;
 public class EncounterTrigger : MonoBehaviour
 {
     [SerializeField] private EnemyEncounter encounter;
+    private PlayerMovement playerMovement;
+    private bool playerInside;
 
     private void Reset()
     {
@@ -15,24 +17,25 @@ public class EncounterTrigger : MonoBehaviour
         encounter = GetComponentInParent<EnemyEncounter>();
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void Update()
     {
-        Transform player = FindPlayerTransform(other);
-        if (player != null)
-            encounter?.TryStartEncounter(player);
-    }
+        if (playerMovement == null)
+            playerMovement = FindAnyObjectByType<PlayerMovement>();
 
-    private static Transform FindPlayerTransform(Collider other)
-    {
-        PlayerMovement playerMovement =
-            other.GetComponentInParent<PlayerMovement>();
+        bool insideNow = PlayerAreaOverlap.ContainsPlayer(
+            GetComponent<Collider>(), playerMovement);
+        if (!insideNow)
+        {
+            playerInside = false;
+            return;
+        }
 
+        if (playerInside)
+            return;
+
+        playerInside = true;
         if (playerMovement != null)
-            return playerMovement.transform;
-
-        return other.CompareTag("Player")
-            ? other.transform
-            : null;
+            encounter?.TryStartEncounter(playerMovement.transform);
     }
 
     private void OnDrawGizmos()

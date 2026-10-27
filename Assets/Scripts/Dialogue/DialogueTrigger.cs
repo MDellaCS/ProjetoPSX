@@ -13,6 +13,8 @@ public sealed class DialogueTrigger : MonoBehaviour
     [SerializeField] private bool disableAfterPlay = true;
 
     private bool hasPlayed;
+    private bool playerInside;
+    private PlayerMovement playerMovement;
 
     private void Reset()
     {
@@ -21,12 +23,29 @@ public sealed class DialogueTrigger : MonoBehaviour
             trigger.isTrigger = true;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void Update()
+    {
+        if (playerMovement == null)
+            playerMovement = FindAnyObjectByType<PlayerMovement>();
+
+        bool insideNow = PlayerAreaOverlap.ContainsPlayer(
+            GetComponent<Collider>(), playerMovement);
+        if (!insideNow)
+        {
+            playerInside = false;
+            return;
+        }
+
+        if (playerInside)
+            return;
+
+        playerInside = true;
+        TryStartDialogue();
+    }
+
+    private void TryStartDialogue()
     {
         if (hasPlayed && playOnce)
-            return;
-        if (other.GetComponentInParent<PlayerMovement>() == null &&
-            !other.CompareTag("Player"))
             return;
         if (DialogueController.Instance == null ||
             !DialogueController.Instance.TryShow(sequence))

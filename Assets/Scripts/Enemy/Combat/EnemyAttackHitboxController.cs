@@ -122,10 +122,13 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
         int count = track.shape switch
         {
             EnemyHitboxShape.Capsule => Physics.OverlapCapsuleNonAlloc(a, b,
-                radius, overlapBuffer),
+                radius, overlapBuffer, Physics.AllLayers,
+                QueryTriggerInteraction.Collide),
             EnemyHitboxShape.Box => Physics.OverlapBoxNonAlloc(center,
-                track.boxSize * .5f, overlapBuffer, rotation),
-            _ => Physics.OverlapSphereNonAlloc(center, radius, overlapBuffer)
+                track.boxSize * .5f, overlapBuffer, rotation,
+                Physics.AllLayers, QueryTriggerInteraction.Collide),
+            _ => Physics.OverlapSphereNonAlloc(center, radius, overlapBuffer,
+                Physics.AllLayers, QueryTriggerInteraction.Collide)
         };
         ResolveHits(strike, track, count);
     }
@@ -135,7 +138,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
         float radius)
     {
         int count = Physics.OverlapCapsuleNonAlloc(origin, center, radius,
-            overlapBuffer);
+            overlapBuffer, Physics.AllLayers, QueryTriggerInteraction.Collide);
         ResolveHits(strike, track, count);
     }
 

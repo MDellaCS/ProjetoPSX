@@ -159,6 +159,21 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         completionTimer = interactionCompletionDelay;
     }
 
+    public void HidePrompt(TemporaryWorldPromptTrigger prompt)
+    {
+        if (prompt == null || prompt != currentPrompt)
+            return;
+
+        ResumeGameIfPausedByPrompt();
+        currentPrompt = null;
+        completionTimer = -1f;
+        visibleTimer = 0f;
+        if (contextualOwner != null)
+            DrawContextualPrompt();
+        else
+            SetVisible(false);
+    }
+
     private void ConsumeCurrentPrompt()
     {
         if (currentPrompt != null)
