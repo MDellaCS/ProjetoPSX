@@ -183,6 +183,8 @@ public class PlayerMovement : MonoBehaviour
         movesetController = GetComponent<PlayerMovesetController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
+        if (GetComponent<GameplayFootstepEmitter>() == null)
+            gameObject.AddComponent<GameplayFootstepEmitter>();
         wasAirborne = !IsGrounded;
 
     }
@@ -1170,7 +1172,12 @@ public class PlayerMovement : MonoBehaviour
     public void MarkEntityAsInvalidGround()
     {
         enemyGroundContactTimer = Mathf.Max(enemyGroundContactTimer, .12f);
-        verticalVelocity = Mathf.Min(verticalVelocity, -2f);
+
+        // O contato invalido serve para impedir que o topo de uma entidade
+        // vire uma plataforma. Ele nao deve cancelar um impulso que ja esteja
+        // levando o jogador para cima (por exemplo, o self-launch do D1).
+        if (verticalVelocity <= 0f)
+            verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
     public void ApplyLaunchForwards(

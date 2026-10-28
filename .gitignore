@@ -112,3 +112,9 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Third-party audio libraries kept locally
+/Assets/Footsteps - Essentials/
+/Assets/Footsteps - Essentials.meta
+/Assets/FreeWeaponSFX_v1.1/
+/Assets/FreeWeaponSFX_v1.1.meta

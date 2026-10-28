@@ -2059,29 +2059,33 @@ MonoBehaviour:
     cameraShakeDuration: 0.2
   lightAttackHitSound:
     clips:
-    - {fileID: 8300000, guid: 77654ee8f367815428b1519f36bb9907, type: 3}
+    - {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
+    - {fileID: 8300000, guid: 4ae73664f9fa52f41b51a2e050901696, type: 3}
+    - {fileID: 8300000, guid: ada2ae050ed4f114eba3fab31db4313e, type: 3}
     volume: 1
     volumeVariation: 0
     pitch: 1
-    pitchVariation: 0.369
+    pitchVariation: 0.2
     is3D: 1
     minDistance: 1
     maxDistance: 25
     outputMixerGroup: {fileID: 0}
   heavyAttackHitSound:
     clips:
-    - {fileID: 8300000, guid: a782b9935f54df347b4c8a36b4e64ad5, type: 3}
+    - {fileID: 8300000, guid: a42a25bfe713e63498febabb408fceea, type: 3}
+    - {fileID: 8300000, guid: b322a4e6a9f59b04a82a3336dde02871, type: 3}
+    - {fileID: 8300000, guid: ae2d2db46850b7c47ab85240cdc448f9, type: 3}
     volume: 1
     volumeVariation: 0
     pitch: 1
-    pitchVariation: 0.409
+    pitchVariation: 0.1
     is3D: 1
     minDistance: 1
     maxDistance: 25
     outputMixerGroup: {fileID: 0}
   enemyAttackHitSound:
     clips:
-    - {fileID: 8300000, guid: 72ce6af274f2c1e489b77bb97d47e2ea, type: 3}
+    - {fileID: 8300000, guid: 99348524f0ef5b3469b6d1976f17370c, type: 3}
     volume: 1
     volumeVariation: 0.08
     pitch: 1

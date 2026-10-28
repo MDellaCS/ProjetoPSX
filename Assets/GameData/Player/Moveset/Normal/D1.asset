@@ -16,13 +16,14 @@ MonoBehaviour:
   displayName: D1
   kind: 0
   context: 2
-  windupDuration: 0.03
-  activeDuration: 0.15
-  recoveryDuration: 0.07
+  windupDuration: 0.01
+  activeDuration: 0.13
+  recoveryDuration: 0.06
+  holdActiveUntilGrounded: 0
   baseDamage: 15
   basePoiseDamage: 50
   movement:
-    forwardDistance: 0.5
+    forwardDistance: 0.2
     startNormalized: 0
     endNormalized: 1
     movementCurve:

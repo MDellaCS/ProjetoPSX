@@ -32,13 +32,11 @@ public sealed class EnemyGuard : MonoBehaviour
     [SerializeField] private bool canGuardPlayerDashAttacks = true;
 
     [Header("Block")]
-    [Tooltip("Arco frontal, em graus, que a guarda protege. 120 cobre 60 graus para cada lado da frente.")]
-    [Range(0f, 360f)] [SerializeField] private float guardAngle = 120f;
     [Tooltip("Parte do dano anulada ao bloquear. 0.7 reduz o dano recebido em 70 por cento.")]
     [Range(0f, 1f)] [SerializeField] private float damageReduction = .7f;
     [Tooltip("Parte do dano de Poise anulada ao bloquear.")]
     [Range(0f, 1f)] [SerializeField] private float poiseReduction = .5f;
-    [Tooltip("Resistencia da guarda. Ataques reduzem este valor usando seu dano de Poise.")]
+    [Tooltip("Resistencia da guarda. Ataques reduzem este valor usando seu dano de Poise; a resistencia persiste ao baixar e levantar a guarda e volta ao maximo depois de uma quebra.")]
     [Min(1f)] [SerializeField] private float maxGuardHealth = 120f;
     [Tooltip("Multiplicador de dano a guarda aplicado a pesados do player.")]
     [Min(0f)] [SerializeField] private float heavyGuardDamageMultiplier = 3f;
@@ -142,7 +140,6 @@ public sealed class EnemyGuard : MonoBehaviour
             Mathf.Min(minimumGuardDuration, maximumGuardDuration),
             Mathf.Max(minimumGuardDuration, maximumGuardDuration)
         );
-        currentGuardHealth = maxGuardHealth;
         if (owner.CurrentState == EnemyBase.State.Staggered)
             health.EndStaggerForGuard();
         owner.CurrentState = EnemyBase.State.Guarding;
@@ -189,15 +186,15 @@ public sealed class EnemyGuard : MonoBehaviour
     internal bool TryBlock(PlayerAttackType attackType,
         Vector3 attackerPosition, ref int damage, ref int poiseDamage)
     {
-        if (!IsGuarding || !CanBlockAttackType(attackType) ||
-            !IsAttackerWithinGuardAngle(attackerPosition))
+        if (!IsGuarding || !CanBlockAttackType(attackType))
         {
             return false;
         }
 
         float guardDamage = Mathf.Max(0, poiseDamage);
         if (attackType == PlayerAttackType.Heavy ||
-            attackType == PlayerAttackType.AerialHeavy)
+            attackType == PlayerAttackType.AerialHeavy ||
+            attackType == PlayerAttackType.DashHeavy)
         {
             guardDamage *= heavyGuardDamageMultiplier;
         }
@@ -209,7 +206,7 @@ public sealed class EnemyGuard : MonoBehaviour
 
         if (currentGuardHealth <= 0f)
         {
-            EndGuard();
+            EndGuard(guardBroken: true);
             health.ApplyGuardBreakStagger(attackerPosition, breakStunDuration);
         }
 
@@ -224,24 +221,19 @@ public sealed class EnemyGuard : MonoBehaviour
             PlayerAttackType.Heavy => canGuardPlayerHeavyAttacks,
             PlayerAttackType.AerialLight or PlayerAttackType.AerialHeavy =>
                 canGuardPlayerAerialAttacks,
-            PlayerAttackType.DashLight => canGuardPlayerDashAttacks,
+            PlayerAttackType.DashLight or PlayerAttackType.DashHeavy =>
+                canGuardPlayerDashAttacks,
             _ => false
         };
     }
 
-    private bool IsAttackerWithinGuardAngle(Vector3 attackerPosition)
+    private void EndGuard(bool guardBroken = false)
     {
-        Vector3 toAttacker = attackerPosition - transform.position;
-        toAttacker.y = 0f;
-        if (toAttacker.sqrMagnitude <= .0001f)
-            return true;
-
-        return Vector3.Angle(transform.forward, toAttacker) <= guardAngle * .5f;
-    }
-
-    private void EndGuard()
-    {
-        currentGuardHealth = maxGuardHealth;
+        // A resistencia persiste entre periodos de guarda. Ela so e
+        // restaurada depois de uma quebra completa, nunca ao baixar ou
+        // levantar a guarda normalmente.
+        if (guardBroken)
+            currentGuardHealth = maxGuardHealth;
         cooldownTimer = guardCooldown;
         health?.SetGuardVisual(false);
         if (owner != null && owner.CurrentState == EnemyBase.State.Guarding)
@@ -272,5 +264,6 @@ public enum PlayerAttackType
     Heavy,
     AerialLight,
     AerialHeavy,
-    DashLight
+    DashLight,
+    DashHeavy
 }

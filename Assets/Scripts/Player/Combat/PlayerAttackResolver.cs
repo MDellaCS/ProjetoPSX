@@ -40,7 +40,9 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         int poise = Mathf.RoundToInt(runtime.PoiseDamage * strike.poiseMultiplier);
         PlayerAttackType type = runtime.Definition.context switch
         {
-            PlayerAttackContext.Dash => PlayerAttackType.DashLight,
+            PlayerAttackContext.Dash => runtime.Definition.kind == PlayerAttackKind.Heavy
+                ? PlayerAttackType.DashHeavy
+                : PlayerAttackType.DashLight,
             PlayerAttackContext.Air => runtime.Definition.kind == PlayerAttackKind.Heavy
                 ? PlayerAttackType.AerialHeavy
                 : PlayerAttackType.AerialLight,
@@ -50,10 +52,16 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         };
         bool connected = enemy.TakeDamage(damage, transform.position, poise,
             out int dealt, out CombatPoiseHitResult poiseHit,
-            true, type, attackReach, impactDirection, impactPosition, true);
+            true, type, attackReach, impactDirection, impactPosition, true,
+            transform);
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
+        GameplayAudioSystem.Play(
+            runtime.Definition.kind == PlayerAttackKind.Heavy
+                ? GameplayAudioCueId.PlayerHeavyAttackHit
+                : GameplayAudioCueId.PlayerLightAttackHit,
+            impactPosition);
         if (strike.effects.juggle)
             ApplyJuggleToPlayer();
         dpsMeter?.ReportDamage(dealt);

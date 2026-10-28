@@ -67,6 +67,9 @@ public class FlyingPuppet : EnemyBase
     private Collider[] teleportDiveColliders;
     private bool[] teleportDiveColliderStates;
 
+    /// <summary>Indica se o corpo do flyer deve ser ignorado pelo motor de colisao do jogador durante o ataque de teleporte.</summary>
+    public bool IgnoresPlayerCollision => teleportDivePhase != TeleportDivePhase.None;
+
     private void Start()
     {
         fallbackFlightHeight = transform.position.y;

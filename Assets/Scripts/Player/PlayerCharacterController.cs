@@ -385,11 +385,25 @@ public sealed class PlayerCharacterController : MonoBehaviour
         top = worldCenter + up * halfSegment;
     }
 
-    private bool IsIgnoredForMovement(Collider other) =>
-        other == capsule || other.transform == transform ||
-        other.transform.IsChildOf(transform) ||
-        other.GetComponentInParent<CombatVisualParticle>() != null ||
-        other.GetComponentInParent<EnemyBase>() != null;
+    private bool IsIgnoredForMovement(Collider other)
+    {
+        if (other == capsule || other.transform == transform ||
+            other.transform.IsChildOf(transform) ||
+            other.GetComponentInParent<CombatVisualParticle>() != null)
+        {
+            return true;
+        }
+
+        EnemyBase enemy = other.GetComponentInParent<EnemyBase>();
+        if (enemy == null)
+            return false;
+
+        // Inimigos terrestres continuam sendo separados pelo sistema
+        // centralizado. O FlyingPuppet usa a colisao do proprio motor do
+        // jogador enquanto voa, exceto durante o ataque de teleporte.
+        FlyingPuppet flyingPuppet = enemy.GetComponent<FlyingPuppet>();
+        return flyingPuppet == null || flyingPuppet.IgnoresPlayerCollision;
+    }
 
     private static CollisionFlags GetCollisionFlag(Vector3 normal)
     {

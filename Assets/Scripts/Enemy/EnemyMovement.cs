@@ -86,9 +86,9 @@ public sealed class EnemyMovement : MonoBehaviour
     public Vector3 LaunchForwardsVelocity => launchForwardsVelocity;
     /// <summary>CharacterController exposto apenas para a separacao central de entidades terrestres.</summary>
     public CharacterController EntityCharacterController => controller;
-    /// <summary>Flyers e inimigos marcados como rastejadores nao participam da separacao terrestre.</summary>
+    /// <summary>Indica se este inimigo participa da separacao entre entidades terrestres.</summary>
     public bool ParticipatesInGroundEntitySeparation =>
-        !ignoreGroundEntitySeparation && GetComponent<FlyingPuppet>() == null;
+        !ignoreGroundEntitySeparation;
     /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
     public bool IsGrounded
     {

@@ -25,8 +25,22 @@ public sealed class EnemyHealth : MonoBehaviour
     [Min(0f)] [SerializeField] private float staggerKnockbackDuration = .2f;
 
     [Header("Visual Feedback")]
-    [Tooltip("Tempo que o material visual pisca vermelho apos receber dano.")]
-    [Min(0f)] [SerializeField] private float damageFlashDuration = .15f;
+    [Tooltip("Cor aplicada enquanto o inimigo esta bloqueando ataques.")]
+    [SerializeField] private Color guardingStateColor = new(.55f, .2f, .8f, 1f);
+    [Tooltip("Cor aplicada durante o windup de um ataque.")]
+    [SerializeField] private Color windupStateColor = Color.yellow;
+    [Tooltip("Cor aplicada durante a fase ativa de um ataque.")]
+    [SerializeField] private Color activeStateColor = new(1f, .25f, .1f, 1f);
+    [Tooltip("Cor aplicada durante o recovery de um ataque.")]
+    [SerializeField] private Color recoveryStateColor = new(1f, .65f, .1f, 1f);
+    [Tooltip("Cor aplicada enquanto o inimigo esta esquivando.")]
+    [SerializeField] private Color dodgingStateColor = Color.cyan;
+    [Tooltip("Cor aplicada enquanto o inimigo esta em stagger.")]
+    [SerializeField] private Color staggeredStateColor = new(1f, .5f, 0f, 1f);
+    [Tooltip("Cor aplicada enquanto o inimigo provoca o jogador.")]
+    [SerializeField] private Color tauntingStateColor = new(1f, .25f, .7f, 1f);
+    [Tooltip("Cor aplicada enquanto o inimigo espera na fila de um ataque especial.")]
+    [SerializeField] private Color specialQueueStateColor = new(.2f, .8f, 1f, 1f);
 
     private EnemyBase owner;
     private EnemyBrain brain;
@@ -35,10 +49,11 @@ public sealed class EnemyHealth : MonoBehaviour
     private EnemyGuard guard;
     private EnemyDodge dodge;
     private EnemyGore gore;
+    private EnemyLightAttackReflector lightAttackReflector;
     private Material[] enemyMaterials = System.Array.Empty<Material>();
+    private readonly System.Collections.Generic.Dictionary<Material, Color>
+        originalMaterialColors = new();
     private DamageNumberSpawner damageNumbers;
-    private Color normalColor;
-    private static readonly Color guardingColor = new(.55f, .2f, .8f, 1f);
     private readonly CombatPoiseState poise = new();
     private float staggerTimer;
     private bool isGuardBreakStagger;
@@ -64,14 +79,14 @@ public sealed class EnemyHealth : MonoBehaviour
         guard = enemyGuard;
         dodge = enemyDodge;
         gore = GetComponent<EnemyGore>();
+        lightAttackReflector = GetComponent<EnemyLightAttackReflector>();
         CurrentHealth = maxHealth;
         poise.Initialize(maxPoise);
         CacheEnemyMaterials();
         damageNumbers = GetComponent<DamageNumberSpawner>();
         if (damageNumbers == null)
             damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
-        if (enemyMaterials.Length > 0)
-            normalColor = enemyMaterials[0].color;
+        SetStateVisual(owner.CurrentState);
     }
 
     public void TickPoise()
@@ -113,11 +128,15 @@ public sealed class EnemyHealth : MonoBehaviour
         float playerAttackReach = 0f,
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
-        bool hasImpactPosition = false)
+        bool hasImpactPosition = false,
+        Transform attacker = null)
     {
         damageDealt = 0;
         poiseResult = default;
         if (IsDead) return false;
+        if (fromPlayerAttack && lightAttackReflector != null &&
+            lightAttackReflector.TryReflect(playerAttackType, attacker))
+            return false;
         if (fromPlayerAttack && dodge != null &&
             dodge.TryAvoidPlayerAttack(playerAttackReach, damage))
             return false;
@@ -130,7 +149,6 @@ public sealed class EnemyHealth : MonoBehaviour
         CurrentHealth -= damage;
         if (damage > 0)
             damageNumbers?.ShowDamage(damage);
-        FlashDamage();
         poiseResult = poise.ReceiveHit(poiseDamage, maxPoise);
         if (isGuardBreakStagger)
             poiseResult = default;
@@ -238,7 +256,51 @@ public sealed class EnemyHealth : MonoBehaviour
     internal void SetGuardVisual(bool isGuarding)
     {
         isShowingGuardVisual = isGuarding;
-        ResetVisualColor();
+        ApplyStateVisual(owner != null
+            ? owner.CurrentState : EnemyBase.State.Idle);
+    }
+
+    /// <summary>Atualiza a cor de estado em todos os renderers do modelo.</summary>
+    internal void SetStateVisual(EnemyBase.State state)
+    {
+        ApplyStateVisual(state);
+    }
+
+    private void ApplyStateVisual(EnemyBase.State state)
+    {
+        if (isShowingGuardVisual || state == EnemyBase.State.Guarding)
+        {
+            SetEnemyColor(guardingStateColor);
+            return;
+        }
+
+        switch (state)
+        {
+            case EnemyBase.State.Windup:
+                SetEnemyColor(windupStateColor);
+                break;
+            case EnemyBase.State.Active:
+                SetEnemyColor(activeStateColor);
+                break;
+            case EnemyBase.State.Recovery:
+                SetEnemyColor(recoveryStateColor);
+                break;
+            case EnemyBase.State.Dodging:
+                SetEnemyColor(dodgingStateColor);
+                break;
+            case EnemyBase.State.Staggered:
+                SetEnemyColor(staggeredStateColor);
+                break;
+            case EnemyBase.State.Taunting:
+                SetEnemyColor(tauntingStateColor);
+                break;
+            case EnemyBase.State.SpecialAttackQueue:
+                SetEnemyColor(specialQueueStateColor);
+                break;
+            default:
+                RestoreOriginalMaterialColors();
+                break;
+        }
     }
 
     private Vector3 ResolveImpactDirection(Vector3 attackerPosition,
@@ -271,20 +333,10 @@ public sealed class EnemyHealth : MonoBehaviour
     {
         if (IsDead) return;
         IsDead = true;
+        GetComponentInChildren<EnemyBodyPartDeathParticles>(true)?.EmitDeathParts(
+            impactDirection, lethalDamage);
         owner.RaiseDied();
         Destroy(gameObject);
-    }
-
-    private void FlashDamage()
-    {
-        SetEnemyColor(Color.red);
-        CancelInvoke(nameof(ResetVisualColor));
-        Invoke(nameof(ResetVisualColor), damageFlashDuration);
-    }
-
-    private void ResetVisualColor()
-    {
-        SetEnemyColor(isShowingGuardVisual ? guardingColor : normalColor);
     }
 
     private void CacheEnemyMaterials()
@@ -293,7 +345,17 @@ public sealed class EnemyHealth : MonoBehaviour
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
         {
             if (renderer != null)
-                materials.AddRange(renderer.materials);
+            {
+                foreach (Material material in renderer.materials)
+                {
+                    if (material == null)
+                        continue;
+
+                    materials.Add(material);
+                    if (!originalMaterialColors.ContainsKey(material))
+                        originalMaterialColors.Add(material, material.color);
+                }
+            }
         }
 
         enemyMaterials = materials.ToArray();
@@ -301,9 +363,24 @@ public sealed class EnemyHealth : MonoBehaviour
 
     private void SetEnemyColor(Color color)
     {
+        // Os visuais podem ser ligados ou montados depois da inicializacao
+        // do inimigo; atualiza a lista antes de colorir para incluir todas as
+        // pecas, inclusive renderers que estavam inativos durante Awake.
+        CacheEnemyMaterials();
         foreach (Material material in enemyMaterials)
         {
             if (material != null)
+                material.color = color;
+        }
+    }
+
+    private void RestoreOriginalMaterialColors()
+    {
+        CacheEnemyMaterials();
+        foreach (Material material in enemyMaterials)
+        {
+            if (material != null &&
+                originalMaterialColors.TryGetValue(material, out Color color))
                 material.color = color;
         }
     }

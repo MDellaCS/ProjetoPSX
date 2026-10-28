@@ -56,6 +56,7 @@ GameObject:
   - component: {fileID: -3204485085092350537}
   - component: {fileID: -7745750461247089783}
   - component: {fileID: -2798535404865380423}
+  - component: {fileID: -6311550100291000042}
   m_Layer: 0
   m_Name: RagDoll
   m_TagString: Untagged
@@ -147,7 +148,7 @@ MonoBehaviour:
   outOfCameraAggressionLoss: -2
   cameraVisibilityPadding: 1
   playerFarAggressionDistance: 7
-  playerFarAggressionChangePerSecond: 15
+  playerFarAggressionChangePerSecond: 2
   damageTakenAggressionChangePerMaxHealthPercent: -1.2
   lowEnemyHealthPercent: 0.3
   lowEnemyHealthDecreaseChance: 0.5
@@ -156,21 +157,45 @@ MonoBehaviour:
   highPlayerHealthPercent: 0.9
   highPlayerHealthAggressionLossPerSecond: 5
   playerAirborneAggressionChangePerSecond: -1
-  retreatsWhenPlayerTakesEnemyDamage: 0
-  gainsAggressionWhenPlayerTakesEnemyDamage: 1
+  retreatsWhenPlayerTakesEnemyDamage: 1
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
   playerDamagedAggressionPercent: 0.1
   playerDamagedAggressionFlatChange: 2
   decisionInterval:
     min: 0.2
-    max: 3
+    max: 2.2
   repositionDuration:
     min: 1
     max: 3
-  repositionSpeedMultiplier:
-    min: 0.25
-    max: 0.5
   chaseCommitmentDuration: 6
-  chaseCommitmentCooldown: 3
+  chaseCommitmentCooldown: 5
+  canChooseTacticalIdle: 1
+  tacticalIdleChancePercent:
+    min: 10
+    max: 50
+  tacticalIdleDuration:
+    min: 1
+    max: 2
+  useCohesiveGroupPositioning: 1
+  groupSeparationRadius:
+    min: 2
+    max: 3
+  groupSeparationStrength:
+    min: 0.65
+    max: 1.15
+  preferredOrbitDistance:
+    min: 2.1
+    max: 3.2
+  orbitStrength:
+    min: 0.35
+    max: 0.8
+  orbitChangeInterval:
+    min: 3
+    max: 6
+  repositionChancePercent:
+    min: 25
+    max: 50
+  orbitDirectionMode: 0
   directorWeight: 20
 --- !u!114 &485302232963280403
 MonoBehaviour:
@@ -236,7 +261,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
-  movementSpeed: 3.4
+  slowSpeed: 1.1
+  standardSpeed: 2.2
+  fastSpeed: 3.3
   gravity: -60
   terminalFallSpeed: 30
   rotationSpeed: 200
@@ -263,11 +290,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 2000
   isUnkillable: 0
-  maxPoise: 90
-  staggerDuration: 0.4
+  maxPoise: 25
+  staggerDuration: 1
   staggerKnockbackForce: 2
   staggerKnockbackDuration: 0.07
-  damageFlashDuration: 0.4
+  guardingStateColor: {r: 0.55, g: 0.2, b: 0.8, a: 1}
+  windupStateColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  activeStateColor: {r: 1, g: 0, b: 0.6606406, a: 1}
+  recoveryStateColor: {r: 1, g: 0.05694356, b: 0, a: 1}
+  dodgingStateColor: {r: 0, g: 1, b: 1, a: 1}
+  staggeredStateColor: {r: 0.10617697, g: 1, b: 0, a: 1}
+  tauntingStateColor: {r: 1, g: 0.25, b: 0.7, a: 1}
+  specialQueueStateColor: {r: 0.2, g: 0.8, b: 1, a: 1}
 --- !u!114 &6421883612428584792
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -371,13 +405,10 @@ MonoBehaviour:
   minimumGuardDuration: 1.25
   maximumGuardDuration: 5
   guardCooldown: 6
-  lowAggressionGuardRetreatSpeedMultiplier: 0.6
-  highAggressionGuardRetreatSpeedMultiplier: 0.15
   canGuardPlayerLightAttacks: 1
-  canGuardPlayerHeavyAttacks: 0
+  canGuardPlayerHeavyAttacks: 1
   canGuardPlayerAerialAttacks: 1
   canGuardPlayerDashAttacks: 1
-  guardAngle: 120
   damageReduction: 0.7
   poiseReduction: 0.5
   maxGuardHealth: 180
@@ -408,6 +439,19 @@ MonoBehaviour:
   hopDuration: 0.3
   hopVerticalSpeed: 2
   protectionAfterDodge: 0.2
+--- !u!114 &-6311550100291000042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5527c21231a44d08d73933eb7a58a6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBodyPartDeathParticles
+  profile: {fileID: 11400000, guid: 09a285251532b314b82f9448bd08290e, type: 2}
 --- !u!1001 &6112487858548316175
 PrefabInstance:
   m_ObjectHideFlags: 0

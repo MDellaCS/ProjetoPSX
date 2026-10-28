@@ -38,8 +38,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  minimumCount: 15
-  maximumCount: 120
+  minimumCount: 25
+  maximumCount: 250
   material: {fileID: 2100000, guid: 538e9f68918e5524b8a53c1a95d1a128, type: 2}
   testColor: {r: 1, g: 0, b: 0, a: 1}
   useSourceMaterial: 0

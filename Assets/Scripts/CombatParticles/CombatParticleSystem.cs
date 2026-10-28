@@ -8,6 +8,8 @@ public sealed class CombatParticleSystem : MonoBehaviour
     private static CombatParticleSystem instance;
     private readonly List<CombatVisualParticle> activeVisual = new();
     private readonly Queue<CombatVisualParticle> freeVisual = new();
+    private readonly List<CombatVisualParticle> activeBodyParts = new();
+    private readonly Queue<CombatVisualParticle> freeBodyParts = new();
     private readonly Dictionary<CombatParticleProfile, Material> profileMaterials = new();
     private Transform poolRoot;
     private Material hitMaterial;
@@ -61,9 +63,9 @@ public sealed class CombatParticleSystem : MonoBehaviour
         {
             int currencyGorePieces = gore != null
                 ? gore.GetCurrencyGorePieceCount(finalHitDamage, enemyMaxHealth) : 0;
-            system.Emit(gore != null ? gore.DeathProfile : null, system.defaultGore,
-                position, direction, damageDealt, renderer,
-                gore != null ? gore.ParticleCountMultiplier : 1f,
+            system.Emit(gore != null ? gore.DeathProfile : null,
+                system.defaultGore, position, direction, damageDealt,
+                renderer, gore != null ? gore.ParticleCountMultiplier : 1f,
                 gore != null ? gore.CurrencyValueRange : default,
                 currencyGorePieces);
         }
@@ -152,6 +154,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
     private void Update()
     {
         Reclaim(activeVisual, freeVisual, particle => particle.HasExpired);
+        Reclaim(activeBodyParts, freeBodyParts, particle => particle.HasExpired);
     }
 
     /// <summary>Retorna se o collider deve participar da fisica das particulas.</summary>
@@ -186,10 +189,40 @@ public sealed class CombatParticleSystem : MonoBehaviour
         activeVisual.Add(particle);
     }
 
-    private CombatVisualParticle CreateVisual()
+    public void EmitBodyPart(Mesh mesh, bool ownsMesh, Vector3 position,
+        Quaternion rotation, Vector3 worldScale, Vector3 velocity,
+        Material[] materials, EnemyBodyPartProfile profile)
+    {
+        if (mesh == null || profile == null)
+        {
+            if (ownsMesh && mesh != null)
+                Destroy(mesh);
+            return;
+        }
+
+        SpawnMeshVisual(profile, mesh, ownsMesh, position, rotation,
+            worldScale, velocity, materials);
+    }
+
+    private void SpawnMeshVisual(EnemyBodyPartProfile profile, Mesh mesh,
+        bool ownsMesh, Vector3 position, Quaternion rotation,
+        Vector3 worldScale, Vector3 velocity, Material[] materials)
+    {
+        // O pool de partes cresce quando necessario e nao toma slots do pool
+        // limitado de gore/currency. Assim, nenhuma parte e substituida por
+        // uma particula comum durante uma morte com muitos segmentos.
+        CombatVisualParticle particle = freeBodyParts.Count > 0
+            ? freeBodyParts.Dequeue() : CreateVisual(true);
+        particle.InitializeMeshPart(profile, mesh, ownsMesh, position,
+            rotation, worldScale, velocity, materials, particleLayer);
+        activeBodyParts.Add(particle);
+    }
+
+    private CombatVisualParticle CreateVisual(bool isBodyPart = false)
     {
         GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        piece.name = "Combat Visual Particle";
+        piece.name = isBodyPart ? "Combat Body Part Particle" :
+            "Combat Visual Particle";
         piece.transform.SetParent(poolRoot);
         piece.AddComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         piece.AddComponent<CombatParticleCollisionFilter>();

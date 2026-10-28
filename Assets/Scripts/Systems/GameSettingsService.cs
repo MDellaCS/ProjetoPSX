@@ -130,6 +130,7 @@ public static class GameSettingsService
     {
         AudioListener.volume = applied.masterVolume;
         GameAudioSystem.RefreshEffectsVolume();
+        GameplayAudioSystem.RefreshEffectsVolume();
         if (Screen.fullScreen != applied.fullScreen)
             Screen.fullScreen = applied.fullScreen;
         QualitySettings.SetQualityLevel(applied.qualityLevel, true);

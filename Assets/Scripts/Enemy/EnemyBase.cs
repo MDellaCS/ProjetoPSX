@@ -13,6 +13,7 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyHealth))]
 [RequireComponent(typeof(EnemyDebug))]
 [RequireComponent(typeof(EnemyReactionController))]
+[RequireComponent(typeof(EnemyBodyPartDeathParticles))]
 public class EnemyBase : MonoBehaviour
 {
     public enum State
@@ -49,7 +50,19 @@ public class EnemyBase : MonoBehaviour
     private bool isSpawning;
     private bool isTemporarilyUntargetable;
 
-    public State CurrentState { get; internal set; } = State.Idle;
+    private State currentState = State.Idle;
+    public State CurrentState
+    {
+        get => currentState;
+        internal set
+        {
+            if (currentState == value)
+                return;
+
+            currentState = value;
+            health?.SetStateVisual(currentState);
+        }
+    }
     public bool IsDead => health != null && health.IsDead;
     public bool IsInAttackSequence => CurrentState == State.Windup ||
         CurrentState == State.Active || CurrentState == State.Recovery;
@@ -101,6 +114,7 @@ public class EnemyBase : MonoBehaviour
         brain = GetOrAdd<EnemyBrain>();
         attacks = GetOrAdd<EnemyAttackController>();
         movement = GetOrAdd<EnemyMovement>();
+        GetOrAdd<GameplayFootstepEmitter>();
         health = GetOrAdd<EnemyHealth>();
         debugView = GetOrAdd<EnemyDebug>();
         characterController = GetOrAdd<CharacterController>();
@@ -254,11 +268,12 @@ public class EnemyBase : MonoBehaviour
         float playerAttackRadius = 0f,
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
-        bool hasImpactPosition = false) =>
+        bool hasImpactPosition = false,
+        Transform attacker = null) =>
         health.TakeDamage(damage, attackerPosition, poiseDamage, out damageDealt,
             out poiseResult,
             fromPlayerAttack, playerAttackType, playerAttackRadius,
-            impactDirection, impactPosition, hasImpactPosition);
+            impactDirection, impactPosition, hasImpactPosition, attacker);
     public bool ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
         CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>

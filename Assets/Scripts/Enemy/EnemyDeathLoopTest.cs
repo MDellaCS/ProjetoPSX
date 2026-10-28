@@ -88,6 +88,8 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
             if (gore == null)
                 gore = gameObject.AddComponent<EnemyGore>();
             gore.SpawnTestGore(testDamage, worldDamageDirection);
+            GetComponent<EnemyBodyPartDeathParticles>()?.EmitDeathParts(
+                worldDamageDirection, testDamage);
         }
 
         SetAliveVisual(false);

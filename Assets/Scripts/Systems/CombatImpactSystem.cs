@@ -48,14 +48,6 @@ public class CombatImpactSystem : MonoBehaviour
         cameraShakeDuration = .1f
     };
 
-    [Header("Impact Sounds")]
-    [Tooltip("Som reproduzido quando um ataque leve do player conecta.")]
-    [SerializeField] private AudioCue lightAttackHitSound;
-    [Tooltip("Som reproduzido quando um ataque pesado do player conecta.")]
-    [SerializeField] private AudioCue heavyAttackHitSound;
-    [Tooltip("Som reproduzido quando um ataque inimigo conecta no player.")]
-    [SerializeField] private AudioCue enemyAttackHitSound;
-
     [Header("Global Camera Shake")]
     [Tooltip("Curva global do impacto. X=0 e o inicio do shake; X=1 e o fim.")]
     [SerializeField] private AnimationCurve impactShakeIntensity =
@@ -167,7 +159,6 @@ public class CombatImpactSystem : MonoBehaviour
             profile,
             damageDealt,
             null,
-            isHeavy ? system.heavyAttackHitSound : system.lightAttackHitSound,
             requestCameraShake
         );
     }
@@ -222,7 +213,6 @@ public class CombatImpactSystem : MonoBehaviour
             profile,
             damage,
             attackerPosition,
-            system.enemyAttackHitSound,
             true
         );
     }
@@ -256,7 +246,6 @@ public class CombatImpactSystem : MonoBehaviour
             system.heavyAttackImpact,
             damageDealt,
             target.position - impactDirection,
-            null,
             true
         );
     }
@@ -267,15 +256,12 @@ public class CombatImpactSystem : MonoBehaviour
         ImpactProfile profile,
         int damageDealt,
         Vector3? explicitAttackerPosition,
-        AudioCue sound,
         bool requestCameraShake)
     {
         FreezePresentation(attacker, profile.hitstopDuration);
         FreezePresentation(target, profile.hitstopDuration);
         FreezeGameplay(attacker, profile.hitstopDuration);
         FreezeGameplay(target, profile.hitstopDuration);
-
-        PlayImpactSound(attacker, target, sound);
 
         if (target == null || !requestCameraShake)
             return;
@@ -299,20 +285,6 @@ public class CombatImpactSystem : MonoBehaviour
                 impactShakeIntensity
             );
         }
-    }
-
-    private void PlayImpactSound(
-        Transform attacker,
-        Transform target,
-        AudioCue cue)
-    {
-        if (cue == null || !cue.HasClip)
-            return;
-
-        Vector3 soundPosition = target != null
-            ? target.position
-            : attacker != null ? attacker.position : Vector3.zero;
-        GameAudioSystem.PlayAt(cue, soundPosition);
     }
 
     private static void FreezePresentation(Transform root, float duration)

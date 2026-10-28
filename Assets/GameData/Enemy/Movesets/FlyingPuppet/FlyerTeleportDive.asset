@@ -21,11 +21,11 @@ MonoBehaviour:
   - TeleportDive
   specialQueueId: Flyer.TeleportDive
   windupDuration: 1.25
-  activeDuration: 0.8
-  recoveryDuration: 1.5
+  activeDuration: 0.5
+  recoveryDuration: 1.3
   baseDamage: 30
-  basePoiseDamage: 35
-  causesHeavyStagger: 0
+  basePoiseDamage: 45
+  causesHeavyStagger: 1
   movement:
     forwardDistance: 0
     lateralDistance: 0
@@ -37,11 +37,11 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    faceTargetDuringWindup: 0
+    faceTargetDuringWindup: 1
     faceTargetDuringActive: 0
   requirements:
-    minimumRange: 0
-    maximumRange: 30
+    minimumRange: 6
+    maximumRange: 40
     selfContext: 2
     targetContext: 2
     maximumTargetAngle: 180
@@ -64,8 +64,8 @@ MonoBehaviour:
       shape: 2
       anchorMode: 0
       trajectoryMode: 0
-      primaryAnchorId:
-      secondaryAnchorId:
+      primaryAnchorId: 
+      secondaryAnchorId: 
       startLocalPosition: {x: 0, y: 0, z: 0}
       endLocalPosition: {x: 0, y: 0, z: 0}
       startLocalEuler: {x: 0, y: 0, z: 0}

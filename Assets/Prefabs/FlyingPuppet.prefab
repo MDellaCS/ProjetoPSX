@@ -54,6 +54,7 @@ GameObject:
   - component: {fileID: 2658722192233227514}
   - component: {fileID: 1539936370110795481}
   - component: {fileID: 6082453215620148203}
+  - component: {fileID: -6311550100291000043}
   m_Layer: 0
   m_Name: FlyingPuppet
   m_TagString: Untagged
@@ -350,6 +351,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyGore
   damageProfile: {fileID: 11400000, guid: 0467eb97ccca3ce449f59592207d4658, type: 2}
   deathProfile: {fileID: 11400000, guid: 3124fe2430a717f4da45771b47a5e9b3, type: 2}
+  emitModelPartsOnDeath: 1
   particleCountMultiplier: 0.8
   baseCurrencyValue: {x: 2, y: 5}
   currencyGorePieces: 3
@@ -495,3 +497,16 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
   m_PrefabInstance: {fileID: 4747769637860590773}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &-6311550100291000043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5527c21231a44d08d73933eb7a58a6f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBodyPartDeathParticles
+  profile: {fileID: 11400000, guid: 09a285251532b314b82f9448bd08290e, type: 2}

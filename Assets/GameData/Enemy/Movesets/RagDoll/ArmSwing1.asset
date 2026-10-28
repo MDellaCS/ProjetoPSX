@@ -18,11 +18,13 @@ MonoBehaviour:
   context: 0
   animationStateId: ArmSwing1
   tags: []
-  windupDuration: 1
+  specialQueueId: 
+  windupDuration: 1.3
   activeDuration: 0.1
-  recoveryDuration: 0.15
+  recoveryDuration: 2
   baseDamage: 15
   basePoiseDamage: 20
+  causesHeavyStagger: 0
   movement:
     forwardDistance: 0.5
     lateralDistance: 0

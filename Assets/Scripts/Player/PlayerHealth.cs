@@ -270,6 +270,19 @@ public class PlayerHealth : MonoBehaviour
         return true;
     }
 
+    /// <summary>Aplica o LightStagger padrao quando o jogador acerta uma defesa refletiva.</summary>
+    public void ApplyReflectedLightAttackStagger(Vector3 defenderPosition)
+    {
+        if (playerState == null || playerState.IsDead() ||
+            playerState.IsHeavyStaggered() || playerState.IsBurnStunned() ||
+            playerState.IsBurnWalking())
+        {
+            return;
+        }
+
+        StartStagger(false, defenderPosition);
+    }
+
     public void TakeDamage(
         int damage,
         Vector3 attackerPosition,
@@ -288,6 +301,8 @@ public class PlayerHealth : MonoBehaviour
         {
             combatStatus?.RegisterDamageTakenFromEnemy();
             EnemyBase.NotifyPlayerDamagedByEnemy();
+            GameplayAudioSystem.Play(GameplayAudioCueId.PlayerHurt,
+                transform.position);
         }
 
         damageNumbers?.ShowDamage(damage, incomingDamageNumberColor);

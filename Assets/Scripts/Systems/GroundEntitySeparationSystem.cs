@@ -28,6 +28,7 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
         public CharacterController enemyController;
         public PlayerMovement player;
         public EnemyMovement enemy;
+        public FlyingPuppet flyingPuppet;
 
         public Transform Transform => player != null ? player.transform : enemy.transform;
         public Bounds Bounds => player != null
@@ -80,7 +81,8 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
             entities.Add(new GroundEntity
             {
                 playerController = controller,
-                player = player
+                player = player,
+                flyingPuppet = null
             });
             return;
         }
@@ -93,12 +95,29 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
         entities.Add(new GroundEntity
         {
             enemyController = enemyController,
-            enemy = enemy
+            enemy = enemy,
+            flyingPuppet = enemy.GetComponent<FlyingPuppet>()
         });
     }
 
     private void ResolvePair(GroundEntity first, GroundEntity second)
     {
+        bool playerFlyerPair =
+            (first.player != null && second.flyingPuppet != null) ||
+            (second.player != null && first.flyingPuppet != null);
+        if ((first.flyingPuppet != null || second.flyingPuppet != null) &&
+            !playerFlyerPair)
+        {
+            return;
+        }
+
+        if (playerFlyerPair &&
+            ((first.flyingPuppet != null && first.flyingPuppet.IgnoresPlayerCollision) ||
+             (second.flyingPuppet != null && second.flyingPuppet.IgnoresPlayerCollision)))
+        {
+            return;
+        }
+
         if (!HasRelevantVerticalContact(first, second))
             return;
 
@@ -152,6 +171,15 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
             secondBounds.min.y <= firstBounds.max.y + verticalContactTolerance;
         if (!verticalOverlap)
             return false;
+
+        // O flyer so se separa horizontalmente do jogador quando as capsulas
+        // realmente se sobrepoem em altura. A subida/descida nao deve anular
+        // a colisao lateral, e ele continua livre para voar sobre inimigos.
+        if ((first.player != null && second.flyingPuppet != null) ||
+            (second.player != null && first.flyingPuppet != null))
+        {
+            return true;
+        }
 
         const float ascendingThreshold = .05f;
         float bottomDifference = firstBounds.min.y - secondBounds.min.y;

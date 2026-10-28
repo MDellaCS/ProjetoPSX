@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3ad7d462a4d438ea2a7f1cf7c8f9db1, type: 3}
+  m_Name: GameplayAudioSettings
+  m_EditorClassIdentifier: Assembly-CSharp::GameplayAudioSettings
+  sfxEnabled: 1
+  globalVolume: 0.376
+  globalPitch: 1
+  initialVoiceCount: 16
+  maximumVoiceCount: 1006
+  defaultOutputMixerGroup: {fileID: 0}
+  minimumFootstepSpeed: 0.2
+  playerFootstepDistance: 2.4
+  enemyFootstepDistance: 1.5
+  footstepHeightOffset: 0.08
+  playerLightAttackHit:
+    clips:
+    - {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
+    - {fileID: 8300000, guid: 4ae73664f9fa52f41b51a2e050901696, type: 3}
+    - {fileID: 8300000, guid: ada2ae050ed4f114eba3fab31db4313e, type: 3}
+    volume: 1
+    volumeVariation: 0
+    pitch: 1
+    pitchVariation: 0
+    spatialBlend: 1
+    minDistance: 1
+    maxDistance: 24
+    rolloffMode: 0
+    priority: 96
+    outputMixerGroup: {fileID: 0}
+  playerHeavyAttackHit:
+    clips:
+    - {fileID: 8300000, guid: a42a25bfe713e63498febabb408fceea, type: 3}
+    - {fileID: 8300000, guid: b322a4e6a9f59b04a82a3336dde02871, type: 3}
+    - {fileID: 8300000, guid: ae2d2db46850b7c47ab85240cdc448f9, type: 3}
+    volume: 1
+    volumeVariation: 0
+    pitch: 1
+    pitchVariation: 0
+    spatialBlend: 1
+    minDistance: 1
+    maxDistance: 28
+    rolloffMode: 0
+    priority: 88
+    outputMixerGroup: {fileID: 0}
+  playerHurt:
+    clips:
+    - {fileID: 8300000, guid: 99348524f0ef5b3469b6d1976f17370c, type: 3}
+    - {fileID: 8300000, guid: 0910b552636052c42a5d5fb6d168dc27, type: 3}
+    - {fileID: 8300000, guid: 8115c336b0fa59f41b1cb0af599a2271, type: 3}
+    volume: 1
+    volumeVariation: 0
+    pitch: 1
+    pitchVariation: 0
+    spatialBlend: 1
+    minDistance: 1
+    maxDistance: 24
+    rolloffMode: 0
+    priority: 80
+    outputMixerGroup: {fileID: 0}
+  playerFootstep:
+    clips:
+    - {fileID: 8300000, guid: 505a015d5525e0442ae4a62d5bac304d, type: 3}
+    volume: 4
+    volumeVariation: 0.05
+    pitch: 1
+    pitchVariation: 0.05
+    spatialBlend: 1
+    minDistance: 1
+    maxDistance: 16
+    rolloffMode: 0
+    priority: 160
+    outputMixerGroup: {fileID: 0}
+  enemyFootstep:
+    clips:
+    - {fileID: 8300000, guid: 8e001351cd7065543a068386cde4c960, type: 3}
+    volume: 4
+    volumeVariation: 0.05
+    pitch: 1
+    pitchVariation: 0.05
+    spatialBlend: 1
+    minDistance: 1
+    maxDistance: 20
+    rolloffMode: 0
+    priority: 160
+    outputMixerGroup: {fileID: 0}

@@ -297,7 +297,7 @@ PrefabInstance:
       objectReference: {fileID: 1115055766}
     - target: {fileID: 5318782377259686372, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_VersionIndex
-      value: 5897
+      value: 5915
       objectReference: {fileID: 0}
     - target: {fileID: 5337938448132209636, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_Mesh
@@ -329,7 +329,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: maxAlive
-      value: 6
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: areaSize.x
@@ -353,19 +353,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: enemyPrefabs.Array.size
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: 'enemyPrefabs.Array.data[0]'
       value: 
-      objectReference: {fileID: -5168411248268108556, guid: 3f4ae08cd3872284b9426504478c5e43, type: 3}
+      objectReference: {fileID: -1183834332778261383, guid: 6851f633fa0a09241beb31b8ed762658, type: 3}
+    - target: {fileID: 7830438203531127801, guid: bf529fd3342712043834221bae708a04, type: 3}
+      propertyPath: 'enemyPrefabs.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2183351498342374004, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
     - target: {fileID: 8718357877101864650, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 1851934216}
     - target: {fileID: 8718357877101864650, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_VersionIndex
-      value: 5893
+      value: 5911
       objectReference: {fileID: 0}
     - target: {fileID: 9098914493532181134, guid: bf529fd3342712043834221bae708a04, type: 3}
       propertyPath: m_Mesh

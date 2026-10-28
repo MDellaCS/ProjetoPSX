@@ -18,9 +18,10 @@ MonoBehaviour:
   context: 0
   animationStateId: Z1
   tags: []
+  specialQueueId: 
   windupDuration: 0.7
   activeDuration: 0.1
-  recoveryDuration: 0.4
+  recoveryDuration: 2
   baseDamage: 5
   basePoiseDamage: 80
   causesHeavyStagger: 1
