@@ -16,14 +16,14 @@ MonoBehaviour:
   resourceMode: 0
   globalPauseDelay: 0.5
   movementSpeedMultiplier: 1
-  allowAirJump: 1
   allowDash: 1
+  allowAirJump: 1
   allowAirDash: 1
   jumpInitialSpeed: 14
   dashImpulse: 12.8
   dashCooldown: 1.3
-  lightWindupActiveRotationSpeed: 1500
-  heavyWindupActiveRotationSpeed: 800
+  lightWindupActiveRotationSpeed: 450
+  heavyWindupActiveRotationSpeed: 350
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
     continuationWindow: 0.6

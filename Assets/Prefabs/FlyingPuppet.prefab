@@ -115,26 +115,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21882b701d20d8448b0e1fb973e82c57, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlyingPuppet
-  groundFlightHeight: 3.5
+  groundFlightHeight: 3.7
   flightGroundLayers:
     serializedVersion: 2
     m_Bits: 4294967295
   groundProbeDistance: 20
   groundProbeStartOffset: 2
   heightCorrectionSpeed: 5
-  sweepDescentSpeed: 8
+  sweepDescentSpeed: 12
   visualRoot: {fileID: 699346647437120168}
   airSpinVisualRotations: 3
-  teleportDiveCooldown: 8
-  teleportDiveDecisionChance: 35
+  teleportDiveCooldown: 5
+  teleportDiveDecisionChance: 80
   teleportDiveRiseDuration: 0.45
   teleportDiveRiseSpeed: 9
-  teleportDiveHeight: 6
+  teleportDiveHeight: 9
   teleportDiveWindup:
-    min: 1
-    max: 1.5
+    min: 1.2
+    max: 1.2
   teleportDiveDescentSpeed: 14
-  teleportDiveWarningSize: {x: 2.5, y: 0.25, z: 2.5}
+  teleportDiveMaximumDescentDuration: 5
+  teleportDiveWarningSize: {x: 2.6, y: 0.05, z: 2.6}
 --- !u!114 &7038528183464375128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -154,53 +155,53 @@ MonoBehaviour:
   initialAggressionPercent:
     min: 25
     max: 85
-  minimumAggressionPercent: 25
-  maximumAggressionPercent: 85
+  minimumAggressionPercent: 0
+  maximumAggressionPercent: 100
   aggressionChangeRatePerSecond:
     min: 2
     max: 5
   aggressionChangeInterval:
     min: 3
     max: 6
-  playerBackTurnedAggressionGain: 1
-  outOfCameraAggressionLoss: -1
-  cameraVisibilityPadding: 1
-  playerFarAggressionDistance: 0
-  playerFarAggressionChangePerSecond: 0
-  damageTakenAggressionChangePerMaxHealthPercent: -1
+  playerBackTurnedAggressionGain: 2
+  outOfCameraAggressionLoss: -4
+  cameraVisibilityPadding: 2
+  playerFarAggressionDistance: 12
+  playerFarAggressionChangePerSecond: 5
+  damageTakenAggressionChangePerMaxHealthPercent: -10
   lowEnemyHealthPercent: 0
   lowEnemyHealthDecreaseChance: 0
   lowPlayerHealthPercent: 0
   lowPlayerHealthAggressionGainPerSecond: 0
   highPlayerHealthPercent: 0
   highPlayerHealthAggressionLossPerSecond: 0
-  playerAirborneAggressionChangePerSecond: 15
-  retreatsWhenPlayerTakesEnemyDamage: 0
+  playerAirborneAggressionChangePerSecond: 10
+  retreatsWhenPlayerTakesEnemyDamage: 1
   gainsAggressionWhenPlayerTakesEnemyDamage: 0
-  playerDamagedAggressionPercent: 0
-  playerDamagedAggressionFlatChange: 0
+  playerDamagedAggressionPercent: 0.1
+  playerDamagedAggressionFlatChange: 1
   decisionInterval:
-    min: 3
-    max: 6
+    min: 4
+    max: 5
   repositionDuration:
-    min: 2
-    max: 4
-  chaseCommitmentDuration: 5
-  chaseCommitmentCooldown: 5
+    min: 5
+    max: 10
+  chaseCommitmentDuration: 4
+  chaseCommitmentCooldown: 6
   canChooseTacticalIdle: 1
   tacticalIdleChancePercent:
     min: 10
     max: 25
   tacticalIdleDuration:
-    min: 0.5
-    max: 1.25
+    min: 3
+    max: 5
   useCohesiveGroupPositioning: 1
   groupSeparationRadius:
-    min: 2.25
-    max: 3.25
+    min: 4
+    max: 6
   groupSeparationStrength:
-    min: 0.65
-    max: 1.15
+    min: 1
+    max: 2
   preferredOrbitDistance:
     min: 2.1
     max: 3.2
@@ -214,7 +215,7 @@ MonoBehaviour:
     min: 25
     max: 50
   orbitDirectionMode: 0
-  directorWeight: 40
+  directorWeight: 30
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -284,7 +285,7 @@ MonoBehaviour:
   fastSpeed: 3.3
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 40
+  rotationSpeed: 35
   useTankControls: 1
   tankControlsAdvanceAlignment: 0
   canBeLaunchedUp: 0
@@ -306,13 +307,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 1000
+  maxHealth: 800
   isUnkillable: 0
-  maxPoise: 40
+  maxPoise: 20
   staggerDuration: 1
-  staggerKnockbackForce: 1
-  staggerKnockbackDuration: 0.2
-  damageFlashDuration: 0.15
+  staggerKnockbackForce: 2
+  staggerKnockbackDuration: 0.07
+  guardingStateColor: {r: 0.55, g: 0.2, b: 0.8, a: 1}
+  windupStateColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  activeStateColor: {r: 1, g: 0.25, b: 0.1, a: 1}
+  recoveryStateColor: {r: 1, g: 0.65, b: 0.1, a: 1}
+  dodgingStateColor: {r: 0, g: 1, b: 1, a: 1}
+  staggeredStateColor: {r: 1, g: 0.5, b: 0, a: 1}
+  tauntingStateColor: {r: 1, g: 0.25, b: 0.7, a: 1}
+  specialQueueStateColor: {r: 0.2, g: 0.8, b: 1, a: 1}
 --- !u!114 &6421883612428584792
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -351,7 +359,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyGore
   damageProfile: {fileID: 11400000, guid: 0467eb97ccca3ce449f59592207d4658, type: 2}
   deathProfile: {fileID: 11400000, guid: 3124fe2430a717f4da45771b47a5e9b3, type: 2}
-  emitModelPartsOnDeath: 1
   particleCountMultiplier: 0.8
   baseCurrencyValue: {x: 2, y: 5}
   currencyGorePieces: 3
@@ -373,20 +380,33 @@ MonoBehaviour:
     min: 0.15
     max: 0.35
   slowFrequency:
-    min: 0.12
-    max: 0.25
+    min: 0.1
+    max: 0.2
   fastFrequency:
     min: 0.3
-    max: 0.55
+    max: 0.4
   frequencyChangeInterval:
-    min: 2
-    max: 4
+    min: 3
+    max: 6
   frequencyTransitionSpeed: 0.5
-  movementThreshold: 0.1
-  minimumStillDuration: 0.2
-  movementPullDuration: 0.3
-  movementPullHeight: 0.35
+  movementThreshold: 0.05
+  minimumStillDuration: 0.4
+  movementPullDuration: 0.25
+  movementPullHeight: 0.3
   movementPullVerticalSpeed: 4
+--- !u!114 &-6311550100291000043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5527c21231a44d08d73933eb7a58a6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBodyPartDeathParticles
+  profile: {fileID: 11400000, guid: 09a285251532b314b82f9448bd08290e, type: 2}
 --- !u!1001 &4747769637860590773
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -497,16 +517,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
   m_PrefabInstance: {fileID: 4747769637860590773}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &-6311550100291000043
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a5527c21231a44d08d73933eb7a58a6f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyBodyPartDeathParticles
-  profile: {fileID: 11400000, guid: 09a285251532b314b82f9448bd08290e, type: 2}

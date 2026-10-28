@@ -32,7 +32,8 @@ public sealed class EnemyAttackController : MonoBehaviour
     public event Action<EnemyAttackRuntime, EnemyAttackPhase> PhaseChanged;
     public event Action<EnemyAttackRuntime> AttackEnded;
     public float PhaseProgress => CurrentAttack == null ? 0f :
-        1f - phaseTimer / Mathf.Max(.0001f, GetPhaseDuration(CurrentPhase));
+        Mathf.Clamp01(1f - phaseTimer /
+            Mathf.Max(.0001f, GetPhaseDuration(CurrentPhase)));
 
     internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
         EnemyMovement enemyMovement)
@@ -142,8 +143,14 @@ public sealed class EnemyAttackController : MonoBehaviour
         TickMovement();
         hitboxes.Tick(PhaseProgress);
         phaseTimer -= Time.deltaTime;
-        if (phaseTimer <= 0f)
+        bool endEarly = owner.ShouldEndAttackActivePhaseEarly(CurrentAttack);
+        if (endEarly || phaseTimer <= 0f)
         {
+            if (!endEarly && owner.ShouldHoldAttackActivePhase(CurrentAttack))
+            {
+                phaseTimer = 0f;
+                return;
+            }
             hitboxes.Tick(1f);
             EnterRecovery();
         }
@@ -158,6 +165,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         if (pendingContinuation != null &&
             recoveryElapsed >= pendingContinuationDelay)
         {
+            owner.NotifyAttackEnded(CurrentAttack.Definition);
             AttackEnded?.Invoke(CurrentAttack);
             BeginAttack(pendingContinuation);
             return;
@@ -191,6 +199,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         phaseTimer = Mathf.Max(0f, CurrentAttack.RecoveryDuration);
         recoveryElapsed = 0f;
         owner.CurrentState = EnemyBase.State.Recovery;
+        owner.NotifyAttackRecoveryStarted(CurrentAttack.Definition);
         PhaseChanged?.Invoke(CurrentAttack, CurrentPhase);
         pendingContinuation = null;
         pendingContinuationDelay = 0f;
@@ -214,6 +223,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         if (pendingContinuation != null &&
             recoveryElapsed >= pendingContinuationDelay)
         {
+            owner.NotifyAttackEnded(CurrentAttack.Definition);
             AttackEnded?.Invoke(CurrentAttack);
             BeginAttack(pendingContinuation);
             return;
@@ -241,7 +251,10 @@ public sealed class EnemyAttackController : MonoBehaviour
         authoredMovement?.End();
         hitboxes?.End();
         if (ended != null)
+        {
+            owner.NotifyAttackEnded(ended.Definition);
             AttackEnded?.Invoke(ended);
+        }
     }
 
     internal void OnSpecialAttackQueueFailed(string queueId)

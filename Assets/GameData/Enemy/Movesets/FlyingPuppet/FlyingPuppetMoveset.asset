@@ -22,7 +22,7 @@ MonoBehaviour:
     selectionWeight: 200
     requiresDirectorAuthorization: 1
   - targetNodeId: FlyerAirSpin
-    selectionWeight: 80
+    selectionWeight: 60
     requiresDirectorAuthorization: 1
   nodes:
   - nodeId: FlyerSweep

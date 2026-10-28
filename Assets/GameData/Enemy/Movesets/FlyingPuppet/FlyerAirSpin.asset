@@ -20,12 +20,12 @@ MonoBehaviour:
   tags:
   - AirSpin
   specialQueueId: 
-  windupDuration: 0.5
+  windupDuration: 0.7
   activeDuration: 1.7
-  recoveryDuration: 4
+  recoveryDuration: 5
   baseDamage: 25
-  basePoiseDamage: 100
-  causesHeavyStagger: 0
+  basePoiseDamage: 70
+  causesHeavyStagger: 1
   movement:
     forwardDistance: 2
     lateralDistance: 2
@@ -59,7 +59,7 @@ MonoBehaviour:
     faceTargetDuringActive: 1
   requirements:
     minimumRange: 0
-    maximumRange: 2.3
+    maximumRange: 1.5
     selfContext: 1
     targetContext: 1
     maximumTargetAngle: 180
@@ -67,7 +67,7 @@ MonoBehaviour:
     lineOfSightBlockingLayers:
       serializedVersion: 2
       m_Bits: 4294967295
-    minimumAggressionPercent: 10
+    minimumAggressionPercent: 40
     maximumAggressionPercent: 100
     preferredRange: 0
   strikes:

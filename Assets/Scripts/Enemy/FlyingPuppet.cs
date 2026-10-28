@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -10,7 +11,14 @@ public class FlyingPuppet : EnemyBase
     private const string AirSpinTag = "AirSpin";
     private const string TeleportDiveTag = "TeleportDive";
 
-    private enum TeleportDivePhase { None, Rising, HiddenWindup, Descending }
+    private enum TeleportDivePhase
+    {
+        None,
+        Rising,
+        HiddenWindup,
+        Descending,
+        GroundedRecovery
+    }
 
     [Header("Flight")]
     [Tooltip("Altura que o inimigo busca manter acima do chao enquanto nao esta em sweep.")]
@@ -33,6 +41,16 @@ public class FlyingPuppet : EnemyBase
     [Tooltip("Numero de voltas completas do visual durante Windup + Active de Air Spin.")]
     [Min(0f)] [SerializeField] private float airSpinVisualRotations = 2f;
 
+    [Header("Gizmos de Ossos (F3)")]
+    [Tooltip("Osso da cabeca usado como origem da linha vertical de depuracao. Se vazio, tenta obter Head do Animator Humanoid.")]
+    [SerializeField] private Transform headGizmoAnchor;
+    [Tooltip("Osso da mao esquerda usado como origem da linha vertical de depuracao. Se vazio, tenta obter Left Hand do Animator Humanoid.")]
+    [SerializeField] private Transform leftHandGizmoAnchor;
+    [Tooltip("Osso da mao direita usado como origem da linha vertical de depuracao. Se vazio, tenta obter Right Hand do Animator Humanoid.")]
+    [SerializeField] private Transform rightHandGizmoAnchor;
+    [Tooltip("Altura, em unidades do mundo, projetada para cima a partir da cabeca e das duas maos quando F3 esta ativo.")]
+    [Min(1f)] [SerializeField] private float boneGizmoLineHeight = 20f;
+
     [Header("Teleport Dive")]
     [Tooltip("Intervalo minimo entre tentativas do ataque de desaparecer e cair sobre o jogador.")]
     [Min(0f)] [SerializeField] private float teleportDiveCooldown = 8f;
@@ -48,6 +66,8 @@ public class FlyingPuppet : EnemyBase
     [SerializeField] private EnemyFloatRange teleportDiveWindup = new() { min = 1f, max = 1.5f };
     [Tooltip("Velocidade vertical da queda durante o ataque ativo. O hitbox do asset acompanha a descida.")]
     [Min(.1f)] [SerializeField] private float teleportDiveDescentSpeed = 14f;
+    [Tooltip("Tempo maximo que o Flyer tenta atingir o chao durante a descida. Ao exceder, ele e colocado no piso detectado e inicia o recovery no chao.")]
+    [Min(.1f)] [SerializeField] private float teleportDiveMaximumDescentDuration = 1.5f;
     [Tooltip("Tamanho do cubo vermelho de aviso desenhado sobre o ponto de impacto quando F3 esta ativo.")]
     [SerializeField] private Vector3 teleportDiveWarningSize = new(2.5f, .25f, 2.5f);
 
@@ -60,15 +80,28 @@ public class FlyingPuppet : EnemyBase
     private TeleportDivePhase teleportDivePhase;
     private float teleportDivePhaseTimer;
     private float teleportDiveCooldownTimer;
+    private float teleportDiveDescentTimer;
     private float preparedTeleportDiveWindup;
     private Vector3 teleportDiveLandingPoint;
     private Renderer[] teleportDiveRenderers;
     private bool[] teleportDiveRendererStates;
     private Collider[] teleportDiveColliders;
     private bool[] teleportDiveColliderStates;
+    private readonly List<IgnoredEnemyCollision> teleportDiveIgnoredCollisions = new();
+    private bool isIgnoringOtherEnemyCollisions;
 
-    /// <summary>Indica se o corpo do flyer deve ser ignorado pelo motor de colisao do jogador durante o ataque de teleporte.</summary>
-    public bool IgnoresPlayerCollision => teleportDivePhase != TeleportDivePhase.None;
+    private struct IgnoredEnemyCollision
+    {
+        public Collider first;
+        public Collider second;
+        public bool wasIgnored;
+    }
+
+    /// <summary>Indica se player e inimigos devem ignorar a colisao fisica com o Flyer durante o movimento de teleporte.</summary>
+    public bool IgnoresPlayerCollision =>
+        teleportDivePhase == TeleportDivePhase.Rising ||
+        teleportDivePhase == TeleportDivePhase.HiddenWindup ||
+        teleportDivePhase == TeleportDivePhase.Descending;
 
     private void Start()
     {
@@ -77,6 +110,7 @@ public class FlyingPuppet : EnemyBase
         if (bobbing == null)
             bobbing = gameObject.AddComponent<EnemyBobbing>();
         ResolveVisualRoot();
+        ResolveBoneGizmoAnchors();
     }
 
     private void OnValidate()
@@ -88,6 +122,9 @@ public class FlyingPuppet : EnemyBase
             Mathf.Max(.05f, teleportDiveWarningSize.x),
             Mathf.Max(.05f, teleportDiveWarningSize.y),
             Mathf.Max(.05f, teleportDiveWarningSize.z));
+        teleportDiveMaximumDescentDuration = Mathf.Max(.1f,
+            teleportDiveMaximumDescentDuration);
+        boneGizmoLineHeight = Mathf.Max(1f, boneGizmoLineHeight);
     }
 
     private void LateUpdate()
@@ -107,7 +144,10 @@ public class FlyingPuppet : EnemyBase
 
         if (teleportDivePhase != TeleportDivePhase.None &&
             (CurrentAttack == null || !CurrentAttack.HasTag(TeleportDiveTag)))
+        {
             RestoreTeleportDivePresentation();
+            RestoreOtherEnemyCollisionsAfterTeleportDive();
+        }
     }
 
     protected override void TickEnemySpecificSystems()
@@ -116,6 +156,7 @@ public class FlyingPuppet : EnemyBase
             (CurrentAttack == null || !CurrentAttack.HasTag(TeleportDiveTag)))
         {
             RestoreTeleportDivePresentation();
+            RestoreOtherEnemyCollisionsAfterTeleportDive();
             return;
         }
 
@@ -133,6 +174,11 @@ public class FlyingPuppet : EnemyBase
         else if (teleportDivePhase == TeleportDivePhase.HiddenWindup)
         {
             teleportDivePhaseTimer -= Time.deltaTime;
+        }
+        else if (teleportDivePhase == TeleportDivePhase.Descending)
+        {
+            teleportDiveDescentTimer = Mathf.Max(0f,
+                teleportDiveDescentTimer - Time.deltaTime);
         }
     }
 
@@ -160,10 +206,6 @@ public class FlyingPuppet : EnemyBase
 
     protected override void UpdateVerticalMovement(EnemyMovement movement)
     {
-        if (teleportDivePhase == TeleportDivePhase.Descending &&
-            CurrentState == State.Recovery)
-            teleportDivePhase = TeleportDivePhase.None;
-
         if (teleportDivePhase == TeleportDivePhase.Rising)
         {
             movement.SetVerticalVelocity(teleportDiveRiseSpeed);
@@ -177,6 +219,11 @@ public class FlyingPuppet : EnemyBase
         if (teleportDivePhase == TeleportDivePhase.Descending)
         {
             movement.SetVerticalVelocity(-teleportDiveDescentSpeed);
+            return;
+        }
+        if (teleportDivePhase == TeleportDivePhase.GroundedRecovery)
+        {
+            movement.SetVerticalVelocity(-2f);
             return;
         }
 
@@ -249,6 +296,7 @@ public class FlyingPuppet : EnemyBase
     {
         if (attack != null && attack.HasTag(TeleportDiveTag))
         {
+            IgnoreOtherEnemiesDuringTeleportDive();
             teleportDivePhase = TeleportDivePhase.Rising;
             teleportDivePhaseTimer = teleportDiveRiseDuration;
             return;
@@ -270,7 +318,123 @@ public class FlyingPuppet : EnemyBase
 
         RestoreTeleportDivePresentation();
         teleportDivePhase = TeleportDivePhase.Descending;
+        teleportDiveDescentTimer = teleportDiveMaximumDescentDuration;
         Movement?.SetVerticalVelocity(-teleportDiveDescentSpeed);
+    }
+
+    protected override bool ShouldHoldAttackActive(EnemyAttackRuntime attack)
+    {
+        if (attack?.Definition == null ||
+            !attack.Definition.HasTag(TeleportDiveTag) ||
+            teleportDivePhase != TeleportDivePhase.Descending)
+            return false;
+
+        if (Movement != null && Movement.IsGrounded)
+            return false;
+        if (teleportDiveDescentTimer > 0f)
+            return true;
+
+        SnapTeleportDiveToGround();
+        return false;
+    }
+
+    protected override bool ShouldEndAttackActiveEarly(EnemyAttackRuntime attack)
+    {
+        return attack?.Definition != null &&
+            attack.Definition.HasTag(TeleportDiveTag) &&
+            teleportDivePhase == TeleportDivePhase.Descending &&
+            Movement != null && Movement.IsGrounded;
+    }
+
+    protected override void OnAttackRecoveryStarted(EnemyAttackDefinition attack)
+    {
+        if (attack != null && attack.HasTag(TeleportDiveTag))
+        {
+            RestoreOtherEnemyCollisionsAfterTeleportDive();
+            teleportDivePhase = TeleportDivePhase.GroundedRecovery;
+            Movement?.SetVerticalVelocity(-2f);
+        }
+    }
+
+    protected override void OnAttackEnded(EnemyAttackDefinition attack)
+    {
+        if (attack != null && attack.HasTag(TeleportDiveTag))
+        {
+            RestoreOtherEnemyCollisionsAfterTeleportDive();
+            teleportDivePhase = TeleportDivePhase.None;
+        }
+    }
+
+    private void IgnoreOtherEnemiesDuringTeleportDive()
+    {
+        if (isIgnoringOtherEnemyCollisions)
+            return;
+
+        isIgnoringOtherEnemyCollisions = true;
+        Movement?.SetTemporaryGroundEntitySeparationIgnored(true);
+        Collider[] ownColliders = GetComponentsInChildren<Collider>(true);
+        foreach (EnemyBase otherEnemy in EnemyBase.ActiveEnemies)
+        {
+            if (otherEnemy == null || otherEnemy == this ||
+                !otherEnemy.gameObject.activeInHierarchy)
+                continue;
+
+            Collider[] otherColliders =
+                otherEnemy.GetComponentsInChildren<Collider>(true);
+            foreach (Collider ownCollider in ownColliders)
+            {
+                if (ownCollider == null || !ownCollider.gameObject.activeInHierarchy)
+                    continue;
+                foreach (Collider otherCollider in otherColliders)
+                {
+                    if (otherCollider == null ||
+                        !otherCollider.gameObject.activeInHierarchy ||
+                        ownCollider == otherCollider)
+                        continue;
+
+                    bool wasIgnored = Physics.GetIgnoreCollision(ownCollider,
+                        otherCollider);
+                    teleportDiveIgnoredCollisions.Add(new IgnoredEnemyCollision
+                    {
+                        first = ownCollider,
+                        second = otherCollider,
+                        wasIgnored = wasIgnored
+                    });
+                    Physics.IgnoreCollision(ownCollider, otherCollider, true);
+                }
+            }
+        }
+    }
+
+    private void RestoreOtherEnemyCollisionsAfterTeleportDive()
+    {
+        foreach (IgnoredEnemyCollision pair in teleportDiveIgnoredCollisions)
+        {
+            if (pair.first != null && pair.second != null)
+                Physics.IgnoreCollision(pair.first, pair.second,
+                    pair.wasIgnored);
+        }
+        teleportDiveIgnoredCollisions.Clear();
+        isIgnoringOtherEnemyCollisions = false;
+        Movement?.SetTemporaryGroundEntitySeparationIgnored(false);
+    }
+
+    private void SnapTeleportDiveToGround()
+    {
+        if (!TryGetGroundHeightAt(transform.position, out float groundHeight))
+            groundHeight = teleportDiveLandingPoint.y;
+
+        CharacterController characterController = GetComponent<CharacterController>();
+        bool controllerWasEnabled = characterController != null &&
+            characterController.enabled;
+        if (characterController != null)
+            characterController.enabled = false;
+        Vector3 position = transform.position;
+        position.y = groundHeight;
+        transform.position = position;
+        if (characterController != null)
+            characterController.enabled = controllerWasEnabled;
+        Movement?.SetVerticalVelocity(-2f);
     }
 
     private void BeginHiddenTeleportDive()
@@ -381,13 +545,24 @@ public class FlyingPuppet : EnemyBase
         teleportDivePhase = TeleportDivePhase.None;
     }
 
-    private void OnDisable() => RestoreTeleportDivePresentation();
+    private void OnDisable()
+    {
+        RestoreTeleportDivePresentation();
+        RestoreOtherEnemyCollisionsAfterTeleportDive();
+    }
 
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying ||
-            !PlayerDebugToolkitHUD.IsVisible ||
-            teleportDivePhase != TeleportDivePhase.HiddenWindup)
+            !PlayerDebugToolkitHUD.IsVisible)
+            return;
+
+        ResolveBoneGizmoAnchors();
+        DrawBoneGizmoLine(headGizmoAnchor, new Color(.1f, 1f, .9f));
+        DrawBoneGizmoLine(leftHandGizmoAnchor, new Color(1f, .65f, .1f));
+        DrawBoneGizmoLine(rightHandGizmoAnchor, new Color(.8f, .35f, 1f));
+
+        if (teleportDivePhase != TeleportDivePhase.HiddenWindup)
             return;
 
         Vector3 size = new(
@@ -398,6 +573,28 @@ public class FlyingPuppet : EnemyBase
         Gizmos.DrawCube(teleportDiveLandingPoint + Vector3.up * (size.y * .5f), size);
         Gizmos.color = new Color(1f, .08f, .04f, .95f);
         Gizmos.DrawWireCube(teleportDiveLandingPoint + Vector3.up * (size.y * .5f), size);
+    }
+
+    private void ResolveBoneGizmoAnchors()
+    {
+        Animator animator = GetComponentInChildren<Animator>(true);
+        if (animator == null || !animator.isHuman)
+            return;
+
+        headGizmoAnchor ??= animator.GetBoneTransform(HumanBodyBones.Head);
+        leftHandGizmoAnchor ??= animator.GetBoneTransform(HumanBodyBones.LeftHand);
+        rightHandGizmoAnchor ??= animator.GetBoneTransform(HumanBodyBones.RightHand);
+    }
+
+    private void DrawBoneGizmoLine(Transform anchor, Color color)
+    {
+        if (anchor == null)
+            return;
+
+        Vector3 end = anchor.position + Vector3.up * boneGizmoLineHeight;
+        Gizmos.color = color;
+        Gizmos.DrawLine(anchor.position, end);
+        Gizmos.DrawSphere(end, .07f);
     }
 
     private bool IsAirSpinAttack(EnemyAttackDefinition attack)

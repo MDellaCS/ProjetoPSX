@@ -68,6 +68,7 @@ public sealed class EnemyMovement : MonoBehaviour
     private bool isLaunched;
     private bool isLaunchedForwards;
     private bool hasGroundContact;
+    private bool temporarilyIgnoreGroundEntitySeparation;
     private readonly HashSet<EnemyBase> bodyImpactTargets = new();
     private readonly Collider[] bodyImpactOverlapBuffer = new Collider[64];
 
@@ -88,7 +89,8 @@ public sealed class EnemyMovement : MonoBehaviour
     public CharacterController EntityCharacterController => controller;
     /// <summary>Indica se este inimigo participa da separacao entre entidades terrestres.</summary>
     public bool ParticipatesInGroundEntitySeparation =>
-        !ignoreGroundEntitySeparation;
+        !ignoreGroundEntitySeparation &&
+        !temporarilyIgnoreGroundEntitySeparation;
     /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
     public bool IsGrounded
     {
@@ -102,6 +104,10 @@ public sealed class EnemyMovement : MonoBehaviour
         }
     }
     public float VerticalVelocity => verticalVelocity;
+
+    /// <summary>Suspende temporariamente a separacao global entre inimigos durante movimentos especiais.</summary>
+    public void SetTemporaryGroundEntitySeparationIgnored(bool ignored) =>
+        temporarilyIgnoreGroundEntitySeparation = ignored;
 
     internal void Initialize(EnemyBase enemy, EnemyHealth enemyHealth)
     {

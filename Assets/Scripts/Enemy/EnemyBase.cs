@@ -252,6 +252,10 @@ public class EnemyBase : MonoBehaviour
     protected virtual bool TryChooseSpecialCombatAction() => false;
     protected virtual void OnAttackStarted(EnemyAttackDefinition attack) { }
     protected virtual void OnAttackActiveStarted(EnemyAttackDefinition attack) { }
+    protected virtual bool ShouldEndAttackActiveEarly(EnemyAttackRuntime attack) => false;
+    protected virtual bool ShouldHoldAttackActive(EnemyAttackRuntime attack) => false;
+    protected virtual void OnAttackRecoveryStarted(EnemyAttackDefinition attack) { }
+    protected virtual void OnAttackEnded(EnemyAttackDefinition attack) { }
 
     internal bool CanSelectAttack(EnemyAttackDefinition attack) =>
         CanUseAttack(attack);
@@ -260,6 +264,14 @@ public class EnemyBase : MonoBehaviour
         OnAttackStarted(attack);
     internal void NotifyAttackActive(EnemyAttackDefinition attack) =>
         OnAttackActiveStarted(attack);
+    internal bool ShouldHoldAttackActivePhase(EnemyAttackRuntime attack) =>
+        ShouldHoldAttackActive(attack);
+    internal bool ShouldEndAttackActivePhaseEarly(EnemyAttackRuntime attack) =>
+        ShouldEndAttackActiveEarly(attack);
+    internal void NotifyAttackRecoveryStarted(EnemyAttackDefinition attack) =>
+        OnAttackRecoveryStarted(attack);
+    internal void NotifyAttackEnded(EnemyAttackDefinition attack) =>
+        OnAttackEnded(attack);
 
     public bool TakeDamage(int damage, Vector3 attackerPosition, int poiseDamage,
         out int damageDealt, out CombatPoiseHitResult poiseResult,

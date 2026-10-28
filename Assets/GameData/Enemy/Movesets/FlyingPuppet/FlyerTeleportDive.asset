@@ -22,7 +22,7 @@ MonoBehaviour:
   specialQueueId: Flyer.TeleportDive
   windupDuration: 1.25
   activeDuration: 0.5
-  recoveryDuration: 1.3
+  recoveryDuration: 1.8
   baseDamage: 30
   basePoiseDamage: 45
   causesHeavyStagger: 1
@@ -40,7 +40,7 @@ MonoBehaviour:
     faceTargetDuringWindup: 1
     faceTargetDuringActive: 0
   requirements:
-    minimumRange: 6
+    minimumRange: 3
     maximumRange: 40
     selfContext: 2
     targetContext: 2
@@ -51,7 +51,7 @@ MonoBehaviour:
       m_Bits: 4294967295
     minimumAggressionPercent: 0
     maximumAggressionPercent: 100
-    preferredRange: 8
+    preferredRange: 5
   strikes:
   - strikeName: Teleport Dive Impact
     activeStartNormalized: 0
@@ -61,13 +61,13 @@ MonoBehaviour:
     reaction: 1
     hitboxes:
     - trackName: Dive Body Impact
-      shape: 2
+      shape: 1
       anchorMode: 0
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
       startLocalPosition: {x: 0, y: 0, z: 0}
-      endLocalPosition: {x: 0, y: 0, z: 0}
+      endLocalPosition: {x: 0, y: -0.56, z: 0}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -95,9 +95,9 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 0.5
-      capsuleHeight: 1
-      capsuleAxis: 2
+      radius: 1
+      capsuleHeight: 2.76
+      capsuleAxis: 1
       boxSize: {x: 2.5, y: 2.5, z: 2.5}
       activeStartNormalized: 0
       activeEndNormalized: 1
