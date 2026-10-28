@@ -121,17 +121,20 @@ public class PlayerMovement : MonoBehaviour
     private PlayerCharacterController controller;
     private PlayerState playerState;
     private PlayerAttackController attackController;
+    private PlayerHealth playerHealth;
     private PlayerHeat playerHeat;
     private PlayerMovesetController movesetController;
     private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
     private Vector3 launchForwardsVelocity;
+    private Vector3 staggerPushVelocity;
     private Vector3 slideDirection;
 
     private float verticalVelocity;
     private float jumpHoldTimer;
     private float launchForwardsDeceleration;
+    private float staggerPushDeceleration;
     private float dashTimer;
     private float dashCooldownTimer;
     private float aerialLightTimer;
@@ -168,7 +171,6 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         controller = PlayerCharacterController.GetOrAdd(gameObject);
-        controller.CollisionHit += HandleControllerHit;
     }
 
     void Start()
@@ -176,18 +178,13 @@ public class PlayerMovement : MonoBehaviour
         CacheStandingControllerShape();
         playerState = GetComponent<PlayerState>();
         attackController = GetComponent<PlayerAttackController>();
+        playerHealth = GetComponent<PlayerHealth>();
         playerHeat = GetComponent<PlayerHeat>();
         movesetController = GetComponent<PlayerMovesetController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
         wasAirborne = !IsGrounded;
 
-    }
-
-    private void OnDestroy()
-    {
-        if (controller != null)
-            controller.CollisionHit -= HandleControllerHit;
     }
 
     void Update()
@@ -275,8 +272,10 @@ public class PlayerMovement : MonoBehaviour
 
         bool isQueuedDash = queuedRecoveryCancelAction ==
             RecoveryCancelAction.Dash;
+        bool heavyStaggerExit = playerState.IsHeavyStaggered() &&
+            playerHealth != null && playerHealth.CanExitHeavyStaggerEarly;
         bool canStartDash = playerState.IsNormal() ||
-            playerState.IsSliding();
+            playerState.IsSliding() || heavyStaggerExit;
 
         if (!canStartDash ||
             dashCooldownTimer > 0f ||
@@ -288,6 +287,9 @@ public class PlayerMovement : MonoBehaviour
 
         if (!isQueuedDash &&
             !inputBuffer.TryConsume(PlayerBufferedInput.Dash))
+            return;
+
+        if (heavyStaggerExit && !playerHealth.TryExitHeavyStaggerEarly())
             return;
 
         queuedRecoveryCancelAction = RecoveryCancelAction.None;
@@ -345,8 +347,10 @@ public class PlayerMovement : MonoBehaviour
             RecoveryCancelAction.Jump;
 
         bool wasDashing = playerState.IsDashing();
+        bool heavyStaggerExit = playerState.IsHeavyStaggered() &&
+            playerHealth != null && playerHealth.CanExitHeavyStaggerEarly;
         bool canStartJump = (playerState.IsNormal() || playerState.IsSliding() ||
-            wasDashing) &&
+            wasDashing || heavyStaggerExit) &&
             !IsStandingOnEnemy;
 
         if (!canStartJump ||
@@ -357,6 +361,9 @@ public class PlayerMovement : MonoBehaviour
 
         if (!isQueuedJump &&
             !inputBuffer.TryConsume(PlayerBufferedInput.Jump))
+            return;
+
+        if (heavyStaggerExit && !playerHealth.TryExitHeavyStaggerEarly())
             return;
 
         queuedRecoveryCancelAction = RecoveryCancelAction.None;
@@ -578,7 +585,8 @@ public class PlayerMovement : MonoBehaviour
         foreach (Collider overlap in overlaps)
         {
             if (overlap == null || overlap == controller ||
-                overlap.transform.IsChildOf(transform))
+                overlap.transform.IsChildOf(transform) ||
+                overlap.GetComponentInParent<CombatVisualParticle>() != null)
             {
                 continue;
             }
@@ -693,6 +701,14 @@ public class PlayerMovement : MonoBehaviour
             launchForwardsVelocity = Vector3.MoveTowards(
                 launchForwardsVelocity, Vector3.zero,
                 launchForwardsDeceleration * Time.deltaTime);
+            return forcedVelocity;
+        }
+
+        if (staggerPushVelocity.sqrMagnitude > .0001f)
+        {
+            Vector3 forcedVelocity = staggerPushVelocity;
+            staggerPushVelocity = Vector3.MoveTowards(staggerPushVelocity,
+                Vector3.zero, staggerPushDeceleration * Time.deltaTime);
             return forcedVelocity;
         }
 
@@ -1157,50 +1173,6 @@ public class PlayerMovement : MonoBehaviour
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
     }
 
-    private void HandleControllerHit(Collider hitCollider, Vector3 hitPoint,
-        Vector3 hitNormal)
-    {
-        EnemyBase enemy = hitCollider != null
-            ? hitCollider.GetComponentInParent<EnemyBase>()
-            : null;
-        if (enemy == null || enemy.IsDead || !IsLandingOnEnemyTop(enemy))
-            return;
-
-        // Um inimigo nunca conta como chao: nao reseta pulos e nao permite
-        // iniciar um novo pulo. O impulso lateral tambem tira o player do
-        // topo, em vez de deixa-lo equilibrado na cabeca do inimigo.
-        enemyGroundContactTimer = .1f;
-        verticalVelocity = Mathf.Min(verticalVelocity, -2f);
-
-        Vector3 separationDirection = transform.position - enemy.transform.position;
-        separationDirection.y = 0f;
-
-        if (separationDirection.sqrMagnitude <= .0001f)
-            separationDirection = transform.right;
-
-        horizontalVelocity = separationDirection.normalized * enemyHeadSeparationSpeed;
-    }
-
-    private bool IsLandingOnEnemyTop(EnemyBase enemy)
-    {
-        // Colisoes laterais e por baixo tambem chamam
-        // OnControllerColliderHit. So tratamos o inimigo como "chao invalido"
-        // quando a base do player chegou ao topo dele enquanto estava caindo.
-        if (controller == null || verticalVelocity > 0f)
-            return false;
-
-        CharacterController enemyController =
-            enemy.GetComponent<CharacterController>();
-        if (enemyController == null)
-            return false;
-
-        const float topContactTolerance = .15f;
-        float playerBottom = controller.bounds.min.y;
-        float enemyTop = enemyController.bounds.max.y;
-
-        return playerBottom >= enemyTop - topContactTolerance;
-    }
-
     public void ApplyLaunchForwards(
         Vector3 direction,
         float force,
@@ -1209,6 +1181,31 @@ public class PlayerMovement : MonoBehaviour
     {
         launchForwardsVelocity = direction * Mathf.Max(0f, force);
         launchForwardsDeceleration = Mathf.Max(.01f, deceleration);
+    }
+
+    /// <summary>Aplica o deslocamento horizontal padronizado de um stagger, independente do golpe recebido.</summary>
+    public void ApplyStaggerPush(Vector3 direction, float distance,
+        float duration)
+    {
+        CancelStaggerPush();
+        launchForwardsVelocity = Vector3.zero;
+        launchForwardsDeceleration = 0f;
+        horizontalVelocity = Vector3.zero;
+        direction.y = 0f;
+        duration = Mathf.Max(0f, duration);
+        if (distance <= 0f || duration <= 0f || direction.sqrMagnitude <= .0001f)
+            return;
+
+        float initialSpeed = 2f * distance / duration;
+        staggerPushVelocity = direction.normalized * initialSpeed;
+        staggerPushDeceleration = initialSpeed / duration;
+    }
+
+    /// <summary>Cancela o empurrao temporario aplicado exclusivamente por Stagger.</summary>
+    public void CancelStaggerPush()
+    {
+        staggerPushVelocity = Vector3.zero;
+        staggerPushDeceleration = 0f;
     }
 
     /// <summary>Interrompe traversal ao iniciar Burn, sem alterar o estado.</summary>
@@ -1223,7 +1220,40 @@ public class PlayerMovement : MonoBehaviour
         jumpHoldTimer = 0f;
         horizontalVelocity = Vector3.zero;
         launchForwardsVelocity = Vector3.zero;
+        CancelStaggerPush();
         launchForwardsDeceleration = 0f;
+    }
+
+    /// <summary>Remove velocidades e acoes em andamento ao reiniciar apos Game Over.</summary>
+    public void ResetForNewGame()
+    {
+        DesiredDirection = Vector3.zero;
+        horizontalVelocity = Vector3.zero;
+        launchForwardsVelocity = Vector3.zero;
+        CancelStaggerPush();
+        slideDirection = Vector3.zero;
+        verticalVelocity = 0f;
+        jumpHoldTimer = 0f;
+        launchForwardsDeceleration = 0f;
+        dashTimer = 0f;
+        dashCooldownTimer = 0f;
+        aerialLightTimer = 0f;
+        aerialGravityMultiplier = 1f;
+        aerialDiveFallSpeed = 0f;
+        launchGravity = gravity;
+        enemyGroundContactTimer = 0f;
+        jumpsUsed = 0;
+        hasUsedAirDash = false;
+        dashStartedGrounded = false;
+        isCrouching = false;
+        isLaunched = false;
+        isAerialDiving = false;
+        isDashJump = false;
+        wasAirborne = false;
+        queuedRecoveryCancelAction = RecoveryCancelAction.None;
+        inputBuffer?.ClearBufferedInputs(ignoreNextFrame: true);
+        movesetController?.ResetSequence();
+        attackController?.CancelAttack();
     }
 
     /// <summary>

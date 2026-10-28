@@ -10,36 +10,33 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1000000000000000000000000000002, type: 3}
-  m_Name: BasicZombieMoveset
+  m_Name: FlyingPuppetMoveset
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovesetDefinition
   lightWindupActiveRotationSpeed: 240
   heavyWindupActiveRotationSpeed: 180
   specialWindupActiveRotationSpeed: 120
   extendedArmHitboxRadius: 0.25
-  maximumAttacksPerSequence: 4
+  maximumAttacksPerSequence: 5
   openings:
-  - targetNodeId: Z1
-    selectionWeight: 50
+  - targetNodeId: FlyerSweep
+    selectionWeight: 200
     requiresDirectorAuthorization: 1
-  - targetNodeId: Z2
-    selectionWeight: 50
+  - targetNodeId: FlyerAirSpin
+    selectionWeight: 80
     requiresDirectorAuthorization: 1
   nodes:
-  - nodeId: Z1
-    attack: {fileID: 11400000, guid: b1000000000000000000000000000001, type: 2}
+  - nodeId: FlyerSweep
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000011, type: 2}
+    transitions: []
+  - nodeId: FlyerAirSpin
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000012, type: 2}
     transitions:
-    - targetNodeId: Z2
-      continuationChance: 50
+    - targetNodeId: FlyerAirSpin
+      continuationChance: 33
       selectionWeight: 100
-      minimumDelayAfterActive: 1
+      minimumDelayAfterActive: 0
       continuationWindow: 0
       requiresHitConfirm: 0
-  - nodeId: Z2
-    attack: {fileID: 11400000, guid: 9811065aa3d6b1945aeee761253bcb7a, type: 2}
-    transitions:
-    - targetNodeId: Z1
-      continuationChance: 50
-      selectionWeight: 100
-      minimumDelayAfterActive: 0.75
-      continuationWindow: 0
-      requiresHitConfirm: 0
+  - nodeId: FlyerTeleportDive
+    attack: {fileID: 11400000, guid: f7424ce4ecef4cdc97508d3692b63078, type: 2}
+    transitions: []

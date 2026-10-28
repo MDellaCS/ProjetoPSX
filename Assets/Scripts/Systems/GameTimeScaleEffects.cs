@@ -20,6 +20,22 @@ public sealed class GameTimeScaleEffects : MonoBehaviour
     public static bool IsCompletionSlowMotionActive =>
         instance != null && instance.isEffectActive;
 
+    /// <summary>Volta a escala global ao normal antes de recarregar apos Game Over.</summary>
+    public static void ResetForGameRestart()
+    {
+        if (instance == null)
+        {
+            Time.timeScale = 1f;
+            return;
+        }
+
+        instance.isEffectActive = false;
+        instance.effectDuration = 0f;
+        instance.effectElapsed = 0f;
+        instance.debugTimeScale = 1f;
+        instance.ApplyCurrentScale();
+    }
+
     /// <summary>Define a escala base usada pelos atalhos de teste.</summary>
     public static void SetDebugTimeScale(float value)
     {

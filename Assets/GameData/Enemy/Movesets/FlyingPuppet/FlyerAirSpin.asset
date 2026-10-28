@@ -10,24 +10,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1000000000000000000000000000001, type: 3}
-  m_Name: Push
+  m_Name: FlyerAirSpin
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
-  attackId: Push
-  displayName: Push
-  kind: 0
-  context: 0
-  animationStateId: Z1
-  tags: []
-  windupDuration: 0.7
-  activeDuration: 0.1
-  recoveryDuration: 0.4
-  baseDamage: 5
-  basePoiseDamage: 80
+  attackId: FlyerAirSpin
+  displayName: Flyer Air Spin
+  kind: 2
+  context: 1
+  animationStateId: FlyerAirSpin
+  tags:
+  - AirSpin
+  specialQueueId: 
+  windupDuration: 0.5
+  activeDuration: 1.7
+  recoveryDuration: 4
+  baseDamage: 25
+  basePoiseDamage: 100
+  causesHeavyStagger: 0
   movement:
     forwardDistance: 2
-    lateralDistance: 0
+    lateralDistance: 2
     startNormalized: 0
-    endNormalized: 0.5
+    endNormalized: 1
     movementCurve:
       serializedVersion: 2
       m_Curve:
@@ -43,8 +46,8 @@ MonoBehaviour:
       - serializedVersion: 3
         time: 1
         value: 1
-        inSlope: 2
-        outSlope: 2
+        inSlope: 0
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
@@ -53,37 +56,36 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     faceTargetDuringWindup: 1
-    faceTargetDuringActive: 0
+    faceTargetDuringActive: 1
   requirements:
     minimumRange: 0
-    maximumRange: 1.5
-    selfContext: 2
-    targetContext: 2
-    maximumTargetAngle: 120
+    maximumRange: 2.3
+    selfContext: 1
+    targetContext: 1
+    maximumTargetAngle: 180
     requiresLineOfSight: 1
     lineOfSightBlockingLayers:
       serializedVersion: 2
       m_Bits: 4294967295
-    cooldown: 3
-    minimumAggressionPercent: 0
-    maximumAggressionPercent: 50
-    preferredRange: 0.5
+    minimumAggressionPercent: 10
+    maximumAggressionPercent: 100
+    preferredRange: 0
   strikes:
-  - strikeName: Push
+  - strikeName: FlyerAirSpin
     activeStartNormalized: 0
     activeEndNormalized: 1
     damageMultiplier: 1
     poiseMultiplier: 1
     reaction: 5
     hitboxes:
-    - trackName: Push Esquerda
+    - trackName: FlyerAirSpin Hitbox
       shape: 0
       anchorMode: 0
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
-      startLocalPosition: {x: 0.36, y: 0.36, z: 0.2}
-      endLocalPosition: {x: 0.36, y: 0.36, z: 1.2}
+      startLocalPosition: {x: 0, y: 0, z: 0}
+      endLocalPosition: {x: 0, y: 0, z: 0}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -111,7 +113,7 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 0.5
+      radius: 2.35
       capsuleHeight: 1
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}
@@ -120,52 +122,6 @@ MonoBehaviour:
       sweep: 1
       sweepStepDistance: 0.25
       hitGroup: 0
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Push Direita
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: -0.36, y: 0.36, z: 0.2}
-      endLocalPosition: {x: -0.36, y: 0.36, z: 1.2}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.5
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 1
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 1
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-  usesExtendedArmHitbox: 1
+      allowRepeatHits: 1
+      repeatHitInterval: 0.5
+  usesExtendedArmHitbox: 0

@@ -10,24 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1000000000000000000000000000001, type: 3}
-  m_Name: FlyerAirSpin
+  m_Name: Run
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
-  attackId: FlyerAirSpin
-  displayName: Flyer Air Spin
-  kind: 2
-  context: 1
-  animationStateId: FlyerAirSpin
-  tags:
-  - AirSpin
-  windupDuration: 0.5
-  activeDuration: 1.7
-  recoveryDuration: 4
-  baseDamage: 25
-  basePoiseDamage: 200
+  attackId: Run
+  displayName: Run
+  kind: 1
+  context: 0
+  animationStateId: Run
+  tags: []
+  specialQueueId: RagDoll.Run
+  windupDuration: 1.5
+  activeDuration: 9
+  recoveryDuration: 5
+  baseDamage: 30
+  basePoiseDamage: 120
+  causesHeavyStagger: 1
   movement:
-    forwardDistance: 2
-    lateralDistance: 2
-    startNormalized: 0
+    forwardDistance: 40
+    lateralDistance: 0
+    startNormalized: 0.1
     endNormalized: 1
     movementCurve:
       serializedVersion: 2
@@ -44,8 +45,8 @@ MonoBehaviour:
       - serializedVersion: 3
         time: 1
         value: 1
-        inSlope: 0
-        outSlope: 0
+        inSlope: 2
+        outSlope: 2
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
@@ -56,34 +57,34 @@ MonoBehaviour:
     faceTargetDuringWindup: 1
     faceTargetDuringActive: 1
   requirements:
-    minimumRange: 0
-    maximumRange: 2.3
-    selfContext: 1
-    targetContext: 1
-    maximumTargetAngle: 180
+    minimumRange: 11
+    maximumRange: 16
+    selfContext: 2
+    targetContext: 0
+    maximumTargetAngle: 20
     requiresLineOfSight: 1
     lineOfSightBlockingLayers:
       serializedVersion: 2
       m_Bits: 4294967295
-    minimumAggressionPercent: 10
+    minimumAggressionPercent: 60
     maximumAggressionPercent: 100
-    preferredRange: 0
+    preferredRange: 14
   strikes:
-  - strikeName: FlyerAirSpin
+  - strikeName: Run
     activeStartNormalized: 0
     activeEndNormalized: 1
     damageMultiplier: 1
     poiseMultiplier: 1
-    reaction: 5
+    reaction: 3
     hitboxes:
-    - trackName: FlyerAirSpin Hitbox
+    - trackName: Run
       shape: 0
       anchorMode: 0
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
-      startLocalPosition: {x: 0, y: 0, z: 0}
-      endLocalPosition: {x: 0, y: 0, z: 0}
+      startLocalPosition: {x: 0, y: 0, z: 0.5}
+      endLocalPosition: {x: 0, y: 0, z: 0.5}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -111,15 +112,15 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 2.35
+      radius: 1.3
       capsuleHeight: 1
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}
       activeStartNormalized: 0
-      activeEndNormalized: 1
+      activeEndNormalized: 0.85
       sweep: 1
       sweepStepDistance: 0.25
       hitGroup: 0
       allowRepeatHits: 1
-      repeatHitInterval: 0.5
-  usesExtendedArmHitbox: 0
+      repeatHitInterval: 2
+  usesExtendedArmHitbox: 1

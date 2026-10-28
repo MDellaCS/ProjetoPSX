@@ -10,12 +10,15 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private PlayerInputBuffer inputBuffer;
     private PlayerAttackController attacks;
     private PlayerMovement movement;
+    private PlayerState playerState;
     private PlayerMovesetCatalog catalog;
     private string currentNodeId;
     private float activeStartedAt;
     private PlayerMoveNode pendingNode;
 
     public PlayerMovesetDefinition Moveset => moveset;
+    public bool UsesHealth => moveset != null && moveset.resourceMode == PlayerResourceMode.Health;
+    public bool UsesHeat => !UsesHealth;
     public string CurrentMovesetName => moveset == null
         ? "NONE"
         : string.IsNullOrWhiteSpace(moveset.displayName)
@@ -25,7 +28,9 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private void Awake()
     {
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
-        attacks = GetComponent<PlayerAttackController>(); movement = GetComponent<PlayerMovement>();
+        attacks = GetComponent<PlayerAttackController>();
+        movement = GetComponent<PlayerMovement>();
+        playerState = GetComponent<PlayerState>();
         catalog = PlayerMovesetCatalog.Load();
         if (catalog != null && catalog.startingMoveset != null)
             moveset = catalog.startingMoveset;
@@ -43,6 +48,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
         if (GamePauseController.IsPaused ||
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
+        if (playerState != null && playerState.IsDead()) return;
         if (Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
             CycleMoveset();
         if (moveset == null) return;
@@ -72,6 +78,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
             inputBuffer?.ClearBufferedInputs(ignoreNextFrame: true);
             attacks?.CancelAttack();
             moveset = next;
+            GetComponent<PlayerHealth>()?.ResetHealthForResourceMode();
+            GetComponent<PlayerHeat>()?.ResetHeatForResourceMode();
             return;
         }
     }

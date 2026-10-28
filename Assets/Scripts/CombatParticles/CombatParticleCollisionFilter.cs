@@ -10,17 +10,21 @@ public sealed class CombatParticleCollisionFilter : MonoBehaviour
     private void OnEnable()
     {
         ownCollider ??= GetComponent<Collider>();
+        CombatParticleSystem system = CombatParticleSystem.Instance;
+
         foreach (Collider other in FindObjectsByType<Collider>(FindObjectsInactive.Exclude))
         {
             if (other == null || other == ownCollider) continue;
-            Physics.IgnoreCollision(ownCollider, other, !CombatParticleSystem.Instance.IsWorldCollision(other));
+            Physics.IgnoreCollision(ownCollider, other,
+                !system.CanParticleCollideWith(other));
         }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         Collider other = collision != null ? collision.collider : null;
-        if (other == null || CombatParticleSystem.Instance.IsWorldCollision(other)) return;
+        if (other == null ||
+            CombatParticleSystem.Instance.CanParticleCollideWith(other)) return;
         Physics.IgnoreCollision(ownCollider, other, true);
     }
 }

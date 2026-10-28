@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: HumanMoveset
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
   displayName: Human
+  resourceMode: 1
   globalPauseDelay: 0.5
   movementSpeedMultiplier: 0.85
   allowDash: 0

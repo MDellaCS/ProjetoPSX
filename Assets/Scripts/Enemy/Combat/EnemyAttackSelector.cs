@@ -21,6 +21,24 @@ public sealed class EnemyAttackSelector
 
     public bool HasOpening() => SelectOpening(false, out _, out _);
 
+    public bool HasValidAttackWithTag(string tag) =>
+        FindValidAttackWithTag(tag) != null;
+
+    public EnemyMoveNode FindValidAttackWithTag(string tag)
+    {
+        if (moveset?.nodes == null || string.IsNullOrWhiteSpace(tag))
+            return null;
+
+        foreach (EnemyMoveNode node in moveset.nodes)
+        {
+            if (node?.attack != null && node.attack.HasTag(tag) &&
+                IsValid(node.attack))
+                return node;
+        }
+
+        return null;
+    }
+
     public bool TrySelectOpening(out EnemyMoveNode node,
         out bool requiresDirectorAuthorization) =>
         SelectOpening(true, out node, out requiresDirectorAuthorization);
@@ -102,6 +120,9 @@ public sealed class EnemyAttackSelector
     public bool IsValid(EnemyAttackDefinition attack)
     {
         if (attack == null || brain.Target == null)
+            return false;
+        if (!EnemySpecialAttackQueue.IsAvailableFor(
+            attack.specialQueueId, owner))
             return false;
         EnemyAttackRequirements rules = attack.requirements;
         float distance = brain.DistanceToTarget();

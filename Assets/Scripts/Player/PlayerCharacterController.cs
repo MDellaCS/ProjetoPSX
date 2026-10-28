@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 /// <summary>
@@ -78,8 +77,6 @@ public sealed class PlayerCharacterController : MonoBehaviour
     public Vector3 GroundNormal => hasGroundContact ? groundNormal : Vector3.up;
     public bool HasGroundContact => hasGroundContact;
     public CollisionFlags LastCollisionFlags => lastCollisionFlags;
-
-    public event Action<Collider, Vector3, Vector3> CollisionHit;
 
     private void Awake()
     {
@@ -167,8 +164,6 @@ public sealed class PlayerCharacterController : MonoBehaviour
                 hasGroundContact = true;
                 grounded = Vector3.Angle(groundNormal, Vector3.up) <= slopeLimit;
             }
-            CollisionHit?.Invoke(hit.collider, hit.point, hit.normal);
-
             if (wasGrounded && (hitFlag & CollisionFlags.Sides) != 0 &&
                 hit.collider.GetComponentInParent<EnemyBase>() == null &&
                 stepHeight > 0f && TryStep(ref remaining))
@@ -241,7 +236,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             RaycastHit candidate = hitBuffer[i];
-            if (candidate.collider == null || IsSelf(candidate.collider) ||
+            if (candidate.collider == null || IsIgnoredForMovement(candidate.collider) ||
                 candidate.distance >= nearestDistance)
                 continue;
 
@@ -265,9 +260,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 Collider other = overlapBuffer[i];
-                if (other == null || IsSelf(other))
-                    continue;
-                if (other.GetComponentInParent<EnemyBase>() != null)
+                if (other == null || IsIgnoredForMovement(other))
                     continue;
 
                 if (!Physics.ComputePenetration(capsule, transform.position,
@@ -346,8 +339,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             RaycastHit hit = hitBuffer[i];
-            if (hit.collider == null || IsSelf(hit.collider) ||
-                hit.collider.GetComponentInParent<EnemyBase>() != null ||
+            if (hit.collider == null || IsIgnoredForMovement(hit.collider) ||
                 hit.normal.y <= .0001f || hit.distance >= nearestDistance)
                 continue;
             nearestDistance = hit.distance;
@@ -393,8 +385,11 @@ public sealed class PlayerCharacterController : MonoBehaviour
         top = worldCenter + up * halfSegment;
     }
 
-    private bool IsSelf(Collider other) => other == capsule ||
-        other.transform == transform || other.transform.IsChildOf(transform);
+    private bool IsIgnoredForMovement(Collider other) =>
+        other == capsule || other.transform == transform ||
+        other.transform.IsChildOf(transform) ||
+        other.GetComponentInParent<CombatVisualParticle>() != null ||
+        other.GetComponentInParent<EnemyBase>() != null;
 
     private static CollisionFlags GetCollisionFlag(Vector3 normal)
     {

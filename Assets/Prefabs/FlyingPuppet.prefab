@@ -29,7 +29,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8426669122577738002}
+  - {fileID: 5073813134098932574}
   m_Father: {fileID: 7231791797390308556}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7502535439468429065
@@ -42,7 +42,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7231791797390308556}
   - component: {fileID: 8065122105029396497}
-  - component: {fileID: -1183834332778261383}
+  - component: {fileID: -5168411248268108556}
   - component: {fileID: 7038528183464375128}
   - component: {fileID: 485302232963280403}
   - component: {fileID: 910000000000000001}
@@ -52,12 +52,10 @@ GameObject:
   - component: {fileID: 212785566711577276}
   - component: {fileID: 6421883612428584792}
   - component: {fileID: 2658722192233227514}
-  - component: {fileID: 4740837926576013056}
-  - component: {fileID: -3204485085092350537}
-  - component: {fileID: -7745750461247089783}
-  - component: {fileID: -2798535404865380423}
+  - component: {fileID: 1539936370110795481}
+  - component: {fileID: 6082453215620148203}
   m_Layer: 0
-  m_Name: IntermediateZombie
+  m_Name: FlyingPuppet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -104,7 +102,7 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 1.25, z: 0}
---- !u!114 &-1183834332778261383
+--- !u!114 &-5168411248268108556
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -113,9 +111,29 @@ MonoBehaviour:
   m_GameObject: {fileID: 7502535439468429065}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c32db2d3faf3f9c4bbe8b7a27d69889c, type: 3}
+  m_Script: {fileID: 11500000, guid: 21882b701d20d8448b0e1fb973e82c57, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IntermediateZombie
+  m_EditorClassIdentifier: Assembly-CSharp::FlyingPuppet
+  groundFlightHeight: 3.5
+  flightGroundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  groundProbeDistance: 20
+  groundProbeStartOffset: 2
+  heightCorrectionSpeed: 5
+  sweepDescentSpeed: 8
+  visualRoot: {fileID: 699346647437120168}
+  airSpinVisualRotations: 3
+  teleportDiveCooldown: 8
+  teleportDiveDecisionChance: 35
+  teleportDiveRiseDuration: 0.45
+  teleportDiveRiseSpeed: 9
+  teleportDiveHeight: 6
+  teleportDiveWindup:
+    min: 1
+    max: 1.5
+  teleportDiveDescentSpeed: 14
+  teleportDiveWarningSize: {x: 2.5, y: 0.25, z: 2.5}
 --- !u!114 &7038528183464375128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -133,45 +151,69 @@ MonoBehaviour:
   lastKnownSearchDuration: 2.5
   lastKnownArrivalDistance: 0.35
   initialAggressionPercent:
-    min: 30
-    max: 90
-  minimumAggressionPercent: 0
-  maximumAggressionPercent: 100
+    min: 25
+    max: 85
+  minimumAggressionPercent: 25
+  maximumAggressionPercent: 85
   aggressionChangeRatePerSecond:
-    min: 1
-    max: 3
+    min: 2
+    max: 5
   aggressionChangeInterval:
-    min: 5
+    min: 3
     max: 6
-  playerBackTurnedAggressionGain: 5
-  outOfCameraAggressionLoss: -2
+  playerBackTurnedAggressionGain: 1
+  outOfCameraAggressionLoss: -1
   cameraVisibilityPadding: 1
-  playerFarAggressionDistance: 7
-  playerFarAggressionChangePerSecond: 15
-  damageTakenAggressionChangePerMaxHealthPercent: -1.2
-  lowEnemyHealthPercent: 0.3
-  lowEnemyHealthDecreaseChance: 0.5
-  lowPlayerHealthPercent: 0.5
-  lowPlayerHealthAggressionGainPerSecond: 5
-  highPlayerHealthPercent: 0.9
-  highPlayerHealthAggressionLossPerSecond: 5
-  playerAirborneAggressionChangePerSecond: -1
+  playerFarAggressionDistance: 0
+  playerFarAggressionChangePerSecond: 0
+  damageTakenAggressionChangePerMaxHealthPercent: -1
+  lowEnemyHealthPercent: 0
+  lowEnemyHealthDecreaseChance: 0
+  lowPlayerHealthPercent: 0
+  lowPlayerHealthAggressionGainPerSecond: 0
+  highPlayerHealthPercent: 0
+  highPlayerHealthAggressionLossPerSecond: 0
+  playerAirborneAggressionChangePerSecond: 15
   retreatsWhenPlayerTakesEnemyDamage: 0
-  gainsAggressionWhenPlayerTakesEnemyDamage: 1
-  playerDamagedAggressionPercent: 0.1
-  playerDamagedAggressionFlatChange: 2
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
+  playerDamagedAggressionPercent: 0
+  playerDamagedAggressionFlatChange: 0
   decisionInterval:
-    min: 0.2
-    max: 3
+    min: 3
+    max: 6
   repositionDuration:
-    min: 1
-    max: 3
-  repositionSpeedMultiplier:
-    min: 0.25
-    max: 0.5
-  chaseCommitmentDuration: 6
-  chaseCommitmentCooldown: 3
-  directorWeight: 20
+    min: 2
+    max: 4
+  chaseCommitmentDuration: 5
+  chaseCommitmentCooldown: 5
+  canChooseTacticalIdle: 1
+  tacticalIdleChancePercent:
+    min: 10
+    max: 25
+  tacticalIdleDuration:
+    min: 0.5
+    max: 1.25
+  useCohesiveGroupPositioning: 1
+  groupSeparationRadius:
+    min: 2.25
+    max: 3.25
+  groupSeparationStrength:
+    min: 0.65
+    max: 1.15
+  preferredOrbitDistance:
+    min: 2.1
+    max: 3.2
+  orbitStrength:
+    min: 0.35
+    max: 0.8
+  orbitChangeInterval:
+    min: 3
+    max: 6
+  repositionChancePercent:
+    min: 25
+    max: 50
+  orbitDirectionMode: 0
+  directorWeight: 40
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,7 +226,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 626817c8c5f64627a702307337b9c54f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackController
-  moveset: {fileID: 11400000, guid: c1000000000000000000000000000002, type: 2}
+  moveset: {fileID: 11400000, guid: c1000000000000000000000000000004, type: 2}
 --- !u!114 &910000000000000001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -236,18 +278,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
-  movementSpeed: 3.4
+  slowSpeed: 1.1
+  standardSpeed: 2.2
+  fastSpeed: 3.3
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 200
+  rotationSpeed: 40
   useTankControls: 1
-  tankControlsAdvanceAlignment: 0.85
-  canBeLaunchedUp: 1
+  tankControlsAdvanceAlignment: 0
+  canBeLaunchedUp: 0
   canBeLaunchedDown: 1
-  canBeLaunchedForwards: 1
+  canBeLaunchedForwards: 0
   canBeJuggled: 1
-  impactWeight: 2
-  launchedBodyImpactHitboxSizeIncreasePercent: 20
+  impactWeight: 1
+  launchedBodyImpactHitboxSizeIncreasePercent: 50
+  ignoreGroundEntitySeparation: 0
 --- !u!114 &212785566711577276
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -260,13 +305,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 2000
+  maxHealth: 1000
   isUnkillable: 0
-  maxPoise: 90
-  staggerDuration: 0.4
-  staggerKnockbackForce: 2
-  staggerKnockbackDuration: 0.07
-  damageFlashDuration: 0.4
+  maxPoise: 40
+  staggerDuration: 1
+  staggerKnockbackForce: 1
+  staggerKnockbackDuration: 0.2
+  damageFlashDuration: 0.15
 --- !u!114 &6421883612428584792
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -291,7 +336,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d2fd0501a5b4d24a9ff12bccd9fc963, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyReactionController
---- !u!114 &4740837926576013056
+--- !u!114 &1539936370110795481
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -305,8 +350,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyGore
   damageProfile: {fileID: 11400000, guid: 0467eb97ccca3ce449f59592207d4658, type: 2}
   deathProfile: {fileID: 11400000, guid: 3124fe2430a717f4da45771b47a5e9b3, type: 2}
-  particleCountMultiplier: 2.2
---- !u!114 &-3204485085092350537
+  particleCountMultiplier: 0.8
+  baseCurrencyValue: {x: 2, y: 5}
+  currencyGorePieces: 3
+  overkillThresholdPercent: 0.5
+  overkillCurrencyMultiplier: 2
+--- !u!114 &6082453215620148203
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -315,95 +364,28 @@ MonoBehaviour:
   m_GameObject: {fileID: 7502535439468429065}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c86963c142c4f57ba9b2395fed5e40e, type: 3}
+  m_Script: {fileID: 11500000, guid: 18fa91ec88274b029ef18579202a3bc0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemySpawnPresentation
-  playOnEncounterSpawn: 1
-  sphereColor: {r: 0.4811321, g: 0.088636264, b: 0, a: 0.8}
-  initialSphereScale: 0.05
-  finalSphereScale: 1.5
-  growthDuration: 2
-  holdDuration: 0.05
-  growthCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
---- !u!114 &-7745750461247089783
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b01c52c19385e494f8edc9031d13331d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyGuard
-  guardChancePerDecision: 15
-  maximumAggressionPercentToConsiderGuard: 30
-  guardStartMaximumRange: 3
-  minimumGuardDuration: 1.25
-  maximumGuardDuration: 5
-  guardCooldown: 6
-  lowAggressionGuardRetreatSpeedMultiplier: 0.6
-  highAggressionGuardRetreatSpeedMultiplier: 0.15
-  canGuardPlayerLightAttacks: 1
-  canGuardPlayerHeavyAttacks: 0
-  canGuardPlayerAerialAttacks: 1
-  canGuardPlayerDashAttacks: 1
-  guardAngle: 120
-  damageReduction: 0.7
-  poiseReduction: 0.5
-  maxGuardHealth: 180
-  heavyGuardDamageMultiplier: 3
-  breakStunDuration: 3
-  staggerGuardDelay: 0.2
---- !u!114 &-2798535404865380423
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1933a99ea4fb4b5e9e8154692eeb7c24, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyDodge
-  dodgeChanceOnHit: 3
-  maximumAggressionPercentToDodge: 2
-  aggressiveDodgeThreshold: 1
-  passiveExtraHopChance: 20
-  dodgeCooldown: 8
-  baseHopDistance: 0.6
-  attackReachDistanceMultiplier: 0.7
-  minimumLateralDodgeOffset: -2
-  maximumLateralDodgeOffset: 2
-  hopDuration: 0.3
-  hopVerticalSpeed: 2
-  protectionAfterDodge: 0.2
---- !u!1001 &8321301459396382457
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyBobbing
+  bobbingHeight:
+    min: 0.15
+    max: 0.35
+  slowFrequency:
+    min: 0.12
+    max: 0.25
+  fastFrequency:
+    min: 0.3
+    max: 0.55
+  frequencyChangeInterval:
+    min: 2
+    max: 4
+  frequencyTransitionSpeed: 0.5
+  movementThreshold: 0.1
+  minimumStillDuration: 0.2
+  movementPullDuration: 0.3
+  movementPullHeight: 0.35
+  movementPullVerticalSpeed: 4
+--- !u!1001 &4747769637860590773
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -411,81 +393,105 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 699346647437120168}
     m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.13
+      value: 1.17
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.4125
+      value: 1.17
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1.13
+      value: 1.17
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalPosition.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -7813590141776298306, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: -6547223059409353530, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 46eb48a4269e2454aaa31c25f64e2c7e, type: 2}
-    - target: {fileID: 919132149155446097, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: -4396642182433536433, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: -2599525373717517256, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: -666985854777507172, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: 919132149155446097, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: m_Name
-      value: Model
+      value: Untitled7
       objectReference: {fileID: 0}
-    - target: {fileID: 5822821947120931875, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
+    - target: {fileID: 3331037512195626236, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 0e01ac5ad3eee044f8484f1ee84eeebf, type: 2}
-    - target: {fileID: 5866666021909216657, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
-      propertyPath: m_ApplyRootMotion
-      value: 0
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: 4351411106470829699, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: 5144707904935540474, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: 5797384429611982230, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
+    - target: {fileID: 8662617239381368188, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 1d5a214f17c104d4c83da398bf339bbc, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
---- !u!4 &8426669122577738002 stripped
+  m_SourcePrefab: {fileID: 100100000, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+--- !u!4 &5073813134098932574 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 33f9e283ef1507e419253c619a7af4fe, type: 3}
-  m_PrefabInstance: {fileID: 8321301459396382457}
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
+  m_PrefabInstance: {fileID: 4747769637860590773}
   m_PrefabAsset: {fileID: 0}

@@ -15,7 +15,20 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyReactionController))]
 public class EnemyBase : MonoBehaviour
 {
-    public enum State { Idle, Combat, Windup, Active, Recovery, Guarding, Dodging, Taunting, Staggered }
+    public enum State
+    {
+        Idle,
+        Combat,
+        Windup,
+        Active,
+        Recovery,
+        Guarding,
+        Dodging,
+        Taunting,
+        Staggered,
+        TacticalIdle,
+        SpecialAttackQueue
+    }
 
     private static readonly HashSet<EnemyBase> activeEnemies = new();
     public static event Action<EnemyBase> EnemyDied;
@@ -34,6 +47,7 @@ public class EnemyBase : MonoBehaviour
     private CharacterController characterController;
     private bool initialized;
     private bool isSpawning;
+    private bool isTemporarilyUntargetable;
 
     public State CurrentState { get; internal set; } = State.Idle;
     public bool IsDead => health != null && health.IsDead;
@@ -42,6 +56,7 @@ public class EnemyBase : MonoBehaviour
     public bool IsLaunched => movement != null && movement.IsLaunched;
     public bool IsLaunchedForwards => movement != null && movement.IsLaunchedForwards;
     public bool CanBeLockOnTarget => isActiveAndEnabled && !IsDead &&
+        !isTemporarilyUntargetable &&
         brain != null && !brain.IsWaitingForEncounter;
     public bool IsSpawning => isSpawning;
     public int CurrentHealth => health != null ? health.CurrentHealth : 0;
@@ -117,6 +132,7 @@ public class EnemyBase : MonoBehaviour
     {
         activeEnemies.Remove(this);
         EnemyDirector.ReleaseEnemy(this);
+        EnemySpecialAttackQueue.Release(this);
     }
 
     internal static IEnumerable<EnemyBase> ActiveEnemies => activeEnemies;
@@ -138,6 +154,9 @@ public class EnemyBase : MonoBehaviour
             brain.IsWaitingForEncounter ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
+
+        TickEnemySpecificSystems();
+        EnemySpecialAttackQueue.Tick();
 
         brain.ResolvePlayer();
         brain.TickAggression();
@@ -165,6 +184,13 @@ public class EnemyBase : MonoBehaviour
                 break;
             case State.Combat:
                 brain.TickCombat();
+                break;
+            case State.TacticalIdle:
+                brain.TickTacticalIdle();
+                movement.Move(Vector3.zero);
+                break;
+            case State.SpecialAttackQueue:
+                movement.Move(Vector3.zero);
                 break;
             case State.Windup:
                 attacks.TickWindup();
@@ -203,7 +229,9 @@ public class EnemyBase : MonoBehaviour
         }
     }
 
-    // Ganchos especificos: a base conserva o comportamento generico.
+    // Ganchos especificos: sistemas Unity de subclasses devem usar este hook
+    // em vez de declarar outro Update e ocultar o ciclo de vida da base.
+    protected virtual void TickEnemySpecificSystems() { }
     protected virtual void UpdateVerticalMovement(EnemyMovement locomotion) =>
         locomotion.ApplyGravity();
     protected virtual bool CanUseAttack(EnemyAttackDefinition attack) => true;
@@ -255,6 +283,27 @@ public class EnemyBase : MonoBehaviour
     {
         EnsureInitialized();
         isSpawning = value;
+    }
+
+    /// <summary>Oculta temporariamente este inimigo das selecoes de lock-on.</summary>
+    public void SetTemporarilyUntargetable(bool value) =>
+        isTemporarilyUntargetable = value;
+
+    internal void SetWaitingForSpecialAttackQueue(bool value)
+    {
+        if (value)
+            CurrentState = State.SpecialAttackQueue;
+        else if (CurrentState == State.SpecialAttackQueue)
+        {
+            CurrentState = State.Combat;
+            brain?.DecideImmediately();
+        }
+    }
+
+    internal void NotifySpecialAttackQueueFailed(string queueId)
+    {
+        attacks?.OnSpecialAttackQueueFailed(queueId);
+        SetWaitingForSpecialAttackQueue(false);
     }
     public void SetUnkillable(bool value)
     {

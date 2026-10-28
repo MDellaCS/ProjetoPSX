@@ -36,6 +36,8 @@ public class GameOverHUD : MonoBehaviour
         SetVisible(true);
     }
 
+    public void Hide() => SetVisible(false);
+
     private void HandleUIReload(
         PanelRenderer _,
         VisualElement rootVisualElement,

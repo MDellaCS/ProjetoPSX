@@ -3,11 +3,32 @@ using UnityEngine.InputSystem;
 
 public class PlayerHealth : MonoBehaviour
 {
+    [Header("Vida")]
+    [Tooltip("Vida maxima usada por movesets configurados com o recurso Health. Ao chegar a zero, o jogador morre.")]
+    [Min(1)] public int maxHealth = 100;
+    private int currentHealth;
+
     [Header("Poise")]
     [Tooltip("Poise maximo do player. Enquanto estiver acima de zero, golpes nao causam Stagger, Juggle ou Launches.")]
     [Min(1)] public int maxPoise = 100;
-    [Tooltip("Tempo base em que o player fica sem agir ao sofrer Stagger. Superstagger usa o dobro.")]
-    [Min(0f)] public float staggerDuration = 0.8f;
+
+    [Header("Light Stagger")]
+    [Tooltip("Duracao fixa do LightStagger. Nao varia com o dano ou o Poise do ataque que o causou.")]
+    [Min(0f)] public float lightStaggerDuration = .8f;
+    [Tooltip("Distancia horizontal fixa percorrida pelo jogador ao receber LightStagger, antes de colisoes com o cenario.")]
+    [Min(0f)] public float lightStaggerDistance = .6f;
+    [Tooltip("Tempo usado para percorrer a distancia de LightStagger. O empurrao desacelera ate parar durante esse intervalo.")]
+    [Min(.01f)] public float lightStaggerPushDuration = .16f;
+
+    [Header("Heavy Stagger")]
+    [Tooltip("Duracao fixa do HeavyStagger. Nao varia com o dano ou o Poise do ataque que o causou.")]
+    [Min(0f)] public float heavyStaggerDuration = 1.2f;
+    [Tooltip("Distancia horizontal fixa percorrida pelo jogador ao receber HeavyStagger, antes de colisoes com o cenario.")]
+    [Min(0f)] public float heavyStaggerDistance = 1f;
+    [Tooltip("Tempo usado para percorrer a distancia de HeavyStagger. O empurrao desacelera ate parar durante esse intervalo.")]
+    [Min(.01f)] public float heavyStaggerPushDuration = .22f;
+    [Tooltip("Fracao da duracao total do HeavyStagger que precisa passar antes de permitir cancelar com dash ou pulo.")]
+    [Range(0f, 1f)] public float heavyStaggerMinimumDurationPercent = .4f;
     [Tooltip("Permite que uma quebra de Poise lance o player para cima.")]
     public bool canBeLaunchedUp = true;
     [Tooltip("Permite que uma quebra de Poise lance o player para baixo enquanto estiver no ar.")]
@@ -27,7 +48,7 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Tempo em segundos que Y precisa ficar pressionado para apagar todos os saves, incluindo progresso, currency, opcoes e configuracoes de teclas.")]
     [Min(.1f)] [SerializeField] private float resetAllSavesHoldDuration = 3f;
 
-    private Renderer playerRenderer;
+    private Material[] playerMaterials = System.Array.Empty<Material>();
 
     private PlayerState playerState;
     private PlayerAttackController attackController;
@@ -42,13 +63,23 @@ public class PlayerHealth : MonoBehaviour
     private bool resetAllSavesTriggered;
 
     private float staggerTimer;
+    private float activeStaggerDuration;
     private bool waitingForForcedReactionEnd;
-    private bool applySuperStaggerAfterForcedReaction;
     private readonly CombatPoiseState poise = new();
     private Color normalColor;
 
     public bool IsGodMode => godMode;
+    public int CurrentHealth => currentHealth;
+    public int MaxHealth => Mathf.Max(1, maxHealth);
+    public float HealthPercent => MaxHealth > 0 ? Mathf.Clamp01((float)currentHealth / MaxHealth) : 0f;
     public float CurrentPoise => poise.Current;
+    public float CurrentStaggerRemaining => playerState != null && playerState.IsStaggered()
+        ? Mathf.Max(0f, staggerTimer) : 0f;
+    public bool IsHeavyStaggered => playerState != null && playerState.IsHeavyStaggered();
+    public bool IsDamageImmune => IsHeavyStaggered;
+    public bool CanExitHeavyStaggerEarly => IsHeavyStaggered &&
+        staggerTimer <= activeStaggerDuration *
+            (1f - Mathf.Clamp01(heavyStaggerMinimumDurationPercent)) + .0001f;
     public bool IsHoldingResetAllSaves => resetAllSavesHoldElapsed > 0f;
     public float ResetAllSavesHoldProgress => holdToResetAllSavesEnabled
         ? Mathf.Clamp01(resetAllSavesHoldElapsed / Mathf.Max(.1f, resetAllSavesHoldDuration))
@@ -58,7 +89,7 @@ public class PlayerHealth : MonoBehaviour
     {
         // O renderer pertence ao VisualRoot/filho, nao a raiz que concentra
         // a simulacao. Esta referencia e apenas feedback visual opcional.
-        playerRenderer = GetComponentInChildren<Renderer>(true);
+        CachePlayerMaterials();
         playerState = GetComponent<PlayerState>();
         attackController = GetComponent<PlayerAttackController>();
         combatStatus = GetComponent<PlayerCombatStatus>();
@@ -69,9 +100,10 @@ public class PlayerHealth : MonoBehaviour
         if (damageNumbers == null)
             damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
         poise.Initialize(maxPoise);
+        currentHealth = MaxHealth;
 
-        if (playerRenderer != null)
-            normalColor = playerRenderer.material.color;
+        if (playerMaterials.Length > 0)
+            normalColor = playerMaterials[0].color;
     }
 
     void Update()
@@ -98,12 +130,7 @@ public class PlayerHealth : MonoBehaviour
                     return;
 
                 waitingForForcedReactionEnd = false;
-                bool applySuper = applySuperStaggerAfterForcedReaction;
-                applySuperStaggerAfterForcedReaction = false;
-                if (applySuper)
-                    StartStagger(true);
-                else
-                    EndStagger();
+                EndStagger();
                 return;
             }
 
@@ -161,26 +188,54 @@ public class PlayerHealth : MonoBehaviour
     {
         godMode = false;
         staggerTimer = 0f;
+        activeStaggerDuration = 0f;
         waitingForForcedReactionEnd = false;
-        applySuperStaggerAfterForcedReaction = false;
         resetAllSavesHoldElapsed = 0f;
         resetAllSavesTriggered = false;
         poise.Initialize(maxPoise);
+        currentHealth = MaxHealth;
         playerState?.ResetForNewGame();
-        if (playerRenderer != null)
-            playerRenderer.material.color = normalColor;
+        SetPlayerColor(normalColor);
     }
 
-    void StartStagger(bool superStagger = false)
+    /// <summary>Restaura a vida ao trocar o modo de recurso do moveset.</summary>
+    public void ResetHealthForResourceMode()
     {
-        playerState.ChangeState(
-            PlayerState.State.Stagger
-        );
+        currentHealth = MaxHealth;
+    }
 
-        staggerTimer = staggerDuration * (superStagger ? 2f : 1f);
+    private void StartStagger(bool heavyStagger, Vector3 attackerPosition,
+        bool applyStandardPush = true)
+    {
+        if (playerState == null || playerState.IsDead())
+            return;
 
-        if (playerRenderer != null)
-            playerRenderer.material.color = Color.yellow;
+        playerState.ChangeState(heavyStagger
+            ? PlayerState.State.HeavyStagger
+            : PlayerState.State.Stagger);
+
+        activeStaggerDuration = heavyStagger
+            ? Mathf.Max(0f, heavyStaggerDuration)
+            : Mathf.Max(0f, lightStaggerDuration);
+        staggerTimer = activeStaggerDuration;
+        waitingForForcedReactionEnd = false;
+        playerMovement?.CancelStaggerPush();
+
+        if (applyStandardPush)
+        {
+            Vector3 pushDirection = transform.position - attackerPosition;
+            pushDirection.y = 0f;
+            if (pushDirection.sqrMagnitude <= .0001f)
+                pushDirection = -transform.forward;
+            float distance = heavyStagger
+                ? heavyStaggerDistance : lightStaggerDistance;
+            float pushDuration = heavyStagger
+                ? heavyStaggerPushDuration : lightStaggerPushDuration;
+            playerMovement?.ApplyStaggerPush(pushDirection, distance,
+                Mathf.Min(activeStaggerDuration, Mathf.Max(.01f, pushDuration)));
+        }
+
+        SetPlayerColor(Color.yellow);
 
         attackController?.CancelAttack();
         movesetController?.ResetSequence();
@@ -193,12 +248,26 @@ public class PlayerHealth : MonoBehaviour
         if (playerState.IsDead())
             return;
 
-        if (playerRenderer != null)
-            playerRenderer.material.color = normalColor;
+        staggerTimer = 0f;
+        activeStaggerDuration = 0f;
+        waitingForForcedReactionEnd = false;
+        playerMovement?.CancelStaggerPush();
+
+        SetPlayerColor(normalColor);
 
         playerState.ChangeState(
             PlayerState.State.Normal
         );
+    }
+
+    /// <summary>Encerra HeavyStagger quando dash ou pulo e permitido como cancelamento antecipado.</summary>
+    public bool TryExitHeavyStaggerEarly()
+    {
+        if (!CanExitHeavyStaggerEarly)
+            return false;
+
+        EndStagger();
+        return true;
     }
 
     public void TakeDamage(
@@ -207,10 +276,11 @@ public class PlayerHealth : MonoBehaviour
         int poiseDamage,
         CombatReactionType requestedReaction,
         bool causedByEnemy = false,
-        Transform attacker = null
+        Transform attacker = null,
+        bool causesHeavyStagger = false
     )
     {
-        if (playerState.IsDead() || godMode)
+        if (playerState.IsDead() || playerState.IsHeavyStaggered())
             return;
 
         // Um ataque inimigo conectado mantém o jogador em combate.
@@ -222,7 +292,22 @@ public class PlayerHealth : MonoBehaviour
 
         damageNumbers?.ShowDamage(damage, incomingDamageNumberColor);
 
-        playerHeat.RemoveHeat(damage);
+        PlayerMovesetController activeMoveset = movesetController != null
+            ? movesetController : GetComponent<PlayerMovesetController>();
+        bool usesHealth = activeMoveset != null && activeMoveset.UsesHealth;
+        // GodMode protege somente o recurso final. O golpe ainda confirma
+        // dano, mantém o combate ativo, gera feedback e reduz Poise, podendo
+        // provocar stagger ou outras reações normalmente.
+        if (!godMode && usesHealth)
+        {
+            currentHealth = Mathf.Max(0, currentHealth - Mathf.Max(0, damage));
+            if (currentHealth == 0)
+                playerState.ChangeState(PlayerState.State.Dead);
+        }
+        else if (!godMode)
+        {
+            playerHeat?.RemoveHeat(damage);
+        }
         CombatPoiseHitResult poiseHit = poise.ReceiveHit(poiseDamage, maxPoise);
 
         // O impacto pertence ao dano confirmado, inclusive se ele levar o
@@ -253,13 +338,20 @@ public class PlayerHealth : MonoBehaviour
         if (!poiseHit.CanReact)
             return;
 
-        ApplyPoiseReaction(poiseHit, requestedReaction, attackerPosition, damage);
+        ApplyPoiseReaction(poiseHit, requestedReaction, attackerPosition,
+            damage, causesHeavyStagger);
     }
 
     private void ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
         CombatReactionType requestedReaction, Vector3 attackerPosition,
-        int damageDealt)
+        int damageDealt, bool causesHeavyStagger)
     {
+        if (causesHeavyStagger)
+        {
+            StartStagger(true, attackerPosition);
+            return;
+        }
+
         bool airborne = !playerMovement.IsGrounded || playerMovement.IsLaunched;
         CombatReactionType reaction = requestedReaction switch
         {
@@ -281,7 +373,11 @@ public class PlayerHealth : MonoBehaviour
             reaction = CombatReactionType.Stagger;
 
         bool forcedReaction = reaction != CombatReactionType.Stagger;
-        StartStagger(poiseHit.IsSuperStagger && !forcedReaction);
+        StartStagger(false, attackerPosition,
+            applyStandardPush: !forcedReaction);
+        if (!forcedReaction)
+            return;
+
         switch (reaction)
         {
             case CombatReactionType.LaunchUp:
@@ -312,9 +408,29 @@ public class PlayerHealth : MonoBehaviour
         }
 
         if (forcedReaction)
-        {
             waitingForForcedReactionEnd = true;
-            applySuperStaggerAfterForcedReaction = poiseHit.IsSuperStagger;
+    }
+
+    private void CachePlayerMaterials()
+    {
+        System.Collections.Generic.List<Material> materials = new();
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer == null)
+                continue;
+
+            materials.AddRange(renderer.materials);
+        }
+
+        playerMaterials = materials.ToArray();
+    }
+
+    private void SetPlayerColor(Color color)
+    {
+        foreach (Material material in playerMaterials)
+        {
+            if (material != null)
+                material.color = color;
         }
     }
 

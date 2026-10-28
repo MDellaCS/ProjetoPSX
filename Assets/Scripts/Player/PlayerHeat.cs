@@ -103,9 +103,11 @@ public class PlayerHeat : MonoBehaviour
     private float burnStartHeat;
 
     private PlayerState playerState;
+    private PlayerHealth playerHealth;
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
     private PlayerMovement playerMovement;
+    private PlayerMovesetController movesetController;
     private float chargeMaxHeatBonus;
     private readonly Dictionary<Object, float> rageGrants = new();
     private float rageDuration;
@@ -128,12 +130,23 @@ public class PlayerHeat : MonoBehaviour
     public float HeavyDamageMultiplier => GetHeavyDamageMultiplier();
     public float HeavyPoiseMultiplier => GetHeavyPoiseMultiplier();
     private float BurnFinalHeatTarget => -maxColdMagnitude * burnFinalColdPercent;
+    public bool IsHeatModeActive
+    {
+        get
+        {
+            if (movesetController == null)
+                movesetController = GetComponent<PlayerMovesetController>();
+            return movesetController == null || movesetController.UsesHeat;
+        }
+    }
 
 
     private void Start()
     {
         PlayerProgression.GetOrAdd(gameObject).Initialize();
+        movesetController = GetComponent<PlayerMovesetController>();
         playerState = GetComponent<PlayerState>();
+        playerHealth = GetComponent<PlayerHealth>();
         combatStatus = GetComponent<PlayerCombatStatus>();
         attackController = GetComponent<PlayerAttackController>();
         playerMovement = GetComponent<PlayerMovement>();
@@ -173,14 +186,37 @@ public class PlayerHeat : MonoBehaviour
         rageDuration = 0f;
         attackController?.CancelAttack();
         playerMovement?.InterruptForBurn();
-        GetComponent<PlayerMovesetController>()?.ResetSequence();
+        movesetController?.ResetSequence();
         GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
         playerState?.ResetForNewGame();
+    }
+
+    /// <summary>Zera apenas o estado termico ao trocar para ou desde um moveset Health.</summary>
+    public void ResetHeatForResourceMode()
+    {
+        bool wasThermalStateActive = burnPhase != BurnPhase.None;
+        currentHeat = 0f;
+        currentSuperheat = 0f;
+        heatCoolingElapsed = 0f;
+        heatGainCoolingDelayRemaining = 0f;
+        debugHeatAccumulator = 0f;
+        burnPhase = BurnPhase.None;
+        burnPhaseTimer = 0f;
+        burnElapsed = 0f;
+        burnStartHeat = 0f;
+        attackController?.CancelAttack();
+        playerMovement?.InterruptForBurn();
+        GetComponent<PlayerMovesetController>()?.ResetSequence();
+        GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
+        if (wasThermalStateActive)
+            playerState.ChangeState(PlayerState.State.Normal);
     }
 
 
     private void Update()
     {
+        if (!IsHeatModeActive)
+            return;
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
@@ -271,6 +307,7 @@ public class PlayerHeat : MonoBehaviour
 
     public void AddHeat(float amount)
     {
+        if (!IsHeatModeActive) return;
         if (amount <= 0f || IsBurning) return;
         float availableHeat = MaxHeat - currentHeat;
         if (amount <= availableHeat)
@@ -286,6 +323,7 @@ public class PlayerHeat : MonoBehaviour
 
     public void RemoveHeat(float amount)
     {
+        if (!IsHeatModeActive) return;
         if (amount <= 0f || IsRaging) return;
         currentHeat = Mathf.Max(MinHeat, currentHeat - amount);
         CheckColdDeath();
@@ -293,6 +331,7 @@ public class PlayerHeat : MonoBehaviour
 
     public void AddSuperheat(float amount)
     {
+        if (!IsHeatModeActive) return;
         if (amount <= 0f || IsBurning) return;
         currentSuperheat = Mathf.Min(maxSuperheat, currentSuperheat + amount);
         if (currentSuperheat >= maxSuperheat) BeginBurn();
@@ -300,6 +339,7 @@ public class PlayerHeat : MonoBehaviour
 
     public void RemoveSuperheat(float amount)
     {
+        if (!IsHeatModeActive) return;
         if (amount > 0f) currentSuperheat = Mathf.Max(0f, currentSuperheat - amount);
     }
 
@@ -309,6 +349,7 @@ public class PlayerHeat : MonoBehaviour
     /// </summary>
     public void FillHeatAndSuperheatForDebug()
     {
+        if (!IsHeatModeActive) return;
         if (IsBurning)
             return;
 
@@ -323,6 +364,8 @@ public class PlayerHeat : MonoBehaviour
     /// </summary>
     public HeavyAttackCharge ConsumeHeatForHeavyAttack()
     {
+        if (!IsHeatModeActive)
+            return new HeavyAttackCharge(0f, 1f, 1f);
         if (IsRaging)
         {
             currentHeat = MaxHeat;
@@ -366,6 +409,8 @@ public class PlayerHeat : MonoBehaviour
     {
         if (baseDamage <= 0)
             return 0;
+        if (!IsHeatModeActive)
+            return Mathf.RoundToInt(baseDamage * Mathf.Max(0f, damageMultiplier));
 
         float powerMultiplier = Mathf.Max(0f, damageMultiplier);
         float additiveBonus = powerMultiplier *
@@ -381,6 +426,7 @@ public class PlayerHeat : MonoBehaviour
 
     private float GetHeavyDamageMultiplier()
     {
+        if (!IsHeatModeActive) return 1f;
         return GetHeavyDamageMultiplier(GetHeavyPowerNotches(currentHeat));
     }
 
@@ -391,6 +437,7 @@ public class PlayerHeat : MonoBehaviour
 
     private float GetHeavyPoiseMultiplier()
     {
+        if (!IsHeatModeActive) return 1f;
         return GetHeavyPoiseMultiplier(GetHeavyPowerNotches(currentHeat));
     }
 
@@ -560,7 +607,9 @@ public class PlayerHeat : MonoBehaviour
 
     private void CheckColdDeath()
     {
-        if (playerState != null && !playerState.IsDead() && currentHeat <= MinHeat)
+        if (playerState != null && !playerState.IsDead() &&
+            (playerHealth == null || !playerHealth.IsGodMode) &&
+            currentHeat <= MinHeat)
             playerState.ChangeState(PlayerState.State.Dead);
     }
 }

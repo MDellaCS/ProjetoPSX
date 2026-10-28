@@ -23,6 +23,7 @@ public sealed class EnemyAttackController : MonoBehaviour
     private int attacksInSequence;
     private EnemyMoveNode pendingContinuation;
     private float pendingContinuationDelay;
+    private string queuedSpecialAttackId;
 
     public EnemyMovesetDefinition Moveset => moveset;
     public EnemyAttackRuntime CurrentAttack { get; private set; }
@@ -50,6 +51,19 @@ public sealed class EnemyAttackController : MonoBehaviour
 
     public bool HasAvailableOpening() => selector != null && selector.HasOpening();
 
+    public bool HasAvailableAttackWithTag(string tag) => selector != null &&
+        selector.HasValidAttackWithTag(tag);
+
+    public bool TryBeginAttackWithTag(string tag, float windupDuration)
+    {
+        EnemyMoveNode node = selector?.FindValidAttackWithTag(tag);
+        if (node == null || !EnemyDirector.RequestAttackTurn(owner))
+            return false;
+
+        attacksInSequence = 0;
+        return BeginOrQueueAttack(node, windupDuration);
+    }
+
     public bool TryBeginSelectedOpening()
     {
         if (selector == null || !selector.TrySelectOpening(out EnemyMoveNode node,
@@ -58,15 +72,46 @@ public sealed class EnemyAttackController : MonoBehaviour
         if (needsDirector && !EnemyDirector.RequestAttackTurn(owner))
             return false;
         attacksInSequence = 0;
-        BeginAttack(node);
-        return true;
+        return BeginOrQueueAttack(node, null);
     }
 
-    private void BeginAttack(EnemyMoveNode node)
+    private bool BeginOrQueueAttack(EnemyMoveNode node,
+        float? windupDurationOverride)
+    {
+        string queueId = node.attack.specialQueueId;
+        if (string.IsNullOrWhiteSpace(queueId))
+        {
+            BeginAttack(node, windupDurationOverride);
+            return CurrentAttack != null;
+        }
+
+        queuedSpecialAttackId = queueId;
+        bool queued = EnemySpecialAttackQueue.TryQueue(queueId, owner,
+            EnemyDirector.SpecialAttackQueueDelayFrames,
+            () => StartQueuedAttack(node, windupDurationOverride));
+        if (!queued)
+            queuedSpecialAttackId = null;
+        return queued;
+    }
+
+    private bool StartQueuedAttack(EnemyMoveNode node,
+        float? windupDurationOverride)
+    {
+        if (owner == null || owner.IsDead || node?.attack == null ||
+            !selector.IsValid(node.attack))
+            return false;
+
+        BeginAttack(node, windupDurationOverride);
+        return CurrentAttack != null;
+    }
+
+    private void BeginAttack(EnemyMoveNode node,
+        float? windupDurationOverride = null)
     {
         if (node?.attack == null || moveset == null)
             return;
-        CurrentAttack = new EnemyAttackRuntime(node, moveset);
+        CurrentAttack = new EnemyAttackRuntime(node, moveset,
+            windupDurationOverride);
         CurrentPhase = EnemyAttackPhase.Windup;
         phaseTimer = Mathf.Max(0f, CurrentAttack.WindupDuration);
         recoveryElapsed = 0f;
@@ -181,6 +226,11 @@ public sealed class EnemyAttackController : MonoBehaviour
     public void CancelAttack()
     {
         EnemyAttackRuntime ended = CurrentAttack;
+        if (!string.IsNullOrWhiteSpace(queuedSpecialAttackId))
+        {
+            EnemySpecialAttackQueue.Release(owner, queuedSpecialAttackId);
+            queuedSpecialAttackId = null;
+        }
         CurrentAttack = null;
         CurrentPhase = EnemyAttackPhase.None;
         phaseTimer = 0f;
@@ -192,6 +242,12 @@ public sealed class EnemyAttackController : MonoBehaviour
         hitboxes?.End();
         if (ended != null)
             AttackEnded?.Invoke(ended);
+    }
+
+    internal void OnSpecialAttackQueueFailed(string queueId)
+    {
+        if (queuedSpecialAttackId == queueId)
+            queuedSpecialAttackId = null;
     }
 
     private float GetPhaseDuration(EnemyAttackPhase phase) =>

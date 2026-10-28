@@ -35,7 +35,7 @@ public sealed class EnemyHealth : MonoBehaviour
     private EnemyGuard guard;
     private EnemyDodge dodge;
     private EnemyGore gore;
-    private Renderer enemyRenderer;
+    private Material[] enemyMaterials = System.Array.Empty<Material>();
     private DamageNumberSpawner damageNumbers;
     private Color normalColor;
     private static readonly Color guardingColor = new(.55f, .2f, .8f, 1f);
@@ -66,12 +66,12 @@ public sealed class EnemyHealth : MonoBehaviour
         gore = GetComponent<EnemyGore>();
         CurrentHealth = maxHealth;
         poise.Initialize(maxPoise);
-        enemyRenderer = GetComponentInChildren<Renderer>();
+        CacheEnemyMaterials();
         damageNumbers = GetComponent<DamageNumberSpawner>();
         if (damageNumbers == null)
             damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
-        if (enemyRenderer != null)
-            normalColor = enemyRenderer.material.color;
+        if (enemyMaterials.Length > 0)
+            normalColor = enemyMaterials[0].color;
     }
 
     public void TickPoise()
@@ -277,16 +277,34 @@ public sealed class EnemyHealth : MonoBehaviour
 
     private void FlashDamage()
     {
-        if (enemyRenderer == null) return;
-        enemyRenderer.material.color = Color.red;
+        SetEnemyColor(Color.red);
         CancelInvoke(nameof(ResetVisualColor));
         Invoke(nameof(ResetVisualColor), damageFlashDuration);
     }
 
     private void ResetVisualColor()
     {
-        if (enemyRenderer != null)
-            enemyRenderer.material.color = isShowingGuardVisual
-                ? guardingColor : normalColor;
+        SetEnemyColor(isShowingGuardVisual ? guardingColor : normalColor);
+    }
+
+    private void CacheEnemyMaterials()
+    {
+        System.Collections.Generic.List<Material> materials = new();
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer != null)
+                materials.AddRange(renderer.materials);
+        }
+
+        enemyMaterials = materials.ToArray();
+    }
+
+    private void SetEnemyColor(Color color)
+    {
+        foreach (Material material in enemyMaterials)
+        {
+            if (material != null)
+                material.color = color;
+        }
     }
 }

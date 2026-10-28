@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.InputSystem;
 
 public class PlayerGameOver : MonoBehaviour
 {
@@ -16,18 +15,18 @@ public class PlayerGameOver : MonoBehaviour
 
     private bool deathDetected;
     private bool gameOverVisible;
+    private bool restartRequested;
     private float deathTimer;
 
     void Awake()
     {
         playerState = GetComponent<PlayerState>();
         playerHeat = GetComponent<PlayerHeat>();
-
     }
 
     void Update()
     {
-        if (!playerState.IsDead())
+        if (playerState == null || !playerState.IsDead())
             return;
 
         if (!deathDetected)
@@ -38,14 +37,13 @@ public class PlayerGameOver : MonoBehaviour
 
         if (!gameOverVisible)
         {
-            deathTimer += Time.deltaTime;
+            deathTimer += Time.unscaledDeltaTime;
 
             if (deathTimer >= showDelay)
                 ShowGameOver();
         }
 
-        if (!GamePauseController.IsPaused && gameOverVisible &&
-            GameInput.RestartPressed)
+        if (!restartRequested && gameOverVisible && GameInput.RestartPressed)
         {
             RestartGame();
         }
@@ -61,7 +59,7 @@ public class PlayerGameOver : MonoBehaviour
 
     private string GetDeathMessage()
     {
-        if (playerHeat == null)
+        if (playerHeat == null || !playerHeat.IsHeatModeActive)
             return "VOCE MORREU";
 
         if (playerHeat.CurrentHeat <= playerHeat.MinHeat)
@@ -76,10 +74,32 @@ public class PlayerGameOver : MonoBehaviour
             gameOverHUD = FindAnyObjectByType<GameOverHUD>();
     }
 
-    void RestartGame()
+    private void RestartGame()
     {
-        SceneManager.LoadScene(
-            SceneManager.GetActiveScene().buildIndex
-        );
+        restartRequested = true;
+
+        // O Player vive no GameRoot persistente e nao e recriado ao recarregar
+        // uma fase. Limpa primeiro os estados da campanha anterior.
+        GetComponent<PlayerHealth>()?.ResetForNewGame();
+        playerHeat?.ResetForNewGame();
+        GetComponent<PlayerMovement>()?.ResetForNewGame();
+        gameOverHUD?.Hide();
+        GameTimeScaleEffects.ResetForGameRestart();
+
+        deathDetected = false;
+        gameOverVisible = false;
+        deathTimer = 0f;
+
+        GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
+        if (loader != null)
+        {
+            loader.ReloadCurrentScene();
+            restartRequested = false;
+            return;
+        }
+
+        // O nome continua funcionando para cenas cujo buildIndex seja -1.
+        restartRequested = false;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

@@ -133,7 +133,8 @@ public sealed class EnemyDodge : MonoBehaviour
             owner.CurrentState == EnemyBase.State.Recovery ||
             owner.CurrentState == EnemyBase.State.Guarding ||
             owner.CurrentState == EnemyBase.State.Taunting ||
-            owner.CurrentState == EnemyBase.State.Staggered;
+            owner.CurrentState == EnemyBase.State.Staggered ||
+            owner.CurrentState == EnemyBase.State.TacticalIdle;
     }
 
     internal Vector3 TickDodge()

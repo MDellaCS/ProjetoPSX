@@ -2,6 +2,13 @@
     <Style src="PlayerHUD.uss" />
     <Style src="PlayerHeatHUD.uss" />
     <ui:VisualElement name="player-hud">
+        <ui:VisualElement name="human-health-bar" class="human-health-bar">
+            <ui:Label name="human-health-title" text="VIDA" class="human-health-title" />
+            <ui:VisualElement name="human-health-track" class="human-health-track">
+                <ui:VisualElement name="human-health-fill" class="human-health-fill" />
+            </ui:VisualElement>
+            <ui:Label name="human-health-value" text="100 / 100" class="human-health-value" />
+        </ui:VisualElement>
         <ui:VisualElement name="heat-thermometer">
             <ui:VisualElement name="thermometer-heading">
                 <ui:Label name="thermometer-title" text="TERMÔMETRO" />

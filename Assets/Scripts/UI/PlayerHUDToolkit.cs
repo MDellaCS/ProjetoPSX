@@ -64,6 +64,12 @@ public class PlayerHUDToolkit : MonoBehaviour
     private readonly List<VisualElement> hotNotches = new();
     private readonly List<VisualElement> superheatNotches = new();
     private PlayerHeat playerHeat;
+    private PlayerHealth playerHealth;
+    private PlayerMovesetController movesetController;
+    private VisualElement heatThermometer;
+    private VisualElement healthBar;
+    private VisualElement healthFill;
+    private Label healthValue;
     private Label heatPowerText;
     private VisualElement hotNotchParent;
     private VisualElement zeroNotch;
@@ -109,9 +115,18 @@ public class PlayerHUDToolkit : MonoBehaviour
 
     private void Update()
     {
-        if (playerHeat == null)
+        if (playerHeat == null || playerHealth == null || movesetController == null)
             ResolvePlayerComponents();
-        if (playerHeat == null)
+        if (playerHeat == null || playerHealth == null)
+            return;
+
+        bool usesHealth = movesetController != null && movesetController.UsesHealth;
+        if (heatThermometer != null)
+            heatThermometer.style.display = usesHealth ? DisplayStyle.None : DisplayStyle.Flex;
+        if (healthBar != null)
+            healthBar.style.display = usesHealth ? DisplayStyle.Flex : DisplayStyle.None;
+        UpdateHealthBar();
+        if (usesHealth)
             return;
 
         UpdateThermometer();
@@ -134,6 +149,10 @@ public class PlayerHUDToolkit : MonoBehaviour
         hudRoot.style.overflow = Overflow.Visible;
 
         heatPowerText = root.Q<Label>("heat-power-value");
+        heatThermometer = root.Q<VisualElement>("heat-thermometer");
+        healthBar = root.Q<VisualElement>("human-health-bar");
+        healthFill = root.Q<VisualElement>("human-health-fill");
+        healthValue = root.Q<Label>("human-health-value");
         VisualElement thermometer = root.Q<VisualElement>("heat-thermometer");
         if (thermometer != null)
         {
@@ -213,7 +232,23 @@ public class PlayerHUDToolkit : MonoBehaviour
         }
 
         if (playerTransform != null)
+        {
             playerHeat = playerTransform.GetComponent<PlayerHeat>();
+            playerHealth = playerTransform.GetComponent<PlayerHealth>();
+            movesetController = playerTransform.GetComponent<PlayerMovesetController>();
+        }
+    }
+
+    private void UpdateHealthBar()
+    {
+        if (playerHealth == null)
+            return;
+
+        float percent = playerHealth.HealthPercent;
+        if (healthFill != null)
+            healthFill.style.width = Length.Percent(percent * 100f);
+        if (healthValue != null)
+            healthValue.text = $"{playerHealth.CurrentHealth} / {playerHealth.MaxHealth}";
     }
 
     private void UpdateThermometer()

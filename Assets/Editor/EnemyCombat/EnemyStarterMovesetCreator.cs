@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>Cria e conecta os movesets equivalentes aos quatro prefabs atuais.</summary>
+/// <summary>Cria e conecta os movesets dos inimigos iniciais.</summary>
 public static class EnemyStarterMovesetCreator
 {
     private const string Root = "Assets/GameData/Enemy/Movesets";
@@ -14,26 +14,24 @@ public static class EnemyStarterMovesetCreator
         EnsureFolder("Assets/GameData/Enemy");
         EnsureFolder(Root);
 
-        EnemyMovesetDefinition basic = CreateBasic();
-        EnemyMovesetDefinition intermediate = CreateIntermediate();
-        EnemyMovesetDefinition advanced = CreateAdvanced();
-        EnemyMovesetDefinition flyer = CreateFlyer();
-        AssignToPrefab("Assets/Prefabs/BasicZombie.prefab", basic);
-        AssignToPrefab("Assets/Prefabs/IntermediateZombie.prefab", intermediate);
-        AssignToPrefab("Assets/Prefabs/AdvancedZombie.prefab", advanced);
-        AssignToPrefab("Assets/Prefabs/BasicFlyer.prefab", flyer);
+        EnemyMovesetDefinition limpRagDoll = CreateLimpRagDoll();
+        EnemyMovesetDefinition ragDoll = CreateRagDoll();
+        EnemyMovesetDefinition flyer = CreateFlyingPuppet();
+        AssignToPrefab("Assets/Prefabs/LimpRagDoll.prefab", limpRagDoll);
+        AssignToPrefab("Assets/Prefabs/RagDoll.prefab", ragDoll);
+        AssignToPrefab("Assets/Prefabs/FlyingPuppet.prefab", flyer);
         AssetDatabase.SaveAssets();
     }
 
-    private static EnemyMovesetDefinition CreateBasic()
+    private static EnemyMovesetDefinition CreateLimpRagDoll()
     {
-        const string folder = Root + "/BasicZombie";
+        const string folder = Root + "/LimpRagDoll";
         EnsureFolder(folder);
         EnemyAttackDefinition z1 = EnsureAttack(folder, "Z1", 25, 20,
             1.5f, .1f, 1f, 1.5f, .5f, 1.25f);
         EnemyAttackDefinition z2 = EnsureAttack(folder, "Z2", 20, 20,
             1f, .1f, .75f, 1.5f, .5f, 1f);
-        return EnsureMoveset(folder, "BasicZombieMoveset", 2,
+        return EnsureMoveset(folder, "LimpRagDollMoveset", 2,
             new[] { z1, z2 },
             new[] { Opening("Z1", 50f), Opening("Z2", 50f) },
             new Dictionary<string, EnemyMoveTransition[]>
@@ -43,15 +41,15 @@ public static class EnemyStarterMovesetCreator
             });
     }
 
-    private static EnemyMovesetDefinition CreateIntermediate()
+    private static EnemyMovesetDefinition CreateRagDoll()
     {
-        const string folder = Root + "/IntermediateZombie";
+        const string folder = Root + "/RagDoll";
         EnsureFolder(folder);
         EnemyAttackDefinition z1 = EnsureAttack(folder, "Z1", 35, 20,
             1f, .1f, .4f, 1.5f, .5f, 1.3f);
         EnemyAttackDefinition z2 = EnsureAttack(folder, "Z2", 30, 20,
             .75f, .1f, .4f, 1.5f, .5f, 1.1f);
-        return EnsureMoveset(folder, "IntermediateZombieMoveset", 5,
+        return EnsureMoveset(folder, "RagDollMoveset", 5,
             new[] { z1, z2 },
             new[] { Opening("Z1", 50f), Opening("Z2", 50f) },
             new Dictionary<string, EnemyMoveTransition[]>
@@ -61,52 +59,9 @@ public static class EnemyStarterMovesetCreator
             });
     }
 
-    private static EnemyMovesetDefinition CreateAdvanced()
+    private static EnemyMovesetDefinition CreateFlyingPuppet()
     {
-        const string folder = Root + "/AdvancedZombie";
-        EnsureFolder(folder);
-        EnemyAttackDefinition z1 = EnsureAttack(folder, "ZombieStrike1", 20,
-            20, 1.5f, .1f, 1f, 1.5f, .5f, 1f);
-        EnemyAttackDefinition z2 = EnsureAttack(folder, "ZombieStrike2", 20,
-            20, 1f, .1f, 1f, 1.5f, .5f, 1f);
-        EnemyAttackDefinition z3 = EnsureAttack(folder, "ZombieStrike3", 20,
-            20, .5f, .1f, 1f, 1.5f, .5f, 1f);
-        EnemyAttackDefinition h1 = EnsureAttack(folder, "ZombieHeavy1", 32,
-            35, 1.15f, .16f, .85f, 1.8f, .7f, 1.15f,
-            EnemyAttackKind.Heavy);
-        EnemyAttackDefinition h2 = EnsureAttack(folder, "ZombieHeavy2", 38,
-            45, .75f, .18f, 1.25f, 1.9f, .8f, 1.25f,
-            EnemyAttackKind.Heavy);
-        bool createdCharge = AssetDatabase.LoadAssetAtPath<EnemyAttackDefinition>(
-            folder + "/ZombieCharge.asset") == null;
-        EnemyAttackDefinition charge = EnsureAttack(folder, "ZombieCharge", 30,
-            35, .8f, .5f, 1.2f, 5.5f, .8f, 1f,
-            EnemyAttackKind.Special);
-        if (createdCharge)
-        {
-            charge.tags = new List<string> { "Charge" };
-            charge.requirements.minimumRange = 2.5f;
-            charge.requirements.preferredRange = 4f;
-            charge.movement.forwardDistance = 4.5f;
-            charge.movement.startNormalized = .8f / 1.3f;
-            charge.movement.faceTargetDuringActive = false;
-            EditorUtility.SetDirty(charge);
-        }
-        return EnsureMoveset(folder, "AdvancedZombieMoveset", 5,
-            new[] { z1, z2, z3, h1, h2, charge },
-            new[] { Opening(z1.attackId, 65f), Opening(h1.attackId, 35f),
-                Opening(charge.attackId, 45f) },
-            new Dictionary<string, EnemyMoveTransition[]>
-            {
-                [z1.attackId] = new[] { Transition(z2.attackId, 65f, 1f) },
-                [z2.attackId] = new[] { Transition(z3.attackId, 65f, 1f) },
-                [h1.attackId] = new[] { Transition(h2.attackId, 65f, .85f) }
-            });
-    }
-
-    private static EnemyMovesetDefinition CreateFlyer()
-    {
-        const string folder = Root + "/BasicFlyer";
+        const string folder = Root + "/FlyingPuppet";
         EnsureFolder(folder);
         bool createdSweep = AssetDatabase.LoadAssetAtPath<EnemyAttackDefinition>(
             folder + "/FlyerSweep.asset") == null;
@@ -131,7 +86,7 @@ public static class EnemyStarterMovesetCreator
             spin.requirements.targetContext = EnemyAttackContext.Air;
             EditorUtility.SetDirty(spin);
         }
-        return EnsureMoveset(folder, "BasicFlyerMoveset", 5,
+        return EnsureMoveset(folder, "FlyingPuppetMoveset", 5,
             new[] { sweep, spin },
             new[] { Opening(sweep.attackId, 100f),
                 Opening(spin.attackId, 100f) }, null);

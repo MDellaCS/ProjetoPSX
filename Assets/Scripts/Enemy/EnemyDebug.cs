@@ -178,10 +178,11 @@ public sealed class EnemyDebug : MonoBehaviour
 
         EnemyAttackDefinition attack = attacks.CurrentAttack?.Definition;
         string attackName = attack != null ? attack.displayName : "-";
-        string timings = attack != null
-            ? attack.windupDuration.ToString("0.00") + " / " +
-                attack.activeDuration.ToString("0.00") + " / " +
-                attack.recoveryDuration.ToString("0.00")
+        EnemyAttackRuntime runtime = attacks.CurrentAttack;
+        string timings = runtime != null
+            ? runtime.WindupDuration.ToString("0.00") + " / " +
+                runtime.ActiveDuration.ToString("0.00") + " / " +
+                runtime.RecoveryDuration.ToString("0.00")
             : "-";
         string status = movement.IsLaunchedForwards ? "LAUNCHED FORWARDS" :
             movement.IsLaunched ? "LAUNCHED" :
@@ -191,7 +192,10 @@ public sealed class EnemyDebug : MonoBehaviour
             "HP: " + health.CurrentHealth + " / " + health.MaxHealth +
             "   POISE: " + Mathf.CeilToInt(health.CurrentPoise) +
                 " / " + health.MaxPoise + "\n" +
-            "STATE: " + owner.CurrentState + "   " + status + "\n" +
+            "STATE: " + owner.CurrentState + "   " + status +
+                (brain.IsTacticalIdle
+                    ? "   PAUSE: " + brain.TacticalIdleRemaining.ToString("0.00") + "s"
+                    : string.Empty) + "\n" +
             "AGGRO: " + brain.CurrentAggressionPercent.ToString("0.0") +
                 "% (" + brain.CurrentAggressionVelocity.ToString("+0.0;-0.0;0.0") +
                 "/s)\n" +
@@ -209,7 +213,17 @@ public sealed class EnemyDebug : MonoBehaviour
             "CAMERA: " + cameraStatus + "\n" +
             "COMMIT: " + brain.CommitmentTimer.ToString("0.00") +
                 "s   CD: " + brain.CommitmentCooldownTimer.ToString("0.00") + "s\n" +
-            "MOVE: " + movement.MovementSpeed.ToString("0.00") +
+            "GROUP: " + (brain.UsesCohesiveGroupPositioning ? "COHESIVE" : "CLASSIC") +
+                "   SEP: " + brain.GroupSeparationRadius.ToString("0.0") +
+                "/" + brain.GroupSeparationStrength.ToString("0.00") +
+                "   ORBIT: " + brain.PreferredOrbitDistance.ToString("0.0") +
+                " / " + brain.OrbitStrength.ToString("0.00") +
+                "   DIR: " + (brain.OrbitDirection >= 0f ? "CW" : "CCW") +
+                " / " + brain.OrbitChangeInterval.ToString("0.0") + "s" +
+                "   REPOS: " + brain.RepositionChancePercent.ToString("0") + "%\n" +
+            "MOVE SLOW/STANDARD/FAST: " + movement.SlowSpeed.ToString("0.00") + "/" +
+                movement.StandardSpeed.ToString("0.00") + "/" +
+                movement.FastSpeed.ToString("0.00") +
                 "   DETECT: " + brain.DetectionRange.ToString("0.00") +
                 " / " + brain.CombatDetectionRange.ToString("0.00") + "\n" +
             "ATTACK: " + attackName + "\n" +

@@ -10,30 +10,36 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1000000000000000000000000000002, type: 3}
-  m_Name: BasicFlyerMoveset
+  m_Name: LimpRagDollMoveset
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovesetDefinition
   lightWindupActiveRotationSpeed: 240
   heavyWindupActiveRotationSpeed: 180
   specialWindupActiveRotationSpeed: 120
   extendedArmHitboxRadius: 0.25
-  maximumAttacksPerSequence: 5
+  maximumAttacksPerSequence: 4
   openings:
-  - targetNodeId: FlyerSweep
-    selectionWeight: 200
+  - targetNodeId: Z1
+    selectionWeight: 50
     requiresDirectorAuthorization: 1
-  - targetNodeId: FlyerAirSpin
-    selectionWeight: 80
+  - targetNodeId: Z2
+    selectionWeight: 50
     requiresDirectorAuthorization: 1
   nodes:
-  - nodeId: FlyerSweep
-    attack: {fileID: 11400000, guid: b1000000000000000000000000000011, type: 2}
-    transitions: []
-  - nodeId: FlyerAirSpin
-    attack: {fileID: 11400000, guid: b1000000000000000000000000000012, type: 2}
+  - nodeId: Z1
+    attack: {fileID: 11400000, guid: b1000000000000000000000000000001, type: 2}
     transitions:
-    - targetNodeId: FlyerAirSpin
-      continuationChance: 33
+    - targetNodeId: Z2
+      continuationChance: 50
       selectionWeight: 100
-      minimumDelayAfterActive: 0
+      minimumDelayAfterActive: 1
+      continuationWindow: 0
+      requiresHitConfirm: 0
+  - nodeId: Z2
+    attack: {fileID: 11400000, guid: 9811065aa3d6b1945aeee761253bcb7a, type: 2}
+    transitions:
+    - targetNodeId: Z1
+      continuationChance: 50
+      selectionWeight: 100
+      minimumDelayAfterActive: 0.75
       continuationWindow: 0
       requiresHitConfirm: 0

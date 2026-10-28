@@ -8,6 +8,12 @@ public enum PlayerAttackInput
     Heavy
 }
 
+public enum PlayerResourceMode
+{
+    Heat,
+    Health
+}
+
 [Serializable]
 public class PlayerMoveTransition
 {
@@ -59,6 +65,8 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
 {
     [Tooltip("Nome curto exibido no F3 para identificar este moveset durante os testes.")]
     public string displayName = "Moveset";
+    [Tooltip("Escolhe o recurso defensivo do moveset. Heat usa o sistema de calor; Health usa uma barra de vida tradicional e desativa as mecanicas de calor.")]
+    public PlayerResourceMode resourceMode = PlayerResourceMode.Heat;
     [Tooltip("Tempo global sem novo input que classifica a proxima entrada como PAUSE.")]
     [Min(0f)] public float globalPauseDelay = .25f;
 

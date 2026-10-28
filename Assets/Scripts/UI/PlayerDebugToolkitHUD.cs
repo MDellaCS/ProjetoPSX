@@ -181,12 +181,16 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         testShortcutsTextBuilder.Clear();
         testShortcutsTextBuilder.AppendLine("TEST SHORTCUTS");
         testShortcutsTextBuilder.AppendLine("F3  DEBUG HUD");
-        testShortcutsTextBuilder.AppendLine("F4  HEAT - (HOLD)");
-        testShortcutsTextBuilder.AppendLine("F5  HEAT + (HOLD)");
+        bool usesHealth = movesetController != null && movesetController.UsesHealth;
+        if (!usesHealth)
+        {
+            testShortcutsTextBuilder.AppendLine("F4  HEAT - (HOLD)");
+            testShortcutsTextBuilder.AppendLine("F5  HEAT + (HOLD)");
+            testShortcutsTextBuilder.AppendLine("F8  MAX HEAT + SUPERHEAT");
+        }
         testShortcutsTextBuilder.AppendLine("F6  COMBAT OVERRIDE");
         testShortcutsTextBuilder.Append("F7  GOD MODE: ")
             .AppendLine(playerHealth != null && playerHealth.IsGodMode ? "ON" : "OFF");
-        testShortcutsTextBuilder.AppendLine("F8  MAX HEAT + SUPERHEAT");
         testShortcutsTextBuilder.AppendLine("F9  NEXT SCENE");
         testShortcutsTextBuilder.AppendLine("U   NEXT PLAYER MOVESET");
         testShortcutsTextBuilder.Append("F11 TIME: ")
@@ -212,6 +216,16 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.AppendLine("DEBUG HUD");
         textBuilder.Append("STATE: ")
             .AppendLine(playerState.CurrentState.ToString());
+        if (playerHealth.IsHeavyStaggered)
+        {
+            textBuilder.Append("HEAVY STAGGER: ")
+                .Append(playerHealth.CurrentStaggerRemaining.ToString("0.00"))
+                .Append(" s | IMMUNE: ")
+                .Append(playerHealth.IsDamageImmune ? "YES" : "NO")
+                .Append(" | EARLY EXIT: ")
+                .AppendLine(playerHealth.CanExitHeavyStaggerEarly
+                    ? "READY" : "LOCKED");
+        }
         textBuilder.Append("MOVESET: ")
             .AppendLine(movesetController != null
                 ? movesetController.CurrentMovesetName
@@ -260,26 +274,37 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.Append("ENCOUNTER SLOWMO: ")
             .AppendLine(GameTimeScaleEffects.IsCompletionSlowMotionActive
                 ? "YES" : "NO");
-        textBuilder.Append("HEAT: ")
-            .Append(FormatSigned(playerHeat.CurrentHeat))
-            .Append(" / ")
-            .AppendLine(playerHeat.MaxHeat.ToString("0"));
-        textBuilder.Append("HEAT NOTCH: ")
-            .AppendLine(playerHeat.CurrentHeatNotch.ToString());
-        textBuilder.Append("HEAVY POWER: ")
-            .AppendLine(playerHeat.HeavyDamageMultiplier.ToString("0.#") + "x");
-        textBuilder.Append("HEAVY POISE: ")
-            .AppendLine(playerHeat.HeavyPoiseMultiplier.ToString("0.##") + "x");
-        textBuilder.Append("SUPERHEAT: ")
-            .Append(playerHeat.CurrentSuperheat.ToString("0.0"))
-            .Append(" / ")
-            .AppendLine(playerHeat.MaxSuperheat.ToString("0"));
-        textBuilder.Append("BURN: ")
-            .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
-        textBuilder.Append("RAGE: ")
-            .AppendLine(playerHeat.IsRaging
-                ? playerHeat.RageTimeRemaining.ToString("0.0") + " s"
-                : playerHeat.HasRageUnlocked ? "UNLOCKED" : "LOCKED");
+        bool usesHealth = movesetController != null && movesetController.UsesHealth;
+        if (usesHealth)
+        {
+            textBuilder.Append("HEALTH: ")
+                .Append(playerHealth.CurrentHealth)
+                .Append(" / ")
+                .AppendLine(playerHealth.MaxHealth.ToString());
+        }
+        else
+        {
+            textBuilder.Append("HEAT: ")
+                .Append(FormatSigned(playerHeat.CurrentHeat))
+                .Append(" / ")
+                .AppendLine(playerHeat.MaxHeat.ToString("0"));
+            textBuilder.Append("HEAT NOTCH: ")
+                .AppendLine(playerHeat.CurrentHeatNotch.ToString());
+            textBuilder.Append("HEAVY POWER: ")
+                .AppendLine(playerHeat.HeavyDamageMultiplier.ToString("0.#") + "x");
+            textBuilder.Append("HEAVY POISE: ")
+                .AppendLine(playerHeat.HeavyPoiseMultiplier.ToString("0.##") + "x");
+            textBuilder.Append("SUPERHEAT: ")
+                .Append(playerHeat.CurrentSuperheat.ToString("0.0"))
+                .Append(" / ")
+                .AppendLine(playerHeat.MaxSuperheat.ToString("0"));
+            textBuilder.Append("BURN: ")
+                .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
+            textBuilder.Append("RAGE: ")
+                .AppendLine(playerHeat.IsRaging
+                    ? playerHeat.RageTimeRemaining.ToString("0.0") + " s"
+                    : playerHeat.HasRageUnlocked ? "UNLOCKED" : "LOCKED");
+        }
         textBuilder.Append("CURRENCY: ")
             .AppendLine((playerCurrency != null ? playerCurrency.Current : 0).ToString());
         textBuilder.Append("ATTACKING: ")

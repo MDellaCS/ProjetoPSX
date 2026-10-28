@@ -21,12 +21,6 @@ public sealed class EnemyGuard : MonoBehaviour
     [Tooltip("Tempo apos baixar ou quebrar a guarda antes de poder defende-la novamente.")]
     [Min(0f)] [SerializeField] private float guardCooldown = 1.2f;
 
-    [Header("Guard Movement")]
-    [Tooltip("Multiplicador da Movement Speed usado para recuar bloqueando com agressividade zero. Deve ser menor que 1 para continuar mais lento que a caminhada normal.")]
-    [Range(0f, 1f)] [SerializeField] private float lowAggressionGuardRetreatSpeedMultiplier = .6f;
-    [Tooltip("Multiplicador da Movement Speed usado para recuar bloqueando com agressividade maxima. Deve ser menor que o valor de baixa agressividade.")]
-    [Range(0f, 1f)] [SerializeField] private float highAggressionGuardRetreatSpeedMultiplier = .15f;
-
     [Header("Blocked Attack Types")]
     [Tooltip("Permite bloquear ataques leves terrestres do player.")]
     [SerializeField] private bool canGuardPlayerLightAttacks = true;
@@ -189,16 +183,7 @@ public sealed class EnemyGuard : MonoBehaviour
         // FaceDirection ignora a regra de Tank Controls, pois bloquear deve
         // manter o olhar no player mesmo enquanto o inimigo recua.
         movement.FaceDirection(towardPlayer);
-        float aggression = Mathf.InverseLerp(
-            0f, 100f, brain.CurrentAggressionPercent
-        );
-        float speedMultiplier = Mathf.Lerp(
-            lowAggressionGuardRetreatSpeedMultiplier,
-            highAggressionGuardRetreatSpeedMultiplier,
-            aggression
-        );
-        return -towardPlayer.normalized * movement.MovementSpeed *
-            speedMultiplier;
+        return -towardPlayer.normalized * movement.SlowSpeed;
     }
 
     internal bool TryBlock(PlayerAttackType attackType,

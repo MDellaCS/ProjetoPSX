@@ -75,8 +75,9 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             rules.JuggleGravityMultiplier,
             rules.JuggleDuration
         ));
-        if (runtime.Definition.kind == PlayerAttackKind.Light &&
-            strike.generatesHeatOnHit && heat != null)
+        if (heat != null && heat.IsHeatModeActive &&
+            runtime.Definition.kind == PlayerAttackKind.Light &&
+            strike.generatesHeatOnHit)
             heat.AddHeat(dealt * heat.heatGeneratedPerDamageDealt);
         combatStatus?.RegisterDamageDealtToEnemy();
         return true;
@@ -119,8 +120,9 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             cameraShakeReported = true;
         }
 
-        if (runtime.Definition.kind == PlayerAttackKind.Light &&
-            strike.generatesHeatOnHit && heat != null)
+        if (heat != null && heat.IsHeatModeActive &&
+            runtime.Definition.kind == PlayerAttackKind.Light &&
+            strike.generatesHeatOnHit)
         {
             heat.AddHeat(damage * heat.heatGeneratedPerDamageDealt);
         }

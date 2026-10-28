@@ -1422,15 +1422,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eebf147459b3ee4499d828d0ff6de089, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  maxHealth: 150
   maxPoise: 100
-  staggerDuration: 0.8
+  lightStaggerDuration: 0.8
+  lightStaggerDistance: 1.2
+  lightStaggerPushDuration: 0.2
+  heavyStaggerDuration: 3.2
+  heavyStaggerDistance: 5
+  heavyStaggerPushDuration: 0.6
+  heavyStaggerMinimumDurationPercent: 0.6
   canBeLaunchedUp: 1
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
   canBeJuggled: 1
   incomingDamageNumberColor: {r: 1, g: 0.3, b: 0.3, a: 1}
   holdToResetAllSavesEnabled: 1
-  resetAllSavesHoldDuration: 3
+  resetAllSavesHoldDuration: 2
 --- !u!114 &825647907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2708,6 +2715,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDirector
   controlAttackTurns: 1
   maximumLeadWeight: 100
+  specialAttackQueueDelayFrames: 5
   halfWeightSpawnChance: 20
   doubleWeightSpawnChance: 20
   leadAggressionBonus: 0
@@ -2888,6 +2896,38 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 311817224}
     m_Modifications:
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: maxHealth
+      value: 150
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: heavyStaggerDistance
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: heavyStaggerDuration
+      value: 3.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: lightStaggerDistance
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: heavyStaggerPushDuration
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: lightStaggerPushDuration
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: resetAllSavesHoldDuration
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1392315265754387562, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: heavyStaggerMinimumDurationPercent
+      value: 0.6
+      objectReference: {fileID: 0}
     - target: {fileID: 3481279927476739912, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: m_Name
       value: Player

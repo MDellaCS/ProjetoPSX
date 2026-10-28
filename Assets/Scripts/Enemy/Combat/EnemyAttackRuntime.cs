@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public enum EnemyAttackPhase { None, Windup, Active, Recovery }
 
 public sealed class EnemyAttackRuntime
@@ -13,13 +15,15 @@ public sealed class EnemyAttackRuntime
     public readonly float ExtendedArmHitboxRadius;
     public bool HitConfirmed;
 
-    public EnemyAttackRuntime(EnemyMoveNode node, EnemyMovesetDefinition moveset)
+    public EnemyAttackRuntime(EnemyMoveNode node, EnemyMovesetDefinition moveset,
+        float? windupDurationOverride = null)
     {
         Node = node;
         Definition = node.attack;
         Damage = Definition.baseDamage;
         PoiseDamage = Definition.basePoiseDamage;
-        WindupDuration = Definition.windupDuration;
+        WindupDuration = Mathf.Max(0f,
+            windupDurationOverride ?? Definition.windupDuration);
         ActiveDuration = Definition.activeDuration;
         RecoveryDuration = Definition.recoveryDuration;
         RotationSpeed = moveset.GetRotationSpeed(Definition.kind);

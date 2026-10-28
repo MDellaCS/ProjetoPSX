@@ -157,6 +157,8 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     public string animationStateId;
     [Tooltip("Marcadores livres usados por inimigos especificos, como Charge, Sweep ou AirSpin.")]
     public List<string> tags = new();
+    [Tooltip("Chave compartilhada por ataques exclusivos. Inimigos com a mesma chave aguardam a fila global e apenas um pode manter o ataque reservado por vez. Deixe vazio para ataques sem fila.")]
+    public string specialQueueId;
 
     [Header("Timing")]
     [Tooltip("Tempo de preparacao antes dos Strikes ficarem ativos.")]
@@ -171,6 +173,8 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     [Min(0)] public int baseDamage = 10;
     [Tooltip("Dano base de Poise antes dos multiplicadores de Strike.")]
     [Min(0)] public int basePoiseDamage = 10;
+    [Tooltip("Quando este ataque quebra o Poise do jogador, aplica HeavyStagger, que o torna imune a novos danos e permite sair mais cedo com dash ou pulo.")]
+    public bool causesHeavyStagger;
 
     [Header("Movement")]
     [Tooltip("Movimento de gameplay executado independentemente da animacao.")]

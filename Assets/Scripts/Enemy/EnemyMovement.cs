@@ -8,8 +8,12 @@ using UnityEngine.Serialization;
 public sealed class EnemyMovement : MonoBehaviour
 {
     [Header("Movement")]
-    [Tooltip("Velocidade de deslocamento normal do inimigo.")]
-    [Min(0f)] [SerializeField] private float movementSpeed = 2.2f;
+    [Tooltip("Velocidade usada ao bloquear e recuar. Deve ser menor ou igual a Standard Speed.")]
+    [Min(0f)] [SerializeField] private float slowSpeed = 1.1f;
+    [Tooltip("Velocidade constante usada em strafe, orbit, recuo, reposicionamento e outras locomocoes comuns.")]
+    [Min(0f)] [SerializeField] private float standardSpeed = 2.2f;
+    [Tooltip("Velocidade constante usada para perseguir o jogador e buscar sua ultima posicao conhecida.")]
+    [Min(0f)] [SerializeField] private float fastSpeed = 3.3f;
     [Tooltip("Aceleracao vertical somada a velocidade. Use um valor negativo para queda.")]
     [SerializeField] private float gravity = -20f;
     [Tooltip("Velocidade maxima de queda vertical.")]
@@ -63,10 +67,15 @@ public sealed class EnemyMovement : MonoBehaviour
     private Vector3 lastMoveVelocity;
     private bool isLaunched;
     private bool isLaunchedForwards;
+    private bool hasGroundContact;
     private readonly HashSet<EnemyBase> bodyImpactTargets = new();
     private readonly Collider[] bodyImpactOverlapBuffer = new Collider[64];
 
-    public float MovementSpeed => movementSpeed;
+    public float SlowSpeed => slowSpeed;
+    public float StandardSpeed => standardSpeed;
+    public float FastSpeed => fastSpeed;
+    public float LastHorizontalSpeed =>
+        new Vector3(lastMoveVelocity.x, 0f, lastMoveVelocity.z).magnitude;
     public float ImpactWeight => Mathf.Max(.01f, impactWeight);
     public bool CanBeLaunchedUp => canBeLaunchedUp;
     public bool CanBeLaunchedDown => canBeLaunchedDown;
@@ -79,9 +88,19 @@ public sealed class EnemyMovement : MonoBehaviour
     public CharacterController EntityCharacterController => controller;
     /// <summary>Flyers e inimigos marcados como rastejadores nao participam da separacao terrestre.</summary>
     public bool ParticipatesInGroundEntitySeparation =>
-        !ignoreGroundEntitySeparation && GetComponent<BasicFlyer>() == null;
+        !ignoreGroundEntitySeparation && GetComponent<FlyingPuppet>() == null;
     /// <summary>Indica se o Character Controller esta apoiado no chao.</summary>
-    public bool IsGrounded => IsControllerUsable && controller.isGrounded;
+    public bool IsGrounded
+    {
+        get
+        {
+            if (!IsControllerUsable || verticalVelocity > .05f)
+                return false;
+            if (isLaunched && !hasGroundContact)
+                return false;
+            return hasGroundContact || controller.isGrounded;
+        }
+    }
     public float VerticalVelocity => verticalVelocity;
 
     internal void Initialize(EnemyBase enemy, EnemyHealth enemyHealth)
@@ -97,6 +116,9 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         if (gravity > 0f)
             gravity = -gravity;
+        slowSpeed = Mathf.Max(0f, slowSpeed);
+        standardSpeed = Mathf.Max(slowSpeed, standardSpeed);
+        fastSpeed = Mathf.Max(standardSpeed, fastSpeed);
     }
 
     /// <summary>
@@ -121,6 +143,8 @@ public sealed class EnemyMovement : MonoBehaviour
         velocity.y = verticalVelocity;
         lastMoveVelocity = velocity;
         CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
+        hasGroundContact = (flags & CollisionFlags.Below) != 0 ||
+            controller.isGrounded;
 
         if (isLaunchedForwards)
         {
@@ -176,7 +200,7 @@ public sealed class EnemyMovement : MonoBehaviour
     public void ApplyGravity()
     {
         if (!IsControllerUsable) return;
-        if (!isLaunched && controller.isGrounded && verticalVelocity < 0f)
+        if (!isLaunched && IsGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
         if (juggleTimer > 0f)
         {
@@ -190,7 +214,12 @@ public sealed class EnemyMovement : MonoBehaviour
             -terminalFallSpeed);
     }
 
-    public void SetVerticalVelocity(float value) => verticalVelocity = value;
+    public void SetVerticalVelocity(float value)
+    {
+        verticalVelocity = value;
+        if (value > .05f)
+            hasGroundContact = false;
+    }
 
     private bool IsControllerUsable => controller != null &&
         controller.enabled && controller.gameObject.activeInHierarchy;
@@ -207,6 +236,23 @@ public sealed class EnemyMovement : MonoBehaviour
     /// <summary>Move em direcao ao alvo. Tank Controls gira antes de avancar.</summary>
     public void MoveTowardTarget(float speed) =>
         MoveTowardDirection(GetTargetDirection(), speed);
+
+    /// <summary>
+    /// Desloca-se na direcao tática calculada pelo Brain sem virar as costas
+    /// ao jogador. Permite perseguir e orbitar mantendo o alvo a frente.
+    /// </summary>
+    public void MoveWithTargetFacing(Vector3 direction, float speed)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .001f || speed <= 0f)
+        {
+            Move(Vector3.zero);
+            return;
+        }
+
+        FaceTarget();
+        Move(direction.normalized * speed);
+    }
 
     /// <summary>
     /// Move em uma direcao de mundo. Com Tank Controls, a translacao acontece
@@ -304,6 +350,7 @@ public sealed class EnemyMovement : MonoBehaviour
         verticalVelocity = initialSpeed;
         launchGravity = newGravity;
         isLaunched = true;
+        hasGroundContact = false;
         ResetJuggleMovement();
         CancelSlideLaunchHorizontalImpulse();
     }
@@ -414,6 +461,7 @@ public sealed class EnemyMovement : MonoBehaviour
         owner.CurrentState = EnemyBase.State.Combat;
         isLaunched = true;
         verticalVelocity = liftSpeed;
+        hasGroundContact = false;
         launchGravity = newGravity;
         juggleGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
         juggleTimer = Mathf.Max(juggleTimer, duration);
@@ -426,6 +474,7 @@ public sealed class EnemyMovement : MonoBehaviour
         owner.CurrentState = EnemyBase.State.Combat;
         isLaunched = true;
         verticalVelocity = -Mathf.Max(0f, fallSpeed);
+        hasGroundContact = false;
         ResetJuggleMovement();
     }
 

@@ -15,6 +15,8 @@ public class EnemyDirector : MonoBehaviour
     [SerializeField] private bool controlAttackTurns = true;
     [Tooltip("Orcamento maximo inteiro ocupado simultaneamente pelos inimigos Lead. Aceita qualquer valor positivo.")]
     [Min(1)] [SerializeField] private int maximumLeadWeight = 100;
+    [Tooltip("Numero de frames de jogo que um ataque exclusivo aguarda antes de iniciar. A reserva impede que varios inimigos iniciem ataques do mesmo tipo ao mesmo tempo.")]
+    [Min(0)] [SerializeField] private int specialAttackQueueDelayFrames = 3;
 
     [Header("Spawn Weight Variation")]
     [Tooltip("Chance global de um inimigo nascer ocupando metade de seu Director Weight. O sorteio acontece uma vez por nascimento.")]
@@ -44,6 +46,8 @@ public class EnemyDirector : MonoBehaviour
     private EnemyBase nextAttacker;
 
     public float CurrentLeadWeight => GetOccupiedLeadWeight();
+    public static int SpecialAttackQueueDelayFrames => activeDirector != null
+        ? Mathf.Max(0, activeDirector.specialAttackQueueDelayFrames) : 3;
 
     public static bool IsControllingAttackTurns => activeDirector != null &&
         activeDirector.isActiveAndEnabled && activeDirector.controlAttackTurns;
@@ -70,6 +74,8 @@ public class EnemyDirector : MonoBehaviour
     private void OnValidate()
     {
         maximumLeadWeight = Mathf.Max(1, maximumLeadWeight);
+        specialAttackQueueDelayFrames = Mathf.Max(0,
+            specialAttackQueueDelayFrames);
         halfWeightSpawnChance = Mathf.Clamp(halfWeightSpawnChance, 0f, 100f);
         doubleWeightSpawnChance = Mathf.Clamp(doubleWeightSpawnChance,
             0f, 100f - halfWeightSpawnChance);

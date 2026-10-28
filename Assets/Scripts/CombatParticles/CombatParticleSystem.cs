@@ -143,7 +143,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
         poolRoot.SetParent(transform);
         particleLayer = LayerMask.NameToLayer("CombatParticle");
         if (particleLayer >= 0)
-            Physics.IgnoreLayerCollision(particleLayer, particleLayer, true);
+            Physics.IgnoreLayerCollision(particleLayer, particleLayer, false);
         else
             particleLayer = gameObject.layer;
         EnsureDefaults();
@@ -154,14 +154,24 @@ public sealed class CombatParticleSystem : MonoBehaviour
         Reclaim(activeVisual, freeVisual, particle => particle.HasExpired);
     }
 
-    /// <summary>Retorna se o Collider pertence ao chao ou parede permitido.</summary>
-    public bool IsWorldCollision(Collider collider)
+    /// <summary>Retorna se o collider deve participar da fisica das particulas.</summary>
+    public bool CanParticleCollideWith(Collider collider)
     {
-        if (collider == null || collider.GetComponent<CombatVisualParticle>() != null)
+        if (collider == null)
             return false;
-        if (collider.GetComponentInParent<PlayerHealth>() != null ||
-            collider.GetComponentInParent<EnemyBase>() != null)
+
+        // As particulas interagem umas com as outras, mas nunca empurram
+        // entidades com controllers proprios ou corpos dinamicos.
+        if (collider.GetComponentInParent<CombatVisualParticle>() != null)
+            return true;
+        if (collider.attachedRigidbody != null ||
+            collider.GetComponentInParent<PlayerMovement>() != null ||
+            collider.GetComponentInParent<PlayerHealth>() != null ||
+            collider.GetComponentInParent<PlayerCharacterController>() != null ||
+            collider.GetComponentInParent<EnemyBase>() != null ||
+            collider.GetComponentInParent<EnemyMovement>() != null)
             return false;
+
         return (worldCollisionLayers.value & (1 << collider.gameObject.layer)) != 0;
     }
 

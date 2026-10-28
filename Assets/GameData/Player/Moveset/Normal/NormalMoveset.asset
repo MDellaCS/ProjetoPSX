@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: NormalMoveset
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
   displayName: Normal
+  resourceMode: 0
   globalPauseDelay: 0.5
   movementSpeedMultiplier: 1
   allowAirJump: 1
