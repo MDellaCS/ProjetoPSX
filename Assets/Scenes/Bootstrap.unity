@@ -1494,12 +1494,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3612e2f0d9db0e14395c741c3f1702aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCurrencyWallet
-  collectRadius: 0.2
-  attractionRadius: 16
+  collectRadius: 0.4
+  attractionRadius: 20
   playerCurrencyCenterHeightOffset: 1.8
   attractionDelay: 3
-  attractionAcceleration: 8
-  maximumAttractionSpeed: 16
+  attractionAcceleration: 15
+  attractionAccelerationRampDuration: 2
+  attractionAccelerationCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  maximumAttractionSpeed: 1000
 --- !u!136 &825647910
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1928,6 +1953,11 @@ MonoBehaviour:
   currencyGoreVisualMaterial: {fileID: 2100000, guid: c55cd5fd6b341314fabe59256f846435, type: 2}
   currencyGoreLifetimeMultiplier: 6
   minimumCurrencyGoreLifetime: 12
+  particleFadeStartRemainingPercent: 15
+  currencyBlinkStartRemainingPercent: 30
+  currencyFastBlinkStartRemainingPercent: 10
+  currencyBlinkFrequency: 3
+  currencyFastBlinkFrequency: 9
 --- !u!1 &1026784251
 GameObject:
   m_ObjectHideFlags: 0
@@ -2057,43 +2087,6 @@ MonoBehaviour:
   heavyAttackImpact:
     hitstopDuration: 0.3
     cameraShakeDuration: 0.2
-  lightAttackHitSound:
-    clips:
-    - {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
-    - {fileID: 8300000, guid: 4ae73664f9fa52f41b51a2e050901696, type: 3}
-    - {fileID: 8300000, guid: ada2ae050ed4f114eba3fab31db4313e, type: 3}
-    volume: 1
-    volumeVariation: 0
-    pitch: 1
-    pitchVariation: 0.2
-    is3D: 1
-    minDistance: 1
-    maxDistance: 25
-    outputMixerGroup: {fileID: 0}
-  heavyAttackHitSound:
-    clips:
-    - {fileID: 8300000, guid: a42a25bfe713e63498febabb408fceea, type: 3}
-    - {fileID: 8300000, guid: b322a4e6a9f59b04a82a3336dde02871, type: 3}
-    - {fileID: 8300000, guid: ae2d2db46850b7c47ab85240cdc448f9, type: 3}
-    volume: 1
-    volumeVariation: 0
-    pitch: 1
-    pitchVariation: 0.1
-    is3D: 1
-    minDistance: 1
-    maxDistance: 25
-    outputMixerGroup: {fileID: 0}
-  enemyAttackHitSound:
-    clips:
-    - {fileID: 8300000, guid: 99348524f0ef5b3469b6d1976f17370c, type: 3}
-    volume: 1
-    volumeVariation: 0.08
-    pitch: 1
-    pitchVariation: 0.06
-    is3D: 1
-    minDistance: 1
-    maxDistance: 25
-    outputMixerGroup: {fileID: 0}
   impactShakeIntensity:
     serializedVersion: 2
     m_Curve:

@@ -157,6 +157,13 @@ public class EnemyBase : MonoBehaviour
     internal void EndStaggerForDodge() => health?.EndStaggerForDodge();
     internal void CancelDodge() => dodge?.CancelDodge();
     internal void CancelTaunt() => taunt?.CancelTaunt();
+    internal void OnDodgeHopCompleted(float tauntChanceBonus,
+        float aggressionChange)
+    {
+        brain?.ApplyDodgeAggressionChange(aggressionChange);
+        taunt?.AddChanceBoost(tauntChanceBonus);
+    }
+    internal void OnDamageDealtToPlayer() => taunt?.OnDamageDealtToPlayer();
     internal bool TryAvoidPlayerAttack(float attackReach,
         int incomingDamage = 0) => dodge != null &&
         dodge.TryAvoidPlayerAttack(attackReach, incomingDamage);
@@ -281,11 +288,13 @@ public class EnemyBase : MonoBehaviour
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
         bool hasImpactPosition = false,
-        Transform attacker = null) =>
+        Transform attacker = null,
+        Vector3 particleImpactDirection = default) =>
         health.TakeDamage(damage, attackerPosition, poiseDamage, out damageDealt,
             out poiseResult,
             fromPlayerAttack, playerAttackType, playerAttackRadius,
-            impactDirection, impactPosition, hasImpactPosition, attacker);
+            impactDirection, impactPosition, hasImpactPosition, attacker,
+            particleImpactDirection);
     public bool ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
         CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>

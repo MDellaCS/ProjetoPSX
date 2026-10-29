@@ -2,14 +2,16 @@ using UnityEngine;
 
 public enum CombatReactionType
 {
-    None,
-    Stagger,
-    Juggle,
-    LaunchUp,
-    LaunchDown,
-    LaunchForwards,
+    [InspectorName("Default (Stagger)")]
+    DefaultStagger = 0,
+    Juggle = 2,
+    LaunchUp = 3,
+    LaunchDown = 4,
+    LaunchForwards = 5,
     // Mantido no fim para não alterar os valores serializados das reações antigas.
-    LaunchUpForwards
+    LaunchUpForwards = 6,
+    [InspectorName("Launch Backwards")]
+    LaunchBackwards = 7
 }
 
 public readonly struct CombatPoiseHitResult

@@ -30,6 +30,35 @@ public sealed class CombatParticleSystem : MonoBehaviour
     [Min(1f)] [SerializeField] private float currencyGoreLifetimeMultiplier = 5f;
     [Tooltip("Tempo de vida minimo, em segundos, de um fragmento que carrega currency.")]
     [Min(0f)] [SerializeField] private float minimumCurrencyGoreLifetime = 12f;
+    [Header("Desaparecimento dos Fragmentos")]
+    [Tooltip("Porcentagem final do tempo de vida em que particulas comuns e partes do corpo comecam a ficar transparentes ate desaparecer.")]
+    [Range(0f, 100f)] [SerializeField] private float particleFadeStartRemainingPercent = 25f;
+    [Tooltip("Porcentagem restante do tempo de vida da currency em que ela comeca a piscar na primeira velocidade.")]
+    [Range(0f, 100f)] [SerializeField] private float currencyBlinkStartRemainingPercent = 30f;
+    [Tooltip("Porcentagem restante do tempo de vida da currency em que ela troca para a piscada mais rapida.")]
+    [Range(0f, 100f)] [SerializeField] private float currencyFastBlinkStartRemainingPercent = 10f;
+    [Tooltip("Quantidade de piscadas por segundo da currency no primeiro estagio de aviso.")]
+    [Min(0f)] [SerializeField] private float currencyBlinkFrequency = 3f;
+    [Tooltip("Quantidade de piscadas por segundo da currency no estagio final antes de desaparecer.")]
+    [Min(0f)] [SerializeField] private float currencyFastBlinkFrequency = 9f;
+
+    private void OnValidate()
+    {
+        currencyGoreLifetimeMultiplier = Mathf.Max(1f,
+            currencyGoreLifetimeMultiplier);
+        minimumCurrencyGoreLifetime = Mathf.Max(0f,
+            minimumCurrencyGoreLifetime);
+        particleFadeStartRemainingPercent = Mathf.Clamp(
+            particleFadeStartRemainingPercent, 0f, 100f);
+        currencyBlinkStartRemainingPercent = Mathf.Clamp(
+            currencyBlinkStartRemainingPercent, 0f, 100f);
+        currencyFastBlinkStartRemainingPercent = Mathf.Clamp(
+            currencyFastBlinkStartRemainingPercent, 0f,
+            currencyBlinkStartRemainingPercent);
+        currencyBlinkFrequency = Mathf.Max(0f, currencyBlinkFrequency);
+        currencyFastBlinkFrequency = Mathf.Max(0f,
+            currencyFastBlinkFrequency);
+    }
 
     public static CombatParticleSystem Instance
     {
@@ -185,7 +214,10 @@ public sealed class CombatParticleSystem : MonoBehaviour
             activeVisual.Count < maximumVisualParticles ? CreateVisual() : ReuseOldest(activeVisual, freeVisual);
         particle.Initialize(profile, position, velocity, size, material, particleLayer,
             currencyValue, CurrencyGoreMaterial, currencyGoreLifetimeMultiplier,
-            minimumCurrencyGoreLifetime);
+            minimumCurrencyGoreLifetime, particleFadeStartRemainingPercent,
+            currencyBlinkStartRemainingPercent,
+            currencyFastBlinkStartRemainingPercent,
+            currencyBlinkFrequency, currencyFastBlinkFrequency);
         activeVisual.Add(particle);
     }
 
@@ -214,7 +246,8 @@ public sealed class CombatParticleSystem : MonoBehaviour
         CombatVisualParticle particle = freeBodyParts.Count > 0
             ? freeBodyParts.Dequeue() : CreateVisual(true);
         particle.InitializeMeshPart(profile, mesh, ownsMesh, position,
-            rotation, worldScale, velocity, materials, particleLayer);
+            rotation, worldScale, velocity, materials, particleLayer,
+            particleFadeStartRemainingPercent);
         activeBodyParts.Add(particle);
     }
 

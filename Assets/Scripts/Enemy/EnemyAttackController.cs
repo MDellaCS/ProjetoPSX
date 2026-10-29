@@ -24,6 +24,8 @@ public sealed class EnemyAttackController : MonoBehaviour
     private EnemyMoveNode pendingContinuation;
     private float pendingContinuationDelay;
     private string queuedSpecialAttackId;
+    private bool approachHasStarted;
+    private bool approachReachedPreferredRange;
 
     public EnemyMovesetDefinition Moveset => moveset;
     public EnemyAttackRuntime CurrentAttack { get; private set; }
@@ -118,6 +120,8 @@ public sealed class EnemyAttackController : MonoBehaviour
         recoveryElapsed = 0f;
         pendingContinuation = null;
         pendingContinuationDelay = 0f;
+        approachHasStarted = false;
+        approachReachedPreferredRange = false;
         attacksInSequence++;
         authoredMovement.Begin(CurrentAttack);
         hitboxes.Begin(CurrentAttack);
@@ -132,6 +136,41 @@ public sealed class EnemyAttackController : MonoBehaviour
     public void TickWindup()
     {
         if (CurrentAttack == null) return;
+        if (CurrentAttack.Definition.movement.approachTargetUntilPreferredRange)
+        {
+            if (!approachHasStarted)
+            {
+                locomotion.Move(Vector3.zero);
+                phaseTimer = Mathf.Max(0f, phaseTimer - Time.deltaTime);
+                if (phaseTimer <= 0f)
+                    approachHasStarted = true;
+                return;
+            }
+
+            if (approachReachedPreferredRange)
+            {
+                locomotion.Move(Vector3.zero);
+                phaseTimer -= Time.deltaTime;
+                if (phaseTimer <= 0f)
+                    EnterActive();
+                return;
+            }
+
+            if (brain.Target == null)
+            {
+                CancelAttack();
+                owner.CurrentState = EnemyBase.State.Combat;
+                brain.ScheduleNextDecision();
+                return;
+            }
+            if (authoredMovement.TickApproachToPreferredRange())
+            {
+                approachReachedPreferredRange = true;
+                phaseTimer = Mathf.Max(0f, CurrentAttack.WindupDuration);
+            }
+            return;
+        }
+
         TickMovement();
         phaseTimer -= Time.deltaTime;
         if (phaseTimer <= 0f) EnterActive();
@@ -213,6 +252,9 @@ public sealed class EnemyAttackController : MonoBehaviour
     private void SkipEmptyPhases()
     {
         if (CurrentAttack == null || phaseTimer > 0f) return;
+        if (CurrentPhase == EnemyAttackPhase.Windup &&
+            CurrentAttack.Definition.movement.approachTargetUntilPreferredRange)
+            return;
         if (CurrentPhase == EnemyAttackPhase.Windup) EnterActive();
         else if (CurrentPhase == EnemyAttackPhase.Active) EnterRecovery();
         else FinishOrContinue();
@@ -248,6 +290,8 @@ public sealed class EnemyAttackController : MonoBehaviour
         attacksInSequence = 0;
         pendingContinuation = null;
         pendingContinuationDelay = 0f;
+        approachHasStarted = false;
+        approachReachedPreferredRange = false;
         authoredMovement?.End();
         hitboxes?.End();
         if (ended != null)

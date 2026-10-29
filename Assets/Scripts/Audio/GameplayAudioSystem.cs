@@ -62,7 +62,13 @@ public sealed class GameplayAudioSystem : MonoBehaviour
     public static void Play(GameplayAudioCueId cueId, Vector3 position)
     {
         GameplayAudioSystem system = Instance;
-        system.PlayCue(cueId, position);
+        system.PlayCue(system.Settings.GetCue(cueId), position);
+    }
+
+    /// <summary>Reproduz uma configuracao de som criada pelo proprio objeto de gameplay.</summary>
+    public static void Play(GameplayAudioCue cue, Vector3 position)
+    {
+        Instance.PlayCue(cue, position);
     }
 
     /// <summary>Atualiza vozes em execucao quando o jogador altera o volume de efeitos.</summary>
@@ -94,13 +100,12 @@ public sealed class GameplayAudioSystem : MonoBehaviour
             CreateVoice();
     }
 
-    private void PlayCue(GameplayAudioCueId cueId, Vector3 position)
+    private void PlayCue(GameplayAudioCue cue, Vector3 position)
     {
         LoadSettings();
         if (!settings.sfxEnabled)
             return;
 
-        GameplayAudioCue cue = settings.GetCue(cueId);
         AudioClip clip = ChooseClip(cue);
         if (clip == null)
             return;

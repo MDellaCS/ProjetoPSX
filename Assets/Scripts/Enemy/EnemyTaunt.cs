@@ -12,12 +12,20 @@ public sealed class EnemyTaunt : MonoBehaviour
     [Range(0f, 100f)] [SerializeField] private float minimumAggressionPercent = 70f;
     [Tooltip("Chance de iniciar um taunt sempre que o inimigo toma uma decisao de combate e a agressividade e suficiente.")]
     [Range(0f, 100f)] [SerializeField] private float tauntChancePerDecision = 10f;
+    [Tooltip("Pontos percentuais somados a chance de taunt deste inimigo quando ele causa dano ao jogador. O bonus acumula ate uma decisao elegivel de taunt.")]
+    [Min(0f)] [SerializeField] private float tauntChanceBoostAfterPlayerDamage;
     [Tooltip("Tempo minimo em que o inimigo fica parado provocando.")]
     [Min(0f)] [SerializeField] private float minimumTauntDuration = .8f;
     [Tooltip("Tempo maximo sorteado para a provocacao. Use o mesmo valor do minimo para uma duracao fixa.")]
     [Min(0f)] [SerializeField] private float maximumTauntDuration = 1.2f;
     [Tooltip("Tempo apos terminar ou interromper um taunt antes de poder iniciar outro.")]
     [Min(0f)] [SerializeField] private float tauntCooldown = 6f;
+    [Tooltip("Se ativo, o inimigo gira para olhar o jogador durante o taunt. Se desligado, mantem a direcao que tinha ao comecar.")]
+    [SerializeField] private bool facePlayerDuringTaunt = true;
+
+    [Header("Audio")]
+    [Tooltip("Som ou variacoes tocadas quando este inimigo inicia um taunt. Usa as configuracoes globais de audio de gameplay.")]
+    [SerializeField] private GameplayAudioCue tauntSound = new();
 
     [Header("Visual")]
     [Tooltip("Animator do modelo visual. Se vazio, procura um Animator nos filhos do inimigo.")]
@@ -30,6 +38,7 @@ public sealed class EnemyTaunt : MonoBehaviour
     private EnemyMovement movement;
     private float tauntTimeRemaining;
     private float cooldownRemaining;
+    private float pendingChanceBoost;
     private int tauntingBoolHash;
     private bool hasTauntingBool;
     private bool isTauntActive;
@@ -74,8 +83,13 @@ public sealed class EnemyTaunt : MonoBehaviour
             movement == null || movement.IsLaunched || movement.IsLaunchedForwards ||
             owner.IsDead || owner.CurrentState != EnemyBase.State.Combat ||
             brain.Target == null || cooldownRemaining > 0f ||
-            brain.EffectiveAggressionPercent < minimumAggressionPercent ||
-            Random.value * 100f >= tauntChancePerDecision)
+            brain.EffectiveAggressionPercent < minimumAggressionPercent)
+            return false;
+
+        float effectiveTauntChance = Mathf.Clamp(
+            tauntChancePerDecision + pendingChanceBoost, 0f, 100f);
+        pendingChanceBoost = 0f;
+        if (Random.value * 100f >= effectiveTauntChance)
             return false;
 
         tauntTimeRemaining = Random.Range(
@@ -85,16 +99,32 @@ public sealed class EnemyTaunt : MonoBehaviour
         brain.CancelReposition();
         movement.StopForTaunt();
         owner.CurrentState = EnemyBase.State.Taunting;
+        GameplayAudioSystem.Play(tauntSound, transform.position);
         if (hasTauntingBool && visualAnimator != null)
             visualAnimator.SetBool(tauntingBoolHash, true);
         return true;
     }
+
+    internal void AddChanceBoost(float percentagePoints)
+    {
+        if (!isActiveAndEnabled || percentagePoints <= 0f)
+            return;
+
+        pendingChanceBoost = Mathf.Min(100f,
+            pendingChanceBoost + percentagePoints);
+    }
+
+    internal void OnDamageDealtToPlayer() =>
+        AddChanceBoost(tauntChanceBoostAfterPlayerDamage);
 
     internal void TickTaunt()
     {
         if (!isTauntActive || owner == null ||
             owner.CurrentState != EnemyBase.State.Taunting)
             return;
+
+        if (facePlayerDuringTaunt && brain.Target != null)
+            movement.FaceTarget();
 
         tauntTimeRemaining -= Time.deltaTime;
         if (tauntTimeRemaining <= 0f)

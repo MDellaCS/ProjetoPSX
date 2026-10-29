@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000002, type: 3}
+  m_Name: GlassDollMoveset
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMovesetDefinition
+  lightWindupActiveRotationSpeed: 240
+  heavyWindupActiveRotationSpeed: 80
+  specialWindupActiveRotationSpeed: 80
+  extendedArmHitboxRadius: 0.25
+  maximumAttacksPerSequence: 3
+  openings:
+  - targetNodeId: GlassDoll_ArmSwing1
+    selectionWeight: 100
+    requiresDirectorAuthorization: 1
+  - targetNodeId: GlassDoll_ArmSwing2
+    selectionWeight: 100
+    requiresDirectorAuthorization: 1
+  - targetNodeId: GlassDoll_Slash
+    selectionWeight: 20
+    requiresDirectorAuthorization: 1
+  nodes:
+  - nodeId: GlassDoll_ArmSwing1
+    attack: {fileID: 11400000, guid: 12163eba6dc1477ab0deedaf6dd44ffc, type: 2}
+    transitions:
+    - targetNodeId: QuickStabs_After_ArmSwing1
+      continuationChance: 100
+      selectionWeight: 100
+      minimumDelayAfterActive: 0
+      continuationWindow: 0
+      requiresHitConfirm: 1
+  - nodeId: GlassDoll_ArmSwing2
+    attack: {fileID: 11400000, guid: 150aab2586424d143a563125392416ca, type: 2}
+    transitions:
+    - targetNodeId: QuickStabs_After_ArmSwing2
+      continuationChance: 100
+      selectionWeight: 100
+      minimumDelayAfterActive: 0
+      continuationWindow: 0
+      requiresHitConfirm: 1
+  - nodeId: GlassDoll_Slash
+    attack: {fileID: 11400000, guid: deab136677868c04393ba04964a69227, type: 2}
+    transitions: []
+  - nodeId: QuickStabs_After_ArmSwing1
+    attack: {fileID: 11400000, guid: de22046c25a16d146823be6b7b15e1c2, type: 2}
+    transitions:
+    - targetNodeId: GlassDoll_ArmSwing2
+      continuationChance: 100
+      selectionWeight: 100
+      minimumDelayAfterActive: 0
+      continuationWindow: 0
+      requiresHitConfirm: 1
+  - nodeId: QuickStabs_After_ArmSwing2
+    attack: {fileID: 11400000, guid: de22046c25a16d146823be6b7b15e1c2, type: 2}
+    transitions:
+    - targetNodeId: GlassDoll_ArmSwing1
+      continuationChance: 100
+      selectionWeight: 100
+      minimumDelayAfterActive: 0
+      continuationWindow: 0
+      requiresHitConfirm: 1

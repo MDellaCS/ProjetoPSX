@@ -45,7 +45,7 @@ MonoBehaviour:
   useSourceMaterial: 0
   minimumSize: 0.03
   maximumSize: 0.07
-  lifetime: 2
+  lifetime: 4
   baseSpeed: 2
   speedPerDamage: 0.005
   randomSpeed: 1

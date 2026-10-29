@@ -100,6 +100,8 @@ public class PlayerAttackEffectsDefinition
     public bool selfLaunchUp;
     [Tooltip("Lanca o inimigo para frente com forca baseada no dano realmente causado pelo golpe.")]
     public bool launchForwards;
+    [Tooltip("Lanca o inimigo horizontalmente na direcao do player, oposta ao Launch Forwards, com forca baseada no dano causado.")]
+    public bool launchBackwards;
     [Tooltip("Mantem no ar inimigos que permitem Juggle e ja estejam aereos.")]
     public bool juggle;
 }

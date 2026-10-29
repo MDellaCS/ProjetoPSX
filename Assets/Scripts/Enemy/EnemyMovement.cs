@@ -30,7 +30,7 @@ public sealed class EnemyMovement : MonoBehaviour
     [SerializeField] private bool canBeLaunchedUp = true;
     [Tooltip("Permite que ataques com Launch Down lancem este inimigo para o chao enquanto ele estiver no ar.")]
     [SerializeField] private bool canBeLaunchedDown = true;
-    [Tooltip("Permite que ataques com Launch Forwards lancem este inimigo horizontalmente.")]
+    [Tooltip("Permite que ataques com Launch Forwards ou Launch Backwards lancem este inimigo horizontalmente.")]
     [SerializeField] private bool canBeLaunchedForwards = true;
     [Tooltip("Permite que ataques de Juggle alterem o movimento vertical depois de Launch Up.")]
     [SerializeField] private bool canBeJuggled = true;
@@ -420,6 +420,21 @@ public sealed class EnemyMovement : MonoBehaviour
         FaceForceOrigin(attackerPosition);
     }
 
+    public void ApplyLaunchBackwards(Vector3 attackerPosition, float force,
+        float deceleration)
+    {
+        if (!canBeLaunchedForwards || owner.IsDead || force <= 0f ||
+            deceleration <= 0f)
+            return;
+
+        Vector3 direction = attackerPosition - transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude <= .001f)
+            direction = transform.forward;
+        BeginLaunchForwards(direction, force, deceleration);
+        FaceForceOrigin(attackerPosition);
+    }
+
     /// <summary>
     /// Recebe a velocidade transferida por outro inimigo arremessado. Nao e
     /// um ataque do player: guarda e esquiva nao participam deste impacto.
@@ -566,7 +581,7 @@ public sealed class EnemyMovement : MonoBehaviour
         if (!chainLaunched)
         {
             impactedEnemy.ApplyPoiseReaction(poiseHit,
-                new CombatReactionRequest(CombatReactionType.None,
+                new CombatReactionRequest(CombatReactionType.DefaultStagger,
                     owner.AttackOrigin, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 0f));
         }
 
@@ -719,7 +734,8 @@ public sealed class EnemyMovement : MonoBehaviour
         bool connected = owner.TakeDamage(damage,
             owner.AttackOrigin - impactDirection, poiseDamage,
             out int damageDealt, out _, false, PlayerAttackType.None, 0f,
-            impactDirection, owner.AttackOrigin, true);
+            impactDirection, owner.AttackOrigin, true, null,
+            GetStaticImpactParticleDirection(impactDirection));
         if (!connected || owner.IsDead)
             return true;
 
@@ -729,6 +745,23 @@ public sealed class EnemyMovement : MonoBehaviour
         CombatImpactSystem.ReportHeavyEnvironmentalImpact(transform,
             impactDirection, damageDealt);
         return true;
+    }
+
+    private Vector3 GetStaticImpactParticleDirection(Vector3 impactDirection)
+    {
+        Transform playerTarget = owner != null ? owner.Target : null;
+        if (playerTarget != null)
+        {
+            Vector3 awayFromPlayer = transform.position - playerTarget.position;
+            awayFromPlayer.y = 0f;
+            if (awayFromPlayer.sqrMagnitude > .0001f)
+                return awayFromPlayer.normalized;
+        }
+
+        impactDirection.y = 0f;
+        if (impactDirection.sqrMagnitude > .0001f)
+            return -impactDirection.normalized;
+        return transform.forward;
     }
 
     private void ResetJuggleMovement()

@@ -770,6 +770,16 @@ public sealed class EnemyBrain : MonoBehaviour
             minimumAggressionPercent, maximumAggressionPercent);
     }
 
+    internal void ApplyDodgeAggressionChange(float change)
+    {
+        if (Mathf.Approximately(change, 0f) || isAggressionSuppressedByBurn ||
+            owner == null || owner.IsDead)
+            return;
+
+        currentAggressionPercent = Mathf.Clamp(currentAggressionPercent + change,
+            minimumAggressionPercent, maximumAggressionPercent);
+    }
+
     private void ResetAggression()
     {
         if (isAggressionSuppressedByBurn)

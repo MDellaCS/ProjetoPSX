@@ -114,6 +114,7 @@ public sealed class EnemyGuard : MonoBehaviour
     private bool CanStartGuard(bool allowStagger)
     {
         if (owner == null || brain == null || health == null || owner.IsDead ||
+            owner.CurrentState == EnemyBase.State.Taunting ||
             cooldownTimer > 0f || brain.Target == null || movement == null ||
             !movement.IsGrounded || movement.IsLaunched)
         {

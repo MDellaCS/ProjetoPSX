@@ -259,12 +259,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
-  slowSpeed: 1.1
-  standardSpeed: 2.2
-  fastSpeed: 3.3
+  slowSpeed: 1.2
+  standardSpeed: 1.6
+  fastSpeed: 2
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 25
+  rotationSpeed: 20
   useTankControls: 1
   tankControlsAdvanceAlignment: 0
   canBeLaunchedUp: 1

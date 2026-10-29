@@ -14,6 +14,7 @@ public sealed class EnemyAttackRuntime
     public readonly float RotationSpeed;
     public readonly float ExtendedArmHitboxRadius;
     public bool HitConfirmed;
+    public Vector3 HitTargetPosition;
 
     public EnemyAttackRuntime(EnemyMoveNode node, EnemyMovesetDefinition moveset,
         float? windupDurationOverride = null)

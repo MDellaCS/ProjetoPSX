@@ -7,7 +7,7 @@ public sealed class EnemyAttackPreview : MonoBehaviour
 {
     private static EnemyAttackPreview editorTarget;
     private static EnemyAttackDefinition editorAttack;
-    private static float editorProgress;
+    private static float editorTime;
 
     [Tooltip("Ataque exibido ao selecionar este inimigo diretamente.")]
     [SerializeField] private EnemyAttackDefinition attack;
@@ -17,11 +17,11 @@ public sealed class EnemyAttackPreview : MonoBehaviour
     [SerializeField] private Color previewColor = new(1f, .25f, .1f, .85f);
 
     public static void SetEditorPreview(EnemyAttackPreview target,
-        EnemyAttackDefinition definition, float progress)
+        EnemyAttackDefinition definition, float time)
     {
         editorTarget = target;
         editorAttack = definition;
-        editorProgress = Mathf.Clamp01(progress);
+        editorTime = Mathf.Max(0f, time);
     }
 
     public static void ClearEditorPreview(EnemyAttackDefinition definition)
@@ -34,18 +34,37 @@ public sealed class EnemyAttackPreview : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying && editorTarget == this && editorAttack != null)
-            DrawAttack(editorAttack, editorProgress);
+            DrawAttack(editorAttack, editorTime);
     }
 
     private void OnDrawGizmosSelected()
     {
         if (!Application.isPlaying && editorTarget != this)
-            DrawAttack(attack, activePreviewProgress);
+        {
+            float activeTime = attack == null ? 0f : attack.windupDuration +
+                activePreviewProgress * attack.activeDuration;
+            DrawAttack(attack, activeTime);
+        }
     }
 
-    private void DrawAttack(EnemyAttackDefinition definition, float progress)
+    private void DrawAttack(EnemyAttackDefinition definition, float previewTime)
     {
         if (definition == null || definition.strikes == null) return;
+        Vector3 origin = GetCenter();
+        float windupEnd = definition.windupDuration;
+        float activeEnd = windupEnd + definition.activeDuration;
+        if (previewTime < windupEnd)
+        {
+            DrawPhaseRing(origin, Color.green);
+            return;
+        }
+        if (previewTime >= activeEnd)
+        {
+            DrawPhaseRing(origin, new Color(1f, .45f, 0f));
+            return;
+        }
+
+        float progress = Mathf.InverseLerp(windupEnd, activeEnd, previewTime);
         Gizmos.color = previewColor;
         foreach (EnemyAttackStrikeDefinition strike in definition.strikes)
         {
@@ -75,6 +94,14 @@ public sealed class EnemyAttackPreview : MonoBehaviour
                     DrawCapsule(GetCenter(), center, GetExtendedRadius());
             }
         }
+    }
+
+    private void DrawPhaseRing(Vector3 origin, Color color)
+    {
+        CharacterController controller = GetComponent<CharacterController>();
+        float radius = controller != null ? controller.radius : .5f;
+        Gizmos.color = color;
+        Gizmos.DrawWireSphere(origin, Mathf.Max(.3f, radius * 1.15f));
     }
 
     private void GetPose(EnemyHitboxTrackDefinition track, float progress,

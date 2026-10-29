@@ -71,12 +71,11 @@ public sealed class EnemyReactionController : MonoBehaviour
                 CombatReactionType.LaunchDown,
             CombatReactionType.LaunchForwards when movement.CanBeLaunchedForwards =>
                 CombatReactionType.LaunchForwards,
+            CombatReactionType.LaunchBackwards when movement.CanBeLaunchedForwards =>
+                CombatReactionType.LaunchBackwards,
             CombatReactionType.Juggle when airborne && movement.CanBeJuggled =>
                 CombatReactionType.Juggle,
-            CombatReactionType.Stagger => CombatReactionType.Stagger,
-            CombatReactionType.None when airborne && movement.CanBeJuggled =>
-                CombatReactionType.Juggle,
-            _ => CombatReactionType.Stagger
+            _ => CombatReactionType.DefaultStagger
         };
     }
 
@@ -105,6 +104,17 @@ public sealed class EnemyReactionController : MonoBehaviour
                     return false;
                 }
                 movement.ApplyLaunchForwards(request.SourcePosition,
+                    request.LaunchForwardsForce,
+                    request.LaunchForwardsDeceleration);
+                return true;
+            case CombatReactionType.LaunchBackwards:
+                if (request.LaunchForwardsForce <= 0f)
+                {
+                    health.ApplyPoiseStagger(request.SourcePosition,
+                        superStagger);
+                    return false;
+                }
+                movement.ApplyLaunchBackwards(request.SourcePosition,
                     request.LaunchForwardsForce,
                     request.LaunchForwardsDeceleration);
                 return true;

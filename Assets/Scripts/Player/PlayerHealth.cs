@@ -33,7 +33,7 @@ public class PlayerHealth : MonoBehaviour
     public bool canBeLaunchedUp = true;
     [Tooltip("Permite que uma quebra de Poise lance o player para baixo enquanto estiver no ar.")]
     public bool canBeLaunchedDown = true;
-    [Tooltip("Permite que uma quebra de Poise lance o player horizontalmente.")]
+    [Tooltip("Permite que uma quebra de Poise lance o player horizontalmente para longe do atacante ou de volta em direcao a ele.")]
     public bool canBeLaunchedForwards = true;
     [Tooltip("Permite que uma quebra de Poise mantenha o player em Juggle no ar.")]
     public bool canBeJuggled = true;
@@ -301,6 +301,8 @@ public class PlayerHealth : MonoBehaviour
         {
             combatStatus?.RegisterDamageTakenFromEnemy();
             EnemyBase.NotifyPlayerDamagedByEnemy();
+            if (damage > 0)
+                attacker?.GetComponentInParent<EnemyBase>()?.OnDamageDealtToPlayer();
             GameplayAudioSystem.Play(GameplayAudioCueId.PlayerHurt,
                 transform.position);
         }
@@ -361,12 +363,6 @@ public class PlayerHealth : MonoBehaviour
         CombatReactionType requestedReaction, Vector3 attackerPosition,
         int damageDealt, bool causesHeavyStagger)
     {
-        if (causesHeavyStagger)
-        {
-            StartStagger(true, attackerPosition);
-            return;
-        }
-
         bool airborne = !playerMovement.IsGrounded || playerMovement.IsLaunched;
         CombatReactionType reaction = requestedReaction switch
         {
@@ -376,19 +372,19 @@ public class PlayerHealth : MonoBehaviour
                 CombatReactionType.LaunchDown,
             CombatReactionType.LaunchForwards when canBeLaunchedForwards =>
                 CombatReactionType.LaunchForwards,
+            CombatReactionType.LaunchBackwards when canBeLaunchedForwards =>
+                CombatReactionType.LaunchBackwards,
             CombatReactionType.Juggle when airborne && canBeJuggled =>
                 CombatReactionType.Juggle,
-            CombatReactionType.Stagger => CombatReactionType.Stagger,
-            CombatReactionType.None when airborne && canBeJuggled =>
-                CombatReactionType.Juggle,
-            _ => CombatReactionType.Stagger
+            _ => CombatReactionType.DefaultStagger
         };
 
-        if (reaction == CombatReactionType.LaunchForwards && damageDealt <= 0)
-            reaction = CombatReactionType.Stagger;
+        if ((reaction == CombatReactionType.LaunchForwards ||
+            reaction == CombatReactionType.LaunchBackwards) && damageDealt <= 0)
+            reaction = CombatReactionType.DefaultStagger;
 
-        bool forcedReaction = reaction != CombatReactionType.Stagger;
-        StartStagger(false, attackerPosition,
+        bool forcedReaction = reaction != CombatReactionType.DefaultStagger;
+        StartStagger(causesHeavyStagger, attackerPosition,
             applyStandardPush: !forcedReaction);
         if (!forcedReaction)
             return;
@@ -413,6 +409,16 @@ public class PlayerHealth : MonoBehaviour
                 playerMovement.ApplyLaunchForwards(direction.normalized,
                     rules.CalculateLaunchForce(damageDealt),
                     rules.LaunchForwardsDeceleration);
+                break;
+            case CombatReactionType.LaunchBackwards:
+                Vector3 backwardsDirection = attackerPosition - transform.position;
+                backwardsDirection.y = 0f;
+                if (backwardsDirection.sqrMagnitude <= .0001f)
+                    backwardsDirection = transform.forward;
+                CombatPoiseSystem backwardsRules = CombatPoiseSystem.Instance;
+                playerMovement.ApplyLaunchForwards(backwardsDirection.normalized,
+                    backwardsRules.CalculateLaunchForce(damageDealt),
+                    backwardsRules.LaunchForwardsDeceleration);
                 break;
             case CombatReactionType.Juggle:
                 CombatPoiseSystem juggleRules = CombatPoiseSystem.Instance;

@@ -18,6 +18,11 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
     [Min(0f)] [SerializeField] private float attractionDelay = .3f;
     [Tooltip("Aceleracao usada para puxar fragmentos de gore coletaveis ao jogador.")]
     [Min(0f)] [SerializeField] private float attractionAcceleration = 32f;
+    [Tooltip("Tempo dentro do alcance de atracao para a aceleracao percorrer toda a curva configurada abaixo.")]
+    [Min(.01f)] [SerializeField] private float attractionAccelerationRampDuration = 1.2f;
+    [Tooltip("Multiplicador da aceleracao conforme o tempo que a currency esta sendo atraida. Aumente a curva para os fragmentos ganharem velocidade progressivamente.")]
+    [SerializeField] private AnimationCurve attractionAccelerationCurve =
+        new AnimationCurve(new Keyframe(0f, .25f), new Keyframe(1f, 1f));
     [Tooltip("Velocidade maxima dos fragmentos de gore enquanto sao atraidos ao jogador.")]
     [Min(0f)] [SerializeField] private float maximumAttractionSpeed = 14f;
 
@@ -31,6 +36,17 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
     public float AttractionDelay => attractionDelay;
     public float AttractionAcceleration => attractionAcceleration;
     public float MaximumAttractionSpeed => maximumAttractionSpeed;
+
+    public float EvaluateAttractionAcceleration(float elapsedAttractionTime)
+    {
+        float normalizedTime = Mathf.Clamp01(elapsedAttractionTime /
+            Mathf.Max(.01f, attractionAccelerationRampDuration));
+        float curveMultiplier = attractionAccelerationCurve == null ||
+            attractionAccelerationCurve.length == 0
+            ? normalizedTime
+            : Mathf.Max(0f, attractionAccelerationCurve.Evaluate(normalizedTime));
+        return attractionAcceleration * curveMultiplier;
+    }
 
     private void Awake()
     {

@@ -7,7 +7,7 @@ public sealed class EnemyAttackDefinitionEditor : Editor
     private const string SpeedPreference =
         "ProjetoPSX.EnemyCombat.AnimatePreviewSpeed";
     private EnemyAttackPreview previewTarget;
-    private float previewProgress;
+    private float previewTime;
     private float previewSpeed = 1f;
     private bool animatePreview;
     private double previousTime;
@@ -55,9 +55,18 @@ public sealed class EnemyAttackDefinitionEditor : Editor
             if (EditorGUI.EndChangeCheck())
                 EditorPrefs.SetFloat(SpeedPreference, previewSpeed);
             EditorGUI.BeginChangeCheck();
-            previewProgress = EditorGUILayout.Slider("Active Progress",
-                previewProgress, 0f, 1f);
+            float duration = GetPreviewDuration();
+            EditorGUILayout.LabelField("Preview Cycle Duration",
+                $"{duration:0.###} s");
+            previewTime = EditorGUILayout.Slider(
+                new GUIContent("Preview Time",
+                    "Tempo atual dentro de Windup + Active + Recovery."),
+                Mathf.Clamp(previewTime, 0f, duration), 0f, duration);
             if (EditorGUI.EndChangeCheck()) UpdatePreview();
+            EditorGUILayout.HelpBox(
+                "Em 1x, Animate Preview leva exatamente Windup + Active + Recovery. " +
+                "Windup mostra um aro verde; Active mostra as hitboxes; Recovery mostra um aro laranja.",
+                MessageType.Info);
         }
         EditorGUILayout.Space();
         EditorGUI.BeginChangeCheck();
@@ -79,7 +88,7 @@ public sealed class EnemyAttackDefinitionEditor : Editor
     {
         if (previewTarget != null)
             EnemyAttackPreview.SetEditorPreview(previewTarget, Attack,
-                previewProgress);
+                previewTime);
         SceneView.RepaintAll();
     }
 
@@ -89,8 +98,12 @@ public sealed class EnemyAttackDefinitionEditor : Editor
         float delta = (float)(now - previousTime);
         previousTime = now;
         if (!animatePreview || previewTarget == null) return;
-        previewProgress = Mathf.Repeat(previewProgress + delta * previewSpeed, 1f);
+        previewTime = Mathf.Repeat(previewTime + delta * previewSpeed,
+            GetPreviewDuration());
         UpdatePreview();
         Repaint();
     }
+
+    private float GetPreviewDuration() => Mathf.Max(.001f,
+        Attack.windupDuration + Attack.activeDuration + Attack.recoveryDuration);
 }

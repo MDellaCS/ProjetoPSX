@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Vida, Poise, Stagger, morte e feedback de dano do inimigo.</summary>
@@ -5,6 +6,16 @@ using UnityEngine;
 public sealed class EnemyHealth : MonoBehaviour
 {
     private const float UnkillableHealthRegenPerSecond = 10000f;
+    private static readonly int BaseColorProperty =
+        Shader.PropertyToID("_BaseColor");
+    private static readonly int LegacyColorProperty =
+        Shader.PropertyToID("_Color");
+
+    private sealed class RendererColorState
+    {
+        public Renderer renderer;
+        public MaterialPropertyBlock originalBlock;
+    }
 
     [Header("Health")]
     [Tooltip("Vida maxima do inimigo.")]
@@ -49,16 +60,21 @@ public sealed class EnemyHealth : MonoBehaviour
     private EnemyGuard guard;
     private EnemyDodge dodge;
     private EnemyGore gore;
-    private EnemyLightAttackReflector lightAttackReflector;
-    private Material[] enemyMaterials = System.Array.Empty<Material>();
-    private readonly System.Collections.Generic.Dictionary<Material, Color>
-        originalMaterialColors = new();
+    private EnemyAttackReflector attackReflector;
+    private readonly List<RendererColorState> enemyRenderers = new();
+    private readonly HashSet<Renderer> cachedEnemyRenderers = new();
+    private MaterialPropertyBlock colorBlock;
     private DamageNumberSpawner damageNumbers;
     private readonly CombatPoiseState poise = new();
     private float staggerTimer;
     private bool isGuardBreakStagger;
     private bool isShowingGuardVisual;
     private float unkillableHealthRegenRemainder;
+
+    private void Awake()
+    {
+        colorBlock = new MaterialPropertyBlock();
+    }
 
     public bool IsDead { get; private set; }
     public int CurrentHealth { get; private set; }
@@ -72,6 +88,9 @@ public sealed class EnemyHealth : MonoBehaviour
         EnemyMovement locomotion, EnemyAttackController attackController,
         EnemyGuard enemyGuard, EnemyDodge enemyDodge)
     {
+        if (colorBlock == null)
+            colorBlock = new MaterialPropertyBlock();
+
         owner = enemy;
         brain = enemyBrain;
         movement = locomotion;
@@ -79,10 +98,10 @@ public sealed class EnemyHealth : MonoBehaviour
         guard = enemyGuard;
         dodge = enemyDodge;
         gore = GetComponent<EnemyGore>();
-        lightAttackReflector = GetComponent<EnemyLightAttackReflector>();
+        attackReflector = GetComponent<EnemyAttackReflector>();
         CurrentHealth = maxHealth;
         poise.Initialize(maxPoise);
-        CacheEnemyMaterials();
+        CacheEnemyRenderers();
         damageNumbers = GetComponent<DamageNumberSpawner>();
         if (damageNumbers == null)
             damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
@@ -129,13 +148,15 @@ public sealed class EnemyHealth : MonoBehaviour
         Vector3 impactDirection = default,
         Vector3 impactPosition = default,
         bool hasImpactPosition = false,
-        Transform attacker = null)
+        Transform attacker = null,
+        Vector3 particleImpactDirection = default)
     {
         damageDealt = 0;
         poiseResult = default;
         if (IsDead) return false;
-        if (fromPlayerAttack && lightAttackReflector != null &&
-            lightAttackReflector.TryReflect(playerAttackType, attacker))
+        if (fromPlayerAttack && attackReflector != null &&
+            attackReflector.TryReflect(playerAttackType, attacker,
+                attackerPosition))
             return false;
         if (fromPlayerAttack && dodge != null &&
             dodge.TryAvoidPlayerAttack(playerAttackReach, damage))
@@ -165,12 +186,14 @@ public sealed class EnemyHealth : MonoBehaviour
                 Vector3 resolvedDirection = ResolveImpactDirection(attackerPosition,
                     impactDirection);
                 Vector3 particleDirection = ResolveParticleImpactDirection(
-                    resolvedDirection, impactPosition, hasImpactPosition);
+                    resolvedDirection, impactPosition, hasImpactPosition,
+                    attackerPosition, fromPlayerAttack,
+                    particleImpactDirection);
                 owner.RaiseHealthChanged();
                 CombatParticleSystem.ReportEnemyDamage(owner, damageDealt,
                     true, particleDirection, impactPosition, hasImpactPosition, gore,
                     finalHitDamage, maxHealth);
-                Die(damageDealt, resolvedDirection);
+                Die(damageDealt, resolvedDirection, particleDirection);
                 return true;
             }
         }
@@ -181,7 +204,8 @@ public sealed class EnemyHealth : MonoBehaviour
             impactDirection);
         CombatParticleSystem.ReportEnemyDamage(owner, damageDealt, false,
             ResolveParticleImpactDirection(resolvedHitDirection, impactPosition,
-                hasImpactPosition),
+                hasImpactPosition, attackerPosition, fromPlayerAttack,
+                particleImpactDirection),
             impactPosition, hasImpactPosition, gore);
         return true;
     }
@@ -298,7 +322,7 @@ public sealed class EnemyHealth : MonoBehaviour
                 SetEnemyColor(specialQueueStateColor);
                 break;
             default:
-                RestoreOriginalMaterialColors();
+            RestoreOriginalRendererProperties();
                 break;
         }
     }
@@ -317,8 +341,22 @@ public sealed class EnemyHealth : MonoBehaviour
     }
 
     private Vector3 ResolveParticleImpactDirection(Vector3 fallbackDirection,
-        Vector3 impactPosition, bool hasImpactPosition)
+        Vector3 impactPosition, bool hasImpactPosition,
+        Vector3 attackerPosition, bool fromPlayerAttack,
+        Vector3 explicitParticleDirection)
     {
+        explicitParticleDirection.y = 0f;
+        if (explicitParticleDirection.sqrMagnitude > .0001f)
+            return explicitParticleDirection.normalized;
+
+        if (fromPlayerAttack)
+        {
+            Vector3 awayFromPlayer = transform.position - attackerPosition;
+            awayFromPlayer.y = 0f;
+            if (awayFromPlayer.sqrMagnitude > .0001f)
+                return awayFromPlayer.normalized;
+        }
+
         if (!hasImpactPosition)
             return fallbackDirection;
 
@@ -329,59 +367,59 @@ public sealed class EnemyHealth : MonoBehaviour
             : fallbackDirection;
     }
 
-    private void Die(int lethalDamage, Vector3 impactDirection)
+    private void Die(int lethalDamage, Vector3 impactDirection,
+        Vector3 particleImpactDirection)
     {
         if (IsDead) return;
         IsDead = true;
         GetComponentInChildren<EnemyBodyPartDeathParticles>(true)?.EmitDeathParts(
-            impactDirection, lethalDamage);
+            particleImpactDirection, lethalDamage);
         owner.RaiseDied();
         Destroy(gameObject);
     }
 
-    private void CacheEnemyMaterials()
+    private void CacheEnemyRenderers()
     {
-        System.Collections.Generic.List<Material> materials = new();
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
         {
-            if (renderer != null)
+            if (renderer == null || !cachedEnemyRenderers.Add(renderer))
+                continue;
+
+            var originalBlock = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(originalBlock);
+            enemyRenderers.Add(new RendererColorState
             {
-                foreach (Material material in renderer.materials)
-                {
-                    if (material == null)
-                        continue;
-
-                    materials.Add(material);
-                    if (!originalMaterialColors.ContainsKey(material))
-                        originalMaterialColors.Add(material, material.color);
-                }
-            }
+                renderer = renderer,
+                originalBlock = originalBlock.isEmpty ? null : originalBlock
+            });
         }
-
-        enemyMaterials = materials.ToArray();
     }
 
     private void SetEnemyColor(Color color)
     {
-        // Os visuais podem ser ligados ou montados depois da inicializacao
-        // do inimigo; atualiza a lista antes de colorir para incluir todas as
-        // pecas, inclusive renderers que estavam inativos durante Awake.
-        CacheEnemyMaterials();
-        foreach (Material material in enemyMaterials)
+        // Inclui renderers adicionados depois da inicializacao e aplica a cor
+        // por instancia, sem criar copias de materiais ou afetar outros usos
+        // do mesmo asset de material.
+        CacheEnemyRenderers();
+        foreach (RendererColorState state in enemyRenderers)
         {
-            if (material != null)
-                material.color = color;
+            if (state.renderer == null)
+                continue;
+
+            state.renderer.GetPropertyBlock(colorBlock);
+            colorBlock.SetColor(BaseColorProperty, color);
+            colorBlock.SetColor(LegacyColorProperty, color);
+            state.renderer.SetPropertyBlock(colorBlock);
         }
     }
 
-    private void RestoreOriginalMaterialColors()
+    private void RestoreOriginalRendererProperties()
     {
-        CacheEnemyMaterials();
-        foreach (Material material in enemyMaterials)
+        CacheEnemyRenderers();
+        foreach (RendererColorState state in enemyRenderers)
         {
-            if (material != null &&
-                originalMaterialColors.TryGetValue(material, out Color color))
-                material.color = color;
+            if (state.renderer != null)
+                state.renderer.SetPropertyBlock(state.originalBlock);
         }
     }
 }

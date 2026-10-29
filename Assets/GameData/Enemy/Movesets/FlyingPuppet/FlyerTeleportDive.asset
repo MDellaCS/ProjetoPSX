@@ -24,7 +24,7 @@ MonoBehaviour:
   activeDuration: 0.5
   recoveryDuration: 1.8
   baseDamage: 30
-  basePoiseDamage: 45
+  basePoiseDamage: 999
   causesHeavyStagger: 1
   movement:
     forwardDistance: 0
@@ -58,7 +58,7 @@ MonoBehaviour:
     activeEndNormalized: 1
     damageMultiplier: 1
     poiseMultiplier: 1
-    reaction: 1
+    reaction: 4
     hitboxes:
     - trackName: Dive Body Impact
       shape: 1
@@ -95,7 +95,7 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 1
+      radius: 1.6
       capsuleHeight: 2.76
       capsuleAxis: 1
       boxSize: {x: 2.5, y: 2.5, z: 2.5}

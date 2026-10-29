@@ -55,7 +55,6 @@ GameObject:
   - component: {fileID: 4740837926576013056}
   - component: {fileID: -3204485085092350537}
   - component: {fileID: -7745750461247089783}
-  - component: {fileID: -2798535404865380423}
   - component: {fileID: -6311550100291000042}
   m_Layer: 0
   m_Name: RagDoll
@@ -261,12 +260,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0449216d9480479cb839ea439d9bf3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
-  slowSpeed: 1.1
+  slowSpeed: 1.8
   standardSpeed: 2.2
-  fastSpeed: 3.3
+  fastSpeed: 2.6
   gravity: -60
   terminalFallSpeed: 30
-  rotationSpeed: 200
+  rotationSpeed: 140
   useTankControls: 1
   tankControlsAdvanceAlignment: 0.85
   canBeLaunchedUp: 1
@@ -401,44 +400,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyGuard
   guardChancePerDecision: 15
   maximumAggressionPercentToConsiderGuard: 30
-  guardStartMaximumRange: 3
-  minimumGuardDuration: 1.25
-  maximumGuardDuration: 5
+  guardStartMaximumRange: 2.5
+  minimumGuardDuration: 1
+  maximumGuardDuration: 3
   guardCooldown: 6
   canGuardPlayerLightAttacks: 1
   canGuardPlayerHeavyAttacks: 1
   canGuardPlayerAerialAttacks: 1
   canGuardPlayerDashAttacks: 1
-  damageReduction: 0.7
-  poiseReduction: 0.5
+  damageReduction: 0.8
+  poiseReduction: 0.8
   maxGuardHealth: 180
-  heavyGuardDamageMultiplier: 3
-  breakStunDuration: 3
-  staggerGuardDelay: 0.2
---- !u!114 &-2798535404865380423
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7502535439468429065}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1933a99ea4fb4b5e9e8154692eeb7c24, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyDodge
-  dodgeChanceOnHit: 3
-  maximumAggressionPercentToDodge: 2
-  aggressiveDodgeThreshold: 1
-  passiveExtraHopChance: 20
-  dodgeCooldown: 8
-  baseHopDistance: 0.6
-  attackReachDistanceMultiplier: 0.7
-  minimumLateralDodgeOffset: -2
-  maximumLateralDodgeOffset: 2
-  hopDuration: 0.3
-  hopVerticalSpeed: 2
-  protectionAfterDodge: 0.2
+  heavyGuardDamageMultiplier: 5
+  breakStunDuration: 4
+  staggerGuardDelay: 0.15
 --- !u!114 &-6311550100291000042
 MonoBehaviour:
   m_ObjectHideFlags: 0

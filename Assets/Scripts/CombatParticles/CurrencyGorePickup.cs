@@ -7,6 +7,7 @@ public sealed class CurrencyGorePickup : MonoBehaviour
     private Rigidbody body;
     private int value;
     private float collectableAt;
+    private float attractionElapsed;
     private PlayerCurrencyWallet wallet;
 
     public void Initialize(int newValue)
@@ -53,7 +54,10 @@ public sealed class CurrencyGorePickup : MonoBehaviour
             return;
 
         body ??= GetComponent<Rigidbody>();
-        body.AddForce(toPlayer / distance * wallet.AttractionAcceleration,
+        attractionElapsed += Time.deltaTime;
+        float acceleration = wallet.EvaluateAttractionAcceleration(
+            attractionElapsed);
+        body.AddForce(toPlayer / distance * acceleration,
             ForceMode.Acceleration);
         if (body.linearVelocity.magnitude > wallet.MaximumAttractionSpeed)
             body.linearVelocity = body.linearVelocity.normalized *

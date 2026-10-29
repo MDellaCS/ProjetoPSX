@@ -18,7 +18,7 @@ MonoBehaviour:
   randomSpeed: 0.5
   randomAngularSpeed: 3
   spawnScatterRadius: 0
-  lifetime: 3
+  lifetime: 6
   gravityMultiplier: 0.4
   mass: 0.2
   linearDamping: 0.2

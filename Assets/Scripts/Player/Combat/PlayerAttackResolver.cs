@@ -191,8 +191,9 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (effects.launchDown) return CombatReactionType.LaunchDown;
         if (effects.launchUp) return CombatReactionType.LaunchUp;
         if (effects.launchForwards) return CombatReactionType.LaunchForwards;
+        if (effects.launchBackwards) return CombatReactionType.LaunchBackwards;
         if (effects.juggle) return CombatReactionType.Juggle;
-        return CombatReactionType.None;
+        return CombatReactionType.DefaultStagger;
     }
 
     private float GetLaunchSpeed() => movement != null

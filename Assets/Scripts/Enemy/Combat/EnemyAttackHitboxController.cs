@@ -162,10 +162,11 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
                 strike.damageMultiplier);
             int poise = Mathf.RoundToInt(runtime.PoiseDamage *
                 strike.poiseMultiplier);
+            runtime.HitTargetPosition = player.transform.position;
+            runtime.HitConfirmed = true;
             player.TakeDamage(damage, owner.AttackOrigin, poise,
                 strike.reaction, true, transform,
                 runtime.Definition.causesHeavyStagger);
-            runtime.HitConfirmed = true;
             hitGroups.Add(group);
             repeatTimes[track] = Time.time + track.repeatHitInterval;
             return;

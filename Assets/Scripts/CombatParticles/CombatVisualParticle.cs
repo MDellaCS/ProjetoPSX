@@ -1,9 +1,13 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>Particula visual com fisica limitada ao mundo configurado.</summary>
 [RequireComponent(typeof(Rigidbody), typeof(Collider))]
 public sealed class CombatVisualParticle : MonoBehaviour
 {
+    private static readonly int BaseColorProperty = Shader.PropertyToID("_BaseColor");
+    private static readonly int LegacyColorProperty = Shader.PropertyToID("_Color");
+
     private Rigidbody body;
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
@@ -11,9 +15,19 @@ public sealed class CombatVisualParticle : MonoBehaviour
     private Mesh defaultMesh;
     private Mesh generatedMesh;
     private Material[] defaultMaterials;
+    private Material[] fadeSourceMaterials;
+    private Material[] fadeMaterials;
+    private MaterialPropertyBlock alphaBlock;
     private Vector3 defaultColliderSize;
     private Vector3 defaultColliderCenter;
     private float expiresAt;
+    private float lifetimeDuration;
+    private float fadeStartRemainingPercent;
+    private float currencyBlinkStartPercent;
+    private float currencyFastBlinkStartPercent;
+    private float currencyBlinkFrequency;
+    private float currencyFastBlinkFrequency;
+    private bool isCurrency;
     private CombatParticleProfile profile;
     private EnemyBodyPartProfile bodyPartProfile;
     private float noiseSeed;
@@ -34,6 +48,7 @@ public sealed class CombatVisualParticle : MonoBehaviour
             defaultColliderSize = boxCollider.size;
             defaultColliderCenter = boxCollider.center;
         }
+        alphaBlock = new MaterialPropertyBlock();
     }
 
     /// <summary>Encerra a particula para que o pool a recicle no proximo frame.</summary>
@@ -45,7 +60,11 @@ public sealed class CombatVisualParticle : MonoBehaviour
     public void Initialize(CombatParticleProfile newProfile, Vector3 position,
         Vector3 initialVelocity, float size, Material material, int particleLayer,
         int currencyValue = 0, Material currencyMaterial = null,
-        float currencyLifetimeMultiplier = 1f, float minimumCurrencyLifetime = 0f)
+        float currencyLifetimeMultiplier = 1f, float minimumCurrencyLifetime = 0f,
+        float fadeStartPercent = 25f, float firstCurrencyBlinkStartPercent = 30f,
+        float secondCurrencyBlinkStartPercent = 10f,
+        float firstCurrencyBlinkFrequency = 3f,
+        float secondCurrencyBlinkFrequency = 8f)
     {
         RestoreDefaultVisual();
         profile = newProfile;
@@ -53,10 +72,9 @@ public sealed class CombatVisualParticle : MonoBehaviour
         gameObject.layer = particleLayer;
         transform.SetPositionAndRotation(position, Random.rotation);
         transform.localScale = Vector3.one * size;
-        Renderer renderer = GetComponent<Renderer>();
-        if (renderer != null)
-            renderer.sharedMaterial = currencyValue > 0 && currencyMaterial != null
-                ? currencyMaterial : material;
+        Material selectedMaterial = currencyValue > 0 && currencyMaterial != null
+            ? currencyMaterial : material;
+        ConfigureFadeMaterials(new[] { selectedMaterial });
         body ??= GetComponent<Rigidbody>();
         body.mass = profile.mass;
         body.linearDamping = profile.linearDamping;
@@ -72,7 +90,10 @@ public sealed class CombatVisualParticle : MonoBehaviour
             ? Mathf.Max(minimumCurrencyLifetime,
                 profile.lifetime * currencyLifetimeMultiplier)
             : profile.lifetime;
-        expiresAt = Time.time + lifetime;
+        ConfigureLifetime(lifetime, currencyValue > 0, fadeStartPercent,
+            firstCurrencyBlinkStartPercent,
+            secondCurrencyBlinkStartPercent,
+            firstCurrencyBlinkFrequency, secondCurrencyBlinkFrequency);
         noiseSeed = Random.value * 1000f;
         GetComponent<CurrencyGorePickup>()?.Initialize(currencyValue);
     }
@@ -80,7 +101,8 @@ public sealed class CombatVisualParticle : MonoBehaviour
     /// <summary>Inicializa uma peca real do modelo como particula fisica.</summary>
     public void InitializeMeshPart(EnemyBodyPartProfile newProfile, Mesh mesh,
         bool ownsMesh, Vector3 position, Quaternion rotation, Vector3 worldScale,
-        Vector3 initialVelocity, Material[] materials, int particleLayer)
+        Vector3 initialVelocity, Material[] materials, int particleLayer,
+        float fadeStartPercent = 25f)
     {
         RestoreDefaultVisual();
         profile = null;
@@ -100,8 +122,7 @@ public sealed class CombatVisualParticle : MonoBehaviour
             if (ownsMesh)
                 generatedMesh = mesh;
         }
-        if (meshRenderer != null && materials != null && materials.Length > 0)
-            meshRenderer.sharedMaterials = materials;
+        ConfigureFadeMaterials(materials);
         if (boxCollider != null && mesh != null)
         {
             Vector3 size = mesh.bounds.size;
@@ -120,8 +141,145 @@ public sealed class CombatVisualParticle : MonoBehaviour
         body.angularVelocity = Random.insideUnitSphere *
             bodyPartProfile.randomAngularSpeed;
         body.WakeUp();
-        expiresAt = Time.time + bodyPartProfile.lifetime;
+        ConfigureLifetime(bodyPartProfile.lifetime, false, fadeStartPercent,
+            0f, 0f, 0f, 0f);
         GetComponent<CurrencyGorePickup>()?.Initialize(0);
+    }
+
+    private void ConfigureLifetime(float lifetime, bool currency,
+        float fadeStartPercent, float firstBlinkPercent,
+        float secondBlinkPercent, float firstBlinkFrequency,
+        float secondBlinkFrequency)
+    {
+        lifetimeDuration = Mathf.Max(.001f, lifetime);
+        expiresAt = Time.time + lifetimeDuration;
+        isCurrency = currency;
+        fadeStartRemainingPercent = Mathf.Clamp(fadeStartPercent, 0f, 100f);
+        currencyBlinkStartPercent = Mathf.Clamp(firstBlinkPercent, 0f, 100f);
+        currencyFastBlinkStartPercent = Mathf.Clamp(secondBlinkPercent, 0f,
+            currencyBlinkStartPercent);
+        currencyBlinkFrequency = Mathf.Max(0f, firstBlinkFrequency);
+        currencyFastBlinkFrequency = Mathf.Max(0f, secondBlinkFrequency);
+        ApplyFadeOrCurrencyBlink(1f);
+    }
+
+    private void ConfigureFadeMaterials(Material[] sourceMaterials)
+    {
+        if (meshRenderer == null)
+            meshRenderer = GetComponent<MeshRenderer>();
+        if (meshRenderer == null || sourceMaterials == null ||
+            sourceMaterials.Length == 0)
+            return;
+
+        bool canReuse = fadeMaterials != null &&
+            fadeSourceMaterials != null &&
+            fadeSourceMaterials.Length == sourceMaterials.Length;
+        if (canReuse)
+        {
+            for (int index = 0; index < sourceMaterials.Length; index++)
+            {
+                if (fadeSourceMaterials[index] == sourceMaterials[index])
+                    continue;
+                canReuse = false;
+                break;
+            }
+        }
+
+        if (!canReuse)
+        {
+            DestroyFadeMaterials();
+            fadeSourceMaterials = (Material[])sourceMaterials.Clone();
+            fadeMaterials = new Material[sourceMaterials.Length];
+            for (int index = 0; index < sourceMaterials.Length; index++)
+            {
+                Material source = sourceMaterials[index];
+                if (source == null)
+                    continue;
+                Material fadeMaterial = new(source)
+                {
+                    name = $"{source.name} (Particle Fade)"
+                };
+                ConfigureTransparentMaterial(fadeMaterial);
+                fadeMaterials[index] = fadeMaterial;
+            }
+        }
+
+        meshRenderer.sharedMaterials = fadeMaterials;
+    }
+
+    private static void ConfigureTransparentMaterial(Material material)
+    {
+        material.SetOverrideTag("RenderType", "Transparent");
+        if (material.HasProperty("_Surface"))
+        {
+            material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_Blend"))
+                material.SetFloat("_Blend", 0f);
+            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            if (material.HasProperty("_SrcBlendAlpha"))
+                material.SetInt("_SrcBlendAlpha", (int)BlendMode.One);
+            if (material.HasProperty("_DstBlendAlpha"))
+                material.SetInt("_DstBlendAlpha",
+                    (int)BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.DisableKeyword("_ALPHAMODULATE_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+        else if (material.HasProperty("_Mode"))
+        {
+            material.SetFloat("_Mode", 3f);
+            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
+        material.renderQueue = (int)RenderQueue.Transparent;
+    }
+
+    private void DestroyFadeMaterials()
+    {
+        if (fadeMaterials != null)
+        {
+            foreach (Material fadeMaterial in fadeMaterials)
+            {
+                if (fadeMaterial != null)
+                    Destroy(fadeMaterial);
+            }
+        }
+
+        fadeMaterials = null;
+        fadeSourceMaterials = null;
+    }
+
+    private void ApplyFadeOrCurrencyBlink(float alpha)
+    {
+        if (meshRenderer == null || fadeSourceMaterials == null ||
+            alphaBlock == null)
+            return;
+
+        for (int index = 0; index < fadeSourceMaterials.Length; index++)
+        {
+            Material source = fadeSourceMaterials[index];
+            if (source == null)
+                continue;
+
+            Color color = source.HasProperty(BaseColorProperty)
+                ? source.GetColor(BaseColorProperty)
+                : source.HasProperty(LegacyColorProperty)
+                    ? source.GetColor(LegacyColorProperty) : Color.white;
+            color.a *= alpha;
+            alphaBlock.Clear();
+            if (source.HasProperty(BaseColorProperty))
+                alphaBlock.SetColor(BaseColorProperty, color);
+            if (source.HasProperty(LegacyColorProperty))
+                alphaBlock.SetColor(LegacyColorProperty, color);
+            meshRenderer.SetPropertyBlock(alphaBlock, index);
+        }
     }
 
     private static float InverseScale(float value) =>
@@ -147,13 +305,49 @@ public sealed class CombatVisualParticle : MonoBehaviour
         }
         if (meshFilter != null && defaultMesh != null)
             meshFilter.sharedMesh = defaultMesh;
-        if (meshRenderer != null && defaultMaterials != null)
-            meshRenderer.sharedMaterials = defaultMaterials;
         if (boxCollider != null)
         {
             boxCollider.size = defaultColliderSize;
             boxCollider.center = defaultColliderCenter;
         }
+        if (meshRenderer != null)
+        {
+            meshRenderer.SetPropertyBlock(null);
+            if (fadeMaterials != null)
+                for (int index = 0; index < fadeMaterials.Length; index++)
+                    meshRenderer.SetPropertyBlock(null, index);
+        }
+        if (meshRenderer != null && defaultMaterials != null)
+            meshRenderer.sharedMaterials = defaultMaterials;
+    }
+
+    private void OnDestroy() => DestroyFadeMaterials();
+
+    private void Update()
+    {
+        if (lifetimeDuration <= 0f || expiresAt <= 0f)
+            return;
+
+        float remainingPercent = Mathf.Clamp01(
+            (expiresAt - Time.time) / lifetimeDuration) * 100f;
+        if (isCurrency)
+        {
+            float frequency = remainingPercent <= currencyFastBlinkStartPercent
+                ? currencyFastBlinkFrequency
+                : remainingPercent <= currencyBlinkStartPercent
+                    ? currencyBlinkFrequency : 0f;
+            float alpha = frequency <= 0f ||
+                Mathf.Sin(Time.time * frequency * Mathf.PI * 2f) >= 0f
+                    ? 1f : .12f;
+            ApplyFadeOrCurrencyBlink(alpha);
+            return;
+        }
+
+        float alphaFade = fadeStartRemainingPercent <= 0f ||
+            remainingPercent > fadeStartRemainingPercent
+                ? 1f
+                : remainingPercent / fadeStartRemainingPercent;
+        ApplyFadeOrCurrencyBlink(alphaFade);
     }
 
     private void FixedUpdate()

@@ -24,7 +24,7 @@ MonoBehaviour:
   activeDuration: 1.7
   recoveryDuration: 5
   baseDamage: 25
-  basePoiseDamage: 70
+  basePoiseDamage: 999
   causesHeavyStagger: 1
   movement:
     forwardDistance: 2

@@ -12,6 +12,10 @@ public enum EnemyHitboxAxis { X, Y, Z }
 [Serializable]
 public sealed class EnemyAttackMovementDefinition
 {
+    [Tooltip("Antes da corrida, espera Windup Duration; corre ate Preferred Range e espera Windup Duration novamente antes de iniciar Active.")]
+    public bool approachTargetUntilPreferredRange;
+    [Tooltip("Velocidade horizontal durante a aproximacao. Zero usa a Fast Speed configurada no movimento deste inimigo.")]
+    [Min(0f)] public float approachSpeed;
     [Tooltip("Distancia total percorrida para frente durante Windup e Active.")]
     public float forwardDistance;
     [Tooltip("Distancia lateral total durante Windup e Active. Valores positivos movem para a direita.")]
@@ -26,6 +30,10 @@ public sealed class EnemyAttackMovementDefinition
     public bool faceTargetDuringWindup = true;
     [Tooltip("Permite corrigir a direcao do ataque durante Active.")]
     public bool faceTargetDuringActive;
+    [Tooltip("Quando o ataque confirma um acerto, interrompe o deslocamento ao chegar a uma distancia definida depois do alvo. Se errar, o movimento completo continua.")]
+    public bool stopAtDistancePastTargetOnHit;
+    [Tooltip("Distancia horizontal que o inimigo deve ultrapassar o alvo antes de parar, somente se este ataque acertar.")]
+    [Min(0f)] public float distancePastTargetOnHit = 1f;
 }
 
 [Serializable]
@@ -135,8 +143,8 @@ public sealed class EnemyAttackStrikeDefinition
     [Min(0f)] public float damageMultiplier = 1f;
     [Tooltip("Multiplicador aplicado ao dano de Poise neste Strike.")]
     [Min(0f)] public float poiseMultiplier = 1f;
-    [Tooltip("Reacao solicitada caso este Strike quebre o Poise do jogador.")]
-    public CombatReactionType reaction = CombatReactionType.Stagger;
+    [Tooltip("Reacao solicitada caso este Strike quebre o Poise do jogador. Launch Backwards lanca o alvo na direcao do atacante.")]
+    public CombatReactionType reaction = CombatReactionType.DefaultStagger;
     [Tooltip("Volumes que formam este Strike.")]
     public List<EnemyHitboxTrackDefinition> hitboxes = new();
 }

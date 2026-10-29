@@ -2,26 +2,30 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// Esquiva reativa opcional. Um acerto do jogador pode iniciar uma retirada;
-/// inimigos menos agressivos podem encadear ate tres saltos.
+/// Esquiva reativa opcional. Um acerto do jogador pode iniciar uma retirada
+/// com continuacoes configuraveis.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class EnemyDodge : MonoBehaviour
 {
-    private const int MaximumPassiveHops = 3;
-
     [Header("Decision")]
     [Tooltip("Chance de esquivar ao ser alcancado por um ataque do jogador, caso a esquiva esteja disponivel.")]
     [Range(0f, 100f)] [SerializeField] private float dodgeChanceOnHit = 25f;
     [Tooltip("Agressividade efetiva maxima para considerar uma esquiva. Com 5, o inimigo so pode desviar em 5 por cento ou menos. Inclui o modificador do EnemyDirector.")]
     [FormerlySerializedAs("minimumAggressionPercentToDodge")]
     [Range(0f, 100f)] [SerializeField] private float maximumAggressionPercentToDodge = 100f;
-    [Tooltip("A partir desta agressividade, o inimigo faz somente um salto. Abaixo dela, pode encadear ate tres.")]
-    [Range(0f, 100f)] [SerializeField] private float aggressiveDodgeThreshold = 60f;
-    [Tooltip("Chance de um inimigo passivo fazer mais um salto apos o anterior, ate o limite de tres.")]
-    [Range(0f, 100f)] [SerializeField] private float passiveExtraHopChance = 65f;
+    [Tooltip("Chance percentual de tentar outra esquiva depois de cada salto concluido, ate atingir o maximo de continuacoes.")]
+    [Range(0f, 100f)] [SerializeField] private float continuationChance = 65f;
+    [Tooltip("Tempo parado entre um salto concluido e a proxima continuacao. Durante esse intervalo, o inimigo continua no estado de esquiva.")]
+    [Min(0f)] [SerializeField] private float continuationInterval = .15f;
+    [Tooltip("Quantidade maxima de saltos adicionais depois da esquiva inicial. Zero significa que nao ha continuacoes.")]
+    [Min(0)] [SerializeField] private int maximumContinuations = 2;
     [Tooltip("Tempo apos a ultima esquiva antes de poder iniciar outra sequencia.")]
     [Min(0f)] [SerializeField] private float dodgeCooldown = 1.5f;
+    [Tooltip("Pontos percentuais somados a chance do proximo taunt elegivel apos cada salto de esquiva. Use 0 para desativar; o bonus acumula ate uma decisao de taunt.")]
+    [Min(0f)] [SerializeField] private float tauntChanceBoostAfterDodge;
+    [Tooltip("Mudanca em pontos percentuais na agressividade a cada salto concluido. Valor positivo aumenta, negativo reduz e 0 mantem a agressividade.")]
+    [SerializeField] private float aggressionChangePerDodge;
 
     [Header("Retreat")]
     [Tooltip("Distancia fixa adicionada a cada salto para tras.")]
@@ -49,9 +53,9 @@ public sealed class EnemyDodge : MonoBehaviour
     private float currentHopTravelDistance;
     private float cooldownRemaining;
     private float protectionRemaining;
+    private float continuationTimeRemaining;
     private Vector3 currentHopDirection;
-    private int hopsCompleted;
-    private bool canChainHops;
+    private int continuationsStarted;
 
     internal bool IsDodging => owner != null &&
         owner.CurrentState == EnemyBase.State.Dodging;
@@ -81,6 +85,8 @@ public sealed class EnemyDodge : MonoBehaviour
     {
         if (!isActiveAndEnabled)
             return false;
+        if (owner != null && owner.CurrentState == EnemyBase.State.Taunting)
+            return false;
         if (IsAvoidingPlayerAttacks)
             return true;
         if (owner == null || owner.IsDead || brain == null ||
@@ -103,17 +109,12 @@ public sealed class EnemyDodge : MonoBehaviour
 
         hopDistance = baseHopDistance +
             Mathf.Max(0f, attackReach) * attackReachDistanceMultiplier;
-        // A personalidade do inimigo define a quantidade de saltos; o
-        // modificador temporario do Director nao a transforma em agressiva.
-        canChainHops = brain.CurrentAggressionPercent <
-            aggressiveDodgeThreshold;
-        hopsCompleted = 0;
+        continuationsStarted = 0;
+        continuationTimeRemaining = 0f;
         if (owner.CurrentState == EnemyBase.State.Guarding)
             owner.CancelGuardForDodge();
         if (owner.CurrentState == EnemyBase.State.Staggered)
             owner.EndStaggerForDodge();
-        if (owner.CurrentState == EnemyBase.State.Taunting)
-            owner.CancelTaunt();
         attacks?.CancelAttack();
         brain.CancelReposition();
         movement.PrepareForDodge();
@@ -125,14 +126,13 @@ public sealed class EnemyDodge : MonoBehaviour
     private bool CanInterruptCurrentState()
     {
         // A esquiva reage ao golpe que iria acertar. Por isso ela precisa
-        // interromper tanto a locomocao quanto qualquer fase de um ataque ou
-        // Taunt, Guarda e Stagger.
+        // interromper tanto a locomocao quanto qualquer fase de um ataque,
+        // Guarda ou Stagger.
         return owner.CurrentState == EnemyBase.State.Combat ||
             owner.CurrentState == EnemyBase.State.Windup ||
             owner.CurrentState == EnemyBase.State.Active ||
             owner.CurrentState == EnemyBase.State.Recovery ||
             owner.CurrentState == EnemyBase.State.Guarding ||
-            owner.CurrentState == EnemyBase.State.Taunting ||
             owner.CurrentState == EnemyBase.State.Staggered ||
             owner.CurrentState == EnemyBase.State.TacticalIdle;
     }
@@ -142,6 +142,42 @@ public sealed class EnemyDodge : MonoBehaviour
         if (!IsDodging)
             return Vector3.zero;
 
+        if (continuationTimeRemaining > 0f)
+        {
+            continuationTimeRemaining -= Time.deltaTime;
+            if (continuationTimeRemaining <= 0f)
+                StartHop();
+            else
+            {
+                FacePlayer();
+                return Vector3.zero;
+            }
+        }
+
+        FacePlayer();
+        Vector3 retreatVelocity = currentHopDirection *
+            (currentHopTravelDistance / Mathf.Max(.01f, hopDuration));
+        hopTimeRemaining -= Time.deltaTime;
+        if (hopTimeRemaining <= 0f)
+        {
+            owner?.OnDodgeHopCompleted(tauntChanceBoostAfterDodge,
+                aggressionChangePerDodge);
+            if (continuationsStarted < maximumContinuations &&
+                Random.value * 100f < continuationChance)
+            {
+                continuationsStarted++;
+                continuationTimeRemaining = continuationInterval;
+                if (continuationTimeRemaining <= 0f)
+                    StartHop();
+            }
+            else
+                FinishDodge();
+        }
+        return retreatVelocity;
+    }
+
+    private void FacePlayer()
+    {
         Vector3 towardPlayer = brain.Target != null
             ? brain.Target.position - transform.position : transform.forward;
         towardPlayer.y = 0f;
@@ -149,19 +185,6 @@ public sealed class EnemyDodge : MonoBehaviour
             towardPlayer = transform.forward;
         towardPlayer.Normalize();
         movement.FaceDirection(towardPlayer);
-
-        Vector3 retreatVelocity = currentHopDirection *
-            (currentHopTravelDistance / Mathf.Max(.01f, hopDuration));
-        hopTimeRemaining -= Time.deltaTime;
-        if (hopTimeRemaining <= 0f)
-        {
-            if (canChainHops && hopsCompleted < MaximumPassiveHops &&
-                Random.value * 100f < passiveExtraHopChance)
-                StartHop();
-            else
-                FinishDodge();
-        }
-        return retreatVelocity;
     }
 
     internal void CancelDodge()
@@ -172,13 +195,14 @@ public sealed class EnemyDodge : MonoBehaviour
         if (!IsDodging)
             return;
         hopTimeRemaining = 0f;
+        continuationTimeRemaining = 0f;
         cooldownRemaining = dodgeCooldown;
         owner.CurrentState = EnemyBase.State.Combat;
     }
 
     private void StartHop()
     {
-        hopsCompleted++;
+        continuationTimeRemaining = 0f;
         hopTimeRemaining = Mathf.Max(.01f, hopDuration);
         Vector3 towardPlayer = brain.Target != null
             ? brain.Target.position - transform.position : transform.forward;
@@ -202,6 +226,7 @@ public sealed class EnemyDodge : MonoBehaviour
     private void FinishDodge()
     {
         hopTimeRemaining = 0f;
+        continuationTimeRemaining = 0f;
         protectionRemaining = protectionAfterDodge;
         cooldownRemaining = dodgeCooldown;
         owner.CurrentState = EnemyBase.State.Combat;
