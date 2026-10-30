@@ -1,59 +1,44 @@
 # TODO — Humanidade e Modo Humano
 
-Status geral: **Pending — proposta de design, ainda não implementada**.
+Status geral: **Pending — a progressão de Humanidade, o aumento de dificuldade e a morte permanente ainda não foram implementados. O moveset com recurso Health já existe como base para o Modo Humano.**
 
 ## Objetivo
 
 Adicionar **Humanidade** como atributo opcional de progressão com seis níveis. Cada nível aumenta a dificuldade global do jogo e tem custo alto. O nível 6 desbloqueia o **Modo Humano**, uma forma de jogar mais vulnerável e com regras de combate próprias.
 
-## Progressão de Humanidade
+## Progressão de Humanidade — pendente
 
-- [ ] Adicionar Humanidade como atributo independente no catálogo de upgrades, configurável sem acoplamento aos outros atributos.
-- [ ] Configurar até seis níveis, com preço e efeitos próprios por nível.
-- [ ] Tornar os níveis caros, com curva de preço configurável.
-- [ ] Cada nível deve aumentar a dificuldade global por meio de modificadores configuráveis.
-- [ ] Definir e balancear os modificadores globais de dificuldade. Candidatos para teste: vida dos inimigos, dano causado por inimigos, agressividade e composição dos encontros.
-- [ ] Manter cada modificador centralizado para que encontros e inimigos recebam os valores de forma consistente.
-- [ ] No nível 6, desbloquear o Modo Humano.
+- [ ] Adicionar Humanidade ao catálogo de upgrades com seis níveis configurados em seus dados, preços altos e desbloqueio especial no nível 6.
+- [ ] Definir e balancear os modificadores globais de dificuldade por nível. Candidatos: vida e dano dos inimigos, agressividade e composição dos encontros.
+- [ ] Centralizar a aplicação dos modificadores para que inimigos e encontros usem os mesmos valores.
+- [ ] Vincular o desbloqueio do nível 6 ao Modo Humano.
 
-## Modo Humano
+## Ativação do Modo Humano — pendente
 
-- [ ] Adicionar um toggle de teste em **F12**, disponível apenas após desbloquear Humanidade nível 6.
-- [ ] Criar um controlador de modo que aplique e remova todas as regras do Modo Humano em conjunto.
-- [ ] Permitir configurar um moveset próprio para o Modo Humano.
-- [ ] O moveset humano deve ter alcance significativamente menor.
-- [ ] Desativar geração de Heat no Modo Humano.
-- [ ] Desativar o multiplicador de dano dos ataques pesados baseado em Heat.
-- [ ] Implementar vida convencional e uma barra de vida comum para o jogador nesse modo.
-- [ ] Manter as regras do Modo Humano independentes do moveset normal e do sistema de Heat, facilitando balanceamento e expansão.
+- [ ] Adicionar o toggle de teste **F12**, habilitado somente após Humanidade nível 6, para entrar e sair do moveset Human.
+- [ ] Garantir que a troca pelo toggle aplique o moveset e o recurso Health juntos, sem deixar regras de Heat ativas.
 
 ## Morte permanente e dados salvos
 
-- [ ] Ao morrer no Modo Humano, apagar o save de campanha para cumprir a regra de morte permanente.
-- [ ] Separar dados de campanha de opções e configurações do jogador.
-- [ ] A morte permanente deve apagar apenas os dados da campanha; opções e configurações devem permanecer.
+- [ ] Separar dados de campanha de opções e configurações do jogador, caso ainda compartilhem armazenamento.
+- [ ] Ao morrer no Modo Humano, apagar apenas os dados da campanha e preservar as opções/configurações.
 - [ ] Validar o fluxo de morte e reinício antes de habilitar a regra fora de testes.
 
 ## Interface e configuração
 
-- [ ] A loja deve exibir preço, nível atual, modificadores de dificuldade e desbloqueios de Humanidade.
-- [ ] Exibir claramente que o nível 6 desbloqueia o Modo Humano.
+- [ ] Exibir na loja os modificadores de dificuldade e o desbloqueio do Modo Humano; preço e nível já são exibidos pelo sistema de upgrades.
 - [ ] Adicionar tooltips em português para todos os novos campos configuráveis no Inspector.
 
-## Etapas sugeridas
+## Próxima ordem de implementação
 
-1. Definir quais modificadores compõem a dificuldade global e seus valores por nível.
-2. Implementar Humanidade na progressão e na loja.
-3. Implementar o controlador do Modo Humano, toggle F12, moveset, Heat e vida.
-4. Integrar HUD de vida e validar entradas/saídas do modo.
-5. Implementar morte permanente com dados de campanha isolados.
-6. Testar cada etapa em uma cena de arena antes de usar em campanha.
+1. Configurar Humanidade e seus modificadores de dificuldade no catálogo.
+2. Vincular o desbloqueio ao nível 6 e adicionar o toggle F12.
+3. Isolar o save de campanha e implementar morte permanente.
+4. Exibir os efeitos de Humanidade na loja e validar o fluxo em uma arena.
 
 ## Critérios de conclusão
 
 - Humanidade possui seis níveis configuráveis e aumenta a dificuldade global conforme os valores definidos.
 - O nível 6 desbloqueia o Modo Humano e F12 alterna o modo para testes.
-- No Modo Humano, o jogador usa moveset próprio, ataques curtos, não gera Heat e não usa multiplicador de Heat nos pesados.
-- Vida e HUD convencionais funcionam no Modo Humano.
 - Morrer no Modo Humano apaga somente o save de campanha, preservando as configurações do jogador.
 - Todos os novos campos do Inspector têm tooltips explicativos em português.

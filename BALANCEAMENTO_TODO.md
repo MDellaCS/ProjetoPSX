@@ -41,9 +41,3 @@ Exemplo inicial para testes futuros:
 ## Monitorar movimento
 
 - Dash terrestre preserva contato com o chão para evitar ataques em buffer serem roteados como aéreos. Observar se o `CharacterController` ainda reporta `GROUNDED: NO` por alguns frames após o dash.
-
-## TODO — Coordenação de agressividade inimiga
-
-- Criar um `EnemyAggroCoordinator` central para acompanhar inimigos em aggro no player e escolher um `Primary Aggressor`.
-- O agressor principal recebe bônus de agressividade e prioridade de perseguir/atacar; os demais recebem um teto ou penalidade de agressividade para orbitar, reposicionar e preparar a próxima troca.
-- Trocar o agressor quando ele terminar um combo, sofrer launch/stagger, morrer, perder distância relevante ou atingir um tempo máximo no papel.

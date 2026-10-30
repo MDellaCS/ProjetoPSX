@@ -1,14 +1,10 @@
 # TODO
 
-## Próximas expansões de colisão de inimigo arremessado
+## Colisão de inimigo arremessado — expansões futuras
 
-- Combate (Pending): avaliar pesos específicos para classes (brute/boss), em vez do peso configurável atual por inimigo.
-- Combate (Pending): avaliar interação da colisão de corpos com guarda, esquiva e imunidade curta a novo Body Impact.
-- Combate (Pending): avaliar dano no próprio inimigo arremessado e feedback audiovisual dedicado para colisões de corpos.
-
-## Colisão de inimigo arremessado
-
-- Combate (Pending): expandir a colisão de inimigo arremessado. V1 entrega dano/Poise por velocidade, um acerto por alvo no mesmo Launch Forwards e perda de velocidade. Avaliar depois: peso por inimigo (brute/boss), Chain Launch opcional, interação com guarda, imunidade curta a Body Impact, dano no inimigo arremessado e efeitos/sons específicos.
+- Combate (Pending): avaliar modificadores de peso por classe (brutamonte/chefe) após testar o peso configurável atual por inimigo.
+- Combate (Pending): avaliar interação com guarda e esquiva, além de imunidade curta a novos Body Impacts.
+- Combate (Pending): avaliar dano no próprio inimigo arremessado e feedback audiovisual dedicado às colisões de corpos.
 
 ## Sistema de animação desacoplado
 
@@ -16,9 +12,7 @@
 
 - Status: Pending
 - Dependências: Iterações 1 e 2.
-- Objetivo: apresentar Hurt/Stunned/Dead e futuras reações sem controlar sua duração.
-- Tarefas: mapear interrupções, stagger, morte e recuperação; garantir que animações antigas não fiquem presas.
-- Critérios de aceitação: reação visual respeita o estado real e nunca atrasa o retorno do controle.
+- Restante: adicionar uma intenção visual `Hurt` separada de `Stunned`, caso o gameplay mantenha essas reações distintas; validar interrupções e retorno visual sem controlar a duração do gameplay.
 
 ### Iteração 5 — Taxa de atualização visual independente
 
@@ -43,11 +37,9 @@
 - Programação (Pending): refatorar `PlayerMovement` sem mudar gameplay. Manter `PlayerMovement` como fachada/orquestrador e único dono de `CharacterController.Move`; extrair responsabilidades para `PlayerMovementMotor`, `PlayerGrounding`, `PlayerLocomotion`, `PlayerDash`, `PlayerJump` e `PlayerCrouchSlide`. Migrar em etapas, preservando a API pública usada por combate e outros sistemas.
 - Combate (Pending): avaliar pisão/bounce na cabeça do inimigo, inspirado em Super Mario e Crash. Deve devolver o player para cima, causar muito Poise e pouco dano.
 - Combate (Pending): avaliar inimigos com ataque de grab anti-pisão, que prende o player pelo pé quando ele tenta cair sobre eles.
-- Combate (Pending): implementar ataques realmente direcionais. Cada impacto deve carregar a direção física da `Hitbox Track`, calculada primeiro por `posição atual - posição anterior`. No primeiro frame, usar a trajetória planejada `End Local Position - Start Local Position`; para `Follow Anchors`, usar a última amostra disponível do Windup. Se não houver movimento válido, usar o forward local da hitbox e, por último, `player → ponto atingido`. Launch Forwards, Camera Shake, reações, knockback e futuros efeitos direcionais devem consumir essa direção. Validar especialmente hitboxes de ida e volta, como bumerangues, para que a volta lance na direção do player.
+- Combate (Pending): completar os casos de direção de impacto que não têm amostra móvel anterior: preservar uma amostra de Windup para tracks `Follow Anchors` e usar `player → ponto atingido` como último fallback. Validar hitboxes que voltam, como bumerangues, para confirmar que a volta lança na direção do jogador.
 - Pending: revisar a reformulação de Heat/Cold/Superheat para uma barra de vida comum em que Heat alto aumenta dano causado e recebido.
 - Pending: melhorias da câmera — revisar suavização de retorno após colisão e comportamento de rotação.
 - Pending: revisar eventuais frames transitórios de `GROUNDED: NO` após dash; marcar como observado e ainda sem reprodução confiável.
 - Pending: permitir configurações próprias para o segundo pulo.
-- Pending: sistema de inimigo principal entre inimigos em aggro, com maior agressividade para um escolhido e menor para os demais.
 - Pending: right shoulder camera offset, caso seja retomado após novos testes.
-- Bloquear: não faz nada, apenas trava o player

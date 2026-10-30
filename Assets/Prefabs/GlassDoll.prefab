@@ -414,20 +414,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyTaunt
   minimumAggressionPercent: 70
-  tauntChancePerDecision: 3
-  tauntChanceBoostAfterPlayerDamage: 30
-  minimumTauntDuration: 2.3
-  maximumTauntDuration: 2.3
-  tauntCooldown: 12
-  facePlayerDuringTaunt: 1
+  tauntChancePerDecision: 2
+  tauntChanceBoostAfterPlayerDamage: 60
+  minimumTauntDuration: 3
+  maximumTauntDuration: 3
+  tauntCooldown: 16
+  facePlayerDuringTaunt: 0
   tauntSound:
     clips:
     - {fileID: 8300000, guid: 804ff44cdb010ce4c98c6cc15a7126bd, type: 3}
-    - {fileID: 8300000, guid: 5078958b7ea16804d89259b915731457, type: 3}
-    volume: 5
-    volumeVariation: 0
+    - {fileID: 8300000, guid: 503eddc58a259cd4785f2da5b675dd6e, type: 3}
+    - {fileID: 8300000, guid: d8089d3734fb882439e96202b8ff4372, type: 3}
+    - {fileID: 8300000, guid: 638ba8374eebbcf4f914b1651b4f8355, type: 3}
+    volume: 4.07
+    volumeVariation: 0.094
     pitch: 1
-    pitchVariation: 0
+    pitchVariation: 0.098
     spatialBlend: 1
     minDistance: 5
     maxDistance: 30
