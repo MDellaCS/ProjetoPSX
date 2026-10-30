@@ -125,6 +125,10 @@ MonoBehaviour:
   sweepDescentSpeed: 12
   visualRoot: {fileID: 699346647437120168}
   airSpinVisualRotations: 3
+  headGizmoAnchor: {fileID: 0}
+  leftHandGizmoAnchor: {fileID: 0}
+  rightHandGizmoAnchor: {fileID: 0}
+  boneGizmoLineHeight: 20
   teleportDiveCooldown: 5
   teleportDiveDecisionChance: 80
   teleportDiveRiseDuration: 0.45
@@ -292,7 +296,7 @@ MonoBehaviour:
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 0
   canBeJuggled: 1
-  impactWeight: 1
+  impactWeight: 2
   launchedBodyImpactHitboxSizeIncreasePercent: 50
   ignoreGroundEntitySeparation: 0
 --- !u!114 &212785566711577276

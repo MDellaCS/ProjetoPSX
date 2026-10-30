@@ -106,6 +106,22 @@ public sealed class PlayerMovesetController : MonoBehaviour
         PlayerMoveNode continuation = isGroundDash
             ? null
             : FindContinuation(input);
+        PlayerMoveNode requestedNode = continuation ?? FindEntry(input);
+        if (attacks.IsAttacking && requestedNode?.attack != null &&
+            requestedNode.attack == attacks.CurrentAttack.Definition)
+        {
+            // Um mesmo asset nao pode criar um cancelamento/loop para si proprio,
+            // mesmo que a regra global de cancel permita Light ou Heavy Attack.
+            return;
+        }
+
+        // Nao interrompe o ataque atual nem consome o input se o proximo
+        // ataque ainda estiver no cooldown individual.
+        if (requestedNode != null &&
+            !attacks.CanStartAttack(requestedNode.attack))
+        {
+            return;
+        }
         if (attacks.IsAttacking)
         {
             PlayerAttackCancelAction cancel = input == PlayerAttackInput.Heavy ? PlayerAttackCancelAction.HeavyAttack : PlayerAttackCancelAction.LightAttack;
@@ -125,7 +141,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
                 return;
             }
         }
-        PlayerMoveNode node = continuation ?? FindEntry(input);
+        PlayerMoveNode node = requestedNode;
         if (input == PlayerAttackInput.Heavy &&
             (node == null || node.attack == null ||
              node.attack.context != PlayerAttackContext.Dash))

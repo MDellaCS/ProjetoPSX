@@ -7,6 +7,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     private PlayerMovement movement;
     private PlayerCombatStatus combatStatus;
     private PlayerDpsMeter dpsMeter;
+    private PlayerGrappleAttackController grappleAttack;
     private bool cameraShakeReported;
     private int lastSelfJuggleFrame = -1;
 
@@ -15,6 +16,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         heat = GetComponent<PlayerHeat>();
         movement = GetComponent<PlayerMovement>();
         combatStatus = GetComponent<PlayerCombatStatus>();
+        grappleAttack = GetComponent<PlayerGrappleAttackController>();
         dpsMeter = GetComponent<PlayerDpsMeter>();
         if (dpsMeter == null)
             dpsMeter = gameObject.AddComponent<PlayerDpsMeter>();
@@ -28,8 +30,16 @@ public sealed class PlayerAttackResolver : MonoBehaviour
 
     public bool Resolve(PlayerAttackRuntime runtime, PlayerAttackStrikeDefinition strike,
         EnemyBase enemy, float attackReach, Vector3 impactPosition,
-        Vector3 impactDirection)
+        Vector3 impactDirection, PlayerHitboxTrackDefinition hitboxTrack,
+        Collider impactCollider)
     {
+        if (runtime != null && runtime.IsGrappleAttack)
+        {
+            return grappleAttack != null && grappleAttack.ResolveHit(runtime,
+                strike, enemy, attackReach, impactPosition, impactDirection,
+                hitboxTrack, impactCollider);
+        }
+
         float distanceFromPlayer = Vector3.Distance(transform.position,
             impactPosition);
         float falloffMultiplier = strike.damageFalloff != null
@@ -57,11 +67,10 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
-        GameplayAudioSystem.Play(
-            runtime.Definition.kind == PlayerAttackKind.Heavy
-                ? GameplayAudioCueId.PlayerHeavyAttackHit
-                : GameplayAudioCueId.PlayerLightAttackHit,
-            impactPosition);
+        Component audioSurfaceTarget = impactCollider != null
+            ? impactCollider : enemy;
+        GetComponent<PlayerAttackAudioController>()?.NotifyHit(runtime,
+            hitboxTrack, audioSurfaceTarget, impactPosition);
         if (strike.effects.juggle)
             ApplyJuggleToPlayer();
         dpsMeter?.ReportDamage(dealt);
@@ -94,7 +103,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     /// <summary>Aplica o dano final do golpe a objetos interativos do mundo.</summary>
     public bool ResolveUtilityTarget(PlayerAttackRuntime runtime,
         PlayerAttackStrikeDefinition strike, IPlayerAttackTarget target,
-        Vector3 impactPosition, Vector3 impactDirection)
+        Vector3 impactPosition, Vector3 impactDirection,
+        PlayerHitboxTrackDefinition hitboxTrack, Collider impactCollider)
     {
         if (target == null)
             return false;
@@ -112,6 +122,10 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             return false;
 
         runtime.HitConfirmed = true;
+        Component hitObject = impactCollider != null
+            ? impactCollider : target as Component;
+        GetComponent<PlayerAttackAudioController>()?.NotifyHit(runtime,
+            hitboxTrack, hitObject, impactPosition);
 
         // Alvos interativos, como StrengthLevers, devem responder ao golpe
         // com o mesmo impacto basico de acertar uma entidade: hitstop local e

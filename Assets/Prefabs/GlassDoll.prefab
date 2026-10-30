@@ -274,7 +274,7 @@ MonoBehaviour:
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
   canBeJuggled: 1
-  impactWeight: 4
+  impactWeight: 5
   launchedBodyImpactHitboxSizeIncreasePercent: 30
   ignoreGroundEntitySeparation: 0
 --- !u!114 &212785566711577276

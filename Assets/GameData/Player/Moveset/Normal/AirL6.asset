@@ -19,12 +19,13 @@ MonoBehaviour:
   windupDuration: 0.02
   activeDuration: 0.15
   recoveryDuration: 0.08
+  holdActiveUntilGrounded: 0
   baseDamage: 18
   basePoiseDamage: 9
   movement:
-    forwardDistance: 0.3
+    forwardDistance: 0.2
     startNormalized: 0
-    endNormalized: 0.5
+    endNormalized: 1
     movementCurve:
       serializedVersion: 2
       m_Curve:
@@ -90,6 +91,7 @@ MonoBehaviour:
       launchUp: 0
       selfLaunchUp: 0
       launchForwards: 0
+      launchBackwards: 0
       juggle: 1
     hitboxes:
     - trackName: AirL6_Vai

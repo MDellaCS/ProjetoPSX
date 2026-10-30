@@ -21,13 +21,20 @@ public sealed class PlayerAttackMovement : MonoBehaviour
     {
         if (runtime == null) return;
         PlayerAttackMovementDefinition data = runtime.Definition.movement;
-        if (phase == PlayerAttackPhase.Windup ||
-            phase == PlayerAttackPhase.Active)
+        if (!runtime.IsGrappleAttack &&
+            (phase == PlayerAttackPhase.Windup ||
+             phase == PlayerAttackPhase.Active))
         {
-            Vector3 direction = lockOn != null && lockOn.IsLockedOn
-                ? lockOn.GetDirectionToLockedTarget()
-                : movement != null && movement.DesiredDirection.sqrMagnitude > .001f
-                    ? movement.DesiredDirection : transform.forward;
+            Vector3 direction;
+            if (runtime.HasAssistTarget)
+                direction = runtime.AssistTargetPosition - GetPlayerCenter();
+            else if (lockOn != null && lockOn.IsLockedOn)
+                direction = lockOn.GetDirectionToLockedTarget();
+            else if (movement != null &&
+                movement.DesiredDirection.sqrMagnitude > .001f)
+                direction = movement.DesiredDirection;
+            else
+                direction = transform.forward;
             direction.y = 0f;
             if (direction.sqrMagnitude > .001f &&
                 runtime.WindupActiveRotationSpeed > 0f)
@@ -50,4 +57,13 @@ public sealed class PlayerAttackMovement : MonoBehaviour
 
     private static float Evaluate(PlayerAttackMovementDefinition data, float value) =>
         data.movementCurve != null ? Mathf.Clamp01(data.movementCurve.Evaluate(value)) : value;
+
+    private Vector3 GetPlayerCenter()
+    {
+        PlayerCharacterController controller = movement != null
+            ? movement.EntityCharacterController
+            : GetComponent<PlayerCharacterController>();
+        return transform.position + transform.rotation *
+            (controller != null ? controller.center : Vector3.zero);
+    }
 }

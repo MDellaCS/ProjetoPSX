@@ -21,11 +21,11 @@ MonoBehaviour:
   recoveryDuration: 0.3
   holdActiveUntilGrounded: 0
   baseDamage: 25
-  basePoiseDamage: 50
+  basePoiseDamage: 80
   movement:
-    forwardDistance: 1.05
+    forwardDistance: 3
     startNormalized: 0
-    endNormalized: 0.85
+    endNormalized: 1
     movementCurve:
       serializedVersion: 2
       m_Curve:
@@ -90,7 +90,8 @@ MonoBehaviour:
       selfLaunchDown: 0
       launchUp: 0
       selfLaunchUp: 0
-      launchForwards: 0
+      launchForwards: 1
+      launchBackwards: 0
       juggle: 0
     hitboxes:
     - trackName: L4_Vai_Esquerda

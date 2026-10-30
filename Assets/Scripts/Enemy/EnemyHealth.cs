@@ -68,6 +68,7 @@ public sealed class EnemyHealth : MonoBehaviour
     private readonly CombatPoiseState poise = new();
     private float staggerTimer;
     private bool isGuardBreakStagger;
+    private bool grappleStaggerLocked;
     private bool isShowingGuardVisual;
     private float unkillableHealthRegenRemainder;
 
@@ -213,6 +214,7 @@ public sealed class EnemyHealth : MonoBehaviour
     public void ApplyPoiseStagger(Vector3 attackerPosition, bool superStagger)
     {
         if (IsDead) return;
+        ClearGrappleStaggerLock();
         dodge?.CancelDodge();
         owner.CancelTaunt();
         bool wasAlreadyStaggered = owner.CurrentState == EnemyBase.State.Staggered;
@@ -225,6 +227,57 @@ public sealed class EnemyHealth : MonoBehaviour
         owner.CurrentState = EnemyBase.State.Staggered;
         if (!wasAlreadyStaggered)
             guard?.NotifyStaggerStarted();
+    }
+
+    /// <summary>Coloca o inimigo em stagger travado enquanto o grapple o desloca.</summary>
+    internal void BeginGrappleStagger()
+    {
+        if (IsDead || owner == null)
+            return;
+
+        bool wasAlreadyStaggered = owner.CurrentState == EnemyBase.State.Staggered;
+        dodge?.CancelDodge();
+        owner.CancelTaunt();
+        owner.CancelGuardForDodge();
+        attacks.CancelAttack();
+        brain.CancelReposition();
+        movement.BeginGrapplePull();
+        grappleStaggerLocked = true;
+        owner.SetGrapplePulled(true);
+        isGuardBreakStagger = false;
+        staggerTimer = 0f;
+        owner.CurrentState = EnemyBase.State.Staggered;
+        if (!wasAlreadyStaggered)
+            guard?.NotifyStaggerStarted();
+    }
+
+    /// <summary>Libera o grapple e mantem o inimigo em stagger pelo recovery configurado.</summary>
+    internal void EndGrappleStagger(float recoveryDuration)
+    {
+        if (owner == null)
+            return;
+
+        ClearGrappleStaggerLock();
+        if (IsDead)
+            return;
+
+        staggerTimer = Mathf.Max(staggerTimer, Mathf.Max(0f,
+            recoveryDuration));
+        if (staggerTimer <= 0f &&
+            owner.CurrentState == EnemyBase.State.Staggered)
+        {
+            owner.CurrentState = EnemyBase.State.Combat;
+        }
+    }
+
+    private void ClearGrappleStaggerLock()
+    {
+        if (!grappleStaggerLocked)
+            return;
+
+        grappleStaggerLocked = false;
+        owner?.SetGrapplePulled(false);
+        movement?.EndGrapplePull();
     }
 
     internal void EndStaggerForGuard()
@@ -269,6 +322,9 @@ public sealed class EnemyHealth : MonoBehaviour
 
     internal void TickStagger()
     {
+        if (grappleStaggerLocked)
+            return;
+
         staggerTimer -= Time.deltaTime;
         if (staggerTimer > 0f) return;
         isGuardBreakStagger = false;

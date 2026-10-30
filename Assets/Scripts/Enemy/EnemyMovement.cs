@@ -69,6 +69,8 @@ public sealed class EnemyMovement : MonoBehaviour
     private bool isLaunchedForwards;
     private bool hasGroundContact;
     private bool temporarilyIgnoreGroundEntitySeparation;
+    private bool grapplePullActive;
+    private Vector3 grapplePullVelocity;
     private readonly HashSet<EnemyBase> bodyImpactTargets = new();
     private readonly Collider[] bodyImpactOverlapBuffer = new Collider[64];
 
@@ -139,14 +141,18 @@ public sealed class EnemyMovement : MonoBehaviour
         // ativo e o Brain ainda tenha um Tick pendente naquele frame.
         if (!IsControllerUsable)
             return;
-        Vector3 velocity = isLaunchedForwards ? launchForwardsVelocity :
+        Vector3 velocity = grapplePullActive ? grapplePullVelocity :
+            isLaunchedForwards ? launchForwardsVelocity :
             playerHeadSeparationTimer > 0f ? playerHeadSeparationVelocity :
             hasSlideLaunchHorizontalImpulse ? slideLaunchHorizontalVelocity :
             knockbackTimer > 0f ? knockbackVelocity : horizontalVelocity;
 
         playerHeadSeparationTimer = Mathf.Max(0f, playerHeadSeparationTimer - Time.deltaTime);
         knockbackTimer = Mathf.Max(0f, knockbackTimer - Time.deltaTime);
-        velocity.y = verticalVelocity;
+        if (grapplePullActive)
+            verticalVelocity = grapplePullVelocity.y;
+        else
+            velocity.y = verticalVelocity;
         lastMoveVelocity = velocity;
         CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
         hasGroundContact = (flags & CollisionFlags.Below) != 0 ||
@@ -225,6 +231,39 @@ public sealed class EnemyMovement : MonoBehaviour
         verticalVelocity = value;
         if (value > .05f)
             hasGroundContact = false;
+    }
+
+    /// <summary>Ativa o controle de movimento do grapple sem alterar a gravidade padrao.</summary>
+    public void BeginGrapplePull()
+    {
+        grapplePullActive = true;
+        grapplePullVelocity = Vector3.zero;
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+        playerHeadSeparationVelocity = Vector3.zero;
+        playerHeadSeparationTimer = 0f;
+        CancelSlideLaunchHorizontalImpulse();
+        ResetLaunchForwards();
+        isLaunched = false;
+        verticalVelocity = 0f;
+        hasGroundContact = controller != null && controller.isGrounded;
+    }
+
+    /// <summary>Define a velocidade vetorial de puxao usada no proximo passo do motor.</summary>
+    public void SetGrapplePullVelocity(Vector3 velocity)
+    {
+        if (!grapplePullActive)
+            return;
+
+        grapplePullVelocity = velocity;
+    }
+
+    /// <summary>Devolve o controle do deslocamento ao Brain e encerra o puxao.</summary>
+    public void EndGrapplePull()
+    {
+        grapplePullActive = false;
+        grapplePullVelocity = Vector3.zero;
+        verticalVelocity = IsGrounded ? -2f : 0f;
     }
 
     private bool IsControllerUsable => controller != null &&

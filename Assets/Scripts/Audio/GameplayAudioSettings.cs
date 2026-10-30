@@ -3,11 +3,18 @@ using UnityEngine.Audio;
 
 public enum GameplayAudioCueId
 {
-    PlayerLightAttackHit,
-    PlayerHeavyAttackHit,
     PlayerHurt,
     PlayerFootstep,
     EnemyFootstep
+}
+
+public enum GameplayAudioSurfaceType
+{
+    Generic,
+    Fabric,
+    Metal,
+    Glass,
+    Stone
 }
 
 [System.Serializable]
@@ -35,6 +42,44 @@ public sealed class GameplayAudioCue
     [Range(0, 255)] public int priority = 128;
     [Tooltip("Mixer Group opcional exclusivo deste som. Vazio usa o grupo global do sistema.")]
     public AudioMixerGroup outputMixerGroup;
+}
+
+[System.Serializable]
+public sealed class GameplayAttackAudioSet
+{
+    [Tooltip("Som tocado imediatamente quando este tipo de ataque comeca. O clip e interrompido ao primeiro acerto.")]
+    public GameplayAudioCue attackStart = new();
+    [Tooltip("Som de conexao usado quando o alvo nao tem uma superficie especifica ou quando a superficie nao tem clips configurados.")]
+    public GameplayAudioCue genericHit = new();
+    [Tooltip("Som de conexao usado em alvos marcados como tecido.")]
+    public GameplayAudioCue fabricHit = new();
+    [Tooltip("Som de conexao usado em alvos marcados como metal.")]
+    public GameplayAudioCue metalHit = new();
+    [Tooltip("Som de conexao usado em alvos marcados como vidro.")]
+    public GameplayAudioCue glassHit = new();
+    [Tooltip("Som de conexao usado em alvos marcados como pedra.")]
+    public GameplayAudioCue stoneHit = new();
+
+    public GameplayAudioCue GetHitCue(GameplayAudioSurfaceType surface) =>
+        surface switch
+        {
+            GameplayAudioSurfaceType.Fabric when HasClips(fabricHit) => fabricHit,
+            GameplayAudioSurfaceType.Metal when HasClips(metalHit) => metalHit,
+            GameplayAudioSurfaceType.Glass when HasClips(glassHit) => glassHit,
+            GameplayAudioSurfaceType.Stone when HasClips(stoneHit) => stoneHit,
+            _ => genericHit
+        };
+
+    private static bool HasClips(GameplayAudioCue cue)
+    {
+        if (cue?.clips == null)
+            return false;
+
+        foreach (AudioClip clip in cue.clips)
+            if (clip != null)
+                return true;
+        return false;
+    }
 }
 
 [CreateAssetMenu(fileName = "GameplayAudioSettings", menuName = "Projeto PSX/Audio/Gameplay Audio Settings")]
@@ -65,10 +110,10 @@ public sealed class GameplayAudioSettings : ScriptableObject
     public float footstepHeightOffset = .08f;
 
     [Header("Player")]
-    [Tooltip("Som tocado quando ataque leve do jogador acerta um inimigo.")]
-    public GameplayAudioCue playerLightAttackHit = new();
-    [Tooltip("Som tocado quando ataque pesado do jogador acerta um inimigo.")]
-    public GameplayAudioCue playerHeavyAttackHit = new();
+    [Tooltip("Sons globais usados por todos os ataques leves do jogador, com variações de acerto por superfície.")]
+    public GameplayAttackAudioSet playerLightAttack = new();
+    [Tooltip("Sons globais usados por todos os ataques pesados do jogador, com variações de acerto por superfície.")]
+    public GameplayAttackAudioSet playerHeavyAttack = new();
     [Tooltip("Som tocado quando o jogador recebe um golpe de inimigo.")]
     public GameplayAudioCue playerHurt = new();
     [Tooltip("Som de passos do jogador enquanto caminha no chao.")]
@@ -80,6 +125,8 @@ public sealed class GameplayAudioSettings : ScriptableObject
 
     private void OnValidate()
     {
+        playerLightAttack ??= new GameplayAttackAudioSet();
+        playerHeavyAttack ??= new GameplayAttackAudioSet();
         initialVoiceCount = Mathf.Max(1, initialVoiceCount);
         maximumVoiceCount = Mathf.Max(initialVoiceCount, maximumVoiceCount);
         minimumFootstepSpeed = Mathf.Max(0f, minimumFootstepSpeed);
@@ -87,10 +134,11 @@ public sealed class GameplayAudioSettings : ScriptableObject
         enemyFootstepDistance = Mathf.Max(.1f, enemyFootstepDistance);
     }
 
+    public GameplayAttackAudioSet GetPlayerAttackAudio(PlayerAttackKind kind) =>
+        kind == PlayerAttackKind.Heavy ? playerHeavyAttack : playerLightAttack;
+
     public GameplayAudioCue GetCue(GameplayAudioCueId cueId) => cueId switch
     {
-        GameplayAudioCueId.PlayerLightAttackHit => playerLightAttackHit,
-        GameplayAudioCueId.PlayerHeavyAttackHit => playerHeavyAttackHit,
         GameplayAudioCueId.PlayerHurt => playerHurt,
         GameplayAudioCueId.PlayerFootstep => playerFootstep,
         GameplayAudioCueId.EnemyFootstep => enemyFootstep,

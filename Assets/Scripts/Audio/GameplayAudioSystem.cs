@@ -11,10 +11,12 @@ public sealed class GameplayAudioSystem : MonoBehaviour
         public AudioSource source;
         public float baseVolume;
         public float startedAt;
+        public int playbackToken;
     }
 
     private static GameplayAudioSystem instance;
     private readonly List<Voice> voices = new();
+    private int nextPlaybackToken;
 
     [Tooltip("Configuracao global e cues de gameplay. Se vazio, carrega Resources/GameplayAudioSettings.")]
     [SerializeField] private GameplayAudioSettings settings;
@@ -71,6 +73,14 @@ public sealed class GameplayAudioSystem : MonoBehaviour
         Instance.PlayCue(cue, position);
     }
 
+    /// <summary>Reproduz um SFX e devolve uma referencia que pode interrompe-lo sem afetar outras vozes.</summary>
+    public static GameplayAudioPlaybackHandle PlayTracked(
+        GameplayAudioCue cue, Vector3 position)
+    {
+        GameplayAudioSystem system = Instance;
+        return system.PlayCue(cue, position);
+    }
+
     /// <summary>Atualiza vozes em execucao quando o jogador altera o volume de efeitos.</summary>
     public static void RefreshEffectsVolume()
     {
@@ -100,15 +110,16 @@ public sealed class GameplayAudioSystem : MonoBehaviour
             CreateVoice();
     }
 
-    private void PlayCue(GameplayAudioCue cue, Vector3 position)
+    private GameplayAudioPlaybackHandle PlayCue(GameplayAudioCue cue,
+        Vector3 position)
     {
         LoadSettings();
         if (!settings.sfxEnabled)
-            return;
+            return null;
 
         AudioClip clip = ChooseClip(cue);
         if (clip == null)
-            return;
+            return null;
 
         Voice voice = GetAvailableVoice();
         AudioSource source = voice.source;
@@ -129,9 +140,25 @@ public sealed class GameplayAudioSystem : MonoBehaviour
         source.pitch = Mathf.Max(.01f, cue.pitch + Random.Range(
             -cue.pitchVariation, cue.pitchVariation)) * settings.globalPitch;
         voice.startedAt = Time.unscaledTime;
+        voice.playbackToken = ++nextPlaybackToken;
         // PlayOneShot aceita escalas acima de 1, ao contrario do limite
         // pratico de AudioSource.volume; isso permite ganho de ate 5x por cue.
         source.PlayOneShot(clip, voice.baseVolume);
+        return new GameplayAudioPlaybackHandle(this, voices.IndexOf(voice),
+            voice.playbackToken);
+    }
+
+    internal void StopPlayback(int voiceIndex, int playbackToken)
+    {
+        if (voiceIndex < 0 || voiceIndex >= voices.Count)
+            return;
+
+        Voice voice = voices[voiceIndex];
+        if (voice.playbackToken != playbackToken || voice.source == null)
+            return;
+
+        voice.source.Stop();
+        voice.playbackToken = ++nextPlaybackToken;
     }
 
     private static AudioClip ChooseClip(GameplayAudioCue cue)
@@ -192,4 +219,29 @@ public sealed class GameplayAudioSystem : MonoBehaviour
     private float GetOutputVolumeMultiplier() => settings.sfxEnabled
         ? GameSettingsService.Applied.effectsVolume
         : 0f;
+}
+
+/// <summary>Handle de uma voz de gameplay que pode ser parada sem interromper outros SFX.</summary>
+public sealed class GameplayAudioPlaybackHandle
+{
+    private GameplayAudioSystem system;
+    private readonly int voiceIndex;
+    private readonly int playbackToken;
+
+    internal GameplayAudioPlaybackHandle(GameplayAudioSystem owner,
+        int sourceVoiceIndex, int sourcePlaybackToken)
+    {
+        system = owner;
+        voiceIndex = sourceVoiceIndex;
+        playbackToken = sourcePlaybackToken;
+    }
+
+    public void Stop()
+    {
+        if (system == null)
+            return;
+
+        system.StopPlayback(voiceIndex, playbackToken);
+        system = null;
+    }
 }

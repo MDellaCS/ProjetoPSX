@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerAttackMovement), typeof(PlayerHitboxController), typeof(PlayerAttackResolver))]
+[RequireComponent(typeof(PlayerAttackAudioController))]
 public sealed class PlayerAttackController : MonoBehaviour
 {
     private PlayerState playerState;
@@ -10,8 +12,11 @@ public sealed class PlayerAttackController : MonoBehaviour
     private PlayerAttackMovement attackMovement;
     private PlayerHitboxController hitboxes;
     private PlayerAttackResolver resolver;
+    private PlayerAttackAudioController attackAudio;
     private PlayerMovesetController movesetController;
     private PlayerMovement movement;
+    private PlayerTargetAssist targetAssist;
+    private readonly Dictionary<PlayerAttackDefinition, float> attackReadyAt = new();
     private float phaseTimer;
     private bool finishAfterActive;
     private bool isExternalAttack;
@@ -40,6 +45,17 @@ public sealed class PlayerAttackController : MonoBehaviour
         resolver = GetComponent<PlayerAttackResolver>();
         movesetController = GetComponent<PlayerMovesetController>();
         movement = GetComponent<PlayerMovement>();
+        targetAssist = GetComponent<PlayerTargetAssist>();
+        if (targetAssist == null)
+        {
+            targetAssist = gameObject.AddComponent<PlayerTargetAssist>();
+            GetComponent<PlayerGrappleAttackController>()?.CopyLegacyTargetAssistSettingsTo(
+                targetAssist);
+        }
+        attackAudio = GetComponent<PlayerAttackAudioController>();
+        if (attackAudio == null)
+            attackAudio = gameObject.AddComponent<PlayerAttackAudioController>();
+        attackAudio.Initialize(this);
     }
 
     private void Update()
@@ -70,9 +86,23 @@ public sealed class PlayerAttackController : MonoBehaviour
 
     public bool TryStartAttack(PlayerAttackDefinition definition)
     {
+        return TryStartAttackInternal(definition, false);
+    }
+
+    /// <summary>Inicia a definicao especial de grapple sem limitar o contexto ao chao/ar.</summary>
+    public bool TryStartGrappleAttack(PlayerAttackDefinition definition)
+    {
+        return TryStartAttackInternal(definition, true);
+    }
+
+    private bool TryStartAttackInternal(PlayerAttackDefinition definition,
+        bool isGrappleAttack)
+    {
         if (definition == null || IsAttacking || playerState == null ||
-            CutsceneController.IsPlayerControlLocked || !playerState.IsNormal()) return false;
-        if (definition.context == PlayerAttackContext.Ground && movement != null && !movement.IsGrounded) return false;
+            CutsceneController.IsPlayerControlLocked || !playerState.IsNormal() ||
+            !CanStartAttack(definition)) return false;
+        if (!isGrappleAttack && definition.context == PlayerAttackContext.Ground &&
+            movement != null && !movement.IsGrounded) return false;
         PlayerMovesetDefinition moveset = movesetController != null
             ? movesetController.Moveset : null;
         float rotationSpeed = moveset != null
@@ -84,8 +114,25 @@ public sealed class PlayerAttackController : MonoBehaviour
         float extendedArmHeightOffset = moveset != null
             ? moveset.extendedArmHitboxHeightOffset
             : 0f;
+        EnemyBase assistedTarget = null;
+        Vector3 assistedTargetPosition = default;
+        if (targetAssist != null && targetAssist.TryCaptureTarget(
+            out assistedTarget, out assistedTargetPosition))
+        {
+            if (isGrappleAttack)
+            {
+                Vector3 direction = Vector3.ProjectOnPlane(
+                    assistedTargetPosition - GetPlayerCenter(), Vector3.up);
+                if (direction.sqrMagnitude > .0001f)
+                    transform.rotation =
+                        Quaternion.LookRotation(direction.normalized);
+            }
+        }
+
         CurrentAttack = new PlayerAttackRuntime(definition, heat,
-            rotationSpeed, extendedArmRadius, extendedArmHeightOffset);
+            rotationSpeed, extendedArmRadius, extendedArmHeightOffset,
+            isGrappleAttack, assistedTarget, assistedTargetPosition);
+        RecordAttackStart(definition);
         CurrentPhase = PlayerAttackPhase.Windup; phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false; isExternalAttack = false;
         playerState.ChangeState(PlayerState.State.Attacking);
@@ -93,6 +140,18 @@ public sealed class PlayerAttackController : MonoBehaviour
         AttackStarted?.Invoke(CurrentAttack);
         if (phaseTimer <= 0f) ChangePhase(PlayerAttackPhase.Active);
         return true;
+    }
+
+    /// <summary>Encerra a fase de ataque apos o primeiro acerto que inicia um puxao.</summary>
+    public void CompleteGrappleAttack(PlayerAttackRuntime runtime)
+    {
+        if (runtime == null || runtime != CurrentAttack ||
+            !runtime.IsGrappleAttack)
+        {
+            return;
+        }
+
+        FinishAttack();
     }
 
     /// <summary>
@@ -104,7 +163,8 @@ public sealed class PlayerAttackController : MonoBehaviour
     public bool TryStartExternalAttack(PlayerAttackDefinition definition)
     {
         if (definition == null || IsAttacking ||
-            CutsceneController.IsPlayerControlLocked)
+            CutsceneController.IsPlayerControlLocked ||
+            !CanStartAttack(definition))
         {
             return false;
         }
@@ -119,9 +179,16 @@ public sealed class PlayerAttackController : MonoBehaviour
         float extendedArmHeightOffset = moveset != null
             ? moveset.extendedArmHitboxHeightOffset : 0f;
 
+        EnemyBase assistedTarget = null;
+        Vector3 assistedTargetPosition = default;
+        targetAssist?.TryCaptureTarget(out assistedTarget,
+            out assistedTargetPosition);
+
         // Eventos externos nao podem gastar Heat por serem marcados Heavy.
         CurrentAttack = new PlayerAttackRuntime(definition, null,
-            rotationSpeed, extendedArmRadius, extendedArmHeightOffset);
+            rotationSpeed, extendedArmRadius, extendedArmHeightOffset,
+            false, assistedTarget, assistedTargetPosition);
+        RecordAttackStart(definition);
         CurrentPhase = PlayerAttackPhase.Windup;
         phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false;
@@ -135,22 +202,65 @@ public sealed class PlayerAttackController : MonoBehaviour
         return true;
     }
 
+    /// <summary>Indica se a definicao terminou seu cooldown individual.</summary>
+    public bool CanStartAttack(PlayerAttackDefinition definition)
+    {
+        if (definition == null)
+            return false;
+        if (definition.cooldownDuration <= 0f)
+            return true;
+        return !attackReadyAt.TryGetValue(definition, out float readyAt) ||
+            Time.time >= readyAt;
+    }
+
+    private void RecordAttackStart(PlayerAttackDefinition definition)
+    {
+        if (definition.cooldownDuration <= 0f)
+        {
+            attackReadyAt.Remove(definition);
+            return;
+        }
+
+        // O cronometro comeca no inicio do ataque, junto ao primeiro frame do Windup.
+        attackReadyAt[definition] = Time.time + definition.cooldownDuration;
+    }
+
     public bool RequestCancel(PlayerAttackCancelAction action)
     {
         if (!IsAttacking) return true;
+        if (!CanRequestCancel(action)) return false;
+
         PlayerMovesetDefinition moveset = movesetController != null
             ? movesetController.Moveset : null;
         System.Collections.Generic.List<PlayerAttackCancelRule> rules =
             moveset != null ? moveset.GetCancelRules(CurrentAttack.Definition.kind) : null;
         PlayerAttackCancelRule rule = rules?.Find(candidate =>
             candidate != null && candidate.action == action);
-        if (rule == null || (rule.allowedPhases & ToFlag(CurrentPhase)) == 0) return false;
+        if (rule == null) return false;
         if (CurrentPhase == PlayerAttackPhase.Active && rule.finishActiveBeforeCancelling)
         {
             finishAfterActive = true;
             return true;
         }
         FinishAttack(); return true;
+    }
+
+    /// <summary>Informa se a acao pode cancelar o ataque atual na fase presente.</summary>
+    public bool CanRequestCancel(PlayerAttackCancelAction action)
+    {
+        if (!IsAttacking)
+            return false;
+
+        PlayerMovesetDefinition moveset = movesetController != null
+            ? movesetController.Moveset : null;
+        System.Collections.Generic.List<PlayerAttackCancelRule> rules =
+            moveset != null
+                ? moveset.GetCancelRules(CurrentAttack.Definition.kind)
+                : null;
+        PlayerAttackCancelRule rule = rules?.Find(candidate =>
+            candidate != null && candidate.action == action);
+        return rule != null &&
+            (rule.allowedPhases & ToFlag(CurrentPhase)) != 0;
     }
 
     public void CancelAttack()
@@ -174,6 +284,15 @@ public sealed class PlayerAttackController : MonoBehaviour
         CurrentAttack.Definition.holdActiveUntilGrounded &&
         movement != null && !movement.IsGrounded;
 
+    private Vector3 GetPlayerCenter()
+    {
+        PlayerCharacterController controller = movement != null
+            ? movement.EntityCharacterController
+            : GetComponent<PlayerCharacterController>();
+        return transform.position + transform.rotation *
+            (controller != null ? controller.center : Vector3.zero);
+    }
+
     private float GetPhaseDuration(PlayerAttackPhase phase) => CurrentAttack == null ? 0f : phase switch
     {
         PlayerAttackPhase.Windup => CurrentAttack.WindupDuration,
@@ -186,6 +305,8 @@ public sealed class PlayerAttackController : MonoBehaviour
     {
         PlayerAttackRuntime finished = CurrentAttack;
         bool finishedExternalAttack = isExternalAttack;
+        if (!notify)
+            attackAudio?.CancelAttackSounds(finished);
         CurrentAttack = null; CurrentPhase = PlayerAttackPhase.None; phaseTimer = 0f; finishAfterActive = false; isExternalAttack = false;
         hitboxes.End(); attackMovement.End();
         if (!finishedExternalAttack && playerState != null && playerState.IsAttacking()) playerState.ChangeState(PlayerState.State.Normal);

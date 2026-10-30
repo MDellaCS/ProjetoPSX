@@ -64,6 +64,12 @@ public static class PlayerStarterMovesetCreator
         }
         Undo.RegisterFullObjectHierarchyUndo(player, "Configure Player Combat");
         GameObjectUtility.RemoveMonoBehavioursWithMissingScript(player);
+        if (player.GetComponent<PlayerTargetAssist>() == null)
+        {
+            PlayerTargetAssist targetAssist = GetOrAdd<PlayerTargetAssist>(player);
+            player.GetComponent<PlayerGrappleAttackController>()?.CopyLegacyTargetAssistSettingsTo(
+                targetAssist);
+        }
         GetOrAdd<PlayerCombatStatus>(player);
         GetOrAdd<PlayerAttackMovement>(player);
         GetOrAdd<PlayerAttackResolver>(player);
@@ -79,6 +85,32 @@ public static class PlayerStarterMovesetCreator
         previewSerialized.FindProperty("attack").objectReferenceValue = moveset.FindNode("L1")?.attack;
         previewSerialized.ApplyModifiedProperties();
         EditorUtility.SetDirty(player);
+    }
+
+    [MenuItem("Tools/Projeto PSX/Player Combat/Add Global Target Assist")]
+    public static void AddGlobalTargetAssist()
+    {
+        GameObject player = Selection.activeGameObject;
+        if (player == null)
+        {
+            EditorUtility.DisplayDialog("Global Target Assist",
+                "Selecione o objeto Player na Hierarchy.", "OK");
+            return;
+        }
+
+        PlayerTargetAssist targetAssist =
+            player.GetComponent<PlayerTargetAssist>();
+        if (targetAssist == null)
+        {
+            Undo.RegisterFullObjectHierarchyUndo(player,
+                "Add Global Target Assist");
+            targetAssist = Undo.AddComponent<PlayerTargetAssist>(player);
+            player.GetComponent<PlayerGrappleAttackController>()?.CopyLegacyTargetAssistSettingsTo(
+                targetAssist);
+            EditorUtility.SetDirty(player);
+        }
+
+        Selection.activeObject = targetAssist;
     }
 
     private static T GetOrAdd<T>(GameObject target) where T : Component

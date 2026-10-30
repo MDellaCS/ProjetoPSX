@@ -42,11 +42,17 @@ MonoBehaviour:
   - action: 1
     allowedPhases: 7
     finishActiveBeforeCancelling: 0
+  - action: 4
+    allowedPhases: -1
+    finishActiveBeforeCancelling: 0
   heavyCancelRules:
   - action: 2
     allowedPhases: 4
     finishActiveBeforeCancelling: 1
   - action: 3
+    allowedPhases: 4
+    finishActiveBeforeCancelling: 1
+  - action: 4
     allowedPhases: 4
     finishActiveBeforeCancelling: 1
   entries:

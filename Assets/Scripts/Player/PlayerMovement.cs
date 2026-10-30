@@ -90,6 +90,8 @@ public class PlayerMovement : MonoBehaviour
     [Header("Enemy Body Interaction")]
     [Tooltip("Impulso horizontal que tira o player de cima de um inimigo.")]
     [Min(0f)] public float enemyHeadSeparationSpeed = 10f;
+    [Tooltip("Peso relativo do jogador usado em grapple e outras interacoes de gameplay. Nao altera gravidade, queda ou movimento normal.")]
+    [Min(.01f)] [SerializeField] private float interactionWeight = 1f;
 
     [Header("References")]
     [Tooltip("Camera usada para converter o input de movimento em direcoes do mundo.")]
@@ -117,6 +119,8 @@ public class PlayerMovement : MonoBehaviour
         dashStartedGrounded;
     /// <summary>Motor de colisao exposto para a separacao central de entidades terrestres.</summary>
     public PlayerCharacterController EntityCharacterController => controller;
+    /// <summary>Peso relativo usado apenas para comparar forcas em interacoes de gameplay.</summary>
+    public float InteractionWeight => Mathf.Max(.01f, interactionWeight);
 
     private PlayerCharacterController controller;
     private PlayerState playerState;
@@ -171,6 +175,8 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         controller = PlayerCharacterController.GetOrAdd(gameObject);
+        if (GetComponent<PlayerSwingController>() == null)
+            gameObject.AddComponent<PlayerSwingController>();
     }
 
     void Start()
@@ -202,6 +208,15 @@ public class PlayerMovement : MonoBehaviour
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
+
+        // O PlayerSwingController calcula e aplica o deslocamento enquanto
+        // esse estado estÃ¡ ativo, usando o mesmo motor de colisao do jogador.
+        if (playerState != null && (playerState.IsSwinging() ||
+            playerState.IsGrapplePulling()))
+        {
+            UpdateCharacterControllerShape();
+            return;
+        }
 
         if (!CanDash && playerState != null && playerState.IsDashing())
         {
@@ -1166,6 +1181,103 @@ public class PlayerMovement : MonoBehaviour
         displacement.y = 0f;
         if (displacement.sqrMagnitude > .0000001f)
             controller.Move(displacement);
+    }
+
+    /// <summary>Inicia movimento externo controlado pelo sistema de balanco.</summary>
+    public bool BeginSwingMotion()
+    {
+        if (playerState == null || !playerState.IsNormal() ||
+            controller == null || !controller.enabled)
+        {
+            return false;
+        }
+
+        EndSlide();
+        SetCrouching(false);
+        horizontalVelocity = Vector3.zero;
+        launchForwardsVelocity = Vector3.zero;
+        staggerPushVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        jumpHoldTimer = 0f;
+        isLaunched = false;
+        isAerialDiving = false;
+        isDashJump = false;
+        playerState.ChangeState(PlayerState.State.Swinging);
+        return true;
+    }
+
+    /// <summary>Aplica um passo do balanco pelo motor cinemÃ¡tico existente.</summary>
+    public CollisionFlags MoveDuringSwing(Vector3 displacement)
+    {
+        if (controller == null || !controller.enabled)
+            return CollisionFlags.None;
+
+        return controller.Move(displacement);
+    }
+
+    /// <summary>Devolve a velocidade tangencial ao movimento normal ao soltar a corda.</summary>
+    public void EndSwingMotion(Vector3 releaseVelocity,
+        bool releasedByJump = false, float jumpUpwardBonus = 0f)
+    {
+        if (playerState == null || !playerState.IsSwinging())
+            return;
+
+        horizontalVelocity = new Vector3(releaseVelocity.x, 0f,
+            releaseVelocity.z);
+        verticalVelocity = releasedByJump
+            ? GetJumpInitialSpeed() + Mathf.Max(0f, jumpUpwardBonus)
+            : releaseVelocity.y;
+        jumpHoldTimer = releasedByJump ? maxJumpHoldDuration : 0f;
+        if (releasedByJump)
+            jumpsUsed = Mathf.Max(jumpsUsed, 1);
+        isLaunched = false;
+        isAerialDiving = false;
+        wasAirborne = true;
+        playerState.ChangeState(PlayerState.State.Normal);
+    }
+
+    /// <summary>Trava locomocao manual durante o puxao da habilidade de grapple.</summary>
+    public bool BeginGrapplePullMotion()
+    {
+        if (playerState == null || controller == null || !controller.enabled ||
+            (!playerState.IsNormal() && !playerState.IsAttacking()))
+        {
+            return false;
+        }
+
+        SetCrouching(false);
+        horizontalVelocity = Vector3.zero;
+        launchForwardsVelocity = Vector3.zero;
+        staggerPushVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        jumpHoldTimer = 0f;
+        isLaunched = false;
+        isAerialDiving = false;
+        isDashJump = false;
+        playerState.ChangeState(PlayerState.State.GrapplePulling);
+        return true;
+    }
+
+    /// <summary>Move o jogador durante o puxao usando o controller com colisao.</summary>
+    public CollisionFlags MoveDuringGrapplePull(Vector3 displacement)
+    {
+        if (controller == null || !controller.enabled)
+            return CollisionFlags.None;
+
+        return controller.Move(displacement);
+    }
+
+    /// <summary>Libera o jogador do puxao e volta a aceitar movimento normal.</summary>
+    public void EndGrapplePullMotion()
+    {
+        if (playerState == null || !playerState.IsGrapplePulling())
+            return;
+
+        horizontalVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        jumpHoldTimer = 0f;
+        wasAirborne = !IsGrounded;
+        playerState.ChangeState(PlayerState.State.Normal);
     }
 
     /// <summary>Impede que um inimigo seja tratado como chao valido pelo player.</summary>

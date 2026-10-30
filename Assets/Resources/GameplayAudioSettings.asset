@@ -22,36 +22,159 @@ MonoBehaviour:
   playerFootstepDistance: 2.4
   enemyFootstepDistance: 1.5
   footstepHeightOffset: 0.08
-  playerLightAttackHit:
-    clips:
-    - {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
-    - {fileID: 8300000, guid: 4ae73664f9fa52f41b51a2e050901696, type: 3}
-    - {fileID: 8300000, guid: ada2ae050ed4f114eba3fab31db4313e, type: 3}
-    volume: 1
-    volumeVariation: 0
-    pitch: 1
-    pitchVariation: 0
-    spatialBlend: 1
-    minDistance: 1
-    maxDistance: 24
-    rolloffMode: 0
-    priority: 96
-    outputMixerGroup: {fileID: 0}
-  playerHeavyAttackHit:
-    clips:
-    - {fileID: 8300000, guid: a42a25bfe713e63498febabb408fceea, type: 3}
-    - {fileID: 8300000, guid: b322a4e6a9f59b04a82a3336dde02871, type: 3}
-    - {fileID: 8300000, guid: ae2d2db46850b7c47ab85240cdc448f9, type: 3}
-    volume: 1
-    volumeVariation: 0
-    pitch: 1
-    pitchVariation: 0
-    spatialBlend: 1
-    minDistance: 1
-    maxDistance: 28
-    rolloffMode: 0
-    priority: 88
-    outputMixerGroup: {fileID: 0}
+  playerLightAttack:
+    attackStart:
+      clips:
+      - {fileID: 8300000, guid: dbdb3ae34c52a8c4582192e804a54f6e, type: 3}
+      volume: 3
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0.028
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    genericHit:
+      clips:
+      - {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
+      - {fileID: 8300000, guid: 4ae73664f9fa52f41b51a2e050901696, type: 3}
+      - {fileID: 8300000, guid: ada2ae050ed4f114eba3fab31db4313e, type: 3}
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 96
+      outputMixerGroup: {fileID: 0}
+    fabricHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    metalHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    glassHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    stoneHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+  playerHeavyAttack:
+    attackStart:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    genericHit:
+      clips:
+      - {fileID: 8300000, guid: a42a25bfe713e63498febabb408fceea, type: 3}
+      - {fileID: 8300000, guid: b322a4e6a9f59b04a82a3336dde02871, type: 3}
+      - {fileID: 8300000, guid: ae2d2db46850b7c47ab85240cdc448f9, type: 3}
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 28
+      rolloffMode: 0
+      priority: 88
+      outputMixerGroup: {fileID: 0}
+    fabricHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    metalHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    glassHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
+    stoneHit:
+      clips: []
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
+      spatialBlend: 1
+      minDistance: 1
+      maxDistance: 24
+      rolloffMode: 0
+      priority: 128
+      outputMixerGroup: {fileID: 0}
   playerHurt:
     clips:
     - {fileID: 8300000, guid: 99348524f0ef5b3469b6d1976f17370c, type: 3}

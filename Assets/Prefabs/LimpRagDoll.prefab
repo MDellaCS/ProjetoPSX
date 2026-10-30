@@ -55,6 +55,7 @@ GameObject:
   - component: {fileID: 8054806121527268827}
   - component: {fileID: -1496825062640559546}
   - component: {fileID: -6311550100291000041}
+  - component: {fileID: 1567571376771655162}
   m_Layer: 0
   m_Name: LimpRagDoll
   m_TagString: Untagged
@@ -271,7 +272,7 @@ MonoBehaviour:
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
   canBeJuggled: 1
-  impactWeight: 1
+  impactWeight: 11
   launchedBodyImpactHitboxSizeIncreasePercent: 20
   ignoreGroundEntitySeparation: 0
 --- !u!114 &212785566711577276
@@ -398,6 +399,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyBodyPartDeathParticles
   profile: {fileID: 11400000, guid: 09a285251532b314b82f9448bd08290e, type: 2}
+--- !u!114 &1567571376771655162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6da89d1eb3f453d943b08e0f3b064ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameplayAudioSurface
+  surfaceType: 1
 --- !u!1001 &4181816537340941668
 PrefabInstance:
   m_ObjectHideFlags: 0

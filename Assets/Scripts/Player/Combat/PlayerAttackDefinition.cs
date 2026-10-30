@@ -31,7 +31,9 @@ public enum PlayerHitboxAnchorMode
 public enum PlayerHitboxTrajectoryMode
 {
     Linear,
-    Orbit
+    Orbit,
+    [InspectorName("Posição do alvo assistido")]
+    TargetAssist
 }
 
 public enum PlayerHitboxAxis
@@ -46,7 +48,8 @@ public enum PlayerAttackCancelAction
     LightAttack,
     HeavyAttack,
     Jump,
-    Dash
+    Dash,
+    Grapple
 }
 
 [Flags]
@@ -143,7 +146,7 @@ public class PlayerHitboxTrackDefinition
     [Tooltip("Procedural interpola os valores locais. Follow Anchors acompanha sockets do modelo sem depender deles para o tempo do ataque.")]
     public PlayerHitboxAnchorMode anchorMode =
         PlayerHitboxAnchorMode.Procedural;
-    [Tooltip("Linear interpola entre Start e End. Orbit faz a hitbox circular ao redor do centro real do player sem depender da animacao.")]
+    [Tooltip("Linear interpola entre Start e End. Orbit faz a hitbox circular ao redor do centro real do jogador. Posição do alvo assistido move a hitbox de Start até a posição do inimigo capturada no início do ataque. Exige um alvo válido dentro do alcance global; sem alvo, usa End Local Position.")]
     public PlayerHitboxTrajectoryMode trajectoryMode =
         PlayerHitboxTrajectoryMode.Linear;
     [Tooltip("ID do anchor principal quando Anchor Mode e Follow Anchors.")]
@@ -249,6 +252,8 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Min(.001f)] public float activeDuration = .1f;
     [Tooltip("Tempo de recuperacao depois do Active.")]
     [Min(0f)] public float recoveryDuration = .2f;
+    [Tooltip("Tempo ate esta definicao poder iniciar novamente, contado desde o primeiro frame do Windup. Zero desativa o cooldown.")]
+    [Min(0f)] public float cooldownDuration;
     [Tooltip("Mantem o ataque na fase Active depois do tempo normal ate o player tocar o chao. Use em Dive para a hitbox e a queda terminarem juntas.")]
     public bool holdActiveUntilGrounded;
 

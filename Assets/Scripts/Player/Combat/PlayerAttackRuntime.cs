@@ -14,11 +14,16 @@ public sealed class PlayerAttackRuntime
     public readonly float WindupActiveRotationSpeed;
     public readonly float ExtendedArmHitboxRadius;
     public readonly float ExtendedArmHitboxHeightOffset;
+    public readonly bool IsGrappleAttack;
+    public readonly EnemyBase AssistTarget;
+    public readonly Vector3 AssistTargetPosition;
+    public readonly bool HasAssistTarget;
     public bool HitConfirmed;
 
     public PlayerAttackRuntime(PlayerAttackDefinition definition, PlayerHeat heat,
         float windupActiveRotationSpeed, float extendedArmHitboxRadius,
-        float extendedArmHitboxHeightOffset)
+        float extendedArmHitboxHeightOffset, bool isGrappleAttack = false,
+        EnemyBase assistTarget = null, Vector3 assistTargetPosition = default)
     {
         Definition = definition;
         int damage = definition.baseDamage;
@@ -47,5 +52,9 @@ public sealed class PlayerAttackRuntime
         ExtendedArmHitboxHeightOffset = definition.usesExtendedArmHitbox
             ? extendedArmHitboxHeightOffset
             : 0f;
+        IsGrappleAttack = isGrappleAttack;
+        AssistTarget = assistTarget;
+        AssistTargetPosition = assistTargetPosition;
+        HasAssistTarget = assistTarget != null;
     }
 }

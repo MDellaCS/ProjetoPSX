@@ -49,6 +49,7 @@ public class EnemyBase : MonoBehaviour
     private bool initialized;
     private bool isSpawning;
     private bool isTemporarilyUntargetable;
+    private bool isGrapplePulled;
 
     private State currentState = State.Idle;
     public State CurrentState
@@ -72,6 +73,7 @@ public class EnemyBase : MonoBehaviour
         !isTemporarilyUntargetable &&
         brain != null && !brain.IsWaitingForEncounter;
     public bool IsSpawning => isSpawning;
+    public bool IsGrapplePulled => isGrapplePulled;
     public int CurrentHealth => health != null ? health.CurrentHealth : 0;
     public int MaxHealth => health != null ? health.MaxHealth : 0;
     public float ImpactWeight => movement != null
@@ -144,6 +146,8 @@ public class EnemyBase : MonoBehaviour
     private void OnEnable() => activeEnemies.Add(this);
     private void OnDisable()
     {
+        if (isGrapplePulled)
+            health?.EndGrappleStagger(0f);
         activeEnemies.Remove(this);
         EnemyDirector.ReleaseEnemy(this);
         EnemySpecialAttackQueue.Release(this);
@@ -155,6 +159,10 @@ public class EnemyBase : MonoBehaviour
     internal void CancelGuardForAirborne() => guard?.CancelForAirborne();
     internal void CancelGuardForDodge() => guard?.CancelForDodge();
     internal void EndStaggerForDodge() => health?.EndStaggerForDodge();
+    internal void SetGrapplePulled(bool value) => isGrapplePulled = value;
+    public void BeginGrappleStagger() => health?.BeginGrappleStagger();
+    public void EndGrappleStagger(float recoveryDuration) =>
+        health?.EndGrappleStagger(recoveryDuration);
     internal void CancelDodge() => dodge?.CancelDodge();
     internal void CancelTaunt() => taunt?.CancelTaunt();
     internal void OnDodgeHopCompleted(float tauntChanceBonus,
@@ -240,7 +248,8 @@ public class EnemyBase : MonoBehaviour
                 movement.Move(Vector3.zero);
                 break;
             case State.Staggered:
-                guard?.TickStaggerGuard();
+                if (!isGrapplePulled)
+                    guard?.TickStaggerGuard();
                 if (CurrentState == State.Staggered)
                 {
                     health.TickStagger();

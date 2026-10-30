@@ -16,7 +16,9 @@ public class PlayerState : MonoBehaviour
         Burning = 9,
         BurnPreExplosion = 10,
         Rage = 11,
-        HeavyStagger = 12
+        HeavyStagger = 12,
+        Swinging = 13,
+        GrapplePulling = 14
     }
 
     [Header("Debug - State Colors")]
@@ -48,6 +50,8 @@ public class PlayerState : MonoBehaviour
     public bool IsStaggered() => currentState == State.Stagger ||
         currentState == State.HeavyStagger;
     public bool IsHeavyStaggered() => currentState == State.HeavyStagger;
+    public bool IsSwinging() => currentState == State.Swinging;
+    public bool IsGrapplePulling() => currentState == State.GrapplePulling;
     public bool IsBurnStunned() => currentState == State.BurnStunned;
     public bool IsBurning() => currentState == State.Burning;
     public bool IsBurnPreExplosion() => currentState == State.BurnPreExplosion;
@@ -122,6 +126,8 @@ public class PlayerState : MonoBehaviour
         {
             case State.Normal:
             case State.Rage:
+            case State.Swinging:
+            case State.GrapplePulling:
                 break;
 
             case State.Attacking:

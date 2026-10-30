@@ -11,11 +11,13 @@ public sealed class PlayerHitboxController : MonoBehaviour
     private readonly Dictionary<(PlayerAttackStrikeDefinition, int), HashSet<IPlayerAttackTarget>> utilityGroupHits = new();
     private readonly Dictionary<(PlayerHitboxTrackDefinition, IPlayerAttackTarget), float> utilityRepeatTimes = new();
     private readonly HashSet<PlayerAttackStrikeDefinition> startedStrikes = new();
+    private readonly HashSet<PlayerHitboxTrackDefinition> activeTrackWindows = new();
     private readonly Dictionary<(PlayerHitboxTrackDefinition, EnemyBase), float> repeatTimes = new();
     private readonly Collider[] overlapBuffer = new Collider[64];
     private readonly List<DebugVolume> debugVolumes = new();
     private PlayerAttackRuntime runtime;
     private PlayerAttackResolver resolver;
+    private PlayerAttackAudioController attackAudio;
     private PlayerCharacterController characterController;
 
     private struct DebugVolume { public PlayerHitboxShape shape; public Vector3 center, a, b, size; public Quaternion rotation; public float radius; }
@@ -23,6 +25,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
     private void Awake()
     {
         resolver = GetComponent<PlayerAttackResolver>();
+        attackAudio = GetComponent<PlayerAttackAudioController>();
         characterController = GetComponent<PlayerCharacterController>();
         foreach (PlayerHitboxAnchor anchor in GetComponentsInChildren<PlayerHitboxAnchor>(true))
             if (anchor != null && !string.IsNullOrWhiteSpace(anchor.AnchorId)) anchors[anchor.AnchorId] = anchor;
@@ -31,18 +34,57 @@ public sealed class PlayerHitboxController : MonoBehaviour
     public void Begin(PlayerAttackRuntime attack)
     {
         runtime = attack; trackStates.Clear(); groupHits.Clear(); utilityGroupHits.Clear(); repeatTimes.Clear(); utilityRepeatTimes.Clear();
-        startedStrikes.Clear(); debugVolumes.Clear();
+        startedStrikes.Clear(); activeTrackWindows.Clear(); debugVolumes.Clear();
     }
-    public void End() { runtime = null; debugVolumes.Clear(); trackStates.Clear(); }
+    public void End()
+    {
+        runtime = null;
+        activeTrackWindows.Clear();
+        debugVolumes.Clear();
+        trackStates.Clear();
+    }
 
     public void Tick(float activeProgress)
     {
         if (runtime == null) return;
         PlayerAttackRuntime activeRuntime = runtime;
         debugVolumes.Clear();
+        activeTrackWindows.Clear();
         foreach (PlayerAttackStrikeDefinition strike in activeRuntime.Definition.strikes)
         {
-            if (strike == null || activeProgress < strike.activeStartNormalized || activeProgress > strike.activeEndNormalized) continue;
+            if (strike == null || activeProgress < strike.activeStartNormalized ||
+                activeProgress > strike.activeEndNormalized ||
+                strike.hitboxes == null)
+            {
+                continue;
+            }
+
+            float strikeProgress = Mathf.InverseLerp(
+                strike.activeStartNormalized, strike.activeEndNormalized,
+                activeProgress);
+            foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
+            {
+                if (track != null &&
+                    strikeProgress >= track.activeStartNormalized &&
+                    strikeProgress <= track.activeEndNormalized)
+                {
+                    activeTrackWindows.Add(track);
+                }
+            }
+        }
+
+        attackAudio ??= GetComponent<PlayerAttackAudioController>();
+        attackAudio?.SyncActiveHitboxTracks(activeRuntime,
+            activeTrackWindows);
+
+        foreach (PlayerAttackStrikeDefinition strike in activeRuntime.Definition.strikes)
+        {
+            if (strike == null || strike.hitboxes == null ||
+                activeProgress < strike.activeStartNormalized ||
+                activeProgress > strike.activeEndNormalized)
+            {
+                continue;
+            }
             if (startedStrikes.Add(strike))
             {
                 if (strike.effects.selfLaunchDown)
@@ -180,7 +222,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
                 Vector3 utilityImpact = GetSafeImpactPoint(overlapBuffer[i],
                     hitboxCenter);
                 resolver.ResolveUtilityTarget(runtime, strike, target,
-                    utilityImpact, impactDirection);
+                    utilityImpact, impactDirection, track, overlapBuffer[i]);
                 continue;
             }
             var key = (track, enemy);
@@ -190,7 +232,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
             Vector3 impactPosition = GetSafeImpactPoint(overlapBuffer[i],
                 hitboxCenter);
             resolver.Resolve(runtime, strike, enemy, attackReach, impactPosition,
-                impactDirection);
+                impactDirection, track, overlapBuffer[i]);
         }
     }
 
@@ -292,6 +334,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
                 effectiveRadius, out a, out b);
             return;
         }
+        Vector3 origin = GetPlayerCenter();
         Vector3 local;
         if (track.trajectoryMode == PlayerHitboxTrajectoryMode.Orbit)
         {
@@ -306,15 +349,26 @@ public sealed class PlayerHitboxController : MonoBehaviour
                 track.orbitHeight, Mathf.Cos(angle) * distance);
             effectiveRadius = Mathf.Max(.01f, Mathf.LerpUnclamped(
                 track.orbitStartRadius, track.orbitEndRadius, radiusProgress));
+            center = origin + transform.rotation * local;
+        }
+        else if (track.trajectoryMode ==
+            PlayerHitboxTrajectoryMode.TargetAssist &&
+            runtime != null && runtime.HasAssistTarget)
+        {
+            Vector3 start = origin +
+                transform.rotation * track.startLocalPosition;
+            center = Vector3.Lerp(start, runtime.AssistTargetPosition,
+                progress);
+            effectiveRadius = track.radius;
         }
         else
         {
             local = Vector3.Lerp(track.startLocalPosition,
                 track.endLocalPosition, progress);
             effectiveRadius = track.radius;
+            center = origin + transform.rotation * local;
         }
-        Vector3 origin = GetPlayerCenter();
-        center = origin + transform.rotation * local;
+
         rotation = transform.rotation * Quaternion.Euler(Vector3.Lerp(track.startLocalEuler, track.endLocalEuler, progress));
         GetCapsuleEndpoints(track, center, rotation, effectiveRadius,
             out a, out b);

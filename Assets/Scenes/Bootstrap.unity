@@ -149,6 +149,10 @@ GameObject:
   - component: {fileID: 825647891}
   - component: {fileID: 825647890}
   - component: {fileID: 825647909}
+  - component: {fileID: 825647912}
+  - component: {fileID: 825647913}
+  - component: {fileID: 825647914}
+  - component: {fileID: 825647915}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -618,7 +622,7 @@ MonoBehaviour:
   maximumColdTemperature: -6
   maximumColdSaturation: -30
   maximumColdContrast: -8
-  playerCenteredFogEnabled: 1
+  playerCenteredFogEnabled: 0
   playerCenteredFogColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
   playerCenteredFogStartRadius: 0
   playerCenteredFogEndRadius: 170
@@ -1481,6 +1485,7 @@ MonoBehaviour:
   airMaxSpeedMultiplier: 1
   airDrag: 8
   enemyHeadSeparationSpeed: 10
+  interactionWeight: 5
   cameraTransform: {fileID: 330585546}
 --- !u!114 &825647909
 MonoBehaviour:
@@ -1575,6 +1580,167 @@ MonoBehaviour:
   stepHeight: 0.3
   groundSnapDistance: 0.18
   copyLegacyControllerSettings: 0
+--- !u!114 &825647912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9232b504aa6f456cb0818eed5092b4b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackAudioController
+--- !u!114 &825647913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0868d51275af4c26ac2a872c55feb1b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerGrappleAttackController
+  attackDefinition: {fileID: 11400000, guid: f985f7c3642c44b4c8f83801acf329a3, type: 2}
+  targetAssistRange: 16
+  targetAssistAngle: 55
+  targetAssistNearAngle: 90
+  targetObstructionMask:
+    serializedVersion: 2
+    m_Bits: 243
+  useTargetAssist: 1
+  pullStopDistance: 3
+  lighterEnemyPullSpeed: 35
+  heavierEnemyPullSpeed: 35
+  postPullStaggerDuration: 0.05
+--- !u!114 &825647914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78f41abffc2f4ff3ba9fe73b4c118cc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerSwingController
+  swingKey: 20
+  releaseOnJump: 1
+  minimumAnchorHeight: 0
+  cameraViewportMargin: 0.03
+  obstructionMask:
+    serializedVersion: 2
+    m_Bits: 243
+  anchorSurfaceTolerance: 0.25
+  swingCycleDuration: 2.5
+  swingAngleAmplitude: 35
+  swingMotionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 6.283
+      outSlope: 6.283
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.25
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.5
+      value: 0
+      inSlope: -6.283
+      outSlope: -6.283
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.75
+      value: -1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 6.283
+      outSlope: 6.283
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  jumpReleaseUpwardSpeed: 0
+  faceSwingDirection: 0
+  swingRotationSpeed: 540
+  detachOnWorldCollision: 1
+  ropeRenderer: {fileID: 0}
+  ropeAttachOffset: {x: 0, y: 1.5, z: 0}
+  ropeWidth: 0.08
+  ropeColor: {r: 1, g: 0, b: 0.18937719, a: 1}
+  gameplayCamera: {fileID: 0}
+--- !u!114 &825647915
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0936a69cb783462fbfa6b3856689d0c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerTargetAssist
+  targetAssistEnabled: 1
+  targetAssistRange: 20
+  targetAssistAngle: 20
+  targetAssistNearAngle: 35
+  targetAssistNearAngleDistanceCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  targetObstructionMask:
+    serializedVersion: 2
+    m_Bits: 243
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -2933,6 +3099,10 @@ PrefabInstance:
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 330585546}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: interactionWeight
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: momentumDeceleration
       value: 39
