@@ -70,7 +70,7 @@ public class PlayerMovement : MonoBehaviour
     [Min(2f)] public float terminalFallSpeed = 30f;
 
     [Header("Jump")]
-    [Tooltip("Velocidade vertical adicional por segundo enquanto o botao de pulo permanece pressionado.")]
+    [Tooltip("Aceleracao vertical adicional enquanto o botao de pulo permanece pressionado. Soltar o botao encerra a subida imediatamente.")]
     [Min(0f)] public float jumpHoldAcceleration = 40f;
     [Tooltip("Tempo maximo em que segurar pulo aumenta sua altura.")]
     [Min(0f)] public float maxJumpHoldDuration = 0.25f;
@@ -616,13 +616,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void UpdateVerticalVelocity()
     {
-        if (isLaunched && controller.isGrounded && verticalVelocity < 0f)
-        {
-            isLaunched = false;
-            verticalVelocity = -2f;
-            jumpHoldTimer = 0f;
-        }
-
         if (playerState.IsDashing())
         {
             // Dash iniciado no chao mantem uma pequena pressao para baixo,
@@ -699,15 +692,29 @@ public class PlayerMovement : MonoBehaviour
 
     private void ApplyJumpHold()
     {
-        if (!GameInput.JumpHeld ||
-            jumpHoldTimer <= 0f ||
-            verticalVelocity <= 0f)
+        if (jumpHoldTimer <= 0f)
         {
             return;
         }
 
-        verticalVelocity += jumpHoldAcceleration * Time.deltaTime;
-        jumpHoldTimer -= Time.deltaTime;
+        if (verticalVelocity <= 0f)
+        {
+            jumpHoldTimer = 0f;
+            return;
+        }
+
+        if (!GameInput.JumpHeld)
+        {
+            // Soltar durante a janela variavel encerra a subida neste frame.
+            // A gravidade aplicada em seguida inicia a queda imediatamente.
+            verticalVelocity = 0f;
+            jumpHoldTimer = 0f;
+            return;
+        }
+
+        float deltaTime = Time.deltaTime;
+        verticalVelocity += jumpHoldAcceleration * deltaTime;
+        jumpHoldTimer = Mathf.Max(0f, jumpHoldTimer - deltaTime);
     }
 
     private Vector3 CalculateHorizontalVelocity()
@@ -1148,6 +1155,18 @@ public class PlayerMovement : MonoBehaviour
             velocity * Time.deltaTime
         );
 
+        // Usa o contato confirmado pelo Move para encerrar o Launch Up. A
+        // propriedade controller.isGrounded pode refletir o contato anterior
+        // por um frame e cortar a trajetoria antes de o player realmente
+        // aterrissar, diferente do latch de contato usado pelos inimigos.
+        if (isLaunched && verticalVelocity <= 0f &&
+            (collisionFlags & CollisionFlags.Below) != 0)
+        {
+            isLaunched = false;
+            verticalVelocity = -2f;
+            jumpHoldTimer = 0f;
+        }
+
         // CharacterController so confirma o chao depois deste Move. Encerrar
         // aqui evita que um clique capturado no mesmo frame do pouso seja
         // usado para continuar uma rota aerea.
@@ -1490,7 +1509,7 @@ public class PlayerMovement : MonoBehaviour
 
         // O hold so fornece impulso enquanto o player ainda sobe. Se a
         // gravidade vencer antes do limite, usamos apenas esse trecho real.
-        if (accelerationDuringHold < 0f && initialJumpSpeed > 0f)
+        if (accelerationDuringHold < 0f)
         {
             holdDuration = Mathf.Min(
                 holdDuration,
@@ -1498,10 +1517,15 @@ public class PlayerMovement : MonoBehaviour
             );
         }
 
-        float speedAfterHold = initialJumpSpeed +
-            accelerationDuringHold * holdDuration;
-        float heightDuringHold = initialJumpSpeed * holdDuration +
-            .5f * accelerationDuringHold * holdDuration * holdDuration;
+        float speedAfterHold = Mathf.Max(
+            0f,
+            initialJumpSpeed + accelerationDuringHold * holdDuration
+        );
+        float heightDuringHold = Mathf.Max(
+            0f,
+            initialJumpSpeed * holdDuration +
+            .5f * accelerationDuringHold * holdDuration * holdDuration
+        );
         float gravityMagnitude = Mathf.Max(.001f, Mathf.Abs(gravity));
 
         float heightAfterHold = speedAfterHold > 0f
@@ -1512,16 +1536,20 @@ public class PlayerMovement : MonoBehaviour
 
     public void ApplySelfLaunchUp(float initialSpeed, float gravity)
     {
-        // Uma fonte externa pode colocar o player em uma trajetoria identica a de um inimigo lancado, sem depender de um ataque especifico.
-        // Launch Up e uma trajetoria vertical intencional: ele limpa qualquer momentum horizontal anterior antes de aplicar o impulso para cima.
+        // Igual ao Launch Up do inimigo, limpa forças concorrentes e mantém
+        // o estado aereo ate o CharacterController confirmar o pouso.
         horizontalVelocity = Vector3.zero;
         launchForwardsVelocity = Vector3.zero;
         launchForwardsDeceleration = 0f;
+        CancelStaggerPush();
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
+        isAerialDiving = false;
+        aerialDiveFallSpeed = 0f;
         jumpHoldTimer = 0f;
         verticalVelocity = initialSpeed;
         launchGravity = gravity;
         isLaunched = true;
+        wasAirborne = true;
     }
 }

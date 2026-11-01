@@ -427,6 +427,7 @@ public sealed class EnemyHealth : MonoBehaviour
         Vector3 particleImpactDirection)
     {
         if (IsDead) return;
+        GetComponent<PracticeDummy>()?.CreateRespawnInstance();
         IsDead = true;
         GetComponentInChildren<EnemyBodyPartDeathParticles>(true)?.EmitDeathParts(
             particleImpactDirection, lethalDamage);

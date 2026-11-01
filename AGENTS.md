@@ -8,3 +8,4 @@
 - As mecânicas devem priorizar agressividade extrema e recompensar decisões de risco.
 - "F3" ou "o F3" referencia a tela de debug com valores do jogo/jogador. Quando criar um gizmo, exiba-o quando em F3.
 - Ao adicionar novos atributos expostos no Inspector, sempre incluir tooltips explicativos em portugues, descrevendo seu efeito no jogo.
+- Sempre executar os testes e validacoes apropriados depois de alterar codigo. Se nao houver teste automatizado para o comportamento, criar ou executar uma verificacao adequada e informar claramente qualquer limitacao.

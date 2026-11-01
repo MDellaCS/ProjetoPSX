@@ -696,6 +696,17 @@ public sealed class EnemyBrain : MonoBehaviour
         repositionMode = RepositionMode.None;
     }
 
+    internal void ResetForPracticeDummy()
+    {
+        isChasing = false;
+        CancelReposition();
+        tacticalIdleTimer = 0f;
+        commitmentTimer = 0f;
+        commitmentCooldownTimer = 0f;
+        lastKnownSearchTimer = 0f;
+        decisionTimer = 0f;
+    }
+
     public void SetEncounterEngaged(Transform encounterPlayer)
     {
         if (encounterPlayer == null || owner.IsDead)

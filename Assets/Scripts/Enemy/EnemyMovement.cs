@@ -70,6 +70,7 @@ public sealed class EnemyMovement : MonoBehaviour
     private bool hasGroundContact;
     private bool temporarilyIgnoreGroundEntitySeparation;
     private bool grapplePullActive;
+    private bool suppressAuthoredMovement;
     private Vector3 grapplePullVelocity;
     private readonly HashSet<EnemyBase> bodyImpactTargets = new();
     private readonly Collider[] bodyImpactOverlapBuffer = new Collider[64];
@@ -145,7 +146,8 @@ public sealed class EnemyMovement : MonoBehaviour
             isLaunchedForwards ? launchForwardsVelocity :
             playerHeadSeparationTimer > 0f ? playerHeadSeparationVelocity :
             hasSlideLaunchHorizontalImpulse ? slideLaunchHorizontalVelocity :
-            knockbackTimer > 0f ? knockbackVelocity : horizontalVelocity;
+            knockbackTimer > 0f ? knockbackVelocity :
+            suppressAuthoredMovement ? Vector3.zero : horizontalVelocity;
 
         playerHeadSeparationTimer = Mathf.Max(0f, playerHeadSeparationTimer - Time.deltaTime);
         knockbackTimer = Mathf.Max(0f, knockbackTimer - Time.deltaTime);
@@ -193,6 +195,31 @@ public sealed class EnemyMovement : MonoBehaviour
                 brain.DecideImmediately();
             }
         }
+    }
+
+    public void SetAuthoredMovementSuppressed(bool suppressed) =>
+        suppressAuthoredMovement = suppressed;
+
+    public void ResetForPracticeDummy(Vector3 position, Quaternion rotation)
+    {
+        if (controller != null)
+            controller.enabled = false;
+        transform.SetPositionAndRotation(position, rotation);
+        if (controller != null)
+            controller.enabled = true;
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+        playerHeadSeparationVelocity = Vector3.zero;
+        playerHeadSeparationTimer = 0f;
+        CancelSlideLaunchHorizontalImpulse();
+        ResetLaunchForwards();
+        ResetJuggleMovement();
+        grapplePullActive = false;
+        grapplePullVelocity = Vector3.zero;
+        isLaunched = false;
+        verticalVelocity = 0f;
+        hasGroundContact = controller != null && controller.isGrounded;
+        lastMoveVelocity = Vector3.zero;
     }
 
     /// <summary>

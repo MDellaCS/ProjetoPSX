@@ -1748,6 +1748,91 @@ MonoBehaviour:
   interactionRange: 50.2
   ropeLength: 4.98
   debugGizmoRadius: 1
+--- !u!1001 &1611627900
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 26
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -10
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7231791797390308556, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7502535439468429065, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      propertyPath: m_Name
+      value: LimpRagDoll
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7502535439468429065, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1615762306}
+  m_SourcePrefab: {fileID: 100100000, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+--- !u!1 &1615762288 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7502535439468429065, guid: 5960031cb38a4024993f76956a1e5136, type: 3}
+  m_PrefabInstance: {fileID: 1611627900}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1615762306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1615762288}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d093acd7a7f4eb583a66905e2d9ccf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PracticeDummy
+  preventSelfMovement: 1
+  allowAttacks: 1
+  allowDodging: 1
+  allowBlocking: 1
+  returnToStart: 1
+  returnInterval: 5
+  respawnWhenKilled: 1
+  respawnDelay: 1
 --- !u!1 &1836985209
 GameObject:
   m_ObjectHideFlags: 0
@@ -2013,3 +2098,4 @@ SceneRoots:
   - {fileID: 1872013475}
   - {fileID: 1836985210}
   - {fileID: 95523969}
+  - {fileID: 1611627900}

@@ -45,6 +45,7 @@ public class EnemyBase : MonoBehaviour
     private EnemyDodge dodge;
     private EnemyTaunt taunt;
     private EnemyReactionController reactions;
+    private PracticeDummy practiceDummy;
     private CharacterController characterController;
     private bool initialized;
     private bool isSpawning;
@@ -123,6 +124,7 @@ public class EnemyBase : MonoBehaviour
         guard = GetComponent<EnemyGuard>();
         dodge = GetComponent<EnemyDodge>();
         taunt = GetComponent<EnemyTaunt>();
+        practiceDummy = GetComponent<PracticeDummy>();
         reactions = GetOrAdd<EnemyReactionController>();
 
         movement.Initialize(this, health);
@@ -264,7 +266,8 @@ public class EnemyBase : MonoBehaviour
     protected virtual void TickEnemySpecificSystems() { }
     protected virtual void UpdateVerticalMovement(EnemyMovement locomotion) =>
         locomotion.ApplyGravity();
-    protected virtual bool CanUseAttack(EnemyAttackDefinition attack) => true;
+    protected virtual bool CanUseAttack(EnemyAttackDefinition attack) =>
+        practiceDummy == null || practiceDummy.AllowAttacks;
     protected virtual bool TryChooseSpecialCombatAction() => false;
     protected virtual void OnAttackStarted(EnemyAttackDefinition attack) { }
     protected virtual void OnAttackActiveStarted(EnemyAttackDefinition attack) { }
@@ -275,6 +278,20 @@ public class EnemyBase : MonoBehaviour
 
     internal bool CanSelectAttack(EnemyAttackDefinition attack) =>
         CanUseAttack(attack);
+    internal bool CanPracticeDummyDodge => practiceDummy == null ||
+        practiceDummy.AllowDodging;
+    internal bool CanPracticeDummyBlock => practiceDummy == null ||
+        practiceDummy.AllowBlocking;
+
+    public void ResetPracticeDummyState()
+    {
+        EnsureInitialized();
+        if (practiceDummy != null)
+        {
+            brain?.ResetForPracticeDummy();
+            CurrentState = State.Idle;
+        }
+    }
     internal bool ChooseSpecialCombatAction() => TryChooseSpecialCombatAction();
     internal void NotifyAttackStarted(EnemyAttackDefinition attack) =>
         OnAttackStarted(attack);

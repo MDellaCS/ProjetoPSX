@@ -79,6 +79,8 @@ public sealed class EnemyGuard : MonoBehaviour
         cooldownTimer = Mathf.Max(0f, cooldownTimer - Time.deltaTime);
     }
 
+    internal void CancelGuardForPracticeDummy() => EndGuard();
+
     internal bool TryStartGuardFromDecision()
     {
         if (!CanStartGuard(allowStagger: false) ||
@@ -114,6 +116,7 @@ public sealed class EnemyGuard : MonoBehaviour
     private bool CanStartGuard(bool allowStagger)
     {
         if (owner == null || brain == null || health == null || owner.IsDead ||
+            !owner.CanPracticeDummyBlock ||
             owner.CurrentState == EnemyBase.State.Taunting ||
             cooldownTimer > 0f || brain.Target == null || movement == null ||
             !movement.IsGrounded || movement.IsLaunched)

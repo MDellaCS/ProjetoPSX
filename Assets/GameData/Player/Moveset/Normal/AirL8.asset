@@ -93,7 +93,7 @@ MonoBehaviour:
       selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
-      juggle: 0
+      juggle: 1
     hitboxes:
     - trackName: AirL8_Dive
       shape: 0

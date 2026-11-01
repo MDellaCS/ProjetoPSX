@@ -164,9 +164,14 @@ public sealed class PlayerCharacterController : MonoBehaviour
                 hasGroundContact = true;
                 grounded = Vector3.Angle(groundNormal, Vector3.up) <= slopeLimit;
             }
+            // Step-up e permitido apenas em obstaculos baixos. Uma parede
+            // vertical pode produzir uma normal levemente inclinada por
+            // causa da capsula/esfera do cast; validamos a altura real do
+            // ponto de contato antes de tentar subir.
             if (wasGrounded && (hitFlag & CollisionFlags.Sides) != 0 &&
                 hit.collider.GetComponentInParent<EnemyBase>() == null &&
-                stepHeight > 0f && TryStep(ref remaining))
+                stepHeight > 0f && IsLowStepContact(hit) &&
+                TryStep(ref remaining))
             {
                 remaining = Vector3.zero;
                 break;
@@ -314,6 +319,13 @@ public sealed class PlayerCharacterController : MonoBehaviour
         lastCollisionFlags |= CollisionFlags.Below;
         remaining = Vector3.zero;
         return true;
+    }
+
+    private bool IsLowStepContact(RaycastHit hit)
+    {
+        GetWorldCapsule(out Vector3 bottom, out _, out _);
+        float contactHeight = hit.point.y - bottom.y;
+        return contactHeight <= stepHeight + skinWidth;
     }
 
     private void ProbeGround(bool allowSnap = false)

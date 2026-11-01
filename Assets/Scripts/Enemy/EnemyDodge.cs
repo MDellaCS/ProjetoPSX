@@ -83,7 +83,8 @@ public sealed class EnemyDodge : MonoBehaviour
 
     internal bool TryAvoidPlayerAttack(float attackReach, int incomingDamage)
     {
-        if (!isActiveAndEnabled)
+        if (!isActiveAndEnabled || owner == null ||
+            !owner.CanPracticeDummyDodge)
             return false;
         if (owner != null && owner.CurrentState == EnemyBase.State.Taunting)
             return false;
