@@ -32,6 +32,8 @@
 
 ## Outros itens existentes
 
+- Combate (Pending): remover completamente os ataques de Pause das cadeias e todo o codigo residual de Pause Input, incluindo regras de transicao, temporizadores, campos de Inspector, assets e testes relacionados. Fazer essa limpeza como uma tarefa dedicada, preservando as demais rotas dos movesets.
+
 - Dialogo/Cutscene (Pending): integrar DialogueController a Timeline. Um Signal deve abrir uma fala modal, pausar somente o PlayableDirector, retomar a Timeline ao confirmar e concluir corretamente quando a cutscene for pulada. Nao implementar ate a proxima iteracao de dialogos em cutscene.
 
 - Programação (Pending): refatorar `PlayerMovement` sem mudar gameplay. Manter `PlayerMovement` como fachada/orquestrador e único dono de `CharacterController.Move`; extrair responsabilidades para `PlayerMovementMotor`, `PlayerGrounding`, `PlayerLocomotion`, `PlayerDash`, `PlayerJump` e `PlayerCrouchSlide`. Migrar em etapas, preservando a API pública usada por combate e outros sistemas.

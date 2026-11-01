@@ -180,6 +180,8 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     [Min(0f)] [SerializeField] private float impactDamagePerIntensity = 15f;
     [Tooltip("Poise causado por cada unidade de intensidade de impacto calculada pela massa e velocidade relativa.")]
     [Min(0f)] [SerializeField] private float impactPoisePerIntensity = 20f;
+    [Tooltip("Intervalo global, por inimigo, entre aplicacoes de dano e Poise por colisao. Durante a protecao a fisica, o deslocamento e o stagger do impacto continuam funcionando normalmente.")]
+    [Min(0f)] [SerializeField] private float enemyCollisionDamageProtectionDuration = .5f;
     [Tooltip("Tempo de Stagger aplicado apos um Wall Splat ou Floor Splat. Colisoes entre inimigos usam a reacao de Poise normal.")]
     [Min(0f)] [SerializeField] private float staticImpactStunDuration = 3f;
     [Tooltip("Camadas que contam como superficies estaticas para Wall Splat. O chao usa a mesma fisica ao pousar apos um Launch.")]
@@ -202,6 +204,8 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     public float PlayerLaunchBodyImpactAssistRange =>
         playerLaunchBodyImpactAssistRange;
     public float MinimumImpactSpeed => minimumImpactSpeed;
+    public float EnemyCollisionDamageProtectionDuration =>
+        enemyCollisionDamageProtectionDuration;
     public float StaticImpactStunDuration => staticImpactStunDuration;
     public LayerMask StaticImpactLayers => staticImpactLayers;
     public float MinimumLaunchForce => Mathf.Min(minimumLaunchForce, maximumLaunchForce);

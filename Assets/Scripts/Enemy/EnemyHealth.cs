@@ -71,6 +71,7 @@ public sealed class EnemyHealth : MonoBehaviour
     private bool grappleStaggerLocked;
     private bool isShowingGuardVisual;
     private float unkillableHealthRegenRemainder;
+    private float nextCollisionDamageTime;
 
     private void Awake()
     {
@@ -84,6 +85,18 @@ public sealed class EnemyHealth : MonoBehaviour
     public int MaxPoise => maxPoise;
     public float HealthPercent => maxHealth > 0
         ? Mathf.Clamp01((float)CurrentHealth / maxHealth) : 0f;
+
+    /// <summary>Limita dano e Poise de colisao sem interferir na reacao fisica.</summary>
+    internal bool TryConsumeCollisionDamageProtection(float duration)
+    {
+        if (duration <= 0f)
+            return true;
+        if (Time.time < nextCollisionDamageTime)
+            return false;
+
+        nextCollisionDamageTime = Time.time + duration;
+        return true;
+    }
 
     internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
         EnemyMovement locomotion, EnemyAttackController attackController,

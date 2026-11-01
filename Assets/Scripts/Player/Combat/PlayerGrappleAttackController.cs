@@ -59,6 +59,8 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
     private const int StationaryPullFramesBeforeAbort = 3;
 
     public bool IsPulling => isPulling;
+    public bool CanStartGrappleAttack => attackDefinition != null &&
+        attacks != null && attacks.CanStartAttack(attackDefinition);
 
     private void Awake()
     {

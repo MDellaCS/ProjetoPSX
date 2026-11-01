@@ -24,6 +24,9 @@ public class PlayerInputBuffer : MonoBehaviour
     private PlayerBufferedInput bufferedInput;
     private float expirationTime = -1f;
     private float capturedTime = -1f;
+    private int bufferedAttackPressSequence;
+    private int lightAttackPressSequence;
+    private int heavyAttackPressSequence;
     private int lastCapturedFrame = -1;
     private int ignoreInputThroughFrame = -1;
     private PlayerState playerState;
@@ -33,6 +36,33 @@ public class PlayerInputBuffer : MonoBehaviour
     public bool HasMouseDevice => Mouse.current != null;
     public int LightPressesDetected { get; private set; }
     public int HeavyPressesDetected { get; private set; }
+
+    public bool TryGetBufferedAttackGesture(PlayerBufferedInput input,
+        out int pressSequence, out float pressedAt)
+    {
+        if ((input != PlayerBufferedInput.LightAttack &&
+             input != PlayerBufferedInput.HeavyAttack) ||
+            !HasBuffered(input))
+        {
+            pressSequence = 0;
+            pressedAt = -1f;
+            return false;
+        }
+
+        pressSequence = bufferedAttackPressSequence;
+        pressedAt = capturedTime;
+        return pressSequence > 0;
+    }
+
+    public int GetLatestAttackPressSequence(PlayerAttackInput input) =>
+        input == PlayerAttackInput.Light
+            ? lightAttackPressSequence
+            : heavyAttackPressSequence;
+
+    public bool IsAttackButtonHeld(PlayerAttackInput input) =>
+        (input == PlayerAttackInput.Light
+            ? GameInput.LightHeld
+            : GameInput.HeavyHeld);
 
     private void OnEnable() => GamePauseController.PauseChanged += OnPauseChanged;
     private void OnDisable() => GamePauseController.PauseChanged -= OnPauseChanged;
@@ -104,6 +134,7 @@ public class PlayerInputBuffer : MonoBehaviour
 
         expirationTime = -1f;
         capturedTime = -1f;
+        bufferedAttackPressSequence = 0;
         return true;
     }
 
@@ -135,6 +166,11 @@ public class PlayerInputBuffer : MonoBehaviour
 
         expirationTime = -1f;
         capturedTime = -1f;
+        bufferedAttackPressSequence = 0;
+        if (input == PlayerBufferedInput.LightAttack)
+            lightAttackPressSequence++;
+        else if (input == PlayerBufferedInput.HeavyAttack)
+            heavyAttackPressSequence++;
     }
 
     public bool TryGetBufferedTimestamp(PlayerBufferedInput input,
@@ -169,6 +205,9 @@ public class PlayerInputBuffer : MonoBehaviour
     {
         expirationTime = -1f;
         capturedTime = -1f;
+        bufferedAttackPressSequence = 0;
+        lightAttackPressSequence++;
+        heavyAttackPressSequence++;
         lastCapturedFrame = Time.frameCount;
         if (ignoreNextFrame)
             ignoreInputThroughFrame = Time.frameCount + 1;
@@ -177,6 +216,9 @@ public class PlayerInputBuffer : MonoBehaviour
     /// <summary>Remove somente ataques pendentes, preservando pulo e dash.</summary>
     public void ClearBufferedAttackInputs()
     {
+        bufferedAttackPressSequence = 0;
+        lightAttackPressSequence++;
+        heavyAttackPressSequence++;
         ClearExpiredInput();
         if (bufferedInput != PlayerBufferedInput.LightAttack &&
             bufferedInput != PlayerBufferedInput.HeavyAttack)
@@ -200,14 +242,16 @@ public class PlayerInputBuffer : MonoBehaviour
 
         if (!DialogueController.BlocksPlayerAttacks && GameInput.LightPressed)
         {
+            lightAttackPressSequence++;
             LightPressesDetected++;
-            Buffer(PlayerBufferedInput.LightAttack);
+            Buffer(PlayerBufferedInput.LightAttack, lightAttackPressSequence);
         }
 
         if (!DialogueController.BlocksPlayerAttacks && GameInput.HeavyPressed)
         {
+            heavyAttackPressSequence++;
             HeavyPressesDetected++;
-            Buffer(PlayerBufferedInput.HeavyAttack);
+            Buffer(PlayerBufferedInput.HeavyAttack, heavyAttackPressSequence);
         }
 
         if (GameInput.JumpPressed)
@@ -224,7 +268,7 @@ public class PlayerInputBuffer : MonoBehaviour
 
     }
 
-    private void Buffer(PlayerBufferedInput input)
+    private void Buffer(PlayerBufferedInput input, int attackPressSequence = 0)
     {
         ClearExpiredInput();
         if (expirationTime >= Time.time)
@@ -232,6 +276,7 @@ public class PlayerInputBuffer : MonoBehaviour
 
         bufferedInput = input;
         capturedTime = Time.time;
+        bufferedAttackPressSequence = attackPressSequence;
         expirationTime = Time.time + bufferDuration;
     }
 
@@ -256,6 +301,7 @@ public class PlayerInputBuffer : MonoBehaviour
         {
             expirationTime = -1f;
             capturedTime = -1f;
+            bufferedAttackPressSequence = 0;
         }
     }
 

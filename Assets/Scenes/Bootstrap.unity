@@ -1614,8 +1614,8 @@ MonoBehaviour:
     m_Bits: 243
   useTargetAssist: 1
   pullStopDistance: 1
-  lighterEnemyPullSpeed: 35
-  heavierEnemyPullSpeed: 35
+  lighterEnemyPullSpeed: 50
+  heavierEnemyPullSpeed: 30
   postPullStaggerDuration: 0.05
 --- !u!114 &825647914
 MonoBehaviour:
@@ -1947,22 +1947,23 @@ MonoBehaviour:
   poiseRegenDelay: 3
   poiseRegenMaxPercentPerSecond: 10
   poiseRegenFlatPerSecond: 10
-  launchForwardsForcePerDamageDealt: 0.07
-  minimumLaunchForce: 13
-  maximumLaunchForce: 48
-  launchForwardsDeceleration: 47
+  launchForwardsForcePerDamageDealt: 0.1
+  minimumLaunchForce: 35
+  maximumLaunchForce: 100
+  launchForwardsDeceleration: 120
   playerLaunchBodyImpactAssistAngle: 80
   playerLaunchBodyImpactAssistRange: 40
   minimumImpactSpeed: 25
   impactDamagePerIntensity: 20
   impactPoisePerIntensity: 30
+  enemyCollisionDamageProtectionDuration: 0.3
   staticImpactStunDuration: 2
   staticImpactLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  juggleLiftSpeed: 2
-  juggleGravityMultiplier: 0.3
-  juggleDuration: 0.15
+  juggleLiftSpeed: 1.97
+  juggleGravityMultiplier: 0.25
+  juggleDuration: 0.26
 --- !u!1 &915318201
 GameObject:
   m_ObjectHideFlags: 0
@@ -2249,11 +2250,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatImpactSystem
   lightAttackImpact:
-    hitstopDuration: 0.01
-    cameraShakeDuration: 0.02
+    hitstopDuration: 0
+    cameraShakeDuration: 0.08
   heavyAttackImpact:
-    hitstopDuration: 0.3
-    cameraShakeDuration: 0.2
+    hitstopDuration: 0.34
+    cameraShakeDuration: 0.23
   impactShakeIntensity:
     serializedVersion: 2
     m_Curve:
@@ -2333,11 +2334,11 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   damageForMaximumShake: 2200
-  maximumShakeDistance: 2
-  maximumShakeYaw: 22
+  maximumShakeDistance: 2.3
+  maximumShakeYaw: 25
   enemyAttackImpact:
-    hitstopDuration: 0.035
-    cameraShakeDuration: 0.08
+    hitstopDuration: 0.34
+    cameraShakeDuration: 0.23
   enemyDamageReference: 30
   maxEnemyDamageHitstopBonus: 0.025
 --- !u!1 &1120693875

@@ -327,6 +327,8 @@ public class EnemyBase : MonoBehaviour
             practiceDummy?.NotifyDamageTaken();
         return wasApplied;
     }
+    internal bool TryConsumeCollisionDamageProtection(float duration) =>
+        health != null && health.TryConsumeCollisionDamageProtection(duration);
     public bool ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
         CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>

@@ -17,9 +17,9 @@ MonoBehaviour:
   kind: 0
   context: 0
   windupDuration: 0.03
-  activeDuration: 0.5
+  activeDuration: 0.4
   recoveryDuration: 0
-  cooldownDuration: 0.6
+  cooldownDuration: 0.65
   holdActiveUntilGrounded: 0
   baseDamage: 5
   basePoiseDamage: 10
@@ -102,7 +102,7 @@ MonoBehaviour:
       primaryAnchorId: 
       secondaryAnchorId: 
       startLocalPosition: {x: 0.36, y: 0.36, z: 0}
-      endLocalPosition: {x: 0, y: 0.36, z: 12}
+      endLocalPosition: {x: 0, y: 0.36, z: 15}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0
@@ -184,7 +184,7 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      radius: 0.8
+      radius: 1
       capsuleHeight: 3.12
       capsuleAxis: 2
       boxSize: {x: 1, y: 1, z: 1}

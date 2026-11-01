@@ -164,6 +164,9 @@ public sealed class PlayerSwingController : MonoBehaviour
     private void TryCancelAttackForGrapple()
     {
         if (attackController == null || inputBuffer == null ||
+            grappleAttack == null ||
+            (!grappleAttack.CanStartGrappleAttack &&
+             FindBestAnchor(allowAttacking: true) == null) ||
             !attackController.CanRequestCancel(
                 PlayerAttackCancelAction.Grapple) ||
             !inputBuffer.TryQueueGrappleUntilAttackEnds())
@@ -219,10 +222,13 @@ public sealed class PlayerSwingController : MonoBehaviour
             keyboard[swingKey].wasPressedThisFrame;
     }
 
-    private PlayerSwingAnchor FindBestAnchor()
+    private PlayerSwingAnchor FindBestAnchor(bool allowAttacking = false)
     {
+        bool validPlayerState = playerState != null &&
+            (playerState.IsNormal() ||
+             (allowAttacking && playerState.IsAttacking()));
         if (movement == null || playerState == null ||
-            !playerState.IsNormal() || characterController == null ||
+            !validPlayerState || characterController == null ||
             !characterController.enabled)
         {
             return null;

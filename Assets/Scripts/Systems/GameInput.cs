@@ -36,6 +36,8 @@ public static class GameInput
     public static Vector2 CycleTarget => ReadVector2("CycleTarget");
     public static bool LightPressed => Pressed("LightAttack");
     public static bool HeavyPressed => Pressed("HeavyAttack");
+    public static bool LightHeld => Held("LightAttack");
+    public static bool HeavyHeld => Held("HeavyAttack");
     public static bool JumpPressed => Pressed("Jump");
     public static bool JumpHeld => Held("Jump");
     public static bool DashPressed => Pressed("Dash");

@@ -18,7 +18,8 @@ MonoBehaviour:
   context: 0
   windupDuration: 0.08
   activeDuration: 0.4
-  recoveryDuration: 0.1
+  recoveryDuration: 0.07
+  cooldownDuration: 0
   holdActiveUntilGrounded: 0
   baseDamage: 7
   basePoiseDamage: 5
@@ -91,6 +92,7 @@ MonoBehaviour:
       launchUp: 0
       selfLaunchUp: 0
       launchForwards: 0
+      launchBackwards: 0
       juggle: 0
     hitboxes:
     - trackName: L3_1

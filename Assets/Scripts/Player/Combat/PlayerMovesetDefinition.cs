@@ -17,10 +17,12 @@ public enum PlayerResourceMode
 [Serializable]
 public class PlayerMoveTransition
 {
-    [Tooltip("Input que escolhe esta transicao.")]
+    [Tooltip("Botao que escolhe esta transicao.")]
     public PlayerAttackInput input;
     [Tooltip("ID do Node de destino.")]
     public string targetNodeId;
+    [Tooltip("Exige que o mesmo clique que iniciou o ataque atual continue pressionado ate esta transicao. Cada clique so pode selecionar uma transicao segurada.")]
+    public bool requiresHeldInput;
     [Tooltip("Exige que o input aconteca depois do Global Pause Delay. Se nao existir uma rota Pause para este input, a rota normal ainda funciona como fallback dentro da Continuation Window.")]
     public bool requiresPause;
     [Tooltip("Exige que ao menos um Strike tenha conectado em um inimigo.")]
@@ -94,6 +96,10 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     [Tooltip("Velocidade global de giro dos ataques pesados durante Windup + Active, em graus por segundo. Zero impede o giro.")]
     [Min(0f)] public float heavyWindupActiveRotationSpeed = 1500f;
 
+    [Header("Held Attack Branches")]
+    [Tooltip("Tempo minimo que o clique original precisa permanecer pressionado para habilitar uma transicao marcada como Held Input. Soltar o botao invalida essa branch.")]
+    [Min(0f)] public float heldAttackBranchThreshold = .18f;
+
     [Header("Global Target Assist")]
     [Tooltip("Margem extra, em metros, somada ao alcance calculado das hitboxes de todos os ataques deste moveset para selecionar um alvo assistido. Compensa o volume do inimigo sem permitir que ataques curtos girem para alvos distantes.")]
     [Min(0f)] public float targetAssistRangePadding = .25f;
@@ -126,6 +132,31 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
         if (string.IsNullOrEmpty(nodeId))
             return null;
         return nodes.Find(node => node != null && node.nodeId == nodeId);
+    }
+
+    public static PlayerMoveTransition FindTransition(
+        List<PlayerMoveTransition> transitions, PlayerAttackInput input,
+        bool requiresHeldInput, bool isPauseInput)
+    {
+        if (transitions == null)
+            return null;
+
+        PlayerMoveTransition normalFallback = null;
+        foreach (PlayerMoveTransition transition in transitions)
+        {
+            if (transition == null || transition.input != input ||
+                transition.requiresHeldInput != requiresHeldInput)
+                continue;
+            if (transition.requiresPause == isPauseInput)
+                return transition;
+
+            if (isPauseInput && !transition.requiresPause &&
+                normalFallback == null)
+            {
+                normalFallback = transition;
+            }
+        }
+        return normalFallback;
     }
 
     public List<PlayerAttackCancelRule> GetCancelRules(PlayerAttackKind kind) =>
@@ -166,4 +197,16 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
         allowedPhases = phases,
         finishActiveBeforeCancelling = finishActive
     };
+}
+
+public static class PlayerHeldBranchRules
+{
+    public static bool IsEligible(int originalPressSequence,
+        int latestPressSequence, bool buttonStillHeld, bool alreadyConsumed,
+        float heldDuration, float requiredDuration) =>
+        originalPressSequence > 0 &&
+        originalPressSequence == latestPressSequence &&
+        buttonStillHeld &&
+        !alreadyConsumed &&
+        heldDuration >= Mathf.Max(0f, requiredDuration);
 }

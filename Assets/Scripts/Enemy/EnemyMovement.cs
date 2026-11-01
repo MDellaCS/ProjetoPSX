@@ -74,6 +74,7 @@ public sealed class EnemyMovement : MonoBehaviour
     private bool hasLaunchProfileForFrame;
     private bool isLaunchedForwards;
     private bool hasGroundContact;
+    private int lastStaticImpactFrame = -1;
     private bool temporarilyIgnoreGroundEntitySeparation;
     private bool grapplePullActive;
     private bool suppressAuthoredMovement;
@@ -700,13 +701,17 @@ public sealed class EnemyMovement : MonoBehaviour
             impactedEnemy.ImpactWeight, impactSpeed, targetSpeed);
         rules.CalculateImpactDamage(massImpact.TargetImpactIntensity,
             out int damage, out int poiseDamage);
-        bool connected = impactedEnemy.TakeDamage(damage, owner.AttackOrigin,
-            poiseDamage, out _,
-            out CombatPoiseHitResult poiseHit, false,
-            PlayerAttackType.None, 0f, impactDirection,
-            impactedEnemy.AttackOrigin, true);
-        if (!connected)
-            return;
+        CombatPoiseHitResult poiseHit = default;
+        if (impactedEnemy.TryConsumeCollisionDamageProtection(
+            rules.EnemyCollisionDamageProtectionDuration))
+        {
+            bool connected = impactedEnemy.TakeDamage(damage,
+                owner.AttackOrigin, poiseDamage, out _, out poiseHit, false,
+                PlayerAttackType.None, 0f, impactDirection,
+                impactedEnemy.AttackOrigin, true);
+            if (!connected)
+                return;
+        }
 
         // Colisao 1D elástica simplificada contra um alvo inicialmente
         // parado. Assim, somente as massas relativas e a velocidade atual
@@ -847,15 +852,22 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         CombatPoiseSystem rules = CombatPoiseSystem.Instance;
         if (impactSpeed < rules.MinimumImpactSpeed || health == null ||
-            owner == null || owner.IsDead)
+            owner == null || owner.IsDead ||
+            lastStaticImpactFrame == Time.frameCount)
         {
             return false;
         }
+
+        // Um CharacterController pode reportar varias faces da mesma quina
+        // durante um unico Move. Isso representa um impacto, nao um por face.
+        lastStaticImpactFrame = Time.frameCount;
 
         CombatMassImpact impact = rules.ResolveMassImpact(ImpactWeight,
             CombatPoiseSystem.StaticSurfaceMass, impactSpeed);
         rules.CalculateImpactDamage(impact.SourceImpactIntensity,
             out int damage, out int poiseDamage);
+        bool applyCollisionDamage = health.TryConsumeCollisionDamageProtection(
+            rules.EnemyCollisionDamageProtectionDuration);
 
         impactDirection.y = 0f;
         if (impactDirection.sqrMagnitude <= .0001f)
@@ -864,16 +876,24 @@ public sealed class EnemyMovement : MonoBehaviour
 
         ResetLaunchForwards();
         CancelSlideLaunchHorizontalImpulse();
+        knockbackVelocity = Vector3.zero;
+        knockbackTimer = 0f;
+        playerHeadSeparationVelocity = Vector3.zero;
+        playerHeadSeparationTimer = 0f;
         attacks.CancelAttack();
         brain.CancelReposition();
 
-        bool connected = owner.TakeDamage(damage,
-            owner.AttackOrigin - impactDirection, poiseDamage,
-            out int damageDealt, out _, false, PlayerAttackType.None, 0f,
-            impactDirection, owner.AttackOrigin, true, null,
-            GetStaticImpactParticleDirection(impactDirection));
-        if (!connected || owner.IsDead)
-            return true;
+        int damageDealt = 0;
+        if (applyCollisionDamage)
+        {
+            bool connected = owner.TakeDamage(damage,
+                owner.AttackOrigin - impactDirection, poiseDamage,
+                out damageDealt, out _, false, PlayerAttackType.None, 0f,
+                impactDirection, owner.AttackOrigin, true, null,
+                GetStaticImpactParticleDirection(impactDirection));
+            if (!connected || owner.IsDead)
+                return true;
+        }
 
         // Superficies estaticas sempre encerram o arremesso em Stagger;
         // o Poise recebido continua contabilizado para recuperacao futura.

@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5b98f1fcdf334852af096c0b0bb97bcb, type: 3}
-  m_Name: L2p
+  m_Name: L1h
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
-  attackId: L2p
-  displayName: L2p
+  attackId: L1h
+  displayName: L1h
   kind: 0
   context: 0
-  windupDuration: 0.5
+  windupDuration: 0.4
   activeDuration: 0.05
   recoveryDuration: 0
   cooldownDuration: 0
@@ -52,7 +52,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   strikes:
-  - strikeName: L2p
+  - strikeName: L1h
     activeStartNormalized: 0
     activeEndNormalized: 1
     damageMultiplier: 1
@@ -95,7 +95,7 @@ MonoBehaviour:
       launchBackwards: 0
       juggle: 0
     hitboxes:
-    - trackName: L2p
+    - trackName: L1h
       shape: 0
       anchorMode: 0
       trajectoryMode: 0
