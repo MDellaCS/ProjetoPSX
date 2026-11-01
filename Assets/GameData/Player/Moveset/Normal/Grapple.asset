@@ -21,12 +21,12 @@ MonoBehaviour:
   recoveryDuration: 0
   cooldownDuration: 0.7
   holdActiveUntilGrounded: 0
-  baseDamage: 15
-  basePoiseDamage: 20
+  baseDamage: 5
+  basePoiseDamage: 10
   movement:
-    forwardDistance: 0
+    forwardDistance: 0.4
     startNormalized: 0
-    endNormalized: 1
+    endNormalized: 0.1
     movementCurve:
       serializedVersion: 2
       m_Curve:

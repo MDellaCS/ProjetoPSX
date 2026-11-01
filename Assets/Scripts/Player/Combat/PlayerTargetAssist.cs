@@ -30,7 +30,8 @@ public sealed class PlayerTargetAssist : MonoBehaviour
     private int assistAreaMeshCurveHash;
 
     public bool IsEnabled => targetAssistEnabled;
-    public EnemyBase CurrentBestTarget => FindBestTarget();
+    public float MaximumRange => targetAssistRange;
+    public EnemyBase CurrentBestTarget => FindBestTarget(targetAssistRange);
 
     private void Awake()
     {
@@ -56,12 +57,32 @@ public sealed class PlayerTargetAssist : MonoBehaviour
     public bool TryCaptureTarget(out EnemyBase target,
         out Vector3 lockedPosition)
     {
-        target = targetAssistEnabled ? FindBestTarget() : null;
+        return TryCaptureTarget(targetAssistRange, out target,
+            out lockedPosition);
+    }
+
+    /// <summary>
+    /// Captura o alvo travado, quando houver, ou o melhor alvo automatico
+    /// dentro do alcance informado pelo ataque.
+    /// </summary>
+    public bool TryCaptureTarget(float attackRange, out EnemyBase target,
+        out Vector3 lockedPosition)
+    {
+        lockOn ??= GetComponent<PlayerLockOn>();
+        EnemyBase lockedEnemy = lockOn != null ? lockOn.LockedEnemy : null;
+        // Lock-on e uma escolha explicita do jogador: ele sempre vence a
+        // selecao automatica, inclusive fora do alcance da hitbox.
+        target = lockedEnemy != null
+            ? lockedEnemy
+            : targetAssistEnabled
+                ? FindBestTarget(Mathf.Min(targetAssistRange,
+                    Mathf.Max(0f, attackRange)))
+                : null;
         lockedPosition = target != null ? target.AttackOrigin : default;
         return target != null;
     }
 
-    public EnemyBase FindBestTarget()
+    public EnemyBase FindBestTarget(float maximumRange)
     {
         if (!targetAssistEnabled)
             return null;
@@ -72,21 +93,12 @@ public sealed class PlayerTargetAssist : MonoBehaviour
         if (forward.sqrMagnitude < .0001f)
             return null;
 
-        // Respeita o lock-on manual quando seu alvo tambem esta dentro da
-        // distancia, abertura e linha de visao da assistencia global.
-        lockOn ??= GetComponent<PlayerLockOn>();
-        EnemyBase lockedEnemy = lockOn != null ? lockOn.LockedEnemy : null;
-        if (lockedEnemy != null && IsEligibleTarget(lockedEnemy, origin,
-            forward))
-        {
-            return lockedEnemy;
-        }
-
         EnemyBase best = null;
         float bestScore = float.PositiveInfinity;
         foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
         {
-            if (enemy == null || !IsEligibleTarget(enemy, origin, forward))
+            if (enemy == null || !IsEligibleTarget(enemy, origin, forward,
+                maximumRange))
                 continue;
 
             Vector3 offset = enemy.AttackOrigin - origin;
@@ -105,7 +117,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour
     }
 
     private bool IsEligibleTarget(EnemyBase enemy, Vector3 origin,
-        Vector3 forward)
+        Vector3 forward, float maximumRange)
     {
         if (enemy == null || !enemy.CanBeLockOnTarget)
             return false;
@@ -113,7 +125,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour
         Vector3 offset = enemy.AttackOrigin - origin;
         float distance = offset.magnitude;
         Vector3 horizontal = Vector3.ProjectOnPlane(offset, Vector3.up);
-        if (distance > targetAssistRange || horizontal.sqrMagnitude < .0001f)
+        if (distance > maximumRange || horizontal.sqrMagnitude < .0001f)
             return false;
 
         float angle = Vector3.Angle(forward, horizontal);

@@ -275,4 +275,98 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Tooltip("Cria uma hitbox reta entre o centro real do player e cada Hitbox Track ativa, evitando espacos vazios em ataques longos ou orbitais.")]
     public bool usesExtendedArmHitbox;
 
+    /// <summary>
+    /// Retorna o maior alcance horizontal que este ataque pode cobrir, medido
+    /// a partir do centro do jogador antes do deslocamento de ataque.
+    /// </summary>
+    public float GetTargetAssistRange(float rangePadding)
+    {
+        float padding = Mathf.Max(0f, rangePadding);
+        float reach = padding +
+            Mathf.Max(0f, movement?.forwardDistance ?? 0f);
+        if (strikes == null)
+            return reach;
+
+        foreach (PlayerAttackStrikeDefinition strike in strikes)
+        {
+            if (strike?.hitboxes == null)
+                continue;
+
+            foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
+            {
+                if (track == null ||
+                    track.anchorMode == PlayerHitboxAnchorMode.FollowAnchors ||
+                    track.trajectoryMode == PlayerHitboxTrajectoryMode.TargetAssist)
+                {
+                    continue;
+                }
+
+                reach = Mathf.Max(reach, GetTrackTargetAssistReach(track) +
+                    Mathf.Max(0f, movement?.forwardDistance ?? 0f) +
+                    padding);
+            }
+        }
+
+        return reach;
+    }
+
+    /// <summary>Indica se alguma hitbox usa o alcance global de Target Assist.</summary>
+    public bool UsesTargetAssistTrajectory
+    {
+        get
+        {
+            if (strikes == null)
+                return false;
+
+            foreach (PlayerAttackStrikeDefinition strike in strikes)
+            {
+                if (strike?.hitboxes == null)
+                    continue;
+
+                foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
+                {
+                    if (track != null &&
+                        track.trajectoryMode == PlayerHitboxTrajectoryMode.TargetAssist)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
+    private static float GetTrackTargetAssistReach(
+        PlayerHitboxTrackDefinition track)
+    {
+        float centerReach;
+        float volumeReach;
+        if (track.trajectoryMode == PlayerHitboxTrajectoryMode.Orbit)
+        {
+            centerReach = Mathf.Max(0f, track.orbitStartDistance,
+                track.orbitEndDistance);
+            volumeReach = Mathf.Max(.01f, track.orbitStartRadius,
+                track.orbitEndRadius);
+        }
+        else
+        {
+            centerReach = Mathf.Max(
+                HorizontalMagnitude(track.startLocalPosition),
+                HorizontalMagnitude(track.endLocalPosition));
+            volumeReach = track.shape switch
+            {
+                PlayerHitboxShape.Box => track.boxSize.magnitude * .5f,
+                PlayerHitboxShape.Capsule => Mathf.Max(.01f, track.radius) +
+                    Mathf.Max(0f, track.capsuleHeight * .5f - track.radius),
+                _ => Mathf.Max(.01f, track.radius)
+            };
+        }
+
+        return centerReach + volumeReach;
+    }
+
+    private static float HorizontalMagnitude(Vector3 value) =>
+        Mathf.Sqrt(value.x * value.x + value.z * value.z);
+
 }

@@ -47,7 +47,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
 
     private void DrawAttack(PlayerAttackDefinition definition, float previewTime)
     {
-        if (definition == null || definition.strikes == null) return;
+        if (definition == null) return;
         PlayerCharacterController controller = GetComponent<PlayerCharacterController>();
         CharacterController legacyController = controller == null
             ? GetComponent<CharacterController>() : null;
@@ -61,6 +61,8 @@ public sealed class PlayerAttackPreview : MonoBehaviour
         Vector3 extendedArmOrigin = origin + transform.up * GetExtendedArmHeightOffset();
         float windupEnd = definition.windupDuration;
         float activeEnd = windupEnd + definition.activeDuration;
+        DrawMovementTrajectory(definition, origin, previewTime, activeEnd);
+        if (definition.strikes == null) return;
         if (previewTime < windupEnd)
         {
             DrawPhaseRing(origin, capsuleRadius, Color.green);
@@ -102,6 +104,55 @@ public sealed class PlayerAttackPreview : MonoBehaviour
                 DrawWireCapsule(extendedArmOrigin, center, extendedArmRadius);
             }
         }
+    }
+
+    /// <summary>Desenha a trajetoria de autoria; nunca aparece durante o jogo.</summary>
+    private void DrawMovementTrajectory(PlayerAttackDefinition definition,
+        Vector3 origin, float previewTime, float windupActiveDuration)
+    {
+        PlayerAttackMovementDefinition movement = definition.movement;
+        if (movement == null || movement.forwardDistance <= 0f ||
+            movement.endNormalized <= movement.startNormalized)
+        {
+            return;
+        }
+
+        const int segments = 24;
+        Color previousColor = Gizmos.color;
+        Gizmos.color = new Color(.1f, .85f, 1f, .85f);
+        Vector3 previous = origin;
+        for (int index = 1; index <= segments; index++)
+        {
+            float progress = index / (float)segments;
+            Vector3 point = origin + transform.forward *
+                (movement.forwardDistance * EvaluateMovement(movement,
+                    progress));
+            Gizmos.DrawLine(previous, point);
+            previous = point;
+        }
+
+        Gizmos.DrawWireSphere(origin, .06f);
+        Gizmos.DrawWireSphere(previous, .09f);
+        float timelineProgress = windupActiveDuration <= 0f ? 1f :
+            Mathf.Clamp01(previewTime / windupActiveDuration);
+        Vector3 current = origin + transform.forward *
+            (movement.forwardDistance * EvaluateMovement(movement,
+                timelineProgress));
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawSphere(current, .07f);
+        Gizmos.color = previousColor;
+    }
+
+    private static float EvaluateMovement(PlayerAttackMovementDefinition movement,
+        float overallProgress)
+    {
+        if (overallProgress <= movement.startNormalized) return 0f;
+        if (overallProgress >= movement.endNormalized) return 1f;
+        float normalized = Mathf.InverseLerp(movement.startNormalized,
+            movement.endNormalized, overallProgress);
+        return movement.movementCurve == null || movement.movementCurve.length == 0
+            ? normalized
+            : Mathf.Clamp01(movement.movementCurve.Evaluate(normalized));
     }
 
     private static void DrawPhaseRing(Vector3 origin, float controllerRadius,

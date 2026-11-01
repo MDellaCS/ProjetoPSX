@@ -19,13 +19,14 @@ MonoBehaviour:
   windupDuration: 0.15
   activeDuration: 1
   recoveryDuration: 0.35
+  cooldownDuration: 0
   holdActiveUntilGrounded: 0
   baseDamage: 50
   basePoiseDamage: 110
   movement:
     forwardDistance: 4
     startNormalized: 0
-    endNormalized: 1
+    endNormalized: 0.45
     movementCurve:
       serializedVersion: 2
       m_Curve:
@@ -91,6 +92,7 @@ MonoBehaviour:
       launchUp: 1
       selfLaunchUp: 0
       launchForwards: 1
+      launchBackwards: 0
       juggle: 0
     hitboxes:
     - trackName: L4p_Gira

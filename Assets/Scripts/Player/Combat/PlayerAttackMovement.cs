@@ -26,10 +26,12 @@ public sealed class PlayerAttackMovement : MonoBehaviour
              phase == PlayerAttackPhase.Active))
         {
             Vector3 direction;
-            if (runtime.HasAssistTarget)
-                direction = runtime.AssistTargetPosition - GetPlayerCenter();
-            else if (lockOn != null && lockOn.IsLockedOn)
+            // Lock-on e uma intencao explicita do jogador e sempre tem
+            // prioridade sobre qualquer alvo escolhido automaticamente.
+            if (lockOn != null && lockOn.IsLockedOn)
                 direction = lockOn.GetDirectionToLockedTarget();
+            else if (runtime.HasAssistTarget)
+                direction = runtime.AssistTargetPosition - GetPlayerCenter();
             else if (movement != null &&
                 movement.DesiredDirection.sqrMagnitude > .001f)
                 direction = movement.DesiredDirection;

@@ -49,10 +49,12 @@ public sealed class EnemyAttackPreview : MonoBehaviour
 
     private void DrawAttack(EnemyAttackDefinition definition, float previewTime)
     {
-        if (definition == null || definition.strikes == null) return;
+        if (definition == null) return;
         Vector3 origin = GetCenter();
         float windupEnd = definition.windupDuration;
         float activeEnd = windupEnd + definition.activeDuration;
+        DrawMovementTrajectory(definition, origin, previewTime, activeEnd);
+        if (definition.strikes == null) return;
         if (previewTime < windupEnd)
         {
             DrawPhaseRing(origin, Color.green);
@@ -94,6 +96,63 @@ public sealed class EnemyAttackPreview : MonoBehaviour
                     DrawCapsule(GetCenter(), center, GetExtendedRadius());
             }
         }
+    }
+
+    /// <summary>Desenha a trajetoria de autoria; nunca aparece durante o jogo.</summary>
+    private void DrawMovementTrajectory(EnemyAttackDefinition definition,
+        Vector3 origin, float previewTime, float windupActiveDuration)
+    {
+        EnemyAttackMovementDefinition movement = definition.movement;
+        if (movement == null ||
+            (Mathf.Approximately(movement.forwardDistance, 0f) &&
+             Mathf.Approximately(movement.lateralDistance, 0f)) ||
+            movement.endNormalized <= movement.startNormalized)
+        {
+            return;
+        }
+
+        const int segments = 24;
+        Color previousColor = Gizmos.color;
+        Gizmos.color = new Color(.1f, .85f, 1f, .85f);
+        Vector3 previous = origin;
+        for (int index = 1; index <= segments; index++)
+        {
+            float progress = index / (float)segments;
+            Vector3 point = GetMovementPoint(origin, movement, progress);
+            Gizmos.DrawLine(previous, point);
+            previous = point;
+        }
+
+        Gizmos.DrawWireSphere(origin, .06f);
+        Gizmos.DrawWireSphere(previous, .09f);
+        float timelineProgress = windupActiveDuration <= 0f ? 1f :
+            Mathf.Clamp01(previewTime / windupActiveDuration);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawSphere(GetMovementPoint(origin, movement,
+            timelineProgress), .07f);
+        Gizmos.color = previousColor;
+    }
+
+    private Vector3 GetMovementPoint(Vector3 origin,
+        EnemyAttackMovementDefinition movement, float overallProgress)
+    {
+        float curveValue;
+        if (overallProgress <= movement.startNormalized) curveValue = 0f;
+        else if (overallProgress >= movement.endNormalized) curveValue = 1f;
+        else
+        {
+            float normalized = Mathf.InverseLerp(movement.startNormalized,
+                Mathf.Max(movement.startNormalized + .0001f,
+                    movement.endNormalized), overallProgress);
+            curveValue = movement.movementCurve == null ||
+                movement.movementCurve.length == 0
+                ? normalized
+                : movement.movementCurve.Evaluate(normalized);
+        }
+
+        return origin + transform.forward *
+            (movement.forwardDistance * curveValue) + transform.right *
+            (movement.lateralDistance * curveValue);
     }
 
     private void DrawPhaseRing(Vector3 origin, Color color)

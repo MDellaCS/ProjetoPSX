@@ -81,7 +81,7 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
     {
         if (cachedPlayerMovement == null)
         {
-            cachedPlayerMovement = FindFirstObjectByType<PlayerMovement>();
+            cachedPlayerMovement = FindAnyObjectByType<PlayerMovement>();
         }
 
         if (cachedPlayerMovement == null ||

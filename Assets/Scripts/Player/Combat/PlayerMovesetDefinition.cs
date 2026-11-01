@@ -92,6 +92,10 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     [Tooltip("Velocidade global de giro dos ataques pesados durante Windup + Active, em graus por segundo. Zero impede o giro.")]
     [Min(0f)] public float heavyWindupActiveRotationSpeed = 1500f;
 
+    [Header("Global Target Assist")]
+    [Tooltip("Margem extra, em metros, somada ao alcance calculado das hitboxes de todos os ataques deste moveset para selecionar um alvo assistido. Compensa o volume do inimigo sem permitir que ataques curtos girem para alvos distantes.")]
+    [Min(0f)] public float targetAssistRangePadding = .25f;
+
     [Header("Global Transition Timing")]
     [Tooltip("Tempos de transicao compartilhados por todos os ataques leves.")]
     public PlayerTransitionTimingSettings lightTransitionTiming = new();

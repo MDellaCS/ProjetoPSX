@@ -125,8 +125,22 @@ public sealed class PlayerMovesetController : MonoBehaviour
         if (attacks.IsAttacking)
         {
             PlayerAttackCancelAction cancel = input == PlayerAttackInput.Heavy ? PlayerAttackCancelAction.HeavyAttack : PlayerAttackCancelAction.LightAttack;
+            // O cancelamento pesado pode encerrar o ataque sincronicamente e
+            // disparar OnAttackFinished. Limpa antes o leve que ja estava
+            // pendente, para ele nao iniciar entre o ataque cancelado e o
+            // pesado solicitado pelo jogador.
+            PlayerMoveNode pendingBeforeHeavyCancel = null;
+            bool replacesPendingContinuation = input == PlayerAttackInput.Heavy &&
+                attacks.CanRequestCancel(cancel);
+            if (replacesPendingContinuation)
+            {
+                pendingBeforeHeavyCancel = pendingNode;
+                pendingNode = null;
+            }
             if (!attacks.RequestCancel(cancel))
             {
+                if (replacesPendingContinuation)
+                    pendingNode = pendingBeforeHeavyCancel;
                 if (continuation == null) return;
                 pendingNode = continuation;
                 inputBuffer.TryConsume(buffered);

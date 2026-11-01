@@ -1612,7 +1612,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 243
   useTargetAssist: 1
-  pullStopDistance: 3
+  pullStopDistance: 1
   lighterEnemyPullSpeed: 35
   heavierEnemyPullSpeed: 35
   postPullStaggerDuration: 0.05

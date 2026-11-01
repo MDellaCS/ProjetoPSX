@@ -116,8 +116,14 @@ public sealed class PlayerAttackController : MonoBehaviour
             : 0f;
         EnemyBase assistedTarget = null;
         Vector3 assistedTargetPosition = default;
+        float targetAssistRange = definition.UsesTargetAssistTrajectory &&
+            targetAssist != null
+            ? targetAssist.MaximumRange
+            : definition.GetTargetAssistRange(moveset != null
+                ? moveset.targetAssistRangePadding : 0f);
         if (targetAssist != null && targetAssist.TryCaptureTarget(
-            out assistedTarget, out assistedTargetPosition))
+            targetAssistRange, out assistedTarget,
+            out assistedTargetPosition))
         {
             if (isGrappleAttack)
             {

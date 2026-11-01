@@ -17,8 +17,9 @@ MonoBehaviour:
   kind: 0
   context: 1
   windupDuration: 0.08
-  activeDuration: 0.2
+  activeDuration: 0.1
   recoveryDuration: 0.08
+  cooldownDuration: 0
   holdActiveUntilGrounded: 1
   baseDamage: 30
   basePoiseDamage: 50
@@ -56,13 +57,42 @@ MonoBehaviour:
     activeEndNormalized: 1
     damageMultiplier: 1
     poiseMultiplier: 1
+    damageFalloff:
+      enabled: 0
+      startDistance: 0
+      endDistance: 1
+      damageMultiplier:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
     generatesHeatOnHit: 1
     effects:
       launchDown: 1
-      selfLaunchDown: 1
+      selfLaunchDown: 0
       launchUp: 0
       selfLaunchUp: 0
       launchForwards: 0
+      launchBackwards: 0
       juggle: 0
     hitboxes:
     - trackName: AirL8_Dive
@@ -71,8 +101,8 @@ MonoBehaviour:
       trajectoryMode: 0
       primaryAnchorId: 
       secondaryAnchorId: 
-      startLocalPosition: {x: 0.36, y: 1.3, z: 0.8}
-      endLocalPosition: {x: 0.36, y: -0.8, z: 0.8}
+      startLocalPosition: {x: 0, y: 0.2, z: 0.8}
+      endLocalPosition: {x: 0, y: 0.2, z: 0.8}
       startLocalEuler: {x: 0, y: 0, z: 0}
       endLocalEuler: {x: 0, y: 0, z: 0}
       orbitStartAngleDegrees: 0

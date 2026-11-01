@@ -52,6 +52,11 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
     private bool isPulling;
     private bool playerMovesToEnemy;
     private bool bothEntitiesMove;
+    private Vector3 previousPlayerPullPosition;
+    private Vector3 previousEnemyPullPosition;
+    private int consecutiveStationaryPullFrames;
+    private const float PullMovementEpsilonSqr = .000001f;
+    private const int StationaryPullFramesBeforeAbort = 3;
 
     public bool IsPulling => isPulling;
 
@@ -95,6 +100,12 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         }
 
         if (pulledEnemy == null || pulledEnemy.IsDead)
+        {
+            EndPull();
+            return;
+        }
+
+        if (BothPullEntitiesAreStationary())
         {
             EndPull();
             return;
@@ -241,6 +252,9 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         bothEntitiesMove = Mathf.Approximately(enemyWeight, playerWeight);
         playerMovesToEnemy = enemyWeight > playerWeight && !bothEntitiesMove;
         isPulling = true;
+        previousPlayerPullPosition = transform.position;
+        previousEnemyPullPosition = enemy.transform.position;
+        consecutiveStationaryPullFrames = 0;
 
         enemy.BeginGrappleStagger();
         if (pulledEnemyMovement == null)
@@ -352,6 +366,27 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         return new CapsuleSeparation(surfaceDistance, direction);
     }
 
+    private bool BothPullEntitiesAreStationary()
+    {
+        Vector3 playerPosition = transform.position;
+        Vector3 enemyPosition = pulledEnemy.transform.position;
+        bool playerMoved = (playerPosition - previousPlayerPullPosition)
+            .sqrMagnitude >= PullMovementEpsilonSqr;
+        bool enemyMoved = (enemyPosition - previousEnemyPullPosition)
+            .sqrMagnitude >= PullMovementEpsilonSqr;
+
+        previousPlayerPullPosition = playerPosition;
+        previousEnemyPullPosition = enemyPosition;
+
+        if (playerMoved || enemyMoved)
+            consecutiveStationaryPullFrames = 0;
+        else
+            consecutiveStationaryPullFrames++;
+
+        return consecutiveStationaryPullFrames >=
+            StationaryPullFramesBeforeAbort;
+    }
+
     private void EndPull()
     {
         if (!isPulling)
@@ -363,6 +398,7 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         bothEntitiesMove = false;
         pulledEnemy = null;
         pulledEnemyMovement = null;
+        consecutiveStationaryPullFrames = 0;
 
         if (playerState != null && playerState.IsGrapplePulling())
         {
