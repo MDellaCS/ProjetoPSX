@@ -16,8 +16,8 @@ MonoBehaviour:
   displayName: AirL8
   kind: 0
   context: 1
-  windupDuration: 0.08
-  activeDuration: 0.1
+  windupDuration: 0.02
+  activeDuration: 0.05
   recoveryDuration: 0.08
   cooldownDuration: 0
   holdActiveUntilGrounded: 1

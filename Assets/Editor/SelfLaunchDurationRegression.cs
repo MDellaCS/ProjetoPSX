@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
@@ -31,7 +32,14 @@ public static class SelfLaunchDurationRegression
     private static float startHeight;
     private static float peakHeight;
     private static float launchBaselineHeight;
+    private static float enemyStartHeight;
+    private static float enemyPeakHeight;
     private static bool launched;
+    private static int jumpTestStage;
+    private static float jumpTestStartTime;
+    private static float jumpTestStartHeight;
+    private static float doubleJumpStartHeight;
+    private static float expectedJumpSpeed;
 
     static SelfLaunchDurationRegression()
     {
@@ -89,6 +97,9 @@ public static class SelfLaunchDurationRegression
         if (Time.frameCount <= setupFrame + 1)
             return;
 
+        if (!RunDoubleJumpSceneCheck())
+            return;
+
         if (attacks.CurrentAttack == null && !launched)
         {
             launchBaselineHeight = player.transform.position.y;
@@ -108,7 +119,11 @@ public static class SelfLaunchDurationRegression
                 $"g={movement.GetJumpLaunchGravity():0.000}m/s.");
         }
         if (targetMovement != null && targetMovement.IsLaunched)
+        {
             enemyLaunched = true;
+            enemyPeakHeight = Mathf.Max(enemyPeakHeight,
+                dummy.transform.position.y);
+        }
 
         if (!launched)
             return;
@@ -121,8 +136,16 @@ public static class SelfLaunchDurationRegression
             $"{attacks.IsAttacking}, pico de subida " +
             $"{peakHeight - startHeight:0.000}m, " +
             $"posicao final {player.transform.position.y - startHeight:0.000}m, " +
+                $"pico do inimigo {enemyPeakHeight - enemyStartHeight:0.000}m, " +
             $"inimigo lancado={enemyLaunched}, " +
             $"velocidade vertical {movement.VerticalSpeed:0.000}m/s.");
+        if (!enemyLaunched)
+            Results.Add("FAIL: o inimigo nao recebeu Launch Up no TestArena.");
+        else if (Mathf.Abs((peakHeight - startHeight) -
+            (enemyPeakHeight - enemyStartHeight)) > .2f)
+            Results.Add("FAIL: os picos do player e do inimigo divergiram mais de 0,2m.");
+        else
+            Results.Add("PASS: Launch Up do player e do inimigo atingiu alturas equivalentes no TestArena.");
         Object.Destroy(player);
         if (attackDefinition != null)
             Object.Destroy(attackDefinition);
@@ -140,6 +163,8 @@ public static class SelfLaunchDurationRegression
             Fail("TestArena nao contem Practice Dummy ativo.");
         targetMovement = dummy.GetComponent<EnemyMovement>();
         dummyStartPosition = dummy.transform.position;
+        enemyStartHeight = dummyStartPosition.y;
+        enemyPeakHeight = enemyStartHeight;
         dummyStartRotation = dummy.transform.rotation;
         if (dummy.GetComponent<EnemyBrain>() != null)
             dummy.GetComponent<EnemyBrain>().enabled = false;
@@ -186,6 +211,94 @@ public static class SelfLaunchDurationRegression
         peakHeight = 0f;
         launched = false;
         enemyLaunched = false;
+        jumpTestStage = 0;
+        jumpTestStartTime = 0f;
+        jumpTestStartHeight = 0f;
+        doubleJumpStartHeight = 0f;
+        expectedJumpSpeed = 0f;
+    }
+
+    private static bool RunDoubleJumpSceneCheck()
+    {
+        PlayerInputBuffer buffer = player.GetComponent<PlayerInputBuffer>();
+        MethodInfo queueJump = typeof(PlayerInputBuffer).GetMethod("Buffer",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        MethodInfo startJump = typeof(PlayerMovement).GetMethod("TryStartJump",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        FieldInfo jumpsUsed = typeof(PlayerMovement).GetField("jumpsUsed",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        if (buffer == null || queueJump == null || startJump == null ||
+            jumpsUsed == null)
+        {
+            Fail("Nao foi possivel acessar a entrada de pulo para a verificacao em cena.");
+            return false;
+        }
+
+        if (jumpTestStage == 0)
+        {
+            jumpTestStartHeight = player.transform.position.y;
+            queueJump.Invoke(buffer, new object[] { PlayerBufferedInput.Jump });
+            startJump.Invoke(movement, null);
+            expectedJumpSpeed = movement.VerticalSpeed;
+            if (expectedJumpSpeed <= 0f || (int)jumpsUsed.GetValue(movement) != 1)
+            {
+                Fail("O primeiro pulo em cena nao iniciou corretamente.");
+                return false;
+            }
+            jumpTestStartTime = Time.time;
+            jumpTestStage = 1;
+            return false;
+        }
+
+        if (jumpTestStage == 1 && Time.time - jumpTestStartTime >= .12f)
+        {
+            if (player.transform.position.y <= jumpTestStartHeight + .1f)
+            {
+                Fail("O jogador nao ganhou altura no primeiro pulo em cena.");
+                return false;
+            }
+            queueJump.Invoke(buffer, new object[] { PlayerBufferedInput.Jump });
+            startJump.Invoke(movement, null);
+            if ((int)jumpsUsed.GetValue(movement) != 2 ||
+                Mathf.Abs(movement.VerticalSpeed - expectedJumpSpeed) > .05f)
+            {
+                Fail("O segundo pulo nao reiniciou com a mesma velocidade inicial.");
+                return false;
+            }
+            doubleJumpStartHeight = player.transform.position.y;
+            jumpTestStartTime = Time.time;
+            jumpTestStage = 2;
+            return false;
+        }
+
+        if (jumpTestStage == 2 && Time.time - jumpTestStartTime >= .12f)
+        {
+            if (player.transform.position.y <= doubleJumpStartHeight + .1f)
+            {
+                Fail("O pulo duplo nao deslocou o jogador para cima.");
+                return false;
+            }
+            jumpTestStartTime = Time.time;
+            jumpTestStage = 3;
+            return false;
+        }
+
+        if (jumpTestStage == 3)
+        {
+            if (movement.IsGrounded && movement.VerticalSpeed <= 0f)
+            {
+                Results.Add("PASS: pulo duplo iniciou e ambos os impulsos moveram o jogador em TestArena.");
+                jumpTestStage = 4;
+                return true;
+            }
+            if (Time.time - jumpTestStartTime > 2f)
+            {
+                Fail("O jogador nao pousou apos o pulo duplo em TestArena.");
+                return false;
+            }
+        }
+
+        return jumpTestStage >= 4;
     }
 
     private static void Finish()
@@ -201,6 +314,8 @@ public static class SelfLaunchDurationRegression
                     $"{Mathf.Abs(shortPeak - longPeak):0.000}m.");
             else
                 Results.Add($"PASS: diferenca de pico {Mathf.Abs(shortPeak - longPeak):0.000}m.");
+            if (!enemyLaunched)
+                Results.Add("FAIL: o inimigo nao recebeu Launch Up no TestArena.");
         }
         string report = string.Join("\n", Results);
         Debug.Log("SELF LAUNCH DURATION REGRESSION\n" + report);
@@ -245,46 +360,56 @@ public static class SelfLaunchDurationRegression
 
     private static bool enemyLaunched;
 
-    /// <summary>Validacao sem cena para o perfil de subida e gravidade de queda.</summary>
+    /// <summary>Validacao sem cena da balistica e do pulo variavel.</summary>
     public static void RunProfileMathRegression()
     {
         try
         {
-            AnimationCurve curve = AnimationCurve.Linear(0f, 2f, 1f, 0f);
             const float height = 3.5f;
-            const float ascentDuration = .85f;
-            float previousProgress = 0f;
-            for (int i = 1; i <= 100; i++)
-            {
-                float t = i / 100f;
-                float progress = JumpAscentProfile.GetHeightProgress(curve, t);
-                if (progress + .00001f < previousProgress)
-                    throw new System.Exception("A curva de subida nao e monotona.");
-                previousProgress = progress;
-            }
-            AssertClose("fim da subida", 1f,
-                JumpAscentProfile.GetHeightProgress(curve, 1f), .0001f);
-            AssertClose("altura no apice", height,
-                height * JumpAscentProfile.GetHeightProgress(curve, 1f), .001f);
-            AssertClose("tempo do apice", ascentDuration,
-                ascentDuration, .0001f);
-
             float gravity = -60f;
+            const float holdDuration = .25f;
+            const float heldGravityMultiplier = .35f;
+            float launchSpeed = PlayerMovement.CalculateJumpInitialSpeed(
+                height, gravity, holdDuration, heldGravityMultiplier);
+            float fullHoldPeak = CalculatePeak(height, gravity,
+                holdDuration, heldGravityMultiplier, launchSpeed, holdDuration);
+            float shortTapPeak = CalculatePeak(height, gravity,
+                holdDuration, heldGravityMultiplier, launchSpeed, 0f);
+            float mediumHoldPeak = CalculatePeak(height, gravity,
+                holdDuration, heldGravityMultiplier, launchSpeed, .1f);
+            AssertClose("altura maxima com pulo segurado", height,
+                fullHoldPeak, .002f);
+            if (shortTapPeak >= mediumHoldPeak ||
+                mediumHoldPeak >= fullHoldPeak || shortTapPeak <= 0f)
+                throw new System.Exception("Segurar o pulo nao aumentou a altura de forma fisica.");
+
             float descentDuration = Mathf.Sqrt(2f * height / -gravity);
             AssertClose("queda sob gravidade", .341565f,
                 descentDuration, .001f);
-            if (Mathf.Abs(descentDuration - ascentDuration) < .1f)
-                throw new System.Exception("A descida ainda depende do tempo de subida.");
 
             PlayerAttackDefinition d1 = AssetDatabase.LoadAssetAtPath<
                 PlayerAttackDefinition>("Assets/GameData/Player/Moveset/Normal/D1.asset");
             if (d1 == null || Mathf.Abs(d1.activeDuration - .13f) > .0001f)
                 throw new System.Exception("D1 nao manteve Active em 0,13s.");
 
-            Debug.Log("JUMP ASCENT PROFILE REGRESSION PASS: " +
-                $"apice {height:0.000}m em {ascentDuration:0.000}s; " +
+            PlayerMovesetDefinition normalMoveset = AssetDatabase.LoadAssetAtPath<
+                PlayerMovesetDefinition>("Assets/GameData/Player/Moveset/Normal/NormalMoveset.asset");
+            PlayerMovesetDefinition humanMoveset = AssetDatabase.LoadAssetAtPath<
+                PlayerMovesetDefinition>("Assets/GameData/Player/Moveset/Human/HumanMoveset.asset");
+            if (normalMoveset == null || humanMoveset == null ||
+                Mathf.Abs(normalMoveset.jumpHeightMultiplier - 1f) > .0001f ||
+                Mathf.Abs(normalMoveset.jumpDurationMultiplier - 1f) > .0001f ||
+                Mathf.Abs(humanMoveset.jumpHeightMultiplier - 1f) > .0001f ||
+                Mathf.Abs(humanMoveset.jumpDurationMultiplier - .85f) > .0001f)
+                throw new System.Exception("Os modificadores dos movesets nao preservam os valores globais/anteriores.");
+
+            Debug.Log("PHYSICAL VARIABLE JUMP REGRESSION PASS: " +
+                $"altura segurando {fullHoldPeak:0.000}m; " +
+                $"toque curto {shortTapPeak:0.000}m; " +
+                $"hold parcial {mediumHoldPeak:0.000}m; " +
                 $"queda por gravity {gravity:0.0} em {descentDuration:0.000}s; " +
-                $"D1 Active {d1.activeDuration:0.00}s.");
+                $"D1 Active {d1.activeDuration:0.00}s; " +
+                $"multiplicadores Normal 1/1 e Human 1/0,85.");
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
         catch (System.Exception exception)
@@ -299,6 +424,22 @@ public static class SelfLaunchDurationRegression
     {
         if (Mathf.Abs(expected - actual) > tolerance)
             throw new System.Exception($"{label}: esperado {expected}, atual {actual}.");
+    }
+
+    private static float CalculatePeak(float maximumHeight, float gravity,
+        float holdDuration, float heldGravityMultiplier, float launchSpeed,
+        float actualHoldTime)
+    {
+        float downGravity = -gravity;
+        float heldGravity = downGravity * heldGravityMultiplier;
+        float heldTime = Mathf.Min(actualHoldTime, holdDuration,
+            launchSpeed / heldGravity);
+        float position = launchSpeed * heldTime -
+            .5f * heldGravity * heldTime * heldTime;
+        float velocity = launchSpeed - heldGravity * heldTime;
+        if (actualHoldTime >= launchSpeed / heldGravity)
+            return position;
+        return position + velocity * velocity / (2f * downGravity);
     }
 
 }

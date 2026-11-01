@@ -91,9 +91,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             rules.JuggleLiftSpeed,
             rules.JuggleGravityMultiplier,
             rules.JuggleDuration,
-            movement != null ? movement.GetJumpLaunchHeight() : 3.5f,
             movement != null ? movement.GetJumpLaunchDuration() : .85f,
-            movement != null ? movement.GetJumpLaunchAscentCurve() : null
+            movement != null ? movement.GetJumpLaunchHoldGravityMultiplier() : .35f
         ));
         if (heat != null && heat.IsHeatModeActive &&
             runtime.Definition.kind == PlayerAttackKind.Light &&
@@ -193,9 +192,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             0f, rules.LaunchForwardsDeceleration,
             rules.JuggleLiftSpeed, rules.JuggleGravityMultiplier,
             rules.JuggleDuration,
-            movement != null ? movement.GetJumpLaunchHeight() : 3.5f,
             movement != null ? movement.GetJumpLaunchDuration() : .85f,
-            movement != null ? movement.GetJumpLaunchAscentCurve() : null));
+            movement != null ? movement.GetJumpLaunchHoldGravityMultiplier() : .35f));
         if (enemy.IsLaunched)
             enemy.ApplyLaunchUpHorizontalImpulse(horizontalDirection, horizontalImpulse);
         combatStatus?.RegisterDamageDealtToEnemy();

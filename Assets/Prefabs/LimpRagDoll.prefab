@@ -264,7 +264,7 @@ MonoBehaviour:
   standardSpeed: 1.6
   fastSpeed: 2
   gravity: -60
-  terminalFallSpeed: 30
+  terminalFallSpeed: 50
   rotationSpeed: 20
   useTankControls: 1
   tankControlsAdvanceAlignment: 0

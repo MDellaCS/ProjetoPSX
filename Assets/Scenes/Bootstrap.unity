@@ -1478,8 +1478,9 @@ MonoBehaviour:
   steepSlopeMaximumSlideSpeed: 15
   gravity: -60
   terminalFallSpeed: 50
-  jumpHoldAcceleration: 40
-  maxJumpHoldDuration: 0.25
+  jumpHeight: 5
+  jumpDuration: 0.2
+  jumpHoldGravityMultiplier: 0.2
   dashDuration: 0.3
   airControl: 40
   airMaxSpeedMultiplier: 1
@@ -3096,6 +3097,14 @@ PrefabInstance:
       value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: jumpHeight
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: jumpDuration
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 330585546}
@@ -3110,6 +3119,10 @@ PrefabInstance:
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: momentumDeceleration
       value: 39
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: jumpHoldGravityMultiplier
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: steepSlopeMaximumSlideSpeed

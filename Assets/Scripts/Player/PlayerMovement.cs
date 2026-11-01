@@ -69,6 +69,14 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Velocidade maxima de queda, aplicada a gravidade e Launch Up.")]
     [Min(2f)] public float terminalFallSpeed = 30f;
 
+    [Header("Jump")]
+    [Tooltip("Altura vertical global desejada para o pulo, em metros, antes do modificador do moveset. A curva de subida preserva esta altura em terreno plano.")]
+    [Min(0f)] public float jumpHeight = 3.5f;
+    [Tooltip("Janela maxima, em segundos, em que segurar o botao reduz a gravidade durante a subida. O apice ainda e resolvido pela velocidade e gravidade.")]
+    [Min(.05f)] public float jumpDuration = .25f;
+    [Tooltip("Multiplicador da gravidade enquanto o botao de pulo esta pressionado e o jogador ainda sobe. Valores abaixo de 1 prolongam e elevam o salto; 1 desativa a extensao por segurar.")]
+    [Range(0.05f, 1f)] public float jumpHoldGravityMultiplier = .35f;
+
     [Header("Dash")]
     [Tooltip("Duração global do estado de dash. Controla steering, dash-jump, cancelamentos e a troca para a animação seguinte; não altera o impulso inicial.")]
     [Min(0f)] public float dashDuration = .3f;
@@ -131,10 +139,11 @@ public class PlayerMovement : MonoBehaviour
 
     private float verticalVelocity;
     private float verticalDisplacementThisFrame;
-    private float jumpAscentElapsed;
-    private float jumpAscentHeight;
-    private float jumpAscentDuration;
-    private AnimationCurve jumpAscentCurve;
+    private float jumpHoldElapsed;
+    private float jumpHoldDurationForCurrentJump;
+    private float launchHoldElapsed;
+    private float launchHoldDuration;
+    private float launchHoldGravityMultiplier = 1f;
     private float launchForwardsDeceleration;
     private float staggerPushDeceleration;
     private float dashTimer;
@@ -177,6 +186,17 @@ public class PlayerMovement : MonoBehaviour
         controller = PlayerCharacterController.GetOrAdd(gameObject);
         if (GetComponent<PlayerSwingController>() == null)
             gameObject.AddComponent<PlayerSwingController>();
+    }
+
+    private void OnValidate()
+    {
+        if (gravity > 0f)
+            gravity = -gravity;
+        terminalFallSpeed = Mathf.Max(2f, terminalFallSpeed);
+        jumpHeight = Mathf.Max(0f, jumpHeight);
+        jumpDuration = Mathf.Max(.05f, jumpDuration);
+        jumpHoldGravityMultiplier = Mathf.Clamp(jumpHoldGravityMultiplier,
+            .05f, 1f);
     }
 
     void Start()
@@ -619,6 +639,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void UpdateVerticalVelocity()
     {
+        UpdateAerialLightTimer();
         if (playerState.IsDashing())
         {
             // Dash iniciado no chao mantem uma pequena pressao para baixo,
@@ -630,16 +651,20 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (isJumpAscending)
+        if (isLaunched)
         {
-            AdvanceJumpAscent(Time.deltaTime);
+            AdvanceJumpPhysics(Time.deltaTime,
+                launchHoldElapsed < launchHoldDuration,
+                ref launchHoldElapsed, launchHoldDuration,
+                launchHoldGravityMultiplier);
             return;
         }
 
-        if (isLaunched)
+        if (isJumpAscending)
         {
-            IntegrateVerticalAcceleration(gravity *
-                aerialGravityMultiplier, Time.deltaTime);
+            AdvanceJumpPhysics(Time.deltaTime, GameInput.JumpHeld,
+                ref jumpHoldElapsed, jumpHoldDurationForCurrentJump,
+                jumpHoldGravityMultiplier);
             return;
         }
 
@@ -672,7 +697,6 @@ public class PlayerMovement : MonoBehaviour
             isJumpAscending = false;
         }
 
-        UpdateAerialLightTimer();
         IntegrateVerticalAcceleration(gravity *
             aerialGravityMultiplier, Time.deltaTime);
     }
@@ -1124,69 +1148,78 @@ public class PlayerMovement : MonoBehaviour
             ? movesetController.Moveset.movementSpeedMultiplier
             : 1f);
 
-    private float GetJumpHeight() => movesetController != null &&
-        movesetController.Moveset != null
-        ? Mathf.Max(0f, movesetController.Moveset.jumpHeight)
-        : 3.5f;
+    private float GetJumpHeight() => Mathf.Max(0f, jumpHeight) *
+        (movesetController != null && movesetController.Moveset != null
+            ? Mathf.Max(0f, movesetController.Moveset.jumpHeightMultiplier)
+            : 1f);
 
-    private float GetJumpDuration() => movesetController != null &&
-        movesetController.Moveset != null
-        ? Mathf.Max(.05f, movesetController.Moveset.jumpDuration)
-        : .85f;
+    private float GetJumpDuration() => Mathf.Max(.05f, jumpDuration) *
+        (movesetController != null && movesetController.Moveset != null
+            ? Mathf.Max(.01f, movesetController.Moveset.jumpDurationMultiplier)
+            : 1f);
 
-    private AnimationCurve GetJumpAscentCurve() =>
-        movesetController != null && movesetController.Moveset != null &&
-        movesetController.Moveset.jumpAscentCurve != null
-            ? movesetController.Moveset.jumpAscentCurve
-            : AnimationCurve.Linear(0f, 2f, 1f, 0f);
-
-    private float GetJumpInitialSpeed() => JumpAscentProfile.GetInitialSpeed(
-        GetJumpHeight(), GetJumpDuration(), GetJumpAscentCurve());
+    private float GetJumpInitialSpeed() => CalculateJumpInitialSpeed(
+        GetJumpHeight(), gravity, GetJumpDuration(),
+        jumpHoldGravityMultiplier);
 
     private void BeginJumpAscent(float height)
     {
-        jumpAscentElapsed = 0f;
-        jumpAscentHeight = Mathf.Max(0f, height);
-        jumpAscentDuration = GetJumpDuration();
-        jumpAscentCurve = GetJumpAscentCurve();
-        verticalVelocity = JumpAscentProfile.GetVerticalSpeed(
-            jumpAscentHeight, jumpAscentDuration, jumpAscentCurve, 0f);
+        jumpHoldElapsed = 0f;
+        jumpHoldDurationForCurrentJump = GetJumpDuration();
+        verticalVelocity = CalculateJumpInitialSpeed(height, gravity,
+            jumpHoldDurationForCurrentJump, jumpHoldGravityMultiplier);
         verticalDisplacementThisFrame = 0f;
-        isJumpAscending = jumpAscentHeight > 0f;
+        isJumpAscending = verticalVelocity > 0f;
     }
 
-    private void AdvanceJumpAscent(float deltaTime)
+    private void AdvanceJumpPhysics(float deltaTime, bool holdRequested,
+        ref float holdElapsed, float holdDuration, float holdGravityMultiplier)
     {
-        float previousTime = jumpAscentElapsed;
-        jumpAscentElapsed = Mathf.Min(jumpAscentDuration,
-            jumpAscentElapsed + Mathf.Max(0f, deltaTime));
-        float previousProgress = JumpAscentProfile.GetHeightProgress(
-            jumpAscentCurve, previousTime / jumpAscentDuration);
-        float nextProgress = JumpAscentProfile.GetHeightProgress(
-            jumpAscentCurve, jumpAscentElapsed / jumpAscentDuration);
-        verticalDisplacementThisFrame = jumpAscentHeight *
-            (nextProgress - previousProgress);
-        verticalVelocity = jumpAscentElapsed >= jumpAscentDuration
-            ? 0f
-            : JumpAscentProfile.GetVerticalSpeed(jumpAscentHeight,
-                jumpAscentDuration, jumpAscentCurve,
-                jumpAscentElapsed / jumpAscentDuration);
-        if (jumpAscentElapsed >= jumpAscentDuration)
-            isJumpAscending = false;
+        float heldTime = holdRequested && verticalVelocity > 0f
+            ? Mathf.Min(deltaTime, Mathf.Max(0f, holdDuration - holdElapsed))
+            : 0f;
+        float totalDisplacement = 0f;
+        if (heldTime > 0f)
+        {
+            IntegrateVerticalAcceleration(gravity *
+                Mathf.Clamp(holdGravityMultiplier, .05f, 1f) *
+                aerialGravityMultiplier, heldTime);
+            totalDisplacement = verticalDisplacementThisFrame;
+            holdElapsed += heldTime;
+        }
+
+        float remainingTime = deltaTime - heldTime;
+        if (remainingTime > 0f)
+        {
+            IntegrateVerticalAcceleration(gravity * aerialGravityMultiplier,
+                remainingTime);
+            totalDisplacement += verticalDisplacementThisFrame;
+        }
+        verticalDisplacementThisFrame = totalDisplacement;
+        isJumpAscending = verticalVelocity > 0f;
     }
 
-    public static float CalculateJumpInitialSpeed(float height, float duration)
+    public static float CalculateJumpInitialSpeed(float height,
+        float gravityAcceleration, float holdDuration,
+        float holdGravityMultiplier)
     {
         float safeHeight = Mathf.Max(0f, height);
-        float safeDuration = Mathf.Max(.05f, duration);
-        return 4f * safeHeight / safeDuration;
-    }
+        float downGravity = Mathf.Max(.01f, -gravityAcceleration);
+        float heldGravity = Mathf.Clamp(holdGravityMultiplier, .05f, 1f);
+        float safeHoldDuration = Mathf.Max(0f, holdDuration);
+        float speedAtHeldApex = Mathf.Sqrt(2f * downGravity * heldGravity *
+            safeHeight);
+        float heldApexTime = speedAtHeldApex /
+            (downGravity * heldGravity);
+        if (safeHoldDuration >= heldApexTime)
+            return speedAtHeldApex;
 
-    public static float CalculateJumpGravity(float height, float duration)
-    {
-        float safeHeight = Mathf.Max(0f, height);
-        float safeDuration = Mathf.Max(.05f, duration);
-        return -8f * safeHeight / (safeDuration * safeDuration);
+        float linearTerm = downGravity * safeHoldDuration *
+            (1f - heldGravity);
+        float discriminant = downGravity * downGravity *
+            safeHoldDuration * safeHoldDuration * (1f - heldGravity) +
+            2f * downGravity * safeHeight;
+        return Mathf.Max(0f, Mathf.Sqrt(discriminant) - linearTerm);
     }
 
     private float GetDashCooldown() => movesetController != null &&
@@ -1581,12 +1614,10 @@ public class PlayerMovement : MonoBehaviour
 
     public float GetJumpLaunchGravity() => gravity;
 
-    public float GetJumpLaunchHeight() => GetJumpHeight();
-
     public float GetJumpLaunchDuration() => GetJumpDuration();
 
-    public AnimationCurve GetJumpLaunchAscentCurve() =>
-        GetJumpAscentCurve();
+    public float GetJumpLaunchHoldGravityMultiplier() =>
+        jumpHoldGravityMultiplier;
 
     public void ApplySelfLaunchUp()
     {
@@ -1602,65 +1633,11 @@ public class PlayerMovement : MonoBehaviour
         aerialDiveFallSpeed = 0f;
         BeginJumpAscent(GetJumpHeight());
         launchGravity = gravity;
+        launchHoldElapsed = 0f;
+        launchHoldDuration = GetJumpDuration();
+        launchHoldGravityMultiplier = jumpHoldGravityMultiplier;
         isLaunched = true;
         isStandardJump = false;
         wasAirborne = true;
-    }
-}
-
-/// <summary>Perfil normalizado de altura para a fase ascendente de um pulo.</summary>
-public static class JumpAscentProfile
-{
-    private const int IntegrationSteps = 128;
-
-    public static float GetHeightProgress(AnimationCurve curve,
-        float normalizedTime)
-    {
-        float t = Mathf.Clamp01(normalizedTime);
-        if (t <= 0f) return 0f;
-        float totalArea = GetArea(curve, 1f);
-        if (totalArea <= Mathf.Epsilon) return t;
-        return Mathf.Clamp01(GetArea(curve, t) / totalArea);
-    }
-
-    public static float GetInitialSpeed(float height, float duration,
-        AnimationCurve curve)
-    {
-        float safeDuration = Mathf.Max(.05f, duration);
-        float area = GetArea(curve, 1f);
-        float startSpeed = curve != null ? Mathf.Max(0f, curve.Evaluate(0f)) : 2f;
-        return area > Mathf.Epsilon
-            ? Mathf.Max(0f, height) * startSpeed / (safeDuration * area)
-            : Mathf.Max(0f, height) / safeDuration;
-    }
-
-    public static float GetVerticalSpeed(float height, float duration,
-        AnimationCurve curve, float normalizedTime)
-    {
-        float safeDuration = Mathf.Max(.05f, duration);
-        float area = GetArea(curve, 1f);
-        if (area <= Mathf.Epsilon) return Mathf.Max(0f, height) / safeDuration;
-        float relativeSpeed = curve != null
-            ? Mathf.Max(0f, curve.Evaluate(Mathf.Clamp01(normalizedTime)))
-            : 1f;
-        return Mathf.Max(0f, height) * relativeSpeed /
-            (safeDuration * area);
-    }
-
-    private static float GetArea(AnimationCurve curve, float endTime)
-    {
-        float end = Mathf.Clamp01(endTime);
-        if (curve == null) return end;
-        float step = end / IntegrationSteps;
-        float previous = Mathf.Max(0f, curve.Evaluate(0f));
-        float area = 0f;
-        for (int i = 1; i <= IntegrationSteps; i++)
-        {
-            float current = Mathf.Max(0f,
-                curve.Evaluate(step * i));
-            area += (previous + current) * .5f * step;
-            previous = current;
-        }
-        return area;
     }
 }

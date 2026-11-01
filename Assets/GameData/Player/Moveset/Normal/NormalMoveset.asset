@@ -14,37 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
   displayName: Normal
   resourceMode: 0
-  globalPauseDelay: 0.5
+  globalPauseDelay: 0.4
   movementSpeedMultiplier: 1
   allowDash: 1
   allowAirJump: 1
   allowAirDash: 1
-  jumpHeight: 3.5
-  jumpDuration: 1
-  jumpAscentCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 2
-      inSlope: -2
-      outSlope: -2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: -2
-      outSlope: -2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
+  jumpHeightMultiplier: 1
+  jumpDurationMultiplier: 1
   dashImpulse: 12.8
   dashCooldown: 1.3
   lightWindupActiveRotationSpeed: 450
@@ -52,10 +28,10 @@ MonoBehaviour:
   targetAssistRangePadding: 0.25
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
-    continuationWindow: 0.6
+    continuationWindow: 0.9
   heavyTransitionTiming:
     minimumDelayAfterWindup: 0
-    continuationWindow: 0.6
+    continuationWindow: 0.9
   extendedArmHitboxRadius: 0.25
   extendedArmHitboxHeightOffset: 0.45
   lightCancelRules:
@@ -105,6 +81,10 @@ MonoBehaviour:
       targetNodeId: L2
       requiresPause: 0
       requiresHitConfirm: 0
+    - input: 0
+      targetNodeId: L2p
+      requiresPause: 1
+      requiresHitConfirm: 0
   - nodeId: L2
     attack: {fileID: 11400000, guid: b5c584aa6e940a44caa09e31d4925dea, type: 2}
     transitions:
@@ -116,6 +96,9 @@ MonoBehaviour:
       targetNodeId: L3p
       requiresPause: 1
       requiresHitConfirm: 0
+  - nodeId: L2p
+    attack: {fileID: 11400000, guid: db7e686f168096f489b9adcbf6f25a88, type: 2}
+    transitions: []
   - nodeId: L3
     attack: {fileID: 11400000, guid: 0521bd37a88a5e84a9d37f42db85c475, type: 2}
     transitions:
