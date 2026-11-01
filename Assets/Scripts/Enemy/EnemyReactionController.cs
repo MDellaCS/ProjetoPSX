@@ -85,13 +85,17 @@ public sealed class EnemyReactionController : MonoBehaviour
         switch (reaction)
         {
             case CombatReactionType.LaunchUp:
-                movement.ApplyLaunchUp(request.LaunchSpeed, request.Gravity);
+                movement.ApplyLaunchUp(request.LaunchSpeed, request.Gravity,
+                    request.LaunchHeight, request.LaunchDuration,
+                    request.LaunchAscentCurve);
                 return true;
             case CombatReactionType.LaunchUpForwards:
                 movement.ApplyLaunchUpAndForwards(request.SourcePosition,
                     request.LaunchSpeed, request.Gravity,
+                    request.LaunchHeight, request.LaunchDuration,
                     request.LaunchForwardsForce,
-                    request.LaunchForwardsDeceleration);
+                    request.LaunchForwardsDeceleration,
+                    request.LaunchAscentCurve);
                 return true;
             case CombatReactionType.LaunchDown:
                 movement.ApplyAerialDive(request.LaunchDownSpeed);

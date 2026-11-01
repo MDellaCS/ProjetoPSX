@@ -19,7 +19,7 @@ MonoBehaviour:
   windupDuration: 0.03
   activeDuration: 0.5
   recoveryDuration: 0
-  cooldownDuration: 0.7
+  cooldownDuration: 0.6
   holdActiveUntilGrounded: 0
   baseDamage: 5
   basePoiseDamage: 10

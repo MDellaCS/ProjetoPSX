@@ -59,13 +59,20 @@ public sealed class EnemyMovement : MonoBehaviour
     private Vector3 playerHeadSeparationVelocity;
     private float playerHeadSeparationTimer;
     private float verticalVelocity;
+    private float verticalDisplacementThisFrame;
     private float launchGravity;
+    private float launchAscentElapsed;
+    private float launchAscentHeight;
+    private float launchAscentDuration;
+    private AnimationCurve launchAscentCurve;
+    private bool hasLaunchAscentProfile;
     private float juggleTimer;
     private float juggleGravityMultiplier = 1f;
     private Vector3 launchForwardsVelocity;
     private float launchForwardsDeceleration;
     private Vector3 lastMoveVelocity;
     private bool isLaunched;
+    private bool hasLaunchProfileForFrame;
     private bool isLaunchedForwards;
     private bool hasGroundContact;
     private bool temporarilyIgnoreGroundEntitySeparation;
@@ -153,10 +160,18 @@ public sealed class EnemyMovement : MonoBehaviour
         knockbackTimer = Mathf.Max(0f, knockbackTimer - Time.deltaTime);
         if (grapplePullActive)
             verticalVelocity = grapplePullVelocity.y;
+        else if (hasLaunchProfileForFrame)
+        {
+            velocity.y = 0f;
+        }
         else
             velocity.y = verticalVelocity;
         lastMoveVelocity = velocity;
-        CollisionFlags flags = controller.Move(velocity * Time.deltaTime);
+        Vector3 displacement = velocity * Time.deltaTime;
+        if (hasLaunchProfileForFrame)
+            displacement.y = verticalDisplacementThisFrame;
+        hasLaunchProfileForFrame = false;
+        CollisionFlags flags = controller.Move(displacement);
         hasGroundContact = (flags & CollisionFlags.Below) != 0 ||
             controller.isGrounded;
 
@@ -185,6 +200,7 @@ public sealed class EnemyMovement : MonoBehaviour
             float landingSpeed = Mathf.Max(0f, -verticalVelocity);
             bool floorSplatted = TryApplyStaticSplat(landingSpeed, Vector3.down);
             isLaunched = false;
+            hasLaunchAscentProfile = false;
             verticalVelocity = -2f;
             ResetJuggleMovement();
             CancelSlideLaunchHorizontalImpulse();
@@ -247,10 +263,41 @@ public sealed class EnemyMovement : MonoBehaviour
             if (juggleTimer <= 0f)
                 juggleGravityMultiplier = 1f;
         }
+        if (isLaunched && hasLaunchAscentProfile)
+        {
+            AdvanceLaunchAscent(Time.deltaTime);
+            hasLaunchProfileForFrame = true;
+            return;
+        }
         float activeGravity = isLaunched ? launchGravity : gravity;
-        verticalVelocity = Mathf.Max(verticalVelocity +
-            activeGravity * juggleGravityMultiplier * Time.deltaTime,
+        float dt = Time.deltaTime;
+        float nextVelocity = Mathf.Max(verticalVelocity +
+            activeGravity * juggleGravityMultiplier * dt,
             -terminalFallSpeed);
+        verticalDisplacementThisFrame =
+            (verticalVelocity + nextVelocity) * .5f * dt;
+        verticalVelocity = nextVelocity;
+        hasLaunchProfileForFrame = isLaunched && launchAscentDuration > 0f;
+    }
+
+    private void AdvanceLaunchAscent(float deltaTime)
+    {
+        float previousTime = launchAscentElapsed;
+        launchAscentElapsed = Mathf.Min(launchAscentDuration,
+            launchAscentElapsed + Mathf.Max(0f, deltaTime));
+        float previousProgress = JumpAscentProfile.GetHeightProgress(
+            launchAscentCurve, previousTime / launchAscentDuration);
+        float nextProgress = JumpAscentProfile.GetHeightProgress(
+            launchAscentCurve, launchAscentElapsed / launchAscentDuration);
+        verticalDisplacementThisFrame = launchAscentHeight *
+            (nextProgress - previousProgress);
+        verticalVelocity = launchAscentElapsed >= launchAscentDuration
+            ? 0f
+            : JumpAscentProfile.GetVerticalSpeed(launchAscentHeight,
+                launchAscentDuration, launchAscentCurve,
+                launchAscentElapsed / launchAscentDuration);
+        if (launchAscentElapsed >= launchAscentDuration)
+            hasLaunchAscentProfile = false;
     }
 
     public void SetVerticalVelocity(float value)
@@ -407,7 +454,9 @@ public sealed class EnemyMovement : MonoBehaviour
         FaceForceOrigin(attackerPosition);
     }
 
-    public void ApplyLaunchUp(float initialSpeed, float newGravity)
+    public void ApplyLaunchUp(float initialSpeed, float newGravity,
+        float ascentHeight = 0f, float ascentDuration = 0f,
+        AnimationCurve ascentCurve = null)
     {
         if (!canBeLaunchedUp || owner.IsDead) return;
         attacks.CancelAttack();
@@ -421,6 +470,18 @@ public sealed class EnemyMovement : MonoBehaviour
         ResetLaunchForwards();
         verticalVelocity = initialSpeed;
         launchGravity = newGravity;
+        hasLaunchAscentProfile = ascentHeight > 0f && ascentDuration > 0f &&
+            ascentCurve != null;
+        hasLaunchProfileForFrame = false;
+        if (hasLaunchAscentProfile)
+        {
+            launchAscentElapsed = 0f;
+            launchAscentHeight = ascentHeight;
+            launchAscentDuration = ascentDuration;
+            launchAscentCurve = ascentCurve;
+            verticalVelocity = JumpAscentProfile.GetVerticalSpeed(
+                ascentHeight, ascentDuration, ascentCurve, 0f);
+        }
         isLaunched = true;
         hasGroundContact = false;
         ResetJuggleMovement();
@@ -435,12 +496,14 @@ public sealed class EnemyMovement : MonoBehaviour
     /// <summary>Aplica Launch Up e Launch Forwards como uma unica reacao diagonal.</summary>
     public void ApplyLaunchUpAndForwards(Vector3 attackerPosition,
         float initialSpeed, float newGravity, float forwardsForce,
-        float forwardsDeceleration)
+        float forwardsDeceleration, float ascentHeight = 0f,
+        float ascentDuration = 0f, AnimationCurve ascentCurve = null)
     {
         if (!canBeLaunchedUp || !canBeLaunchedForwards || owner.IsDead)
             return;
 
-        ApplyLaunchUp(initialSpeed, newGravity);
+        ApplyLaunchUp(initialSpeed, newGravity, ascentHeight,
+            ascentDuration, ascentCurve);
         if (forwardsForce <= 0f || forwardsDeceleration <= 0f)
             return;
 

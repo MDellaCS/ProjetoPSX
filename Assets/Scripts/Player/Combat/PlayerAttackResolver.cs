@@ -90,7 +90,10 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             rules.LaunchForwardsDeceleration,
             rules.JuggleLiftSpeed,
             rules.JuggleGravityMultiplier,
-            rules.JuggleDuration
+            rules.JuggleDuration,
+            movement != null ? movement.GetJumpLaunchHeight() : 3.5f,
+            movement != null ? movement.GetJumpLaunchDuration() : .85f,
+            movement != null ? movement.GetJumpLaunchAscentCurve() : null
         ));
         if (heat != null && heat.IsHeatModeActive &&
             runtime.Definition.kind == PlayerAttackKind.Light &&
@@ -152,8 +155,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         return true;
     }
 
-    public void ApplySelfLaunchUp() => movement?.ApplySelfLaunchUp(
-        movement.GetMaximumJumpLaunchSpeed(), movement.gravity);
+    public void ApplySelfLaunchUp() => movement?.ApplySelfLaunchUp();
 
     public void ApplySelfLaunchDown() =>
         movement?.BeginAerialDive(CombatPoiseSystem.Instance.MinimumLaunchForce);
@@ -190,7 +192,10 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             GetLaunchSpeed(), GetLaunchGravity(), rules.MinimumLaunchForce,
             0f, rules.LaunchForwardsDeceleration,
             rules.JuggleLiftSpeed, rules.JuggleGravityMultiplier,
-            rules.JuggleDuration));
+            rules.JuggleDuration,
+            movement != null ? movement.GetJumpLaunchHeight() : 3.5f,
+            movement != null ? movement.GetJumpLaunchDuration() : .85f,
+            movement != null ? movement.GetJumpLaunchAscentCurve() : null));
         if (enemy.IsLaunched)
             enemy.ApplyLaunchUpHorizontalImpulse(horizontalDirection, horizontalImpulse);
         combatStatus?.RegisterDamageDealtToEnemy();
@@ -211,6 +216,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     }
 
     private float GetLaunchSpeed() => movement != null
-        ? movement.GetMaximumJumpLaunchSpeed() : 18f;
-    private float GetLaunchGravity() => movement != null ? movement.gravity : -60f;
+        ? movement.GetJumpLaunchSpeed() : 18f;
+    private float GetLaunchGravity() => movement != null
+        ? movement.GetJumpLaunchGravity() : -60f;
 }

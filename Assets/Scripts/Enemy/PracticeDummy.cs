@@ -145,4 +145,11 @@ public sealed class PracticeDummy : MonoBehaviour
         transform.SetPositionAndRotation(startPosition, startRotation);
         enemy?.ResetPracticeDummyState();
     }
+
+    /// <summary>Reinicia a espera de retorno apos receber dano real.</summary>
+    internal void NotifyDamageTaken()
+    {
+        if (returnToStart)
+            returnTimer = Mathf.Max(.1f, returnInterval);
+    }
 }

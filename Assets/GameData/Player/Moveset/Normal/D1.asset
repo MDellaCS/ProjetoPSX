@@ -19,6 +19,7 @@ MonoBehaviour:
   windupDuration: 0.01
   activeDuration: 0.13
   recoveryDuration: 0.06
+  cooldownDuration: 0
   holdActiveUntilGrounded: 0
   baseDamage: 15
   basePoiseDamage: 50
@@ -91,6 +92,7 @@ MonoBehaviour:
       launchUp: 1
       selfLaunchUp: 1
       launchForwards: 0
+      launchBackwards: 0
       juggle: 0
     hitboxes:
     - trackName: L1_Vai

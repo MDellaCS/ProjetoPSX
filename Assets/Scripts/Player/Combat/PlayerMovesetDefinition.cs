@@ -79,8 +79,13 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     public bool allowAirJump = true;
     [Tooltip("Permite iniciar um dash enquanto o jogador está no ar.")]
     public bool allowAirDash = true;
-    [Tooltip("Velocidade vertical inicial de cada pulo, em unidades por segundo. A altura final também depende da gravidade e da sustentação global ao segurar o botão.")]
-    [Min(0f)] public float jumpInitialSpeed = 14f;
+    [Tooltip("Altura vertical desejada para o pulo, em metros. A trajetoria em terreno plano conserva esta altura configurada.")]
+    [Min(0f)] public float jumpHeight = 3.5f;
+    [Tooltip("Tempo, em segundos, que o jogador leva para subir ate o apice. A descida e controlada pela gravidade configurada no PlayerMovement.")]
+    [Min(.05f)] public float jumpDuration = .85f;
+    [Tooltip("Perfil da velocidade vertical durante a subida. X representa o tempo normalizado ate o apice e Y distribui a velocidade; a area e normalizada para preservar Jump Height. A descida usa a gravidade do jogador.")]
+    public AnimationCurve jumpAscentCurve = AnimationCurve.Linear(0f, 2f,
+        1f, 0f);
     [Tooltip("Impulso horizontal fixo aplicado pelo dash, em unidades por segundo. Soma-se ao momentum atual do jogador.")]
     [Min(0f)] public float dashImpulse = 12.8f;
     [Tooltip("Tempo, em segundos, até o próximo dash poder ser iniciado.")]

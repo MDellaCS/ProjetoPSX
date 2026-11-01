@@ -164,20 +164,17 @@ public sealed class PlayerCharacterController : MonoBehaviour
                 hasGroundContact = true;
                 grounded = Vector3.Angle(groundNormal, Vector3.up) <= slopeLimit;
             }
-            // Step-up e permitido apenas em obstaculos baixos. Uma parede
-            // vertical pode produzir uma normal levemente inclinada por
-            // causa da capsula/esfera do cast; validamos a altura real do
-            // ponto de contato antes de tentar subir.
-            if (wasGrounded && (hitFlag & CollisionFlags.Sides) != 0 &&
+            if (wasGrounded && displacement.y <= 0f &&
+                (hitFlag & CollisionFlags.Sides) != 0 &&
                 hit.collider.GetComponentInParent<EnemyBase>() == null &&
-                stepHeight > 0f && IsLowStepContact(hit) &&
+                stepHeight > 0f &&
                 TryStep(ref remaining))
             {
                 remaining = Vector3.zero;
                 break;
             }
 
-            Vector3 slide = Vector3.ProjectOnPlane(remaining, hit.normal);
+            Vector3 slide = ProjectRemainingAlongSurface(remaining, hit.normal);
             if (Vector3.Dot(slide, remaining) <= .00001f)
             {
                 remaining = Vector3.zero;
@@ -238,11 +235,27 @@ public sealed class PlayerCharacterController : MonoBehaviour
         float nearestDistance = float.MaxValue;
         nearest = default;
         bool found = false;
+        float capsuleMiddle = (bottom.y + top.y) * .5f;
         for (int i = 0; i < count; i++)
         {
             RaycastHit candidate = hitBuffer[i];
             if (candidate.collider == null || IsIgnoredForMovement(candidate.collider) ||
+                Vector3.Dot(direction, candidate.normal) >= -.0001f ||
                 candidate.distance >= nearestDistance)
+                continue;
+
+            // Casts que partem com o pe apoiado podem reportar o chao como
+            // bloqueio lateral ou como teto quando a capsula se afasta dele.
+            // Ignore esses contatos de suporte; degraus e paredes continuam
+            // validos porque seus colliders se estendem acima do pe/cintura.
+            float colliderTop = candidate.collider.bounds.max.y;
+            if (Mathf.Abs(direction.y) < .05f &&
+                colliderTop <= bottom.y + skinWidth)
+            {
+                continue;
+            }
+
+            if (direction.y > .5f && colliderTop < capsuleMiddle)
                 continue;
 
             nearestDistance = candidate.distance;
@@ -285,15 +298,18 @@ public sealed class PlayerCharacterController : MonoBehaviour
 
     private bool TryStep(ref Vector3 remaining)
     {
+        Vector3 horizontal = Vector3.ProjectOnPlane(remaining, Vector3.up);
+        if (horizontal.sqrMagnitude <= .0001f)
+            return false;
+
         Vector3 originalPosition = transform.position;
+        GetWorldCapsule(out Vector3 originalBottom, out _, out _);
         if (TryFindNearestHit(Vector3.up, stepHeight, out RaycastHit ceiling) &&
             ceiling.distance < stepHeight - skinWidth)
             return false;
 
         transform.position += Vector3.up * stepHeight;
-        Vector3 horizontal = Vector3.ProjectOnPlane(remaining, Vector3.up);
-        if (horizontal.sqrMagnitude > .0001f &&
-            TryFindNearestHit(horizontal.normalized,
+        if (TryFindNearestHit(horizontal.normalized,
                 horizontal.magnitude + skinWidth, out RaycastHit obstacle) &&
             obstacle.distance < horizontal.magnitude - skinWidth)
         {
@@ -304,8 +320,11 @@ public sealed class PlayerCharacterController : MonoBehaviour
         transform.position += horizontal;
         float downDistance = stepHeight + groundProbeDistance;
         if (!TryFindNearestHit(Vector3.down, downDistance, out RaycastHit floor) ||
-            floor.normal.y <= .0001f ||
-            Vector3.Angle(floor.normal, Vector3.up) > slopeLimit)
+            Vector3.Angle(floor.normal, Vector3.up) > slopeLimit ||
+            floor.point.y <= originalBottom.y + .01f ||
+            floor.point.y > originalBottom.y + stepHeight + skinWidth ||
+            floor.collider.bounds.max.y > originalBottom.y +
+                stepHeight + skinWidth)
         {
             transform.position = originalPosition;
             return false;
@@ -321,11 +340,26 @@ public sealed class PlayerCharacterController : MonoBehaviour
         return true;
     }
 
-    private bool IsLowStepContact(RaycastHit hit)
+    private Vector3 ProjectRemainingAlongSurface(Vector3 remaining,
+        Vector3 surfaceNormal)
     {
-        GetWorldCapsule(out Vector3 bottom, out _, out _);
-        float contactHeight = hit.point.y - bottom.y;
-        return contactHeight <= stepHeight + skinWidth;
+        float surfaceAngle = Vector3.Angle(surfaceNormal, Vector3.up);
+        if (surfaceAngle <= slopeLimit)
+            return Vector3.ProjectOnPlane(remaining, surfaceNormal);
+
+        // Normais de paredes obtidas por casts de capsula podem ter uma
+        // pequena componente vertical. Ela nao deve converter movimento
+        // horizontal em subida: superfícies acima do limite de caminhada
+        // restringem apenas o deslocamento horizontal.
+        Vector3 horizontalNormal = Vector3.ProjectOnPlane(surfaceNormal,
+            Vector3.up);
+        if (horizontalNormal.sqrMagnitude <= .0001f)
+            return Vector3.zero;
+
+        Vector3 slide = Vector3.ProjectOnPlane(remaining,
+            horizontalNormal.normalized);
+        slide.y = Mathf.Min(slide.y, remaining.y);
+        return slide;
     }
 
     private void ProbeGround(bool allowSnap = false)
@@ -417,9 +451,9 @@ public sealed class PlayerCharacterController : MonoBehaviour
         return flyingPuppet == null || flyingPuppet.IgnoresPlayerCollision;
     }
 
-    private static CollisionFlags GetCollisionFlag(Vector3 normal)
+    private CollisionFlags GetCollisionFlag(Vector3 normal)
     {
-        if (normal.y > .001f)
+        if (Vector3.Angle(normal, Vector3.up) <= slopeLimit)
             return CollisionFlags.Below;
         if (normal.y < -.5f)
             return CollisionFlags.Above;

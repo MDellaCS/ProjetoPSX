@@ -315,12 +315,18 @@ public class EnemyBase : MonoBehaviour
         Vector3 impactPosition = default,
         bool hasImpactPosition = false,
         Transform attacker = null,
-        Vector3 particleImpactDirection = default) =>
-        health.TakeDamage(damage, attackerPosition, poiseDamage, out damageDealt,
+        Vector3 particleImpactDirection = default)
+    {
+        bool wasApplied = health.TakeDamage(damage, attackerPosition,
+            poiseDamage, out damageDealt,
             out poiseResult,
             fromPlayerAttack, playerAttackType, playerAttackRadius,
             impactDirection, impactPosition, hasImpactPosition, attacker,
             particleImpactDirection);
+        if (wasApplied && damageDealt > 0)
+            practiceDummy?.NotifyDamageTaken();
+        return wasApplied;
+    }
     public bool ApplyPoiseReaction(CombatPoiseHitResult poiseHit,
         CombatReactionRequest request) => reactions.Apply(poiseHit, request);
     public void ApplyLaunchUpHorizontalImpulse(Vector3 direction, float speed) =>

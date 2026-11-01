@@ -41,12 +41,16 @@ public readonly struct CombatReactionRequest
     public readonly float JuggleLiftSpeed;
     public readonly float JuggleGravityMultiplier;
     public readonly float JuggleDuration;
+    public readonly float LaunchHeight;
+    public readonly float LaunchDuration;
+    public readonly AnimationCurve LaunchAscentCurve;
 
     public CombatReactionRequest(CombatReactionType type, Vector3 sourcePosition,
         float launchSpeed, float gravity, float launchDownSpeed,
         float launchForwardsForce, float launchForwardsDeceleration,
         float juggleLiftSpeed, float juggleGravityMultiplier,
-        float juggleDuration)
+        float juggleDuration, float launchHeight = 0f,
+        float launchDuration = 0f, AnimationCurve launchAscentCurve = null)
     {
         Type = type;
         SourcePosition = sourcePosition;
@@ -58,6 +62,9 @@ public readonly struct CombatReactionRequest
         JuggleLiftSpeed = juggleLiftSpeed;
         JuggleGravityMultiplier = juggleGravityMultiplier;
         JuggleDuration = juggleDuration;
+        LaunchHeight = launchHeight;
+        LaunchDuration = launchDuration;
+        LaunchAscentCurve = launchAscentCurve;
     }
 }
 
