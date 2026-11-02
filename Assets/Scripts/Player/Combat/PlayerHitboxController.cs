@@ -354,7 +354,24 @@ public sealed class PlayerHitboxController : MonoBehaviour
         else if (track.trajectoryMode ==
             PlayerHitboxTrajectoryMode.TargetAssist &&
             runtime != null && runtime.HasAssistTarget &&
-            !runtime.IsGrappleAttack)
+            runtime.IsGrappleAttack)
+        {
+            Vector3 start = origin +
+                transform.rotation * track.startLocalPosition;
+            Vector3 aimDirection = runtime.AssistTargetPosition - start;
+            if (aimDirection.sqrMagnitude <= .0001f)
+                aimDirection = transform.forward;
+
+            // Mantem a inclinacao 3D do alvo, mas estende o trajeto ate o
+            // alcance completo configurado no endpoint da track.
+            float fullReach = Vector3.Distance(track.startLocalPosition,
+                track.endLocalPosition);
+            center = start + aimDirection.normalized * fullReach * progress;
+            effectiveRadius = track.radius;
+        }
+        else if (track.trajectoryMode ==
+            PlayerHitboxTrajectoryMode.TargetAssist &&
+            runtime != null && runtime.HasAssistTarget)
         {
             Vector3 start = origin +
                 transform.rotation * track.startLocalPosition;
@@ -364,10 +381,8 @@ public sealed class PlayerHitboxController : MonoBehaviour
         }
         else
         {
-            // O grapple usa o alvo assistido para orientar o disparo, mas sua
-            // hitbox percorre o alcance completo. Encerrar a trajetoria na
-            // posicao capturada do alvo faria o ataque parar atras dele caso
-            // ele se afastasse durante o Windup ou Active.
+            // Trajetorias lineares e ataques sem alvo assistido usam os
+            // endpoints locais configurados no asset.
             local = Vector3.Lerp(track.startLocalPosition,
                 track.endLocalPosition, progress);
             effectiveRadius = track.radius;

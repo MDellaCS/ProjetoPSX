@@ -24,9 +24,9 @@ MonoBehaviour:
   baseDamage: 25
   basePoiseDamage: 60
   movement:
-    forwardDistance: 0
+    forwardDistance: 1.5
     startNormalized: 0
-    endNormalized: 1
+    endNormalized: 0.9
     movementCurve:
       serializedVersion: 2
       m_Curve:
