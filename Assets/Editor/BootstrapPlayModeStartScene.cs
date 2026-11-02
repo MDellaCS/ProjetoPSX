@@ -8,7 +8,7 @@ using UnityEditor.SceneManagement;
 [InitializeOnLoad]
 internal static class BootstrapPlayModeStartScene
 {
-    private const string BootstrapScenePath = "Assets/Scenes/Bootstrap.unity";
+    private const string ScenesFolder = "Assets/Scenes";
 
     static BootstrapPlayModeStartScene()
     {
@@ -18,8 +18,22 @@ internal static class BootstrapPlayModeStartScene
     [MenuItem("Projeto PSX/Play Mode/Usar Bootstrap como cena inicial")]
     private static void SetBootstrapAsPlayModeStartScene()
     {
-        SceneAsset bootstrap = AssetDatabase.LoadAssetAtPath<SceneAsset>(
-            BootstrapScenePath);
+        SceneAsset bootstrap = null;
+        string[] sceneGuids = AssetDatabase.FindAssets("t:Scene",
+            new[] { ScenesFolder });
+        foreach (string sceneGuid in sceneGuids)
+        {
+            string scenePath = AssetDatabase.GUIDToAssetPath(sceneGuid);
+            string sceneName = System.IO.Path.GetFileNameWithoutExtension(
+                scenePath);
+            if (sceneName.IndexOf("Bootstrap",
+                    System.StringComparison.OrdinalIgnoreCase) < 0)
+                continue;
+
+            bootstrap = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+            break;
+        }
+
         if (bootstrap != null)
             EditorSceneManager.playModeStartScene = bootstrap;
     }

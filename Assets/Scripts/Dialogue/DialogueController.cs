@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 /// <summary>
@@ -12,26 +12,35 @@ using UnityEngine.UIElements;
 public sealed class DialogueController : MonoBehaviour
 {
     [Header("Tempo Global")]
-    [Tooltip("Tempo minimo em que a primeira pagina de toda sequencia deve permanecer visivel antes de aceitar clique ou Enter. Soma-se ao minimo individual da pagina, usando o maior valor.")]
+    [Tooltip("Tempo minimo em que a primeira pagina de toda sequencia deve permanecer visivel antes de aceitar o botao Interact. Soma-se ao minimo individual da pagina, usando o maior valor.")]
     [Min(0f)] [SerializeField] private float minimumFirstPageDisplayDuration = .35f;
+    [Tooltip("Tempo apos o fim de uma sequencia antes de aceitar outra interacao de dialogo. Impede que o mesmo Interact que fechou a fala inicie outra imediatamente.")]
+    [Min(0f)] [SerializeField] private float postDialogueInteractionCooldown = .35f;
+    [Tooltip("Ordem de desenho do painel de dialogo. Valores maiores aparecem sobre interfaces comuns; overlays com ordem superior continuam por cima.")]
+    [SerializeField] private int dialogueSortingOrder = 2;
+    [Tooltip("Font Asset do TextCore/UI Toolkit usado nas falas. Crie-o pelo menu UI Toolkit > Text > Font Asset; deixe vazio para usar a fonte padrao do Panel Settings.")]
+    [SerializeField] private FontAsset dialogueFont;
 
     private static DialogueController instance;
     private readonly Queue<DialogueSequence> queue = new();
 
     private PanelRenderer panelRenderer;
     private VisualElement dialogueRoot;
-    private Label speakerLabel;
+    private VisualElement dialogueFade;
     private Label messageLabel;
-    private Label advanceLabel;
+    private Texture2D dialogueFadeTexture;
     private DialogueSequence currentSequence;
     private List<DialogueLine> currentLines;
     private int currentLineIndex;
     private float lineElapsed;
+    private float nextInteractionAvailableAt;
 
     public static DialogueController Instance => instance != null
         ? instance : FindAnyObjectByType<DialogueController>();
     public static bool IsDisplaying => Instance != null &&
         Instance.currentSequence != null;
+    public static bool IsInteractionCooldownActive => Instance != null &&
+        Time.time < Instance.nextInteractionAvailableAt;
     /// <summary>Indica que a fala atual aceita avanço manual e deve bloquear ataques do jogador.</summary>
     public static bool BlocksPlayerAttacks
     {
@@ -56,13 +65,18 @@ public sealed class DialogueController : MonoBehaviour
         instance = this;
         panelRenderer = GetComponent<PanelRenderer>();
         if (panelRenderer != null)
+        {
+            panelRenderer.sortingOrder = dialogueSortingOrder;
             panelRenderer.RegisterUIReloadCallback(HandleUIReload);
+        }
     }
 
     private void OnDestroy()
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+        if (dialogueFadeTexture != null)
+            Destroy(dialogueFadeTexture);
         if (instance == this)
             instance = null;
     }
@@ -81,7 +95,7 @@ public sealed class DialogueController : MonoBehaviour
 
         lineElapsed += Time.deltaTime;
         bool canConfirm = lineElapsed >= GetMinimumDisplayDuration(line);
-        if (canConfirm && line.allowEarlyAdvance && WasAdvancePressed())
+        if (canConfirm && line.allowEarlyAdvance && GameInput.InteractPressed)
         {
             FinishCurrentLine();
             return;
@@ -125,6 +139,7 @@ public sealed class DialogueController : MonoBehaviour
             currentLines = null;
             currentLineIndex = 0;
             lineElapsed = 0f;
+            BeginInteractionCooldown();
             BeginNextSequence();
         }
 
@@ -208,8 +223,14 @@ public sealed class DialogueController : MonoBehaviour
         currentLineIndex = 0;
         lineElapsed = 0f;
         SetVisible(false);
+        if (queue.Count == 0)
+            BeginInteractionCooldown();
         BeginNextSequence();
     }
+
+    private void BeginInteractionCooldown() =>
+        nextInteractionAvailableAt = Time.time +
+            Mathf.Max(0f, postDialogueInteractionCooldown);
 
     private DialogueLine GetCurrentLine()
     {
@@ -236,10 +257,78 @@ public sealed class DialogueController : MonoBehaviour
             return;
 
         dialogueRoot = root.Q<VisualElement>("dialogue-root");
-        speakerLabel = root.Q<Label>("dialogue-speaker");
+        dialogueFade = root.Q<VisualElement>("dialogue-fade");
         messageLabel = root.Q<Label>("dialogue-message");
-        advanceLabel = root.Q<Label>("dialogue-advance");
+        dialogueRoot?.RegisterCallback<GeometryChangedEvent>(
+            HandleDialogueGeometryChanged);
+        messageLabel?.RegisterCallback<GeometryChangedEvent>(
+            HandleDialogueGeometryChanged);
+        ApplyDialogueStyle();
         RefreshVisuals();
+    }
+
+    private void HandleDialogueGeometryChanged(GeometryChangedEvent _)
+    {
+        UpdateDialogueFadeHeight();
+    }
+
+    private void ApplyDialogueStyle()
+    {
+        if (messageLabel != null && dialogueFont != null)
+        {
+            messageLabel.style.unityFontDefinition =
+                new StyleFontDefinition(
+                    FontDefinition.FromSDFFont(dialogueFont));
+        }
+
+        if (dialogueFade == null)
+            return;
+
+        if (dialogueFadeTexture == null)
+            dialogueFadeTexture = CreateDialogueFadeTexture();
+        dialogueFade.style.backgroundImage =
+            Background.FromTexture2D(dialogueFadeTexture);
+        UpdateDialogueFadeHeight();
+    }
+
+    private void UpdateDialogueFadeHeight()
+    {
+        if (dialogueRoot == null || dialogueFade == null ||
+            messageLabel == null)
+            return;
+
+        float rootHeight = dialogueRoot.layout.height;
+        if (rootHeight <= 0f)
+            return;
+
+        const float fadeExtensionAboveText = 24f;
+        float height = rootHeight - messageLabel.layout.y +
+            fadeExtensionAboveText;
+        dialogueFade.style.height = Mathf.Clamp(height, 0f, rootHeight);
+    }
+
+    private static Texture2D CreateDialogueFadeTexture()
+    {
+        const int height = 128;
+        var texture = new Texture2D(1, height, TextureFormat.RGBA32,
+            false, true)
+        {
+            name = "Dialogue Bottom Fade",
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        var pixels = new Color[height];
+        for (int y = 0; y < height; y++)
+        {
+            float fromBottom = (float)y / (height - 1);
+            float opacity = 1f * Mathf.Pow(1f - fromBottom, 1.2f);
+            pixels[y] = new Color(0f, 0f, 0f, opacity);
+        }
+
+        texture.SetPixels(pixels);
+        texture.Apply(false, true);
+        return texture;
     }
 
     private void RefreshVisuals()
@@ -251,22 +340,6 @@ public sealed class DialogueController : MonoBehaviour
 
         if (messageLabel != null)
             messageLabel.text = line.text ?? string.Empty;
-        if (speakerLabel != null)
-        {
-            bool hasSpeaker = !string.IsNullOrWhiteSpace(line.speakerName);
-            speakerLabel.text = line.speakerName ?? string.Empty;
-            speakerLabel.style.display = hasSpeaker
-                ? DisplayStyle.Flex
-                : DisplayStyle.None;
-        }
-        if (advanceLabel != null)
-        {
-            bool mayAdvance = line.allowEarlyAdvance;
-            advanceLabel.style.display = mayAdvance
-                ? DisplayStyle.Flex
-                : DisplayStyle.None;
-            advanceLabel.text = mayAdvance ? "CLIQUE / ENTER" : string.Empty;
-        }
     }
 
     private void SetVisible(bool visible)
@@ -275,12 +348,5 @@ public sealed class DialogueController : MonoBehaviour
             dialogueRoot.style.display = visible
                 ? DisplayStyle.Flex
                 : DisplayStyle.None;
-    }
-
-    private static bool WasAdvancePressed()
-    {
-        return Mouse.current?.leftButton.wasPressedThisFrame == true ||
-            Keyboard.current?.enterKey.wasPressedThisFrame == true ||
-            Keyboard.current?.numpadEnterKey.wasPressedThisFrame == true;
     }
 }

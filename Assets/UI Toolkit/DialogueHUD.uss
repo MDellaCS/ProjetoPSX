@@ -6,67 +6,22 @@
     bottom: 0;
 }
 
-.dialogue-fade-outer,
-.dialogue-fade-middle,
-.dialogue-fade-inner {
+.dialogue-fade {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-}
-
-.dialogue-fade-outer {
-    height: 38%;
-    background-color: rgba(0, 0, 0, 0.12);
-}
-
-.dialogue-fade-middle {
-    height: 27%;
-    background-color: rgba(0, 0, 0, 0.20);
-}
-
-.dialogue-fade-inner {
-    height: 17%;
-    background-color: rgba(0, 0, 0, 0.32);
-}
-
-.dialogue-panel {
-    position: absolute;
-    left: 50%;
-    bottom: 8%;
-    translate: -50% 0;
-    width: 62%;
-    min-width: 420px;
-    max-width: 1040px;
-    padding: 18px 24px 16px 24px;
-    background-color: rgba(4, 5, 7, 0.86);
-    border-left-width: 1px;
-    border-top-width: 1px;
-    border-right-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.38);
-    border-top-color: rgba(255, 255, 255, 0.22);
-    border-right-color: rgba(255, 255, 255, 0.22);
-    border-bottom-color: rgba(255, 255, 255, 0.22);
-}
-
-.dialogue-speaker {
-    margin-bottom: 6px;
-    color: rgb(205, 205, 205);
-    font-size: 16px;
-    -unity-font-style: bold;
+    -unity-background-scale-mode: stretch-to-fill;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .dialogue-message {
-    color: rgb(250, 250, 250);
-    font-size: 23px;
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    bottom: 4.5%;
+    color: #eeeeee;
+    font-size: 40px;
     white-space: normal;
-}
-
-.dialogue-advance {
-    align-self: flex-end;
-    margin-top: 12px;
-    color: rgb(185, 185, 185);
-    font-size: 12px;
-    -unity-font-style: bold;
+    -unity-text-align: middle-center;
 }

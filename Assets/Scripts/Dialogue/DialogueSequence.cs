@@ -25,7 +25,7 @@ public sealed class DialogueLine
     public DialogueFinishMode finishMode = DialogueFinishMode.TimedOrConfirm;
     [Tooltip("Tempo maximo em tela para modos que fecham automaticamente.")]
     [Min(0f)] public float displayDuration = 3f;
-    [Tooltip("Permite fechar esta fala antes do tempo maximo por clique esquerdo ou Enter.")]
+    [Tooltip("Permite fechar esta fala antes do tempo maximo pelo mesmo botao Interact usado para inicia-la.")]
     public bool allowEarlyAdvance = true;
     [Tooltip("Tempo minimo antes de aceitar confirmacao ou avance antecipado, evitando fechar no mesmo clique que iniciou a fala.")]
     [Min(0f)] public float minimumDisplayDuration = .15f;

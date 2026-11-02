@@ -8,6 +8,7 @@ using UnityEngine.Playables;
 using UnityEngine.SceneManagement;
 using UnityEngine.Timeline;
 using UnityEngine.UIElements;
+using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -27,8 +28,13 @@ public sealed class GameSceneLoader : MonoBehaviour
     [SerializeField] private string defaultSpawnId;
 
     [Header("Menu Principal")]
-    [Tooltip("Nome da cena inicial do menu. O GameSceneLoader abre esta cena ao iniciar a sessao.")]
-    [SerializeField] private string mainMenuSceneName = "MainMenu";
+    [Tooltip("Arquivo da cena inicial do menu. Selecione o asset .unity no Project.")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset mainMenuSceneAsset;
+    [SerializeField, HideInInspector] private bool mainMenuSceneAssetInitialized;
+#endif
+    [FormerlySerializedAs("mainMenuSceneName")]
+    [SerializeField, HideInInspector] private string mainMenuScenePath = "Assets/Scenes/1. MainMenu.unity";
     [Tooltip("Posicao mundial da camera estatica que enquadra a cena do menu.")]
     [SerializeField] private Vector3 mainMenuCameraPosition = new(0f, 5f, -10f);
     [Tooltip("Rotacao mundial em graus da camera estatica do menu.")]
@@ -41,24 +47,82 @@ public sealed class GameSceneLoader : MonoBehaviour
     [Header("Atalhos de Teste")]
     [Tooltip("Permite alternar com F9 entre as cenas encontradas em Assets/Scenes, exceto Bootstrap.")]
     [SerializeField] private bool enableDebugSceneShortcuts = true;
-    [Tooltip("Cena que pode ser carregada por LoadGameplayScene, por exemplo ao final de uma Timeline.")]
-    [SerializeField] private string gameplaySceneName;
+    [Tooltip("Arquivo da cena carregado por LoadGameplayScene. Selecione o asset .unity no Project.")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset gameplaySceneAsset;
+    [SerializeField, HideInInspector] private bool gameplaySceneAssetInitialized;
+#endif
+    [FormerlySerializedAs("gameplaySceneName")]
+    [SerializeField, HideInInspector] private string gameplayScenePath;
 
     private bool isLoading;
     private string pendingSpawnId;
     private List<string> sceneCyclePaths;
+    private LoadingScreenHUD loadingScreen;
 
     public bool IsLoading => isLoading;
+    public bool HasStartupSceneConfigured
+    {
+        get
+        {
+            string path = ResolveScenePath(mainMenuScenePath);
+            return !string.IsNullOrWhiteSpace(path) && CanLoadScene(path);
+        }
+    }
+
+    private void OnValidate()
+    {
+#if UNITY_EDITOR
+        SynchronizeSceneAsset(mainMenuSceneAsset,
+            ref mainMenuScenePath, ref mainMenuSceneAssetInitialized,
+            out mainMenuSceneAsset);
+        SynchronizeSceneAsset(gameplaySceneAsset,
+            ref gameplayScenePath, ref gameplaySceneAssetInitialized,
+            out gameplaySceneAsset);
+#endif
+    }
+
+#if UNITY_EDITOR
+    private static void SynchronizeSceneAsset(
+        SceneAsset selectedAsset,
+        ref string scenePath,
+        ref bool selectionInitialized,
+        out SceneAsset synchronizedAsset)
+    {
+        synchronizedAsset = selectedAsset;
+        if (selectedAsset != null)
+        {
+            scenePath = AssetDatabase.GetAssetPath(selectedAsset);
+        }
+        else if (!selectionInitialized)
+        {
+            string resolvedPath = ResolveScenePath(scenePath);
+            if (!string.IsNullOrEmpty(resolvedPath))
+            {
+                synchronizedAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(
+                    resolvedPath);
+                scenePath = resolvedPath;
+            }
+        }
+        else
+        {
+            scenePath = string.Empty;
+        }
+
+        selectionInitialized = true;
+    }
+#endif
 
     private void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
     private void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
 
     private IEnumerator Start()
     {
-        if (!string.IsNullOrWhiteSpace(mainMenuSceneName))
+        ResolveLoadingScreen();
+        if (!string.IsNullOrWhiteSpace(mainMenuScenePath))
         {
             SetGameplayPanelsEnabled(false);
-            LoadScene(mainMenuSceneName);
+            LoadScene(mainMenuScenePath);
             yield break;
         }
 
@@ -67,6 +131,7 @@ public sealed class GameSceneLoader : MonoBehaviour
         // garante que todos os Spawn Points dela ja executaram Awake/OnEnable.
         yield return null;
         PlacePlayerAtSceneSpawn(SceneManager.GetActiveScene(), defaultSpawnId);
+        loadingScreen?.HideAfterSceneReady();
     }
 
     private void Update()
@@ -117,74 +182,114 @@ public sealed class GameSceneLoader : MonoBehaviour
     private static bool IsCycleScene(string path) =>
         !string.IsNullOrWhiteSpace(path) &&
         path.EndsWith(".unity", System.StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(Path.GetFileNameWithoutExtension(path), "Bootstrap",
-            System.StringComparison.OrdinalIgnoreCase);
+        !IsBootstrapScenePath(path);
+
+    private static bool IsBootstrapScenePath(string path) =>
+        !string.IsNullOrWhiteSpace(path) &&
+        Path.GetFileNameWithoutExtension(path).IndexOf("Bootstrap",
+            System.StringComparison.OrdinalIgnoreCase) >= 0;
 
     /// <summary>Carrega a fase principal configurada. Pode ser chamado por UnityEvent.</summary>
-    public void LoadGameplayScene() => LoadScene(gameplaySceneName);
+    public void LoadGameplayScene() => LoadScene(gameplayScenePath);
 
     /// <summary>Recarrega somente a fase atual; GameRoot e Player permanecem.</summary>
     public void ReloadCurrentScene() =>
-        LoadScene(SceneManager.GetActiveScene().name, defaultSpawnId);
+        LoadScene(SceneManager.GetActiveScene().path, defaultSpawnId);
 
-    public void LoadScene(string sceneName) => LoadScene(sceneName, defaultSpawnId);
+    public void LoadScene(string scenePath) => LoadScene(scenePath, defaultSpawnId);
 
-    public void LoadScene(string sceneName, string spawnId)
+    public void LoadScene(string scenePath, string spawnId)
     {
-        if (isLoading || string.IsNullOrWhiteSpace(sceneName) ||
-            !CanLoadScene(sceneName))
+        string resolvedScenePath = ResolveScenePath(scenePath);
+        if (isLoading || string.IsNullOrWhiteSpace(resolvedScenePath) ||
+            !CanLoadScene(resolvedScenePath))
         {
             return;
         }
 
         pendingSpawnId = spawnId;
-        StartCoroutine(LoadSceneRoutine(sceneName));
+        ResolveLoadingScreen();
+        loadingScreen?.Show();
+        StartCoroutine(LoadSceneRoutine(resolvedScenePath));
     }
 
-    private IEnumerator LoadSceneRoutine(string sceneName)
+    private IEnumerator LoadSceneRoutine(string scenePath)
     {
         isLoading = true;
         AsyncOperation operation;
 #if UNITY_EDITOR
-        string scenePath = ResolveScenePath(sceneName);
-        operation = !string.IsNullOrEmpty(scenePath)
-            ? EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath,
-                new LoadSceneParameters(LoadSceneMode.Single))
-            : SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+        operation = EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath,
+            new LoadSceneParameters(LoadSceneMode.Single));
 #else
-        operation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+        operation = SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Single);
 #endif
         if (operation != null)
-            yield return operation;
+        {
+            while (!operation.isDone)
+            {
+                loadingScreen?.SetProgress(operation.progress / .9f);
+                yield return null;
+            }
+            loadingScreen?.SetProgress(1f);
+        }
+        else
+        {
+            Debug.LogError($"Falha ao iniciar o carregamento da cena '{scenePath}'.", this);
+            loadingScreen?.HideAfterSceneReady();
+        }
         isLoading = false;
     }
 
-    private static bool CanLoadScene(string sceneNameOrPath)
+    private static bool CanLoadScene(string scenePath)
     {
 #if UNITY_EDITOR
-        if (!string.IsNullOrEmpty(ResolveScenePath(sceneNameOrPath)))
-            return true;
+        return AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null;
+#else
+        return SceneUtility.GetBuildIndexByScenePath(scenePath) >= 0;
 #endif
-        return Application.CanStreamedLevelBeLoaded(sceneNameOrPath);
     }
 
-#if UNITY_EDITOR
-    private static string ResolveScenePath(string sceneNameOrPath)
+    private static string ResolveScenePath(string scenePathOrLegacyName)
     {
-        if (sceneNameOrPath.EndsWith(".unity", System.StringComparison.OrdinalIgnoreCase) &&
-            AssetDatabase.LoadAssetAtPath<SceneAsset>(sceneNameOrPath) != null)
-            return sceneNameOrPath;
+        if (string.IsNullOrWhiteSpace(scenePathOrLegacyName))
+            return null;
 
-        foreach (string path in FindSceneCyclePaths())
+        if (scenePathOrLegacyName.EndsWith(".unity",
+                System.StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(Path.GetFileNameWithoutExtension(path), sceneNameOrPath,
+#if UNITY_EDITOR
+            return AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePathOrLegacyName) != null
+                ? scenePathOrLegacyName
+                : null;
+#else
+            return SceneUtility.GetBuildIndexByScenePath(scenePathOrLegacyName) >= 0
+                ? scenePathOrLegacyName
+                : null;
+#endif
+        }
+
+#if UNITY_EDITOR
+        string[] sceneGuids = AssetDatabase.FindAssets("t:Scene");
+        foreach (string guid in sceneGuids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.Equals(Path.GetFileNameWithoutExtension(path),
+                    scenePathOrLegacyName,
                     System.StringComparison.OrdinalIgnoreCase))
                 return path;
         }
-
+#else
+        for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+        {
+            string path = SceneUtility.GetScenePathByBuildIndex(i);
+            if (string.Equals(Path.GetFileNameWithoutExtension(path),
+                    scenePathOrLegacyName,
+                    System.StringComparison.OrdinalIgnoreCase))
+                return path;
+        }
+#endif
         return null;
     }
-#endif
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
@@ -194,6 +299,17 @@ public sealed class GameSceneLoader : MonoBehaviour
         PlacePlayerAtSceneSpawn(scene, pendingSpawnId);
         BindSceneCutscenesToPersistentCamera(scene);
         pendingSpawnId = null;
+        ResolveLoadingScreen();
+        loadingScreen?.SetProgress(1f);
+        loadingScreen?.HideAfterSceneReady();
+    }
+
+    private void ResolveLoadingScreen()
+    {
+        if (loadingScreen != null)
+            return;
+
+        loadingScreen = LoadingScreenHUD.Instance;
     }
 
     private void PlacePlayerAtSceneSpawn(Scene scene, string spawnId)
@@ -227,8 +343,11 @@ public sealed class GameSceneLoader : MonoBehaviour
 
         CameraFollow cameraFollow = CameraFollow.Instance != null
             ? CameraFollow.Instance : FindAnyObjectByType<CameraFollow>();
-        bool isMainMenu = string.Equals(scene.name, mainMenuSceneName,
-            System.StringComparison.OrdinalIgnoreCase);
+        string configuredMainMenuPath =
+            ResolveScenePath(mainMenuScenePath);
+        bool isMainMenu = !string.IsNullOrEmpty(configuredMainMenuPath) &&
+            string.Equals(scene.path, configuredMainMenuPath,
+                System.StringComparison.OrdinalIgnoreCase);
         SetGameplayPanelsEnabled(!isMainMenu);
 
         PauseMenuHUD pauseMenu = FindAnyObjectByType<PauseMenuHUD>();

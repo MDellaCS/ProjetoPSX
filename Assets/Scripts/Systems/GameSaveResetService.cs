@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>Apaga todos os dados persistentes do jogo e reinicia a fase atual.</summary>
 public static class GameSaveResetService
@@ -29,7 +28,8 @@ public static class GameSaveResetService
         if (loader != null)
             loader.ReloadCurrentScene();
         else
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            LoadingScreenHUD.Instance?.LoadSceneWithoutSceneLoader(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
 
         isResetting = false;
     }

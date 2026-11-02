@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class PlayerGameOver : MonoBehaviour
 {
@@ -98,8 +97,8 @@ public class PlayerGameOver : MonoBehaviour
             return;
         }
 
-        // O nome continua funcionando para cenas cujo buildIndex seja -1.
         restartRequested = false;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        LoadingScreenHUD.Instance?.LoadSceneWithoutSceneLoader(
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
     }
 }

@@ -15,23 +15,25 @@ MonoBehaviour:
   displayName: Human
   resourceMode: 1
   globalPauseDelay: 0.5
-  movementSpeedMultiplier: 0.85
-  allowDash: 0
+  movementSpeedMultiplier: 0.65
+  allowDash: 1
   allowAirJump: 0
   allowAirDash: 0
-  jumpHeightMultiplier: 1
-  jumpDurationMultiplier: 0.85
-  dashImpulse: 11
-  dashCooldown: 1.3
-  lightWindupActiveRotationSpeed: 1500
-  heavyWindupActiveRotationSpeed: 800
+  jumpHeightMultiplier: 0.6
+  jumpDurationMultiplier: 1
+  dashImpulse: 8
+  dashCooldown: 1.5
+  lightWindupActiveRotationSpeed: 450
+  heavyWindupActiveRotationSpeed: 350
+  heldAttackBranchThreshold: 0.3
+  targetAssistRangePadding: 0.25
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
-    continuationWindow: 0.6
+    continuationWindow: 0.9
   heavyTransitionTiming:
     minimumDelayAfterWindup: 0
-    continuationWindow: 0.6
-  extendedArmHitboxRadius: 0.15
+    continuationWindow: 0.9
+  extendedArmHitboxRadius: 0.25
   extendedArmHitboxHeightOffset: 0.45
   lightCancelRules:
   - action: 2
@@ -72,6 +74,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: L2
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: L2
@@ -79,10 +82,12 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: L3
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
     - input: 0
       targetNodeId: L3p
+      requiresHeldInput: 0
       requiresPause: 1
       requiresHitConfirm: 0
   - nodeId: L3
@@ -90,6 +95,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: L4
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: L3p
@@ -97,6 +103,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: L4p
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: L4
@@ -116,6 +123,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL2
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL2
@@ -123,6 +131,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL3
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL3
@@ -130,6 +139,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL4
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL4
@@ -137,6 +147,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL5
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL5
@@ -144,6 +155,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL6
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL6
@@ -151,6 +163,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL7
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL7
@@ -158,6 +171,7 @@ MonoBehaviour:
     transitions:
     - input: 0
       targetNodeId: AirL8
+      requiresHeldInput: 0
       requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL8

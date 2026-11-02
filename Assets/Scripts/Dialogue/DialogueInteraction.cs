@@ -92,7 +92,8 @@ public sealed class DialogueInteraction : MonoBehaviour
             GameInputBindings.GetDisplayString("Interact"),
             promptMessage, promptIcon);
 
-        if (!GameInput.InteractPressed || sequence == null ||
+        if (!GameInput.InteractPressed ||
+            DialogueController.IsInteractionCooldownActive || sequence == null ||
             DialogueController.Instance == null ||
             !DialogueController.Instance.TryShow(sequence))
             return;

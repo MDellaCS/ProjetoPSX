@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05e0fcf50c704c77a1fd86f4d3f0b231, type: 3}
+  m_Name: DialogueRichTextExample
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueSequence
+  lines:
+  - text: "<align=center><b>Negrito</b> e <i>it\xE1lico</i><br><color=#FFD080>Cor dourada</color> <alpha=#80>meia transpar\xEAncia</alpha><br><size=120%>Tamanho aumentado</size> <u>sublinhado</u> <s>tachado</s><br><uppercase>letras mai\xFAsculas</uppercase> <smallcaps>versalete</smallcaps><br>H<sub>2</sub>O e x<sup>2</sup><br><cspace=2px>espa\xE7o entre letras</cspace><br><voffset=0.2em>texto elevado</voffset> e<space=1em>espa\xE7o horizontal</align>"
+    speakerName: Exemplo de Rich Text
+    voiceOverClip: {fileID: 0}
+    voiceOverVolume: 1
+    finishMode: 2
+    displayDuration: 20
+    allowEarlyAdvance: 1
+    minimumDisplayDuration: 0.25
+  leaveEarlyLines: []

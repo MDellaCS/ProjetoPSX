@@ -1,13 +1,7 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="DialogueHUD.uss" />
+    <Style src="project://database/Assets/UI%20Toolkit/DialogueHUD.uss?fileID=7433441132597879392&amp;guid=6e5d2741eb0242e78f5fedddfbca3a6c&amp;type=3#DialogueHUD"/>
     <ui:VisualElement name="dialogue-root" class="dialogue-root">
-        <ui:VisualElement class="dialogue-fade-outer" />
-        <ui:VisualElement class="dialogue-fade-middle" />
-        <ui:VisualElement class="dialogue-fade-inner" />
-        <ui:VisualElement class="dialogue-panel">
-            <ui:Label name="dialogue-speaker" class="dialogue-speaker" text="SPEAKER" />
-            <ui:Label name="dialogue-message" class="dialogue-message" text="Dialogue message" />
-            <ui:Label name="dialogue-advance" class="dialogue-advance" text="CLIQUE / ENTER" />
-        </ui:VisualElement>
+        <ui:VisualElement name="dialogue-fade" class="dialogue-fade"/>
+        <ui:Label name="dialogue-message" text="Dialogue message" class="dialogue-message"/>
     </ui:VisualElement>
 </ui:UXML>

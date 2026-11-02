@@ -319,13 +319,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameSceneLoader
   player: {fileID: 825647889}
   defaultSpawnId: 0
-  mainMenuSceneName: MainMenu
+  mainMenuSceneAsset: {fileID: 102900000, guid: e6dbbf3e6cd3b0041a2587a3cb0dba79, type: 3}
+  mainMenuSceneAssetInitialized: 1
+  mainMenuScenePath: Assets/Scenes/1. MainMenu.unity
   mainMenuCameraPosition: {x: 0, y: 5, z: -10}
   mainMenuCameraEulerAngles: {x: 18, y: 0, z: 0}
   mainMenuCameraObjectName: MenuCameraPose
   newGameCutsceneObjectName: NewGameIntro
   enableDebugSceneShortcuts: 1
-  gameplaySceneName: Fase1
+  gameplaySceneAsset: {fileID: 0}
+  gameplaySceneAssetInitialized: 1
+  gameplayScenePath: Fase1
 --- !u!114 &311817223
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -767,6 +771,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DialogueController
   minimumFirstPageDisplayDuration: 0.5
+  postDialogueInteractionCooldown: 0.35
+  dialogueSortingOrder: 2
+  dialogueFont: {fileID: 11400000, guid: 27ede2a234bef374ab0f72377bd7e46d, type: 2}
 --- !u!1931382934 &374120203
 PanelRenderer:
   m_ObjectHideFlags: 0
@@ -1346,7 +1353,7 @@ MonoBehaviour:
   maxHeat: 100
   maxColdMagnitude: 100
   heavyDamageAdditivePowerBonus: 7
-  heatGeneratedPerDamageDealt: 0.28
+  heatGeneratedPerDamageDealt: 0.38
   maxSuperheat: 50
   excessHeatToSuperheatMultiplier: 0.5
   passiveHeatCoolingAfterGainDelay: 5
@@ -1469,10 +1476,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 51
   standingClearancePadding: 0.05
-  slideStartSpeedPercent: 1.1
+  slideStartSpeedPercent: 1.03
   slideEndSpeed: 0
-  slideFriction: 16
-  slideSlopeAcceleration: 24
+  slideFriction: 14
+  slideSlopeAcceleration: 28
   steeringStrength: 40
   steepSlopeSlideAcceleration: 45
   steepSlopeMaximumSlideSpeed: 15
@@ -3106,6 +3113,10 @@ PrefabInstance:
       value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: slideFriction
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 330585546}
@@ -3120,6 +3131,14 @@ PrefabInstance:
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: momentumDeceleration
       value: 39
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: slideSlopeAcceleration
+      value: 28
+      objectReference: {fileID: 0}
+    - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: slideStartSpeedPercent
+      value: 1.03
       objectReference: {fileID: 0}
     - target: {fileID: 3996714232966955494, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: jumpHoldGravityMultiplier
@@ -3207,7 +3226,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: heatGeneratedPerDamageDealt
-      value: 0.28
+      value: 0.38
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burningHeatDescentCurve.m_Curve.Array.data[1].inSlope

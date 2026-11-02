@@ -2,6 +2,10 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
+using UnityEngine.Serialization;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Controla uma Timeline de cutscene e expõe um estado global para gameplay.
@@ -30,6 +34,17 @@ public sealed class CutsceneController : MonoBehaviour
     [Tooltip("Player afetado pela cutscene. Se vazio, procura o objeto com a tag Player ao iniciar.")]
     [SerializeField] private Transform player;
 
+    [Header("Troca de Cena")]
+    [Tooltip("Carrega outra cena ao terminar normalmente ou ao pular esta cutscene.")]
+    [SerializeField] private bool loadSceneOnFinish;
+    [Tooltip("Arquivo da cena a carregar ao terminar. Selecione o asset .unity no Project.")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset sceneAssetOnFinish;
+    [SerializeField, HideInInspector] private bool sceneAssetOnFinishInitialized;
+#endif
+    [FormerlySerializedAs("sceneNameOnFinish")]
+    [SerializeField, HideInInspector] private string scenePathOnFinish;
+
     [Header("Eventos")]
     [Tooltip("Chamado imediatamente antes de a Timeline começar a tocar.")]
     [SerializeField] private UnityEvent onStarted;
@@ -40,6 +55,59 @@ public sealed class CutsceneController : MonoBehaviour
 
     private static CutsceneController active;
     private bool isRunning;
+
+    private void OnValidate()
+    {
+#if UNITY_EDITOR
+        if (sceneAssetOnFinish != null)
+        {
+            scenePathOnFinish = AssetDatabase.GetAssetPath(sceneAssetOnFinish);
+        }
+        else if (!sceneAssetOnFinishInitialized)
+        {
+            string resolvedPath = ResolveSceneAssetPath(scenePathOnFinish);
+            if (!string.IsNullOrEmpty(resolvedPath))
+            {
+                sceneAssetOnFinish = AssetDatabase.LoadAssetAtPath<SceneAsset>(
+                    resolvedPath);
+                scenePathOnFinish = resolvedPath;
+            }
+        }
+        else
+        {
+            scenePathOnFinish = string.Empty;
+        }
+
+        sceneAssetOnFinishInitialized = true;
+#endif
+    }
+
+#if UNITY_EDITOR
+    private static string ResolveSceneAssetPath(string pathOrLegacyName)
+    {
+        if (string.IsNullOrWhiteSpace(pathOrLegacyName))
+            return null;
+
+        if (pathOrLegacyName.EndsWith(".unity",
+                System.StringComparison.OrdinalIgnoreCase))
+        {
+            return AssetDatabase.LoadAssetAtPath<SceneAsset>(pathOrLegacyName) != null
+                ? pathOrLegacyName
+                : null;
+        }
+
+        foreach (string guid in AssetDatabase.FindAssets("t:Scene"))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.Equals(System.IO.Path.GetFileNameWithoutExtension(path),
+                    pathOrLegacyName,
+                    System.StringComparison.OrdinalIgnoreCase))
+                return path;
+        }
+
+        return null;
+    }
+#endif
 
     public static bool IsPlaying => active != null && active.isRunning;
     public static CutsceneController Active => IsPlaying ? active : null;
@@ -78,7 +146,7 @@ public sealed class CutsceneController : MonoBehaviour
         if (director != null)
             director.stopped -= OnDirectorStopped;
         if (active == this)
-            Finish(false);
+            Finish(false, false);
     }
 
     private void Update()
@@ -135,7 +203,7 @@ public sealed class CutsceneController : MonoBehaviour
             Finish(false);
     }
 
-    private void Finish(bool skipped)
+    private void Finish(bool skipped, bool allowSceneTransition = true)
     {
         if (!isRunning)
             return;
@@ -147,6 +215,32 @@ public sealed class CutsceneController : MonoBehaviour
         onFinished?.Invoke();
         if (skipped)
             onSkipped?.Invoke();
+
+        if (allowSceneTransition && loadSceneOnFinish)
+            LoadSceneOnFinish();
+    }
+
+    private void LoadSceneOnFinish()
+    {
+        if (string.IsNullOrWhiteSpace(scenePathOnFinish))
+        {
+            Debug.LogError(
+                $"A cutscene '{name}' esta configurada para trocar de cena, mas Scene Path On Finish esta vazio.",
+                this);
+            return;
+        }
+
+        GameSceneLoader sceneLoader =
+            FindAnyObjectByType<GameSceneLoader>();
+        if (sceneLoader == null)
+        {
+            Debug.LogError(
+                $"A cutscene '{name}' nao encontrou um GameSceneLoader ativo para carregar '{scenePathOnFinish}'.",
+                this);
+            return;
+        }
+
+        sceneLoader.LoadScene(scenePathOnFinish);
     }
 
     private void ResolvePlayer()
