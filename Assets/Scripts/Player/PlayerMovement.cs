@@ -136,6 +136,12 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 launchForwardsVelocity;
     private Vector3 staggerPushVelocity;
     private Vector3 slideDirection;
+    private Vector2 previousMoveInput;
+    private Vector3 previousMoveWorldDirection;
+    private Vector2 cameraSwitchLockedInput;
+    private Vector3 cameraSwitchLockedWorldDirection;
+    private int previousMovementCameraVersion = int.MinValue;
+    private bool movementDirectionLockedAcrossCameraSwitch;
 
     private float verticalVelocity;
     private float verticalDisplacementThisFrame;
@@ -265,21 +271,75 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 ReadMovementDirection()
     {
-        if (cameraTransform == null)
-            return Vector3.zero;
-
         Vector2 input = GameInput.Move;
+        Vector2 normalizedInput = input.sqrMagnitude > .0001f
+            ? input.normalized : Vector2.zero;
+        int cameraVersion = CameraFollow.Instance != null
+            ? CameraFollow.Instance.MovementCameraVersion : 0;
 
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
+        if (normalizedInput == Vector2.zero)
+        {
+            movementDirectionLockedAcrossCameraSwitch = false;
+            cameraSwitchLockedInput = Vector2.zero;
+            cameraSwitchLockedWorldDirection = Vector3.zero;
+            previousMoveInput = Vector2.zero;
+            previousMoveWorldDirection = Vector3.zero;
+            previousMovementCameraVersion = cameraVersion;
+            return Vector3.zero;
+        }
 
-        cameraForward.y = 0f;
-        cameraRight.y = 0f;
+        bool inputUnchanged = IsSameMoveDirection(normalizedInput,
+            previousMoveInput);
+        if (cameraVersion != previousMovementCameraVersion &&
+            inputUnchanged &&
+            previousMoveWorldDirection.sqrMagnitude > .0001f)
+        {
+            cameraSwitchLockedInput = previousMoveInput;
+            cameraSwitchLockedWorldDirection = previousMoveWorldDirection;
+            movementDirectionLockedAcrossCameraSwitch = true;
+        }
 
-        cameraForward.Normalize();
-        cameraRight.Normalize();
+        if (movementDirectionLockedAcrossCameraSwitch &&
+            IsSameMoveDirection(normalizedInput, cameraSwitchLockedInput))
+        {
+            previousMoveInput = normalizedInput;
+            previousMoveWorldDirection = cameraSwitchLockedWorldDirection;
+            previousMovementCameraVersion = cameraVersion;
+            return cameraSwitchLockedWorldDirection;
+        }
 
-        return (cameraForward * input.y + cameraRight * input.x).normalized;
+        movementDirectionLockedAcrossCameraSwitch = false;
+        Vector3 worldDirection = Vector3.zero;
+        if (cameraTransform != null)
+        {
+            Vector3 screenUpOnGround = Vector3.ProjectOnPlane(
+                cameraTransform.up, Vector3.up);
+            if (screenUpOnGround.sqrMagnitude <= .0001f)
+            {
+                screenUpOnGround = Vector3.ProjectOnPlane(
+                    cameraTransform.forward, Vector3.up);
+            }
+
+            if (screenUpOnGround.sqrMagnitude > .0001f)
+            {
+                screenUpOnGround.Normalize();
+                Vector3 screenRightOnGround = Vector3.Cross(Vector3.up,
+                    screenUpOnGround).normalized;
+                worldDirection = (screenRightOnGround * normalizedInput.x +
+                    screenUpOnGround * normalizedInput.y).normalized;
+            }
+        }
+
+        previousMoveInput = normalizedInput;
+        previousMoveWorldDirection = worldDirection;
+        previousMovementCameraVersion = cameraVersion;
+        return worldDirection;
+    }
+
+    private static bool IsSameMoveDirection(Vector2 first, Vector2 second)
+    {
+        return first.sqrMagnitude > .0001f && second.sqrMagnitude > .0001f &&
+            Vector2.Dot(first.normalized, second.normalized) >= .999f;
     }
 
     private void TryStartDash()
@@ -1486,6 +1546,13 @@ public class PlayerMovement : MonoBehaviour
     public void ResetForNewGame()
     {
         DesiredDirection = Vector3.zero;
+        previousMoveInput = Vector2.zero;
+        previousMoveWorldDirection = Vector3.zero;
+        cameraSwitchLockedInput = Vector2.zero;
+        cameraSwitchLockedWorldDirection = Vector3.zero;
+        previousMovementCameraVersion = CameraFollow.Instance != null
+            ? CameraFollow.Instance.MovementCameraVersion : 0;
+        movementDirectionLockedAcrossCameraSwitch = false;
         horizontalVelocity = Vector3.zero;
         launchForwardsVelocity = Vector3.zero;
         CancelStaggerPush();

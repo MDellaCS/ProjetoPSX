@@ -4,9 +4,10 @@ using UnityEngine;
 [Serializable]
 public sealed class GameSettingsData
 {
-    public int version = 1;
+    public int version = 2;
     public float masterVolume = 1f;
     public float effectsVolume = 1f;
+    public float uiVolume = 1f;
     public bool fullScreen;
     public bool verticalSync;
     public int frameRateCap;
@@ -102,7 +103,13 @@ public static class GameSettingsService
             try { loaded = JsonUtility.FromJson<GameSettingsData>(json); }
             catch (ArgumentException) { /* Dados inválidos voltam ao padrão. */ }
         }
-        applied = Normalize(loaded != null && loaded.version == 1
+        if (loaded != null && loaded.version == 1)
+        {
+            loaded.uiVolume = 1f;
+            loaded.version = 2;
+        }
+
+        applied = Normalize(loaded != null && loaded.version == 2
             ? loaded : defaults);
         ApplyRuntime();
     }
@@ -110,9 +117,10 @@ public static class GameSettingsService
     private static GameSettingsData Normalize(GameSettingsData value)
     {
         GameSettingsData result = (value ?? defaults).Copy();
-        result.version = 1;
+        result.version = 2;
         result.masterVolume = ClampFinite(result.masterVolume, 0f, 1f, 1f);
         result.effectsVolume = ClampFinite(result.effectsVolume, 0f, 1f, 1f);
+        result.uiVolume = ClampFinite(result.uiVolume, 0f, 1f, 1f);
         result.cameraSensitivity = ClampFinite(result.cameraSensitivity, .2f, 3f, 1f);
         result.cameraShake = ClampFinite(result.cameraShake, 0f, 1f, 1f);
         result.menuScale = ClampFinite(result.menuScale, .8f, 1.4f, 1f);
@@ -130,6 +138,7 @@ public static class GameSettingsService
     {
         AudioListener.volume = applied.masterVolume;
         GameAudioSystem.RefreshEffectsVolume();
+        GameAudioSystem.RefreshMenuVolume();
         GameplayAudioSystem.RefreshEffectsVolume();
         if (Screen.fullScreen != applied.fullScreen)
             Screen.fullScreen = applied.fullScreen;

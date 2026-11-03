@@ -20,6 +20,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private readonly List<Button> buttons = new();
     private readonly Dictionary<Button, Action> commands = new();
+    private readonly Dictionary<Button, MenuAudioCue> commandCues = new();
     private VisualElement root;
     private VisualElement overlay;
     private VisualElement content;
@@ -42,6 +43,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private string mainMenuMessage;
     private int selectedIndex;
     private float nextNavigationAt;
+    private Button hoveredButton;
 
     private void Awake()
     {
@@ -93,6 +95,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
         if (!IsOpen)
             return;
 
+        UpdatePointerHover();
+
         if (GameInput.UICancelPressed)
         {
             if (settingsOpen) CancelSettings();
@@ -109,8 +113,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
                 if (button.resolvedStyle.display == DisplayStyle.None ||
                     !IsPointerInside(button, pointer))
                     continue;
-                Select(i);
-                commands[button]?.Invoke();
+                Select(i, false);
+                ActivateButton(button);
                 return;
             }
         }
@@ -123,7 +127,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
             nextNavigationAt = Time.unscaledTime + .17f;
         }
         if (GameInput.UISubmitPressed && buttons.Count > 0)
-            commands[buttons[selectedIndex]]?.Invoke();
+            ActivateButton(buttons[selectedIndex]);
     }
 
     private void HandleUIReload(PanelRenderer _, VisualElement visualRoot, int __)
@@ -152,6 +156,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
     {
         buttons.Clear();
         commands.Clear();
+        commandCues.Clear();
         if (root == null)
             return;
         if (!settingsOpen)
@@ -166,51 +171,98 @@ public sealed class PauseMenuHUD : MonoBehaviour
             if (quitButton != null)
                 quitButton.text = "SAIR";
             AddButton(primaryButton, mainMenuMode
-                ? new Action(StartNewGame) : new Action(Resume));
+                ? new Action(StartNewGame) : new Action(Resume),
+                mainMenuMode ? MenuAudioCue.Confirm : MenuAudioCue.None);
             AddButton(settingsButton, OpenSettings);
-            AddButton(quitButton, QuitPlaySession);
+            AddButton(quitButton, QuitPlaySession, MenuAudioCue.Warning);
         }
         else
         {
-            AddButton(root.Q<Button>("settings-audio-tab"), () => ShowPage(SettingsPage.Audio));
-            AddButton(root.Q<Button>("settings-video-tab"), () => ShowPage(SettingsPage.Video));
-            AddButton(root.Q<Button>("settings-camera-tab"), () => ShowPage(SettingsPage.Camera));
-            AddButton(root.Q<Button>("settings-controls-tab"), () => ShowPage(SettingsPage.Controls));
-            AddButton(root.Q<Button>("settings-accessibility-tab"), () => ShowPage(SettingsPage.Accessibility));
+            AddButton(root.Q<Button>("settings-audio-tab"), () => ShowPage(SettingsPage.Audio), MenuAudioCue.TabChange);
+            AddButton(root.Q<Button>("settings-video-tab"), () => ShowPage(SettingsPage.Video), MenuAudioCue.TabChange);
+            AddButton(root.Q<Button>("settings-camera-tab"), () => ShowPage(SettingsPage.Camera), MenuAudioCue.TabChange);
+            AddButton(root.Q<Button>("settings-controls-tab"), () => ShowPage(SettingsPage.Controls), MenuAudioCue.TabChange);
+            AddButton(root.Q<Button>("settings-accessibility-tab"), () => ShowPage(SettingsPage.Accessibility), MenuAudioCue.TabChange);
             BuildOptions();
-            AddButton(root.Q<Button>("settings-defaults-button"), ResetCurrentSection);
-            AddButton(root.Q<Button>("settings-apply-button"), ApplySettings);
-            AddButton(root.Q<Button>("settings-cancel-button"), CancelSettings);
+            AddButton(root.Q<Button>("settings-defaults-button"), ResetCurrentSection, MenuAudioCue.Warning);
+            AddButton(root.Q<Button>("settings-apply-button"), ApplySettings, MenuAudioCue.Success);
+            AddButton(root.Q<Button>("settings-cancel-button"), CancelSettings, MenuAudioCue.None);
         }
-        Select(0);
+        Select(0, false);
         ApplyMenuModePresentation();
     }
 
-    private void AddButton(Button button, Action command)
+    private void AddButton(Button button, Action command,
+        MenuAudioCue cue = MenuAudioCue.Confirm)
     {
         if (button == null)
             return;
         buttons.Add(button);
         commands[button] = command;
+        commandCues[button] = cue;
     }
 
-    private void Select(int index)
+    private void Select(int index, bool playFocusSound = true)
     {
         if (buttons.Count == 0)
             return;
+        int previousIndex = selectedIndex;
         if (selectedIndex >= 0 && selectedIndex < buttons.Count)
             buttons[selectedIndex].RemoveFromClassList("settings-selected");
         selectedIndex = Mathf.Clamp(index, 0, buttons.Count - 1);
         buttons[selectedIndex].AddToClassList("settings-selected");
         buttons[selectedIndex].Focus();
+        if (playFocusSound && previousIndex != selectedIndex)
+            MenuUIAudio.Play(MenuAudioCue.Focus);
         if (options != null && options.Contains(buttons[selectedIndex]))
             options.ScrollTo(buttons[selectedIndex]);
+    }
+
+    private void ActivateButton(Button button)
+    {
+        if (button == null || !commands.TryGetValue(button, out Action command))
+            return;
+        if (!button.enabledInHierarchy)
+        {
+            MenuUIAudio.Play(MenuAudioCue.Unavailable);
+            return;
+        }
+
+        commandCues.TryGetValue(button, out MenuAudioCue cue);
+        command?.Invoke();
+        MenuUIAudio.Play(cue);
+    }
+
+    private void UpdatePointerHover()
+    {
+        if (Mouse.current == null)
+            return;
+
+        Vector2 pointer = GameInput.UIPointer;
+        Button hovered = null;
+        for (int i = buttons.Count - 1; i >= 0; i--)
+        {
+            Button candidate = buttons[i];
+            if (candidate.resolvedStyle.display == DisplayStyle.None ||
+                !IsPointerInside(candidate, pointer))
+                continue;
+            hovered = candidate;
+            break;
+        }
+
+        if (hovered == hoveredButton)
+            return;
+
+        hoveredButton = hovered;
+        if (hoveredButton != null)
+            MenuUIAudio.Play(MenuAudioCue.Focus);
     }
 
     public void Pause()
     {
         if (IsOpen)
             return;
+        MenuUIAudio.Play(MenuAudioCue.MenuOpen);
         cursorLockBeforePause = UnityEngine.Cursor.lockState;
         cursorVisibleBeforePause = UnityEngine.Cursor.visible;
         IsOpen = true;
@@ -263,7 +315,9 @@ public sealed class PauseMenuHUD : MonoBehaviour
             return;
         if (settingsOpen)
             CancelSettings();
+        MenuUIAudio.Play(MenuAudioCue.MenuClose);
         IsOpen = false;
+        hoveredButton = null;
         mainMenuMode = false;
         startGameAction = null;
         GamePauseController.ReleasePause(this);
@@ -296,6 +350,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private void CancelSettings()
     {
+        MenuUIAudio.Play(MenuAudioCue.Back);
         GameInputBindings.CancelRebind();
         if (originalSettings != null)
             GameSettingsService.Preview(originalSettings);
@@ -323,6 +378,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
                     value => editingSettings.masterVolume = value);
                 AddStep("Efeitos sonoros", editingSettings.effectsVolume, 0f, 1f, .1f,
                     value => editingSettings.effectsVolume = value);
+                AddStep("Sons de interface", editingSettings.uiVolume, 0f, 1f, .1f,
+                    value => editingSettings.uiVolume = value);
                 break;
             case SettingsPage.Video:
                 AddToggle("Tela cheia", editingSettings.fullScreen,
@@ -381,20 +438,21 @@ public sealed class PauseMenuHUD : MonoBehaviour
         row.Add(minus);
         row.Add(plus);
         AddButton(minus, () => { setter(Mathf.Max(minimum,
-            Mathf.Round((current - step) * 10f) / 10f)); PreviewAndRebuild(); });
+            Mathf.Round((current - step) * 10f) / 10f)); PreviewAndRebuild(); }, MenuAudioCue.Adjust);
         AddButton(plus, () => { setter(Mathf.Min(maximum,
-            Mathf.Round((current + step) * 10f) / 10f)); PreviewAndRebuild(); });
+            Mathf.Round((current + step) * 10f) / 10f)); PreviewAndRebuild(); }, MenuAudioCue.Adjust);
     }
 
     private void AddToggle(string label, bool current, Action<bool> setter) =>
         AddOption(label + ": " + (current ? "SIM" : "NÃO"), () =>
-        { setter(!current); PreviewAndRebuild(); });
+        { setter(!current); PreviewAndRebuild(); }, MenuAudioCue.Toggle);
 
-    private void AddOption(string text, Action command)
+    private void AddOption(string text, Action command,
+        MenuAudioCue cue = MenuAudioCue.Confirm)
     {
         Button button = new() { text = text };
         options.Add(button);
-        AddButton(button, command);
+        AddButton(button, command, cue);
     }
 
     private void PreviewAndRebuild()
@@ -443,6 +501,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
             case SettingsPage.Audio:
                 editingSettings.masterVolume = defaults.masterVolume;
                 editingSettings.effectsVolume = defaults.effectsVolume;
+                editingSettings.uiVolume = defaults.uiVolume;
                 break;
             case SettingsPage.Video:
                 editingSettings.fullScreen = defaults.fullScreen;

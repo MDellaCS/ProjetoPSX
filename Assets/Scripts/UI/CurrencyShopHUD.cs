@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 /// <summary>Uma unica tela modal, compartilhada por todos os terminais do mapa.</summary>
@@ -25,7 +26,7 @@ public sealed class CurrencyShopHUD : MonoBehaviour
     private readonly List<AttributeRow> rows = new();
     private readonly List<Button> buttons = new();
     private VisualElement overlay;
-    private VisualElement list;
+    private ScrollView list;
     private Label title, balance, feedback;
     private CurrencyShopTerminal terminal;
     private PlayerCurrencyWallet wallet;
@@ -33,6 +34,9 @@ public sealed class CurrencyShopHUD : MonoBehaviour
     private CursorLockMode previousCursorLock;
     private bool previousCursorVisible;
     private int lastClickFrame = -1;
+    private Button hoveredButton;
+    private int selectedButtonIndex;
+    private float nextNavigationAt;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetSession() => lastCloseFrame = -1;
@@ -55,7 +59,12 @@ public sealed class CurrencyShopHUD : MonoBehaviour
     public static bool Open(CurrencyShopTerminal source, Transform player)
     {
         CurrencyShopHUD hud = instance != null ? instance : FindAnyObjectByType<CurrencyShopHUD>();
-        if (source == null || player == null || IsOpen) return false;
+        if (source == null || player == null) return false;
+        if (IsOpen)
+        {
+            MenuUIAudio.Play(MenuAudioCue.Unavailable);
+            return false;
+        }
         if (hud == null)
             return OpenFailed(source, "CurrencyShopHUD nao foi encontrado. Mantenha PauseMenuHUD ativo no GameRoot.");
         hud.EnsureUI(hud.GetComponent<PauseMenuHUD>()?.UIRoot);
@@ -78,14 +87,17 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         UnityEngine.Cursor.lockState = CursorLockMode.None;
         UnityEngine.Cursor.visible = true;
         hud.BuildRows();
+        hud.SelectButton(0, false);
         hud.overlay.style.display = DisplayStyle.Flex;
         hud.overlay.BringToFront();
         hud.feedback.text = "";
         hud.Refresh();
+        MenuUIAudio.Play(MenuAudioCue.MenuOpen);
         return true;
     }
     private static bool OpenFailed(CurrencyShopTerminal source, string message)
     {
+        MenuUIAudio.Play(MenuAudioCue.Unavailable);
         Debug.LogWarning("[Loja] " + message, source);
         return false;
     }
@@ -108,9 +120,11 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         bool wasOpen = isOpen;
         isOpen = false;
         terminal = null; wallet = null; progression = null;
+        hoveredButton = null;
         if (overlay != null) overlay.style.display = DisplayStyle.None;
         if (wasOpen)
         {
+            MenuUIAudio.Play(MenuAudioCue.Back);
             lastCloseFrame = Time.frameCount;
             UnityEngine.Cursor.lockState = previousCursorLock;
             UnityEngine.Cursor.visible = previousCursorVisible;
@@ -121,21 +135,50 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         if (!isOpen) return;
         if (terminal == null || !terminal.isActiveAndEnabled) { Close(); return; }
         if (GameInput.UICancelPressed || GameInput.PausePressed) { Close(); return; }
-        // PanelRenderer deste projeto usa entrada manual por coordenadas.
-        if (!GameInput.UIClickPressed || overlay == null) return;
+        if (overlay == null) return;
+
+        float vertical = GameInput.UINavigate.y;
+        if (Mathf.Abs(vertical) > .5f && Time.unscaledTime >= nextNavigationAt &&
+            buttons.Count > 0)
+        {
+            SelectButton((selectedButtonIndex + (vertical < 0f ? 1 : -1) + buttons.Count)
+                % buttons.Count);
+            nextNavigationAt = Time.unscaledTime + .17f;
+        }
+
+        if (GameInput.UISubmitPressed && buttons.Count > 0)
+        {
+            ActivateButton(buttons[selectedButtonIndex]);
+            return;
+        }
+
         Vector2 mouse = GameInput.UIPointer;
         Rect viewport = overlay.worldBound;
         if (Screen.width <= 0 || Screen.height <= 0) return;
         Vector2 point = new(viewport.xMin + mouse.x / Screen.width * viewport.width,
             viewport.yMin + (1f - mouse.y / Screen.height) * viewport.height);
+        Button hovered = null;
         foreach (Button button in buttons)
         {
-            if (!button.enabledInHierarchy || !button.worldBound.Contains(point)) continue;
+            if (!button.worldBound.Contains(point)) continue;
             if (button != buttons[buttons.Count - 1] && !list.worldBound.Contains(point)) continue;
-            if (button.userData is PlayerUpgradeDefinition definition) Buy(definition);
-            else Close();
+            hovered = button;
             break;
         }
+
+        if (Mouse.current != null && hovered != hoveredButton)
+        {
+            hoveredButton = hovered;
+            if (hoveredButton != null)
+                MenuUIAudio.Play(MenuAudioCue.Focus);
+        }
+
+        // PanelRenderer deste projeto usa entrada manual por coordenadas.
+        if (!GameInput.UIClickPressed || hovered == null) return;
+        int hoveredIndex = buttons.IndexOf(hovered);
+        if (hoveredIndex >= 0)
+            SelectButton(hoveredIndex, false);
+        ActivateButton(hovered);
     }
     private void LateUpdate()
     {
@@ -194,11 +237,48 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         Button close = panel[panel.childCount - 1] as Button;
         if (close != null) buttons.Add(close);
     }
+
+    private void SelectButton(int index, bool playFocusSound = true)
+    {
+        if (buttons.Count == 0)
+            return;
+
+        Button previous = selectedButtonIndex >= 0 && selectedButtonIndex < buttons.Count
+            ? buttons[selectedButtonIndex] : null;
+        previous?.RemoveFromClassList("currency-shop-selected");
+        selectedButtonIndex = Mathf.Clamp(index, 0, buttons.Count - 1);
+        Button selected = buttons[selectedButtonIndex];
+        selected.AddToClassList("currency-shop-selected");
+        selected.Focus();
+        if (playFocusSound && previous != selected)
+            MenuUIAudio.Play(MenuAudioCue.Focus);
+        if (list != null && list.Contains(selected))
+            list.ScrollTo(selected);
+    }
+
+    private void ActivateButton(Button button)
+    {
+        if (button == null)
+            return;
+        if (!button.enabledInHierarchy)
+        {
+            MenuUIAudio.Play(MenuAudioCue.Unavailable);
+            return;
+        }
+
+        if (button.userData is PlayerUpgradeDefinition definition)
+            Buy(definition);
+        else
+            Close();
+    }
     private void Buy(PlayerUpgradeDefinition definition)
     {
         if (lastClickFrame == Time.frameCount || progression == null) return;
         lastClickFrame = Time.frameCount;
-        progression.TryPurchase(definition, out string message);
+        bool purchased = progression.TryPurchase(definition, out string message);
+        MenuUIAudio.Play(purchased
+            ? MenuAudioCue.Success
+            : MenuAudioCue.Unavailable);
         feedback.text = message;
         Refresh();
     }

@@ -109,3 +109,9 @@
 #pause-menu-content Button:hover {
     background-color: rgb(70, 106, 119);
 }
+
+#currency-shop-overlay .currency-shop-selected {
+    background-color: rgba(150, 105, 55, 0.75);
+    border-left-width: 2px;
+    border-left-color: rgb(235, 190, 115);
+}

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -81,13 +83,20 @@ public sealed class CameraFollow : MonoBehaviour
     private bool ownsGameplayCamera;
     private bool ownsTrackingPivot;
     private bool initialized;
+    private bool fixedCameraActive;
+    private Coroutine fixedCameraBlendRestoreRoutine;
     private Vector3 previousTargetCenter;
     private float yaw;
     private float pitch;
+    private readonly List<FixedCameraZone> fixedCameraZones = new();
+    private FixedCameraZone activeFixedCameraZone;
+    private int movementCameraVersion;
 
     public Transform Target => target;
     public Vector3 TargetCenter => GetTargetCenter();
     public CinemachineCamera GameplayCamera => gameplayCamera;
+    internal int GameplayCameraPriority => gameplayCameraPriority;
+    internal int MovementCameraVersion => movementCameraVersion;
 
     /// <summary>
     /// Reassocia a camera persistente ao Player depois de uma troca de cena e
@@ -168,17 +177,110 @@ public sealed class CameraFollow : MonoBehaviour
             Initialize();
         if (GamePauseController.IsPaused)
             return;
+        if (fixedCameraActive)
+        {
+            if (lockCursorOnStart)
+                HandleCursorLock();
+            return;
+        }
         UpdateMouseOrbit();
     }
 
     private void LateUpdate()
     {
+        UpdateFixedCameraSelection();
+
         if (!initialized || target == null || trackingPivot == null ||
             thirdPersonFollow == null || gameplayCamera == null)
             return;
 
         UpdateTrackingPivot();
         ApplyCameraState();
+    }
+
+    internal void RegisterFixedCameraZone(FixedCameraZone zone)
+    {
+        if (zone != null && !fixedCameraZones.Contains(zone))
+            fixedCameraZones.Add(zone);
+    }
+
+    internal void UnregisterFixedCameraZone(FixedCameraZone zone)
+    {
+        if (zone == null)
+            return;
+
+        fixedCameraZones.Remove(zone);
+        if (activeFixedCameraZone == zone)
+        {
+            movementCameraVersion++;
+            PrepareInstantCameraSwitch();
+            activeFixedCameraZone.SetCameraSelected(false);
+            activeFixedCameraZone = null;
+            fixedCameraActive = false;
+            ScheduleGameplayBlendRestore();
+        }
+    }
+
+    private void UpdateFixedCameraSelection()
+    {
+        Collider playerCollider = GetCameraZonePlayerCollider();
+        FixedCameraZone bestZone = null;
+
+        for (int i = fixedCameraZones.Count - 1; i >= 0; i--)
+        {
+            FixedCameraZone zone = fixedCameraZones[i];
+            if (zone == null)
+            {
+                fixedCameraZones.RemoveAt(i);
+                continue;
+            }
+
+            if (!zone.IsPlayerInside(playerCollider))
+                continue;
+
+            bool hasHigherPriority = bestZone == null ||
+                zone.CameraPriority > bestZone.CameraPriority;
+            bool enteredMoreRecently = bestZone != null &&
+                zone.CameraPriority == bestZone.CameraPriority &&
+                zone.LastEnteredFrame > bestZone.LastEnteredFrame;
+            bool isMoreSpecific = bestZone != null &&
+                zone.CameraPriority == bestZone.CameraPriority &&
+                zone.LastEnteredFrame == bestZone.LastEnteredFrame &&
+                zone.WorldVolume < bestZone.WorldVolume;
+            if (hasHigherPriority || enteredMoreRecently || isMoreSpecific)
+                bestZone = zone;
+        }
+
+        if (bestZone == activeFixedCameraZone)
+            return;
+
+        movementCameraVersion++;
+
+        PrepareInstantCameraSwitch();
+
+        if (activeFixedCameraZone != null)
+            activeFixedCameraZone.SetCameraSelected(false);
+
+        activeFixedCameraZone = bestZone;
+        fixedCameraActive = activeFixedCameraZone != null;
+        if (activeFixedCameraZone != null)
+            activeFixedCameraZone.SetCameraSelected(true);
+        else
+            ScheduleGameplayBlendRestore();
+    }
+
+    private Collider GetCameraZonePlayerCollider()
+    {
+        if (target == null)
+            return null;
+
+        if (targetController == null)
+            targetController = target.GetComponent<PlayerCharacterController>();
+
+        if (targetController != null && targetController.Collider != null)
+            return targetController.Collider;
+
+        return target.GetComponent<Collider>();
     }
 
     private void EnsureCinemachineRig()
@@ -258,6 +360,12 @@ public sealed class CameraFollow : MonoBehaviour
 
     private void PrepareInstantCameraSwitch()
     {
+        if (fixedCameraBlendRestoreRoutine != null)
+        {
+            StopCoroutine(fixedCameraBlendRestoreRoutine);
+            fixedCameraBlendRestoreRoutine = null;
+        }
+
         CinemachineBrain brain = GetComponent<CinemachineBrain>();
         if (brain == null)
             return;
@@ -271,6 +379,42 @@ public sealed class CameraFollow : MonoBehaviour
         CinemachineBlendDefinition instantBlend = brain.DefaultBlend;
         instantBlend.Time = 0f;
         brain.DefaultBlend = instantBlend;
+    }
+
+    private void ScheduleGameplayBlendRestore()
+    {
+        if (fixedCameraBlendRestoreRoutine != null)
+            StopCoroutine(fixedCameraBlendRestoreRoutine);
+        fixedCameraBlendRestoreRoutine =
+            StartCoroutine(RestoreGameplayBlendAfterCut());
+    }
+
+    private IEnumerator RestoreGameplayBlendAfterCut()
+    {
+        // Aguarda o Brain confirmar que a camera de follow ja foi escolhida.
+        // A coroutine retoma em Update, antes de o Brain avaliar LateUpdate;
+        // restaurar no primeiro yield faria a saida usar o blend normal.
+        CinemachineBrain brain = GetComponent<CinemachineBrain>();
+        int waitedFrames = 0;
+        while (!fixedCameraActive && brain != null && gameplayCamera != null &&
+            !System.Object.ReferenceEquals(brain.ActiveVirtualCamera,
+                gameplayCamera) && waitedFrames < 4)
+        {
+            waitedFrames++;
+            yield return null;
+        }
+
+        // Garante que pelo menos um frame renderizado recebeu o corte antes
+        // de devolver ao gameplay a configuracao normal de blend.
+        yield return new WaitForEndOfFrame();
+        if (!fixedCameraActive && hasSavedDefaultBlend)
+        {
+            if (brain != null)
+                brain.DefaultBlend = gameplayDefaultBlend;
+            hasSavedDefaultBlend = false;
+        }
+
+        fixedCameraBlendRestoreRoutine = null;
     }
 
     /// <summary>Retoma o follow do jogador depois de sair do menu.</summary>
