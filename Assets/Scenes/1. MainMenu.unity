@@ -573,7 +573,7 @@ MonoBehaviour:
   interactOnce: 0
   useLeaveArea: 1
   leaveAreaPercent: 250
-  promptMessage: Falar
+  promptMessage: Conversar
   promptIcon: {fileID: 0}
 --- !u!135 &670039013
 SphereCollider:
@@ -28883,7 +28883,7 @@ MonoBehaviour:
   cutscene: {fileID: 416550154}
   interactOnce: 0
   disableAfterStart: 0
-  promptMessage: Iniciar cutscene
+  promptMessage: Descer
   promptIcon: {fileID: 0}
 --- !u!1 &1124326354
 GameObject:
@@ -28896,7 +28896,7 @@ GameObject:
   - component: {fileID: 1124326356}
   - component: {fileID: 1124326355}
   m_Layer: 0
-  m_Name: CinemachineCamera
+  m_Name: FixedCam_Hole
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28926,11 +28926,11 @@ MonoBehaviour:
     LookAtTarget: {fileID: 0}
     CustomLookAtTarget: 0
   Lens:
-    FieldOfView: 56.6
+    FieldOfView: 67
     OrthographicSize: 10
     NearClipPlane: 0.1
     FarClipPlane: 5000
-    Dutch: 0
+    Dutch: 128.1
     ModeOverride: 0
     PhysicalProperties:
       GateFit: 2
@@ -28953,8 +28953,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1124326354}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.01704372, y: -0.5993821, z: 0.8001797, w: 0.012765609}
-  m_LocalPosition: {x: -1.7620306, y: 0.17346191, z: -0.9084816}
+  m_LocalRotation: {x: -0.07758857, y: -0.5430844, z: 0.83455974, w: -0.050492}
+  m_LocalPosition: {x: -2.0781672, y: 3.5122185, z: -2.1426582}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -29346,7 +29346,7 @@ GameObject:
   - component: {fileID: 1509485141}
   - component: {fileID: 1509485140}
   m_Layer: 0
-  m_Name: CinemachineCamera
+  m_Name: FixedCam_Juliane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

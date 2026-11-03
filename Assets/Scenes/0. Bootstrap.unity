@@ -774,6 +774,8 @@ MonoBehaviour:
   postDialogueInteractionCooldown: 0.35
   dialogueSortingOrder: 2
   dialogueFont: {fileID: 11400000, guid: 27ede2a234bef374ab0f72377bd7e46d, type: 2}
+  speakerNameFont: {fileID: 11400000, guid: 27ede2a234bef374ab0f72377bd7e46d, type: 2}
+  speakerLibrary: {fileID: 11400000, guid: b9ce881f711ea034f981cb7d4c55d19e, type: 2}
 --- !u!1931382934 &374120203
 PanelRenderer:
   m_ObjectHideFlags: 0
@@ -3078,6 +3080,42 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameAudioSystem
   initialSourceCount: 50
   maximumSourceCount: 80
+  focusSound:
+    clip: {fileID: 8300000, guid: f42e196c430e4e743abf84316e9cf06b, type: 3}
+    volume: 0.123
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  confirmSound:
+    clip: {fileID: 8300000, guid: 2750985d67757c44b82dea5033572e56, type: 3}
+    volume: 0.123
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  backSound:
+    clip: {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
+    volume: 0.123
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  adjustSound:
+    clip: {fileID: 0}
+    volume: 0.7
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  unavailableSound:
+    clip: {fileID: 0}
+    volume: 0.7
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  successSound:
+    clip: {fileID: 0}
+    volume: 0.7
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  warningSound:
+    clip: {fileID: 0}
+    volume: 0.7
+    pitch: 1
+    outputMixerGroup: {fileID: 0}
+  focusSoundMinimumInterval: 0.06
 --- !u!1 &2139451642
 GameObject:
   m_ObjectHideFlags: 0

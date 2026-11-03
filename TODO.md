@@ -32,6 +32,8 @@
 
 ## Outros itens existentes
 
+- Audio (Pending): implementar reverberacao dinamica leve. Usar um ambiente global como base, volumes de regiao com presets e transicao suave, e raycasts periodicos entre fontes 3D relevantes e o jogador para detectar oclusao (atenuar som direto e agudos). Escalonar/limitar os raycasts por frame e ignorar fontes distantes ou de baixa prioridade; manter UI e dialogos 2D fora do processamento. Regioes sobrepostas devem resolver por prioridade. Nao tentar estimar reverberacao completa por raycast; medir o custo no Profiler antes de aumentar frequencia ou quantidade de raios.
+
 - Combate (Pending): remover completamente os ataques de Pause das cadeias e todo o codigo residual de Pause Input, incluindo regras de transicao, temporizadores, campos de Inspector, assets e testes relacionados. Fazer essa limpeza como uma tarefa dedicada, preservando as demais rotas dos movesets.
 
 - Dialogo/Cutscene (Pending): integrar DialogueController a Timeline. Um Signal deve abrir uma fala modal, pausar somente o PlayableDirector, retomar a Timeline ao confirmar e concluir corretamente quando a cutscene for pulada. Nao implementar ate a proxima iteracao de dialogos em cutscene.

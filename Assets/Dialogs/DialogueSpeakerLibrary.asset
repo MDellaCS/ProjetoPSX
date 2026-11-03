@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 625ae42198a8ecf49a638531d2c80580, type: 3}
+  m_Name: DialogueSpeakerLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueSpeakerLibrary
+  nameCase: 0
+  bold: 0
+  italic: 0
+  fontSize: 26
+  alignment: 4
+  spacingBelow: 10
+  defaultColor: {r: 1, g: 1, b: 1, a: 1}
+  speakers:
+  - speakerName: Neville
+    color: {r: 0.5707547, g: 1, b: 0.646311, a: 1}
+  - speakerName: Juliane
+    color: {r: 0.6556604, g: 0.74071443, b: 1, a: 1}

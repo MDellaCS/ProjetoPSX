@@ -11,3 +11,4 @@
 - Sempre executar os testes automatizados e validacoes apropriados depois de alterar codigo.
 - Executar testes em cena apenas quando o usuario pedir explicitamente. Sem esse pedido, nao iniciar o jogo nem abrir cenas para testar; usar testes automatizados ou verificacoes fora de cena e informar limitacoes relevantes.
 - HUDs novos devem seguir o padrao UI Toolkit do projeto: estrutura visual em arquivo `.uxml`, estilos em arquivo `.uss` e script C# separado para comportamento e atualizacao dos elementos. Usar `PanelRenderer` e consultar os elementos definidos no UXML, sem construir toda a interface programaticamente no script.
+- A fonte padrao de todos os textos do jogo deve ser Crimson Text, exceto quando uma solicitacao explicitar outra fonte.

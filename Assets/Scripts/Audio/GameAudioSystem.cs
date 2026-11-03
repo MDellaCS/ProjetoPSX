@@ -135,14 +135,6 @@ public class GameAudioSystem : MonoBehaviour
     [SerializeField] private MenuAudioCueSettings confirmSound = new();
     [Tooltip("Som ao voltar ou cancelar uma tela interna.")]
     [SerializeField] private MenuAudioCueSettings backSound = new();
-    [Tooltip("Som ao abrir a pausa, o menu inicial ou a loja.")]
-    [SerializeField] private MenuAudioCueSettings menuOpenSound = new();
-    [Tooltip("Som ao fechar a pausa ou outro menu principal.")]
-    [SerializeField] private MenuAudioCueSettings menuCloseSound = new();
-    [Tooltip("Som ao trocar de aba ou categoria do menu.")]
-    [SerializeField] private MenuAudioCueSettings tabChangeSound = new();
-    [Tooltip("Som ao alternar uma opcao ligada/desligada.")]
-    [SerializeField] private MenuAudioCueSettings toggleSound = new();
     [Tooltip("Som ao aumentar ou reduzir um valor de configuracao.")]
     [SerializeField] private MenuAudioCueSettings adjustSound = new();
     [Tooltip("Som de opcao indisponivel, compra recusada ou requisito nao atendido.")]
@@ -316,15 +308,22 @@ public class GameAudioSystem : MonoBehaviour
 
     private MenuAudioCueSettings GetMenuCueSettings(MenuAudioCue cue)
     {
+        if (cue == MenuAudioCue.MenuClose)
+            return backSound;
+
+        if (cue == MenuAudioCue.MenuOpen || cue == MenuAudioCue.TabChange ||
+            cue == MenuAudioCue.Toggle)
+            return confirmSound;
+
         return cue switch
         {
             MenuAudioCue.Focus => focusSound,
             MenuAudioCue.Confirm => confirmSound,
             MenuAudioCue.Back => backSound,
-            MenuAudioCue.MenuOpen => menuOpenSound,
-            MenuAudioCue.MenuClose => menuCloseSound,
-            MenuAudioCue.TabChange => tabChangeSound,
-            MenuAudioCue.Toggle => toggleSound,
+            MenuAudioCue.MenuOpen => confirmSound,
+            MenuAudioCue.MenuClose => backSound,
+            MenuAudioCue.TabChange => confirmSound,
+            MenuAudioCue.Toggle => confirmSound,
             MenuAudioCue.Adjust => adjustSound,
             MenuAudioCue.Unavailable => unavailableSound,
             MenuAudioCue.Success => successSound,

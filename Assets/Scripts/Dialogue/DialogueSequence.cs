@@ -17,6 +17,10 @@ public sealed class DialogueLine
     [TextArea(2, 6)] public string text;
     [Tooltip("Nome opcional exibido acima da fala. Deixe vazio para uma mensagem sem locutor.")]
     public string speakerName;
+    [Tooltip("Ative para escolher uma cor exclusiva para este nome, ignorando a lista global de speakers.")]
+    public bool overrideSpeakerColor;
+    [Tooltip("Cor personalizada para o nome desta fala, usada quando Override Speaker Color esta ativo.")]
+    public Color speakerColor = Color.white;
     [Tooltip("Arquivo de voz opcional tocado ao abrir esta fala.")]
     public AudioClip voiceOverClip;
     [Tooltip("Volume da voz desta fala. Nao usa variacao aleatoria de pitch ou volume.")]
@@ -29,6 +33,16 @@ public sealed class DialogueLine
     public bool allowEarlyAdvance = true;
     [Tooltip("Tempo minimo antes de aceitar confirmacao ou avance antecipado, evitando fechar no mesmo clique que iniciou a fala.")]
     [Min(0f)] public float minimumDisplayDuration = .15f;
+}
+
+/// <summary>Nome reutilizavel de speaker e sua cor.</summary>
+[Serializable]
+public sealed class DialogueSpeakerStyle
+{
+    [Tooltip("Nome do speaker como aparece no campo Speaker Name das falas.")]
+    public string speakerName;
+    [Tooltip("Cor usada no nome deste speaker quando a fala nao tem override personalizado.")]
+    public Color color = Color.white;
 }
 
 /// <summary>

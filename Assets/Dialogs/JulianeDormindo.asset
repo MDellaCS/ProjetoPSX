@@ -10,27 +10,43 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05e0fcf50c704c77a1fd86f4d3f0b231, type: 3}
-  m_Name: DialogueSequence
+  m_Name: JulianeDormindo
   m_EditorClassIdentifier: Assembly-CSharp::DialogueSequence
   lines:
-  - text: <b>texto em negrito</b>
-    speakerName: 1
+  - text: ...
+    speakerName: Juliane
+    overrideSpeakerColor: 0
+    speakerColor: {r: 1, g: 1, b: 1, a: 1}
+    voiceOverClip: {fileID: 0}
+    voiceOverVolume: 0
+    finishMode: 2
+    displayDuration: 2
+    allowEarlyAdvance: 1
+    minimumDisplayDuration: 0
+  - text: Juliane.
+    speakerName: Neville
+    overrideSpeakerColor: 0
+    speakerColor: {r: 1, g: 1, b: 1, a: 1}
     voiceOverClip: {fileID: 0}
     voiceOverVolume: 0
     finishMode: 2
     displayDuration: 4
     allowEarlyAdvance: 1
     minimumDisplayDuration: 0
-  - text: "<i>texto em it\xE1lico</i>"
-    speakerName: 2
+  - text: ...
+    speakerName: Juliane
+    overrideSpeakerColor: 0
+    speakerColor: {r: 1, g: 1, b: 1, a: 1}
     voiceOverClip: {fileID: 0}
     voiceOverVolume: 0
     finishMode: 2
     displayDuration: 4
     allowEarlyAdvance: 1
     minimumDisplayDuration: 0
-  - text: "<b><i>texto em negrito e it\xE1lico</i></b>"
-    speakerName: 1
+  - text: "Ela n\xE3o vem. Prefere ficar aqui,<br>sob os dormentes, esperando o trem passar."
+    speakerName: Neville
+    overrideSpeakerColor: 0
+    speakerColor: {r: 1, g: 1, b: 1, a: 1}
     voiceOverClip: {fileID: 0}
     voiceOverVolume: 0
     finishMode: 2
@@ -38,11 +54,13 @@ MonoBehaviour:
     allowEarlyAdvance: 1
     minimumDisplayDuration: 0
   leaveEarlyLines:
-  - text: Bla
-    speakerName: 1
+  - text: "\xC9 melhor nem tent\xE1-la, mesmo..."
+    speakerName: Neville
+    overrideSpeakerColor: 0
+    speakerColor: {r: 1, g: 1, b: 1, a: 1}
     voiceOverClip: {fileID: 0}
     voiceOverVolume: 0
     finishMode: 0
-    displayDuration: 2
+    displayDuration: 3
     allowEarlyAdvance: 0
     minimumDisplayDuration: 0

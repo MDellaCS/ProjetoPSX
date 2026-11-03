@@ -20,6 +20,10 @@ public sealed class DialogueController : MonoBehaviour
     [SerializeField] private int dialogueSortingOrder = 2;
     [Tooltip("Font Asset do TextCore/UI Toolkit usado nas falas. Crie-o pelo menu UI Toolkit > Text > Font Asset; deixe vazio para usar a fonte padrao do Panel Settings.")]
     [SerializeField] private FontAsset dialogueFont;
+    [Tooltip("Font Asset Crimson Text usado no nome do speaker; deixe vazio para herdar a fonte do Panel Settings.")]
+    [SerializeField] private FontAsset speakerNameFont;
+    [Tooltip("Asset global com os nomes e cores reutilizados por todas as sequencias de dialogo.")]
+    [SerializeField] private DialogueSpeakerLibrary speakerLibrary;
 
     private static DialogueController instance;
     private readonly Queue<DialogueSequence> queue = new();
@@ -27,6 +31,7 @@ public sealed class DialogueController : MonoBehaviour
     private PanelRenderer panelRenderer;
     private VisualElement dialogueRoot;
     private VisualElement dialogueFade;
+    private Label speakerLabel;
     private Label messageLabel;
     private Texture2D dialogueFadeTexture;
     private DialogueSequence currentSequence;
@@ -258,6 +263,7 @@ public sealed class DialogueController : MonoBehaviour
 
         dialogueRoot = root.Q<VisualElement>("dialogue-root");
         dialogueFade = root.Q<VisualElement>("dialogue-fade");
+        speakerLabel = root.Q<Label>("dialogue-speaker");
         messageLabel = root.Q<Label>("dialogue-message");
         dialogueRoot?.RegisterCallback<GeometryChangedEvent>(
             HandleDialogueGeometryChanged);
@@ -279,6 +285,13 @@ public sealed class DialogueController : MonoBehaviour
             messageLabel.style.unityFontDefinition =
                 new StyleFontDefinition(
                     FontDefinition.FromSDFFont(dialogueFont));
+        }
+
+        if (speakerLabel != null && speakerNameFont != null)
+        {
+            speakerLabel.style.unityFontDefinition =
+                new StyleFontDefinition(
+                    FontDefinition.FromSDFFont(speakerNameFont));
         }
 
         if (dialogueFade == null)
@@ -340,6 +353,34 @@ public sealed class DialogueController : MonoBehaviour
 
         if (messageLabel != null)
             messageLabel.text = line.text ?? string.Empty;
+
+        if (speakerLabel != null)
+        {
+            bool hasSpeaker = !string.IsNullOrWhiteSpace(line.speakerName);
+            speakerLabel.text = hasSpeaker
+                ? (speakerLibrary != null
+                    ? speakerLibrary.FormatSpeakerName(line.speakerName)
+                    : line.speakerName.Trim())
+                : string.Empty;
+            speakerLabel.style.display = hasSpeaker
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+            speakerLabel.style.color = speakerLibrary != null
+                ? speakerLibrary.GetSpeakerColor(line)
+                : Color.white;
+            if (speakerLibrary != null)
+            {
+                speakerLabel.style.fontSize = speakerLibrary.fontSize;
+                speakerLabel.style.unityFontStyleAndWeight =
+                    speakerLibrary.bold && speakerLibrary.italic
+                        ? FontStyle.BoldAndItalic
+                        : speakerLibrary.bold ? FontStyle.Bold
+                        : speakerLibrary.italic ? FontStyle.Italic
+                        : FontStyle.Normal;
+                speakerLabel.style.unityTextAlign = speakerLibrary.alignment;
+                speakerLabel.style.marginBottom = speakerLibrary.spacingBelow;
+            }
+        }
     }
 
     private void SetVisible(bool visible)
