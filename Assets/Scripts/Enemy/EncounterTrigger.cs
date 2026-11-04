@@ -6,9 +6,19 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public class EncounterTrigger : MonoBehaviour
 {
+    [Tooltip("Encontro iniciado quando o jogador atravessa este volume. Se vazio, usa o componente EnemyEncounter pai.")]
     [SerializeField] private EnemyEncounter encounter;
     private PlayerMovement playerMovement;
+    private Collider triggerCollider;
     private bool playerInside;
+    private float nextPlayerLookupTime;
+
+    private void Awake()
+    {
+        triggerCollider = GetComponent<Collider>();
+        if (encounter == null)
+            encounter = GetComponentInParent<EnemyEncounter>();
+    }
 
     private void Reset()
     {
@@ -19,11 +29,21 @@ public class EncounterTrigger : MonoBehaviour
 
     private void Update()
     {
-        if (playerMovement == null)
+        if (encounter == null || encounter.CurrentState !=
+            EnemyEncounter.EncounterState.Inactive)
+        {
+            enabled = false;
+            return;
+        }
+
+        if (playerMovement == null && Time.unscaledTime >= nextPlayerLookupTime)
+        {
+            nextPlayerLookupTime = Time.unscaledTime + .5f;
             playerMovement = FindAnyObjectByType<PlayerMovement>();
+        }
 
         bool insideNow = PlayerAreaOverlap.ContainsPlayer(
-            GetComponent<Collider>(), playerMovement);
+            triggerCollider, playerMovement);
         if (!insideNow)
         {
             playerInside = false;

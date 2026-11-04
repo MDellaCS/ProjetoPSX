@@ -389,12 +389,9 @@ public sealed class PlayerSwingController : MonoBehaviour
         lastSwingVelocity = Vector3.zero;
 
         Vector3 targetCenter = GetPendulumPosition();
-        CollisionFlags collision = movement.MoveDuringSwing(
-            targetCenter - playerCenter);
+        movement.MoveDuringSwing(targetCenter - playerCenter);
         isSwinging = true;
         UpdateRopeVisual();
-        if (detachOnWorldCollision && collision != CollisionFlags.None)
-            ReleaseSwing(false);
     }
 
     private void TickPendulum(float deltaTime)
@@ -418,12 +415,7 @@ public sealed class PlayerSwingController : MonoBehaviour
         Vector3 targetCenter = GetPendulumPosition();
         Vector3 displacement = targetCenter - GetPlayerCenter();
         lastSwingVelocity = displacement / deltaTime;
-        CollisionFlags collision = movement.MoveDuringSwing(displacement);
-        if (detachOnWorldCollision && collision != CollisionFlags.None)
-        {
-            ReleaseSwing(false);
-            return;
-        }
+        movement.MoveDuringSwing(displacement);
 
         if (faceSwingDirection)
         {
@@ -437,6 +429,13 @@ public sealed class PlayerSwingController : MonoBehaviour
             }
         }
         UpdateRopeVisual();
+    }
+
+    internal void OnMovementCommitted(CollisionFlags collision)
+    {
+        if (isSwinging && detachOnWorldCollision &&
+            collision != CollisionFlags.None)
+            ReleaseSwing(false);
     }
 
     private Vector3 GetPendulumPosition()

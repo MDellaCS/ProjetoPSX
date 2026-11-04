@@ -4,6 +4,8 @@ Data: 03/11/2026 · Commit revisado: `085d5e8` · Unity `6000.6.4f1`
 
 Nenhum arquivo do projeto foi alterado nesta revisão. Este documento é o único arquivo criado.
 
+> **Atualização posterior:** o texto abaixo registra os achados da inspeção original. O código foi corrigido depois; consulte a seção final **Status após as correções** para não interpretar as listas históricas como estado atual.
+
 **Escopo.** Foram lidos os 136 scripts de `Assets/Scripts`, todos os de `Assets/Editor`, todos os UXML e USS, além de `ProjectSettings`, `Packages/manifest.json`, `.gitignore` e `.gitattributes`. As cenas `.unity` foram consultadas por grep, sem edição. O jogo não foi executado e nenhuma cena foi aberta.
 
 **Severidade.**
@@ -440,3 +442,29 @@ Propriedades sem o hífen inicial são ignoradas pela Unity, com aviso:
 - `.gitignore` e `.gitattributes` (LFS) estão corretos. Não há `Library/`, `Temp/` ou `.csproj` versionados, e os binários grandes estão em LFS.
 - Não há `.meta` órfão nem asset sem `.meta`.
 - Não há `Debug.Log` solto nem uso do Input Manager legado (`activeInputHandler: 1`).
+
+---
+
+## 8. Status após as correções (03/11/2026)
+
+### Corrigido
+
+- Build Settings, rotas de carregamento e atalhos de debug em build de release; reset de saves agora apaga apenas dados do ProjetoPSX.
+- Bugs de Heat/Cold, reaplicação de upgrades, dano/morte durante ataques, pausa/slow motion e estado estático com Domain Reload desativado.
+- Bindings de controle, prompts de rebind, swing, skip de cutscene e sensibilidade de câmera por dispositivo.
+- Alocações e consultas recorrentes da hitbox, separação de entidades, partículas, turnos do EnemyDirector e colisões de ataques de inimigos. Buffers não alocadores crescem quando lotam para não descartar alvos.
+- Fila de ataques especiais também nas continuações, timeout de aproximação de inimigos, liberação dos turnos, término de ondas e limites de área de spawn.
+- Bugs de guarda direcional, teleporte de spawn reiniciado, shader ausente em apresentação de spawn, moeda em objetos pooled e persistência de currency coletada.
+- Erros de USS, fonte Crimson Text nos HUDs Toolkit, entrada do marcador de lock-on em UI Toolkit, conversão do LoadingScreenHUD para UI Toolkit, prompts contextuais e hint de retry rebindável.
+- Busca de Volume global da câmera cacheada; buscas de Player sem sucesso em encontros agora têm intervalo; EncounterTrigger cacheia collider e para após iniciar; teletransportes não emitem passos falsos.
+- Regressão de lançamento aponta à cena existente e restaura o ponto inicial de Play; o loop de teste não inicia quando desativado e os efeitos de teste ficam fora de builds de release.
+
+### Adiado por escopo ou por depender de validação/decisão
+
+- PlayerMovement agora acumula locomoção, avanço de ataque, separação, swing e grapple para um `Move` por frame em LateUpdate. A regressão isolada falhou (0 commits do jogador temporário; D1 não iniciou SelfLaunchUp), portanto a implementação está pendente de diagnóstico e validação de gameplay. Consulte `RETRABALHO_PLAYERMOVEMENT.md`.
+- Corrigir o comportamento visual de cores em stagger/state sem instanciar materiais e escolher a estratégia de material por renderer. Requer conferir os materiais reais de personagens e VFX para não trocar a aparência.
+- Converter `CurrencyShopHUD`, `DamageNumber`, `PlayerDpsMeter`, `PlayerAttackDebug` e `EnemyDebug` para UI Toolkit. O ganho depende de desenhar os UXML/USS e a forma de posicionamento mundial para cada elemento; o HUD de loja também é construído programaticamente e precisa migração completa.
+- Conectar `BossHealthHUD`: a revisão não identifica quais inimigos/prefabs contam como chefes; precisa definir essa marcação antes de ligar o HUD ao ciclo de vida do boss.
+- Mudar física de slow motion, volumes de saída de `FixedCameraZone`, mixer de áudio, batching de partículas, e política de limpeza de pacotes/assets/texturas. São mudanças de comportamento, autoria ou apresentação com impacto amplo; não foram feitas sem validação/decisão.
+- Criar testes NUnit/CI. Os projetos gerados do Unity não contêm assemblies de teste; configurar isso é uma etapa de estrutura do projeto.
+- A regressão de cena para o PlayerMovement foi executada numa cópia isolada e falhou com 0 commits no jogador temporário e sem iniciar SelfLaunchUp. Verifique o AudioListener durante Play e execute o MenuItem no Editor para diagnosticar. Consulte [PENDENCIAS_USUARIO.md](PENDENCIAS_USUARIO.md).

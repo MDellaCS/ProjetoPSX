@@ -24,6 +24,9 @@
 - `EnemyBase.OnDisable` e um ponto comum de liberacao dos registros do Director e da fila de ataques. Classes derivadas que implementem `OnDisable` devem sobrescrever o metodo base.
 - A UI Toolkit deve corrigir propriedades USS com os nomes suportados (`-unity-font-style`, `-unity-text-align`) e ignorar picking no UXML com `picking-mode="Ignore"`, nao com propriedades USS inexistentes.
 - Testes de cena devem abrir a cena correta sem salvar alteracoes; quando o projeto for configurado para iniciar Play pelo Bootstrap, um teste que precise de outra cena deve definir explicitamente sua cena inicial e restaurar a configuracao anterior ao terminar.
+- `PlayerMovement` acumula locomocao e deslocamentos externos e executa um unico `PlayerCharacterController.Move` em `LateUpdate`; manter esse contrato ao adicionar novas fontes de movimento. Consumidores de colisao devem usar os flags do commit/callback, nunca assumir resultado sincrono ao enfileirar deslocamento.
+- A separacao de entidades do jogador deve ocorrer antes do commit, em `Update` com ordem 1000. Ground snap so pode ocorrer se o jogador iniciou o movimento apoiado e nao esta subindo; parede nao conta como suporte de chao.
+- A regressao de movimento deve consultar o frame do ultimo commit, pois callbacks de Editor podem rodar antes do `LateUpdate` do frame atual.
 
 ## Registro da revisao do projeto (2026-11-03)
 
@@ -37,7 +40,10 @@
 - Corrigidos erros de sintaxe USS/picking mode e aplicada Crimson Text nos estilos UI Toolkit existentes. Corrigida a cena e a restauracao do ponto de entrada no teste `SelfLaunchDurationRegression`.
 - `LoadingScreenHUD` usa UI Toolkit com UXML/USS e `PanelRenderer`; entrada de gameplay/UI fica bloqueada durante o carregamento. O marcador de lock-on tambem foi migrado de IMGUI para UI Toolkit.
 - Corrigidos novos casos de movimento apos morte/stagger/burn, consultas de colisao de inimigos/slide com buffers nao alocadores, timeout de aproximacao e liberacao de turno nas continuacoes de ataques, busca de Volume global cacheada, e comportamento de pausa/skip de cutscene e prompts.
+- `EncounterTrigger` agora guarda a referencia do collider, encerra a verificacao quando o encontro inicia e limita novas buscas por Player; `EnemyEncounter` limita tambem as buscas quando nao encontra jogador. `GameplayFootstepEmitter` descarta deslocamentos grandes de teleporte para evitar sons falsos.
+- O movimento autorado dos ataques inimigos agora aplica o ponto final da curva ao terminar Windup/Active normalmente, evitando perder o deslocamento do ultimo frame.
 - `EnemyDeathLoopTest` e gore de teste ficam restritos ao Editor/build de desenvolvimento; a regressao nao inicia o loop automaticamente quando configurada para nao iniciar.
+- `PlayerMovement` agora enfileira deslocamentos para um unico commit em `LateUpdate`; classificacao de superficies e flags de colisao usam esse resultado. Ver `RETRABALHO_PLAYERMOVEMENT.md`.
 - Validacao: builds `Assembly-CSharp` e `Assembly-CSharp-Editor` passaram com 0 avisos/erros; JSON de Input Actions valido e IDs unicos; `git diff --check` sem erros.
 
 ### Bloqueado para o agente; acao do usuario no Editor
@@ -47,7 +53,9 @@
 
 ### Ainda pendente
 
+- A regressao em cena para o retrabalho do PlayerMovement falhou na copia isolada: o jogador temporario reportou 0 commits e o ataque nao iniciou SelfLaunchUp. O codigo compila, mas a validacao de gameplay depende de diagnosticar o teste no Editor.
+
 - Repetir a validacao de gameplay em cena apos verificar o AudioListener; a regressao nao esta aprovada ate obter `PASS` no log.
-- A refatoracao de `PlayerMovement` para um unico `Move` por frame e extensa e requer validação de gameplay; os varios caminhos atuais mudam estado de grounded e colisao. Rever itens remanescentes em `REVISAO_PROJETO.md` antes de expandir o escopo.
-- A revisao ainda nao foi convertida em testes NUnit/CI; os testes existentes continuam sendo validacoes por MenuItem.
+- A refatoracao de `PlayerMovement` para um unico `Move` por frame e extensa e requer validacao de gameplay; os varios caminhos atuais mudam estado de grounded e colisao. O HUD de boss tambem depende de definir quais inimigos sao chefes. Outros adiamentos estao em `REVISAO_PROJETO.md`.
+- A revisao ainda nao foi convertida em testes NUnit/CI; configurar assemblies e pipeline de teste e uma etapa estrutural.
 - A lista concreta do que depende do usuario esta em [PENDENCIAS_USUARIO.md](PENDENCIAS_USUARIO.md).

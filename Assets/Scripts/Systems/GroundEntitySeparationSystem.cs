@@ -33,7 +33,8 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
 
         public Transform Transform => player != null ? player.transform : enemy.transform;
         public Bounds Bounds => player != null
-            ? playerController.bounds : enemyController.bounds;
+            ? player.GetPredictedBounds(playerController.bounds)
+            : enemyController.bounds;
         public float Radius => player != null
             ? playerController.radius : enemyController.radius;
         public float VerticalVelocity => player != null
@@ -41,7 +42,9 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
             : enemy.VerticalVelocity;
     }
 
-    private void LateUpdate()
+    // Planeja a separacao depois dos Updates de gameplay. PlayerMovement
+    // executa o unico Move no LateUpdate e inclui estas correcaoes acumuladas.
+    private void Update()
     {
         if (GamePauseController.IsPaused)
             return;

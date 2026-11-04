@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -47,10 +48,19 @@ public sealed class PlayerCharacterController : MonoBehaviour
     private RaycastHit[] hitBuffer;
     private Collider[] overlapBuffer;
     private PlayerSlideAttack slideAttack;
+    private readonly Dictionary<Collider, MovementCollisionClassification>
+        movementCollisionCache = new();
     private bool grounded;
     private bool hasGroundContact;
     private Vector3 groundNormal = Vector3.up;
     private CollisionFlags lastCollisionFlags;
+
+    private struct MovementCollisionClassification
+    {
+        public CombatVisualParticle visualParticle;
+        public EnemyBase enemy;
+        public FlyingPuppet flyingPuppet;
+    }
 
     public float height
     {
@@ -129,6 +139,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
         if (!enabled || capsule == null || !capsule.enabled || !gameObject.activeInHierarchy)
             return CollisionFlags.None;
 
+        movementCollisionCache.Clear();
         lastCollisionFlags = CollisionFlags.None;
         Vector3 initialPosition = transform.position;
         ResolveOverlaps();
@@ -159,12 +170,12 @@ public sealed class PlayerCharacterController : MonoBehaviour
             remaining -= direction * travel;
             CollisionFlags hitFlag = GetCollisionFlag(hit.normal);
             lastCollisionFlags |= hitFlag;
-            float supportAngle = Vector3.Angle(hit.normal, Vector3.up);
-            if (hit.normal.y > .0001f && supportAngle < 89f)
+            if (PlayerMovementFrameMath.IsGroundSupport(hit.normal))
             {
                 groundNormal = hit.normal.normalized;
                 hasGroundContact = true;
-                grounded = supportAngle <= slopeLimit;
+                grounded = PlayerMovementFrameMath.IsWalkableGround(
+                    hit.normal, slopeLimit);
             }
             if (wasGrounded && displacement.y <= 0f &&
                 (hitFlag & CollisionFlags.Sides) != 0 &&
@@ -186,7 +197,9 @@ public sealed class PlayerCharacterController : MonoBehaviour
             remaining = slide;
         }
 
-        ProbeGround(allowSnap: displacement.y <= 0f);
+        ProbeGround(allowSnap:
+            PlayerMovementFrameMath.ShouldAllowGroundSnap(wasGrounded,
+                displacement.y));
         if ((transform.position - initialPosition).sqrMagnitude > .0000001f)
             Physics.SyncTransforms();
         return lastCollisionFlags;
@@ -388,7 +401,8 @@ public sealed class PlayerCharacterController : MonoBehaviour
         {
             RaycastHit hit = hitBuffer[i];
             if (hit.collider == null || IsIgnoredForMovement(hit.collider) ||
-                hit.normal.y <= .05f || hit.distance >= nearestDistance)
+                !PlayerMovementFrameMath.IsGroundSupport(hit.normal) ||
+                hit.distance >= nearestDistance)
                 continue;
             nearestDistance = hit.distance;
             nearestNormal = hit.normal.normalized;
@@ -406,7 +420,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
         hasGroundContact = nearestDistance < float.MaxValue;
         groundNormal = hasGroundContact ? nearestNormal : Vector3.up;
         grounded = hasGroundContact &&
-            Vector3.Angle(groundNormal, Vector3.up) <= slopeLimit;
+            PlayerMovementFrameMath.IsWalkableGround(groundNormal, slopeLimit);
         float snapAmount = nearestDistance - skinWidth;
         if (grounded && allowSnap && groundSnapDistance > 0f &&
             snapAmount > .002f &&
@@ -435,14 +449,28 @@ public sealed class PlayerCharacterController : MonoBehaviour
 
     private bool IsIgnoredForMovement(Collider other)
     {
-        if (other == capsule || other.transform == transform ||
-            other.transform.IsChildOf(transform) ||
-            other.GetComponentInParent<CombatVisualParticle>() != null)
+        if (other == null || other == capsule || other.transform == transform ||
+            other.transform.IsChildOf(transform))
         {
             return true;
         }
 
-        EnemyBase enemy = other.GetComponentInParent<EnemyBase>();
+        if (!movementCollisionCache.TryGetValue(other,
+                out MovementCollisionClassification classification))
+        {
+            classification.visualParticle =
+                other.GetComponentInParent<CombatVisualParticle>();
+            classification.enemy = other.GetComponentInParent<EnemyBase>();
+            if (classification.enemy != null)
+                classification.flyingPuppet =
+                    classification.enemy.GetComponent<FlyingPuppet>();
+            movementCollisionCache.Add(other, classification);
+        }
+
+        if (classification.visualParticle != null)
+            return true;
+
+        EnemyBase enemy = classification.enemy;
         if (enemy == null)
             return false;
 
@@ -454,7 +482,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
         // Inimigos terrestres continuam sendo separados pelo sistema
         // centralizado. O FlyingPuppet usa a colisao do proprio motor do
         // jogador enquanto voa, exceto durante o ataque de teleporte.
-        FlyingPuppet flyingPuppet = enemy.GetComponent<FlyingPuppet>();
+        FlyingPuppet flyingPuppet = classification.flyingPuppet;
         return flyingPuppet == null || flyingPuppet.IgnoresPlayerCollision;
     }
 
@@ -465,5 +493,28 @@ public sealed class PlayerCharacterController : MonoBehaviour
         if (normal.y < -.5f)
             return CollisionFlags.Above;
         return CollisionFlags.Sides;
+    }
+}
+
+/// <summary>Regras puras usadas para compor o deslocamento e classificar apoio.</summary>
+public static class PlayerMovementFrameMath
+{
+    public static Vector3 CombineDisplacements(Vector3 locomotion,
+        Vector3 external) => locomotion + external;
+
+    public static bool ShouldAllowGroundSnap(bool wasGrounded,
+        float verticalDisplacement) => wasGrounded &&
+            verticalDisplacement <= 0f;
+
+    public static bool IsGroundSupport(Vector3 normal)
+    {
+        return normal.sqrMagnitude > .0001f &&
+            Vector3.Angle(normal, Vector3.up) < 89f;
+    }
+
+    public static bool IsWalkableGround(Vector3 normal, float slopeLimit)
+    {
+        return IsGroundSupport(normal) &&
+            Vector3.Angle(normal, Vector3.up) <= slopeLimit;
     }
 }

@@ -250,6 +250,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             .AppendLine(combatStatus.CombatTimer.ToString("F2") + " s");
         textBuilder.Append("GROUNDED: ")
             .AppendLine(playerMovement.IsGrounded ? "YES" : "NO");
+        textBuilder.Append("MOVES LAST FRAME: ")
+            .AppendLine(playerMovement.MovementCommitsInLastFrame.ToString());
         textBuilder.Append("POISE: ")
             .Append(Mathf.CeilToInt(playerHealth.CurrentPoise))
             .Append(" / ")
@@ -261,7 +263,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.Append("MOVE SPEED: ")
             .Append(playerMovement.HorizontalSpeed.ToString("F2"))
             .Append(" / ")
-            .AppendLine(playerMovement.speed.ToString("F2"));
+            .AppendLine(playerMovement.Speed.ToString("F2"));
         textBuilder.Append("VERTICAL SPEED: ")
             .AppendLine(playerMovement.VerticalSpeed.ToString("F2"));
         textBuilder.Append("DASH: ")

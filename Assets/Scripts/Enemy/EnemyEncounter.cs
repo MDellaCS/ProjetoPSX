@@ -66,6 +66,7 @@ public sealed class EnemyEncounter : MonoBehaviour
     private int currentWaveIndex = -1;
     private int nextWaveIndex;
     private float nextWaveTimer;
+    private float nextPlayerLookupTime;
     private bool nextWaveScheduled;
     private bool completionPending;
     private float completionDelayRemaining;
@@ -327,6 +328,9 @@ public sealed class EnemyEncounter : MonoBehaviour
     private void ResolvePlayer()
     {
         if (player != null) return;
+        if (Time.unscaledTime < nextPlayerLookupTime)
+            return;
+        nextPlayerLookupTime = Time.unscaledTime + .5f;
         GameObject found = GameObject.FindGameObjectWithTag("Player");
         if (found != null) player = found.transform;
     }

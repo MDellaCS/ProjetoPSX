@@ -48,6 +48,13 @@ public sealed class GameplayFootstepEmitter : MonoBehaviour
         float stepDistance = IsPlayer
             ? GameplayAudioSystem.Instance.Settings.playerFootstepDistance
             : GameplayAudioSystem.Instance.Settings.enemyFootstepDistance;
+        // Teletransportes de spawn/reset nao devem soar como uma longa corrida.
+        if (distance >= stepDistance * 3f)
+        {
+            distanceSinceLastStep = 0f;
+            return;
+        }
+
         if (distanceSinceLastStep < stepDistance)
             return;
 

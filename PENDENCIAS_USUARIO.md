@@ -2,20 +2,26 @@
 
 Atualizado em 03/11/2026.
 
-## Teste em cena
+## Diagnosticar e validar o movimento do jogador
 
-O projeto proíbe o agente de modificar arquivos `.unity`. A cena `Assets/Scenes/999. TestArena.unity` não declara um `AudioListener`; a tentativa anterior ficou presa repetindo avisos de áudio, sem emitir resultado final. Uma nova tentativa saiu com código 1 sem iniciar o teste, enquanto já havia processos do Unity Editor abertos. Nenhuma cena foi salva ou alterada.
+O retrabalho foi implementado e compila, mas a regressão `SelfLaunchDurationRegression` falhou ao rodar numa cópia isolada do projeto: o PlayerMovement temporário reportou 0 commits e o ataque D1 não iniciou `SelfLaunchUp`. Não há aprovação de gameplay ainda. Nenhuma cena `.unity` foi alterada.
 
-No Unity `6000.6.4f1`:
+No Unity 6000.6.4f1:
 
-1. Abra `Assets/Scenes/999. TestArena.unity` e verifique a câmera ativa de gameplay.
-2. Garanta que ela tenha um `AudioListener` ativo e que não exista outro `AudioListener` ativo na cena. Salve a cena.
-3. Execute **Tools > Tests > Run Self Launch Duration Regression**.
-4. Confirme no Console um resultado `PASS` para as durações testadas e para o pulo duplo. Se falhar, envie o erro completo do Console.
+1. Abra `Assets/Scenes/999. TestArena.unity` no Editor e confirme que a cena tenha exatamente um `AudioListener` ativo durante Play.
+2. Execute **Tools > Tests > Run Self Launch Duration Regression**.
+3. Se falhar, envie o erro completo do Console. Verifique por que o jogador criado pela regressão não registra um commit e por que D1 não inicia o lançamento.
+4. Depois de obter `PASS`, valide em gameplay pulo, pulo duplo, dash, dash-jump, slide, launch, dive, swing, grapple, separação e ataques terrestres/aéreos.
 
-## Escopo de código ainda aberto
+## Definição do HUD de chefe
 
-- A revisão identifica uma refatoração grande de `PlayerMovement` para fazer um único `CharacterController.Move` por frame. Ela afeta movimento de ataque, separação, grapple, launch e snap de chão; deixei-a registrada como trabalho futuro que requer uma etapa dedicada de implementação e validação.
-- Os testes existentes são ações de menu do Editor, não testes NUnit/CI. A criação de uma suíte automatizada permanece como melhoria futura.
+- Informe quais inimigos/prefabs devem ser tratados como chefes para conectar `BossHealthHUD` ao inimigo correto.
 
-Os demais itens executáveis foram corrigidos ou registrados em `AGENTS.md`; a lista técnica completa e o estado atual estão em `REVISAO_PROJETO.md`.
+## Não iniciado por exigir decisão ou validação visual
+
+- Corrigir cores/materiais de stagger após conferir os materiais de personagem, armas e VFX.
+- Converter `CurrencyShopHUD`, `DamageNumber`, `PlayerDpsMeter`, `PlayerAttackDebug` e `EnemyDebug` para UI Toolkit; requer desenho e posicionamento próprios.
+- Ajustar física de slow motion, volumes de `FixedCameraZone`, mixer de áudio, batching de partículas e limpeza de assets/pacotes/texturas.
+- Configurar estrutura NUnit/CI; os testes atuais continuam sendo ações de menu do Editor.
+
+Detalhes técnicos e status estão em `REVISAO_PROJETO.md` e `RETRABALHO_PLAYERMOVEMENT.md`.

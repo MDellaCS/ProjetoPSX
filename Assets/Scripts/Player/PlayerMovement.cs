@@ -2,8 +2,14 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [DefaultExecutionOrder(-1000)]
+[RequireComponent(typeof(PlayerState))]
 public class PlayerMovement : MonoBehaviour
 {
+    private const float DefaultDashImpulse = 12.8f;
+    private const float DefaultDashCooldown = 1.3f;
+    private const float GroundedDownwardBias = -2f;
+    private const float EnemyGroundContactGracePeriod = .12f;
+
     private enum RecoveryCancelAction
     {
         None,
@@ -13,95 +19,99 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Walking")]
     [Tooltip("Velocidade base maxima ao andar no chao.")]
-    [Min(0f)] public float speed = 8f;
+    [Min(0f)] [SerializeField] private float speed = 8f;
     [Tooltip("Rapidez para atingir a velocidade desejada ao comecar a andar.")]
-    [Min(0f)] public float acceleration = 120f;
+    [Min(0f)] [SerializeField] private float acceleration = 120f;
     [Tooltip("Desaceleracao ao soltar completamente o movimento.")]
-    [Min(0f)] public float releaseDeceleration = 90f;
+    [Min(0f)] [SerializeField] private float releaseDeceleration = 90f;
     [Tooltip("Desaceleracao ao segurar a direcao oposta ao movimento atual.")]
-    [Min(0f)] public float reverseDeceleration = 220f;
+    [Min(0f)] [SerializeField] private float reverseDeceleration = 220f;
     [Tooltip("Desaceleracao do momentum extra ao voltar para a Speed normal.")]
-    [Min(0f)] public float momentumDeceleration = 61f;
+    [Min(0f)] [SerializeField] private float momentumDeceleration = 61f;
     [Tooltip("Rapidez com que o visual gira para a direcao de movimento normal.")]
-    [Min(0f)] public float rotationSpeed = 17f;
+    [Min(0f)] [SerializeField] private float rotationSpeed = 17f;
 
     [Header("Attack Momentum")]
     [Tooltip("Quao rapido a velocidade de corrida restante desaparece ao iniciar um ataque.")]
-    [Min(0f)] public float attackMomentumDeceleration = 80f;
+    [Min(0f)] [SerializeField] private float attackMomentumDeceleration = 80f;
 
     [Header("Crouch")]
-    [Tooltip("Botao lateral voltar do mouse. Deve permanecer pressionado para agachar.")]
-    [Range(0f, 1f)] public float crouchSpeedMultiplier = 0.5f;
+    [Tooltip("Multiplicador da velocidade de movimento enquanto o jogador esta agachado.")]
+    [Range(0f, 1f)] [SerializeField] private float crouchSpeedMultiplier = 0.5f;
     [Tooltip("Multiplicador da altura da capsula de colisao ao agachar ou deslizar.")]
-    [Range(0.2f, 1f)] public float crouchingHeightMultiplier = 0.6f;
+    [Range(0.2f, 1f)] [SerializeField] private float crouchingHeightMultiplier = 0.6f;
     [Tooltip("Largura da capsula agachada como porcentagem do maximo fisicamente possivel para sua altura. 1 = o mais largo permitido.")]
-    [Range(0.1f, 1f)] public float crouchingRadiusPercentOfHeight = 0.815f;
+    [Range(0.1f, 1f)] [SerializeField] private float crouchingRadiusPercentOfHeight = 0.815f;
     [Tooltip("Velocidade de transicao da colisao entre em pe e agachado.")]
-    [Min(0f)] public float colliderResizeSpeed = 15f;
+    [Min(0f)] [SerializeField] private float colliderResizeSpeed = 15f;
     [Tooltip("Camadas que bloqueiam o retorno para a altura em pe.")]
-    public LayerMask standingClearanceMask = Physics.DefaultRaycastLayers;
+    [SerializeField] private LayerMask standingClearanceMask = Physics.DefaultRaycastLayers;
     [Tooltip("Folga extra acima da cabeca exigida antes de voltar a ficar em pe, em unidades do mundo.")]
-    [Min(0f)] public float standingClearancePadding = 0.05f;
+    [Min(0f)] [SerializeField] private float standingClearancePadding = 0.05f;
 
     [Header("Slide")]
     [Tooltip("Multiplicador da Speed necessario para iniciar um slide. 1.1 significa 110% da velocidade base.")]
-    [Min(0f)] public float slideStartSpeedPercent = 1.1f;
+    [Min(0f)] [SerializeField] private float slideStartSpeedPercent = 1.1f;
     [Tooltip("Velocidade abaixo da qual o slide termina.")]
-    [Min(0f)] public float slideEndSpeed = 0f;
+    [Min(0f)] [SerializeField] private float slideEndSpeed = 0f;
     [Tooltip("Quanto o slide perde de velocidade no chao plano.")]
-    [Min(0f)] public float slideFriction = 16f;
+    [Min(0f)] [SerializeField] private float slideFriction = 16f;
     [Tooltip("Aceleracao adicional ao deslizar em uma descida.")]
-    [Min(0f)] public float slideSlopeAcceleration = 24f;
+    [Min(0f)] [SerializeField] private float slideSlopeAcceleration = 24f;
 
     [Header("Steering")]
     [Tooltip("Velocidade, em graus por segundo, para curvar Slide, Dash e Dash Jump.")]
-    [Min(0f)] public float steeringStrength = 40f;
+    [Min(0f)] [SerializeField] private float steeringStrength = 40f;
 
     [Header("Steep Slopes")]
     [Tooltip("Aceleracao que puxa o player para baixo em inclinacoes acima do limite configurado no PlayerCharacterController.")]
-    [Min(0f)] public float steepSlopeSlideAcceleration = 30f;
+    [Min(0f)] [SerializeField] private float steepSlopeSlideAcceleration = 30f;
     [Tooltip("Velocidade maxima ao escorregar automaticamente por uma inclinacao muito alta.")]
-    [Min(0f)] public float steepSlopeMaximumSlideSpeed = 10f;
+    [Min(0f)] [SerializeField] private float steepSlopeMaximumSlideSpeed = 10f;
 
     [Header("Gravity")]
     [Tooltip("Aceleracao vertical aplicada ao player. Deve ser negativa para puxar para baixo.")]
-    public float gravity = -60f;
+    [SerializeField] private float gravity = -60f;
     [Tooltip("Velocidade maxima de queda, aplicada a gravidade e Launch Up.")]
-    [Min(2f)] public float terminalFallSpeed = 30f;
+    [Min(2f)] [SerializeField] private float terminalFallSpeed = 30f;
 
     [Header("Jump")]
     [Tooltip("Altura vertical global desejada para o pulo, em metros, antes do modificador do moveset. A curva de subida preserva esta altura em terreno plano.")]
-    [Min(0f)] public float jumpHeight = 3.5f;
+    [Min(0f)] [SerializeField] private float jumpHeight = 3.5f;
     [Tooltip("Janela maxima, em segundos, em que segurar o botao reduz a gravidade durante a subida. O apice ainda e resolvido pela velocidade e gravidade.")]
-    [Min(.05f)] public float jumpDuration = .25f;
+    [Min(.05f)] [SerializeField] private float jumpDuration = .25f;
     [Tooltip("Multiplicador da gravidade enquanto o botao de pulo esta pressionado e o jogador ainda sobe. Valores abaixo de 1 prolongam e elevam o salto; 1 desativa a extensao por segurar.")]
-    [Range(0.05f, 1f)] public float jumpHoldGravityMultiplier = .35f;
+    [Range(0.05f, 1f)] [SerializeField] private float jumpHoldGravityMultiplier = .35f;
 
     [Header("Dash")]
     [Tooltip("Duração global do estado de dash. Controla steering, dash-jump, cancelamentos e a troca para a animação seguinte; não altera o impulso inicial.")]
-    [Min(0f)] public float dashDuration = .3f;
+    [Min(0f)] [SerializeField] private float dashDuration = .3f;
 
     [Header("Air Movement")]
     [Tooltip("Aceleracao usada para mudar direcao e velocidade enquanto existe input no ar.")]
-    [Min(0f)] public float airControl = 40f;
+    [Min(0f)] [SerializeField] private float airControl = 40f;
     [Tooltip("Multiplicador da Speed no chao que limita a velocidade no ar.")]
-    [Min(0f)] public float airMaxSpeedMultiplier = 1f;
+    [Min(0f)] [SerializeField] private float airMaxSpeedMultiplier = 1f;
     [Tooltip("Desaceleracao passiva do momentum no ar quando nao existe input.")]
-    [Min(0f)] public float airDrag = 8f;
+    [Min(0f)] [SerializeField] private float airDrag = 8f;
 
     [Header("Enemy Body Interaction")]
     [Tooltip("Impulso horizontal que tira o player de cima de um inimigo.")]
-    [Min(0f)] public float enemyHeadSeparationSpeed = 10f;
+    [Min(0f)] [SerializeField] private float enemyHeadSeparationSpeed = 10f;
     [Tooltip("Peso relativo do jogador usado em grapple e outras interacoes de gameplay. Nao altera gravidade, queda ou movimento normal.")]
     [Min(.01f)] [SerializeField] private float interactionWeight = 1f;
 
     [Header("References")]
     [Tooltip("Camera usada para converter o input de movimento em direcoes do mundo.")]
-    public Transform cameraTransform;
+    [SerializeField] private Transform cameraTransform;
 
     public Vector3 DesiredDirection { get; private set; }
+    public float Speed => speed;
+    public float EnemyHeadSeparationSpeed => enemyHeadSeparationSpeed;
     public float HorizontalSpeed => horizontalVelocity.magnitude;
     public float VerticalSpeed => verticalVelocity;
+    public int MovementCommitsInLastFrame => movementCommitsThisFrame;
+    public int MovementCommitFrame => movementCommitFrame;
     public bool IsGrounded => controller != null && controller.isGrounded &&
         !IsStandingOnEnemy;
     public float DashCooldownRemaining => dashCooldownTimer;
@@ -125,6 +135,7 @@ public class PlayerMovement : MonoBehaviour
     public float InteractionWeight => Mathf.Max(.01f, interactionWeight);
 
     private PlayerCharacterController controller;
+    private PlayerSwingController swingController;
     private PlayerState playerState;
     private PlayerAttackController attackController;
     private PlayerHealth playerHealth;
@@ -133,6 +144,8 @@ public class PlayerMovement : MonoBehaviour
     private PlayerInputBuffer inputBuffer;
 
     private Vector3 horizontalVelocity;
+    private Vector3 pendingLocomotionDisplacement;
+    private Vector3 pendingExternalDisplacement;
     private Vector3 launchForwardsVelocity;
     private Vector3 staggerPushVelocity;
     private Vector3 slideDirection;
@@ -142,6 +155,11 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 cameraSwitchLockedWorldDirection;
     private int previousMovementCameraVersion = int.MinValue;
     private bool movementDirectionLockedAcrossCameraSwitch;
+    private bool hasPendingMovementCommit;
+    private bool swingMovementQueued;
+    private CollisionFlags lastSwingMovementCollisionFlags;
+    private int movementCommitFrame = -1;
+    private int movementCommitsThisFrame;
 
     private float verticalVelocity;
     private float verticalDisplacementThisFrame;
@@ -157,7 +175,6 @@ public class PlayerMovement : MonoBehaviour
     private float aerialLightTimer;
     private float aerialGravityMultiplier = 1f;
     private float aerialDiveFallSpeed;
-    private float launchGravity;
     private float enemyGroundContactTimer;
     private int jumpsUsed;
     private bool hasUsedAirDash;
@@ -175,6 +192,7 @@ public class PlayerMovement : MonoBehaviour
     private float standingControllerRadius;
     private Vector3 standingControllerCenter;
     private bool hasCachedStandingControllerShape;
+    private Collider[] standingOverlapBuffer = new Collider[16];
 
     private bool IsStandingOnEnemy => enemyGroundContactTimer > 0f;
     private bool CanAirJump => movesetController == null ||
@@ -190,8 +208,10 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         controller = PlayerCharacterController.GetOrAdd(gameObject);
+        playerState = GetComponent<PlayerState>();
+        swingController = GetComponent<PlayerSwingController>();
         if (GetComponent<PlayerSwingController>() == null)
-            gameObject.AddComponent<PlayerSwingController>();
+            swingController = gameObject.AddComponent<PlayerSwingController>();
     }
 
     private void OnValidate()
@@ -267,6 +287,35 @@ public class PlayerMovement : MonoBehaviour
         RotateTowardsMovement();
 
         MoveCharacter();
+    }
+
+    private void LateUpdate()
+    {
+        if (movementCommitFrame != Time.frameCount)
+            movementCommitsThisFrame = 0;
+        CommitMovement();
+    }
+
+    private void OnDisable()
+    {
+        pendingLocomotionDisplacement = Vector3.zero;
+        pendingExternalDisplacement = Vector3.zero;
+        hasPendingMovementCommit = false;
+        swingMovementQueued = false;
+        lastSwingMovementCollisionFlags = CollisionFlags.None;
+        movementCommitFrame = -1;
+        movementCommitsThisFrame = 0;
+    }
+
+    /// <summary>Deslocamento planejado deste frame, usado na separacao antes do commit.</summary>
+    internal Vector3 PendingMovementDisplacement =>
+        PlayerMovementFrameMath.CombineDisplacements(
+            pendingLocomotionDisplacement, pendingExternalDisplacement);
+
+    internal Bounds GetPredictedBounds(Bounds currentBounds)
+    {
+        currentBounds.center += PendingMovementDisplacement;
+        return currentBounds;
     }
 
     private Vector3 ReadMovementDirection()
@@ -346,7 +395,8 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!CanDash)
         {
-            inputBuffer?.TryConsume(PlayerBufferedInput.Dash);
+            if (inputBuffer != null)
+                inputBuffer.TryConsume(PlayerBufferedInput.Dash);
             if (queuedRecoveryCancelAction == RecoveryCancelAction.Dash)
                 queuedRecoveryCancelAction = RecoveryCancelAction.None;
             return;
@@ -505,7 +555,8 @@ public class PlayerMovement : MonoBehaviour
 
         inputBuffer.TryConsume(input);
         queuedRecoveryCancelAction = action;
-        movesetController?.ResetSequence();
+        if (movesetController != null)
+            movesetController.ResetSequence();
     }
 
     private void ResetAirActionsWhenGrounded()
@@ -532,7 +583,8 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (wasAirborne)
-            movesetController?.ResetAerialSequenceOnLanding();
+            if (movesetController != null)
+                movesetController.ResetAerialSequenceOnLanding();
         wasAirborne = false;
         if (verticalVelocity <= 0f && !isLaunched)
             isStandardJump = false;
@@ -674,16 +726,21 @@ public class PlayerMovement : MonoBehaviour
         Vector3 top = worldCenter + worldUp *
             (halfStraightSection + standingClearancePadding);
 
-        Collider[] overlaps = Physics.OverlapCapsule(
-            bottom,
-            top,
-            radius,
-            standingClearanceMask,
-            QueryTriggerInteraction.Ignore
-        );
-
-        foreach (Collider overlap in overlaps)
+        int overlapCount;
+        while (true)
         {
+            overlapCount = Physics.OverlapCapsuleNonAlloc(bottom, top, radius,
+                standingOverlapBuffer, standingClearanceMask,
+                QueryTriggerInteraction.Ignore);
+            if (overlapCount < standingOverlapBuffer.Length)
+                break;
+            System.Array.Resize(ref standingOverlapBuffer,
+                standingOverlapBuffer.Length * 2);
+        }
+
+        for (int index = 0; index < overlapCount; index++)
+        {
+            Collider overlap = standingOverlapBuffer[index];
             if (overlap == null || overlap == controller ||
                 overlap.transform.IsChildOf(transform) ||
                 overlap.GetComponentInParent<CombatVisualParticle>() != null)
@@ -705,7 +762,8 @@ public class PlayerMovement : MonoBehaviour
             // Dash iniciado no chao mantem uma pequena pressao para baixo,
             // preservando o contato com o solo. O dash aereo continua sem
             // gravidade, portanto mantem a altura durante toda a duracao.
-            verticalVelocity = dashStartedGrounded ? -2f : 0f;
+            verticalVelocity = dashStartedGrounded
+                ? GroundedDownwardBias : 0f;
             verticalDisplacementThisFrame = verticalVelocity * Time.deltaTime;
             isStandardJump = false;
             return;
@@ -736,7 +794,7 @@ public class PlayerMovement : MonoBehaviour
             {
                 isAerialDiving = false;
                 aerialDiveFallSpeed = 0f;
-                verticalVelocity = -2f;
+                verticalVelocity = GroundedDownwardBias;
                 verticalDisplacementThisFrame = verticalVelocity *
                     Time.deltaTime;
                 return;
@@ -751,7 +809,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (controller.isGrounded && verticalVelocity < 0f)
         {
-            verticalVelocity = -2f;
+            verticalVelocity = GroundedDownwardBias;
             isLaunched = false;
             isStandardJump = false;
             isJumpAscending = false;
@@ -1203,7 +1261,7 @@ public class PlayerMovement : MonoBehaviour
         return movesetController != null &&
             movesetController.Moveset != null
             ? movesetController.Moveset.dashImpulse
-            : 12.8f;
+            : DefaultDashImpulse;
     }
 
     private float GetMovementSpeed() => speed *
@@ -1288,7 +1346,7 @@ public class PlayerMovement : MonoBehaviour
     private float GetDashCooldown() => movesetController != null &&
         movesetController.Moveset != null
         ? movesetController.Moveset.dashCooldown
-        : 1.3f;
+        : DefaultDashCooldown;
 
     private int GetMaximumJumpCount() => CanAirJump ? 2 : 1;
 
@@ -1306,18 +1364,59 @@ public class PlayerMovement : MonoBehaviour
 
         Quaternion targetRotation = Quaternion.LookRotation(DesiredDirection);
 
-        transform.rotation = Quaternion.Slerp(
-            transform.rotation,
-            targetRotation,
-            rotationSpeed * Time.deltaTime
-        );
+        float blend = 1f - Mathf.Exp(-rotationSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Slerp(transform.rotation,
+            targetRotation, blend);
     }
 
     private void MoveCharacter()
     {
         Vector3 displacement = horizontalVelocity * Time.deltaTime;
         displacement.y = verticalDisplacementThisFrame;
+        pendingLocomotionDisplacement += displacement;
+        hasPendingMovementCommit = true;
+    }
+
+    private void CommitMovement()
+    {
+        if (!hasPendingMovementCommit || controller == null ||
+            !controller.enabled || !gameObject.activeInHierarchy)
+        {
+            pendingLocomotionDisplacement = Vector3.zero;
+            pendingExternalDisplacement = Vector3.zero;
+            hasPendingMovementCommit = false;
+            swingMovementQueued = false;
+            return;
+        }
+
+        Vector3 displacement = PlayerMovementFrameMath.CombineDisplacements(
+            pendingLocomotionDisplacement, pendingExternalDisplacement);
+        bool committedSwingMovement = swingMovementQueued;
+        pendingLocomotionDisplacement = Vector3.zero;
+        pendingExternalDisplacement = Vector3.zero;
+        hasPendingMovementCommit = false;
+        swingMovementQueued = false;
+
         CollisionFlags collisionFlags = controller.Move(displacement);
+        if (movementCommitFrame != Time.frameCount)
+        {
+            movementCommitFrame = Time.frameCount;
+            movementCommitsThisFrame = 0;
+        }
+        movementCommitsThisFrame++;
+        ProcessMovementCollision(collisionFlags);
+        if (committedSwingMovement)
+        {
+            lastSwingMovementCollisionFlags = collisionFlags;
+            if (swingController == null)
+                swingController = GetComponent<PlayerSwingController>();
+            if (swingController != null)
+                swingController.OnMovementCommitted(collisionFlags);
+        }
+    }
+
+    private void ProcessMovementCollision(CollisionFlags collisionFlags)
+    {
 
         if ((collisionFlags & CollisionFlags.Above) != 0 &&
             verticalVelocity > 0f && isJumpAscending)
@@ -1335,14 +1434,14 @@ public class PlayerMovement : MonoBehaviour
             (collisionFlags & CollisionFlags.Below) != 0)
         {
             isLaunched = false;
-            verticalVelocity = -2f;
+            verticalVelocity = GroundedDownwardBias;
         }
 
         if (isStandardJump && verticalVelocity <= 0f &&
             (collisionFlags & CollisionFlags.Below) != 0)
         {
             isStandardJump = false;
-            verticalVelocity = -2f;
+            verticalVelocity = GroundedDownwardBias;
         }
 
         // CharacterController so confirma o chao depois deste Move. Encerrar
@@ -1351,7 +1450,8 @@ public class PlayerMovement : MonoBehaviour
         if (wasAirborne && verticalVelocity <= 0f &&
             (collisionFlags & CollisionFlags.Below) != 0)
         {
-            movesetController?.ResetAerialSequenceOnLanding();
+            if (movesetController != null)
+                movesetController.ResetAerialSequenceOnLanding();
             wasAirborne = false;
         }
 
@@ -1369,7 +1469,7 @@ public class PlayerMovement : MonoBehaviour
     /// </summary>
     public void ApplyGroundEntitySeparation(Vector3 displacement)
     {
-        if (controller == null || !controller.enabled ||
+        if (!isActiveAndEnabled || controller == null || !controller.enabled ||
             !gameObject.activeInHierarchy)
         {
             return;
@@ -1377,7 +1477,10 @@ public class PlayerMovement : MonoBehaviour
 
         displacement.y = 0f;
         if (displacement.sqrMagnitude > .0000001f)
-            controller.Move(displacement);
+        {
+            pendingExternalDisplacement += displacement;
+            hasPendingMovementCommit = true;
+        }
     }
 
     /// <summary>Inicia movimento externo controlado pelo sistema de balanco.</summary>
@@ -1406,10 +1509,13 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>Aplica um passo do balanco pelo motor cinemÃ¡tico existente.</summary>
     public CollisionFlags MoveDuringSwing(Vector3 displacement)
     {
-        if (controller == null || !controller.enabled)
+        if (!isActiveAndEnabled || controller == null || !controller.enabled)
             return CollisionFlags.None;
 
-        return controller.Move(displacement);
+        pendingExternalDisplacement += displacement;
+        hasPendingMovementCommit = true;
+        swingMovementQueued = true;
+        return lastSwingMovementCollisionFlags;
     }
 
     /// <summary>Devolve a velocidade tangencial ao movimento normal ao soltar a corda.</summary>
@@ -1464,10 +1570,12 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>Move o jogador durante o puxao usando o controller com colisao.</summary>
     public CollisionFlags MoveDuringGrapplePull(Vector3 displacement)
     {
-        if (controller == null || !controller.enabled)
+        if (!isActiveAndEnabled || controller == null || !controller.enabled)
             return CollisionFlags.None;
 
-        return controller.Move(displacement);
+        pendingExternalDisplacement += displacement;
+        hasPendingMovementCommit = true;
+        return CollisionFlags.None;
     }
 
     /// <summary>Libera o jogador do puxao e volta a aceitar movimento normal.</summary>
@@ -1485,13 +1593,15 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>Impede que um inimigo seja tratado como chao valido pelo player.</summary>
     public void MarkEntityAsInvalidGround()
     {
-        enemyGroundContactTimer = Mathf.Max(enemyGroundContactTimer, .12f);
+        enemyGroundContactTimer = Mathf.Max(enemyGroundContactTimer,
+            EnemyGroundContactGracePeriod);
 
         // O contato invalido serve para impedir que o topo de uma entidade
         // vire uma plataforma. Ele nao deve cancelar um impulso que ja esteja
         // levando o jogador para cima (por exemplo, o self-launch do D1).
         if (verticalVelocity <= 0f)
-            verticalVelocity = Mathf.Min(verticalVelocity, -2f);
+            verticalVelocity = Mathf.Min(verticalVelocity,
+                GroundedDownwardBias);
     }
 
     public void ApplyLaunchForwards(
@@ -1567,13 +1677,19 @@ public class PlayerMovement : MonoBehaviour
         CancelStaggerPush();
         slideDirection = Vector3.zero;
         verticalVelocity = 0f;
+        verticalDisplacementThisFrame = 0f;
+        jumpHoldElapsed = 0f;
+        jumpHoldDurationForCurrentJump = 0f;
+        launchHoldElapsed = 0f;
+        launchHoldDuration = 0f;
+        launchHoldGravityMultiplier = 1f;
         launchForwardsDeceleration = 0f;
+        staggerPushDeceleration = 0f;
         dashTimer = 0f;
         dashCooldownTimer = 0f;
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
         aerialDiveFallSpeed = 0f;
-        launchGravity = gravity;
         enemyGroundContactTimer = 0f;
         jumpsUsed = 0;
         hasUsedAirDash = false;
@@ -1583,11 +1699,20 @@ public class PlayerMovement : MonoBehaviour
         isAerialDiving = false;
         isDashJump = false;
         isStandardJump = false;
+        isJumpAscending = false;
         wasAirborne = false;
         queuedRecoveryCancelAction = RecoveryCancelAction.None;
-        inputBuffer?.ClearBufferedInputs(ignoreNextFrame: true);
-        movesetController?.ResetSequence();
-        attackController?.CancelAttack();
+        pendingLocomotionDisplacement = Vector3.zero;
+        pendingExternalDisplacement = Vector3.zero;
+        hasPendingMovementCommit = false;
+        swingMovementQueued = false;
+        lastSwingMovementCollisionFlags = CollisionFlags.None;
+        if (inputBuffer != null)
+            inputBuffer.ClearBufferedInputs(ignoreNextFrame: true);
+        if (movesetController != null)
+            movesetController.ResetSequence();
+        if (attackController != null)
+            attackController.CancelAttack();
     }
 
     /// <summary>
@@ -1631,12 +1756,12 @@ public class PlayerMovement : MonoBehaviour
 
     public void ApplyAttackMovement(Vector3 displacement)
     {
-        if (controller == null || displacement.sqrMagnitude <= 0.000001f)
+        if (!isActiveAndEnabled || controller == null ||
+            displacement.sqrMagnitude <= 0.000001f)
             return;
 
-        // PlayerAttackMovement planeja o ataque; PlayerMovement continua sendo o unico
-        // responsavel por mover o CharacterController e respeitar colisoes.
-        controller.Move(displacement);
+        pendingExternalDisplacement += displacement;
+        hasPendingMovementCommit = true;
     }
 
     public void BeginAerialLight(
@@ -1650,8 +1775,8 @@ public class PlayerMovement : MonoBehaviour
         isLaunched = false;
         // O leve aereo substitui o momentum vertical do pulo e aplica apenas
         // o lift configurado para o ataque.
-        verticalVelocity = 0f;
         verticalVelocity = liftSpeed;
+        isJumpAscending = verticalVelocity > 0f;
         isStandardJump = false;
         aerialGravityMultiplier = Mathf.Clamp01(gravityMultiplier);
         aerialLightTimer = Mathf.Max(aerialLightTimer, duration);
@@ -1672,6 +1797,7 @@ public class PlayerMovement : MonoBehaviour
         aerialDiveFallSpeed = Mathf.Max(0f, fallSpeed);
         verticalVelocity = -aerialDiveFallSpeed;
         isStandardJump = false;
+        isJumpAscending = false;
         isAerialDiving = true;
     }
 
@@ -1708,7 +1834,6 @@ public class PlayerMovement : MonoBehaviour
         isAerialDiving = false;
         aerialDiveFallSpeed = 0f;
         BeginJumpAscent(GetJumpHeight());
-        launchGravity = gravity;
         launchHoldElapsed = 0f;
         launchHoldDuration = GetJumpDuration();
         launchHoldGravityMultiplier = jumpHoldGravityMultiplier;

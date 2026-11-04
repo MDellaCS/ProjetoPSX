@@ -76,4 +76,58 @@ public static class PlayerHeldBranchRegression
             throw new System.Exception($"Elegibilidade incorreta: {label}.");
     }
 }
+
+/// <summary>Verificacoes sem cena para as regras puras do frame do movimento.</summary>
+public static class PlayerMovementFrameRegression
+{
+    [MenuItem("Tools/Tests/Run Player Movement Frame Regression")]
+    public static void RunMovementFrameChecks()
+    {
+        try
+        {
+            Vector3 locomotion = new(1f, 2f, 3f);
+            Vector3 external = new(-.25f, 0f, 4f);
+            Assert(PlayerMovementFrameMath.CombineDisplacements(locomotion,
+                external) == new Vector3(.75f, 2f, 7f),
+                "A soma deve preservar os deslocamentos de locomocao e externos.");
+            Assert(!PlayerMovementFrameMath.ShouldAllowGroundSnap(false, -.1f),
+                "Uma entidade no ar nao pode receber ground snap.");
+            Assert(!PlayerMovementFrameMath.ShouldAllowGroundSnap(true, .001f),
+                "Um deslocamento ascendente nao pode receber ground snap.");
+            Assert(PlayerMovementFrameMath.ShouldAllowGroundSnap(true, 0f),
+                "Uma entidade apoiada sem subida pode receber ground snap.");
+
+            Vector3 walkableSlope = Quaternion.AngleAxis(30f,
+                Vector3.forward) * Vector3.up;
+            Vector3 steepSlope = Quaternion.AngleAxis(60f,
+                Vector3.forward) * Vector3.up;
+            Assert(PlayerMovementFrameMath.IsGroundSupport(Vector3.up),
+                "O plano horizontal deve contar como suporte.");
+            Assert(!PlayerMovementFrameMath.IsGroundSupport(Vector3.right),
+                "Uma parede vertical nao deve contar como suporte.");
+            Assert(PlayerMovementFrameMath.IsGroundSupport(steepSlope) &&
+                !PlayerMovementFrameMath.IsWalkableGround(steepSlope, 45f),
+                "Uma rampa ingreme e contato, mas nao chao caminhavel.");
+            Assert(PlayerMovementFrameMath.IsWalkableGround(walkableSlope,
+                45f), "Uma rampa abaixo do limite deve ser caminhavel.");
+
+            Debug.Log("PASS: PlayerMovement frame math regression.");
+            if (Application.isBatchMode)
+                EditorApplication.Exit(0);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError("FAIL: PlayerMovement frame math regression: " +
+                exception);
+            if (Application.isBatchMode)
+                EditorApplication.Exit(1);
+        }
+    }
+
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition)
+            throw new System.InvalidOperationException(message);
+    }
+}
 #endif

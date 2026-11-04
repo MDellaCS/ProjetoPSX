@@ -185,7 +185,11 @@ public sealed class EnemyAttackController : MonoBehaviour
 
         TickMovement();
         phaseTimer -= Time.deltaTime;
-        if (phaseTimer <= 0f) EnterActive();
+        if (phaseTimer <= 0f)
+        {
+            TickMovementAtPhaseEnd();
+            EnterActive();
+        }
     }
 
     public void TickActive()
@@ -202,6 +206,8 @@ public sealed class EnemyAttackController : MonoBehaviour
                 phaseTimer = 0f;
                 return;
             }
+            if (!endEarly)
+                TickMovementAtPhaseEnd();
             hitboxes.Tick(1f);
             EnterRecovery();
         }
@@ -229,6 +235,16 @@ public sealed class EnemyAttackController : MonoBehaviour
         float elapsed = CurrentPhase == EnemyAttackPhase.Windup
             ? windup * PhaseProgress : windup + active * PhaseProgress;
         authoredMovement.Tick(CurrentPhase, PhaseProgress,
+            elapsed / Mathf.Max(.0001f, windup + active));
+    }
+
+    private void TickMovementAtPhaseEnd()
+    {
+        float windup = CurrentAttack.WindupDuration;
+        float active = CurrentAttack.ActiveDuration;
+        float elapsed = CurrentPhase == EnemyAttackPhase.Windup
+            ? windup : windup + active;
+        authoredMovement.Tick(CurrentPhase, 1f,
             elapsed / Mathf.Max(.0001f, windup + active));
     }
 

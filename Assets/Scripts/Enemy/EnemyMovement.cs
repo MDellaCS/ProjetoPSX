@@ -849,7 +849,8 @@ public sealed class EnemyMovement : MonoBehaviour
         direction.y = 0f;
         if (direction.sqrMagnitude <= .0001f)
             direction = transform.right;
-        playerHeadSeparationVelocity = direction.normalized * player.enemyHeadSeparationSpeed;
+        playerHeadSeparationVelocity = direction.normalized *
+            player.EnemyHeadSeparationSpeed;
         playerHeadSeparationTimer = .1f;
         verticalVelocity = Mathf.Min(verticalVelocity, -2f);
         FaceForceOrigin(player.transform.position);

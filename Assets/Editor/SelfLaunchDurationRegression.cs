@@ -63,6 +63,8 @@ public static class SelfLaunchDurationRegression
         EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(
             "Assets/Scenes/999. TestArena.unity");
         EditorPrefs.SetBool(RunKey, true);
+        CreateArena();
+        Debug.Log("Iniciando Self Launch Duration Regression em TestArena.");
         EditorApplication.isPlaying = true;
     }
 
@@ -113,6 +115,19 @@ public static class SelfLaunchDurationRegression
 
         if (Time.frameCount <= setupFrame + 1)
             return;
+
+        // EditorApplication.update pode rodar antes do LateUpdate do frame atual.
+        // Validar somente depois que o primeiro commit da cena aconteceu.
+        if (movement.MovementCommitFrame < setupFrame + 1)
+            return;
+
+        if (movement.MovementCommitsInLastFrame != 1)
+        {
+            Fail("O PlayerMovement executou " +
+                movement.MovementCommitsInLastFrame +
+                " commits no frame anterior; esperado: 1.");
+            return;
+        }
 
         if (attacks.CurrentAttack == null && !launched)
         {
@@ -176,7 +191,10 @@ public static class SelfLaunchDurationRegression
         scenario++;
     }
 
-    private static void CreateArena() { }
+    private static void CreateArena()
+    {
+        // A TestArena fornece seu AudioListener ao entrar em Play Mode.
+    }
 
     private static void CreateScenario()
     {
