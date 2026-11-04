@@ -13,8 +13,6 @@ public sealed class LoadingScreenHUD : MonoBehaviour
 {
     private const string LayoutResource = "LoadingScreenHUD/LoadingScreenHUD";
     private const string PanelSettingsResource = "LoadingScreenHUD/PanelSettings";
-    private const float FadeDuration = .3f;
-    private const float MinimumVisibleTime = .35f;
     private const int PanelSortingOrder = 32767;
 
     private static LoadingScreenHUD instance;
@@ -24,7 +22,6 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     private VisualElement progressFill;
     private Label loadingLabel;
     private Coroutine hideRoutine;
-    private float shownAt;
     private float dotTimer;
     private int dotCount;
     private bool isVisible = true;
@@ -89,7 +86,6 @@ public sealed class LoadingScreenHUD : MonoBehaviour
                 panelRenderer.panelSettings.sortingOrder = PanelSortingOrder;
             panelRenderer.RegisterUIReloadCallback(HandleUIReload);
         }
-        shownAt = Time.unscaledTime;
     }
 
     private void OnDestroy()
@@ -129,7 +125,6 @@ public sealed class LoadingScreenHUD : MonoBehaviour
             hideRoutine = null;
         }
 
-        shownAt = Time.unscaledTime;
         isVisible = true;
         GamePauseController.RequestPause(this);
         EnsureElements();
@@ -185,18 +180,23 @@ public sealed class LoadingScreenHUD : MonoBehaviour
 
     private IEnumerator HideRoutine()
     {
-        float remaining = MinimumVisibleTime - (Time.unscaledTime - shownAt);
-        if (remaining > 0f)
-            yield return new WaitForSecondsRealtime(remaining);
+        // O fade so comeca com o carregamento 100% pronto e depois de um
+        // tempo fixo e configuravel (LoadingScreenSettings), independente de
+        // quanto o carregamento demorou.
+        LoadingScreenSettings settings = LoadingScreenSettings.Current;
+        SetProgress(1f);
+        if (settings.extraWaitAfterReady > 0f)
+            yield return new WaitForSecondsRealtime(settings.extraWaitAfterReady);
 
+        float fadeDuration = Mathf.Max(0f, settings.fadeDuration);
         float elapsed = 0f;
         float startOpacity = overlay != null ? overlay.resolvedStyle.opacity : 1f;
-        while (elapsed < FadeDuration)
+        while (elapsed < fadeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
             if (overlay != null)
                 overlay.style.opacity = Mathf.Lerp(startOpacity, 0f,
-                    Mathf.Clamp01(elapsed / FadeDuration));
+                    Mathf.Clamp01(elapsed / fadeDuration));
             yield return null;
         }
 

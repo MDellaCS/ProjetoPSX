@@ -25,6 +25,9 @@ public sealed class CameraEffectStack : MonoBehaviour
     private CinemachineCamera gameplayCamera;
     private CinemachineImpulseListener impulseListener;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => Instance = null;
+
     private void Awake() => Instance = this;
 
     private void OnDestroy()

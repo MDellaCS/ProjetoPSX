@@ -72,14 +72,15 @@ public sealed class GameplayFootstepEmitter : MonoBehaviour
         if (IsPlayer)
         {
             if (!playerMovement.IsGrounded || playerMovement.IsCrouching ||
-                playerState == null)
+                playerMovement.IsSwimming || playerState == null)
                 return false;
 
             return playerState.IsNormal() && !playerState.IsAttacking() &&
                 !playerState.IsDashing() && !playerState.IsSliding();
         }
 
-        if (enemyMovement == null || !enemyMovement.IsGrounded)
+        if (enemyMovement == null || !enemyMovement.IsGrounded ||
+            (enemyBase != null && enemyBase.Water != null && enemyBase.Water.IsSwimming))
             return false;
 
         return enemyBase == null ||

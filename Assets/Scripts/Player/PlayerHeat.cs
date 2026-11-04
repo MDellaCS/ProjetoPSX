@@ -105,6 +105,13 @@ public class PlayerHeat : MonoBehaviour
     private PlayerState playerState;
     private PlayerHealth playerHealth;
     private PlayerCombatStatus combatStatus;
+    private WaterSensor waterSensor;
+
+    // Na agua (rasa ou funda, conforme o WaterProfile) o jogador conta como
+    // fora de combate para o resfriamento passivo do Heat.
+    private bool IsOutOfCombatForCooling =>
+        (combatStatus != null && combatStatus.IsOutOfCombat) ||
+        (waterSensor != null && waterSensor.CoolsHeat);
     private PlayerAttackController attackController;
     private PlayerMovement playerMovement;
     private PlayerMovesetController movesetController;
@@ -149,6 +156,7 @@ public class PlayerHeat : MonoBehaviour
         playerState = GetComponent<PlayerState>();
         playerHealth = GetComponent<PlayerHealth>();
         combatStatus = GetComponent<PlayerCombatStatus>();
+        waterSensor = WaterSensor.GetOrAdd(gameObject);
         attackController = GetComponent<PlayerAttackController>();
         playerMovement = GetComponent<PlayerMovement>();
     }
@@ -223,7 +231,7 @@ public class PlayerHeat : MonoBehaviour
 
         if (playerState == null || playerState.IsDead()) return;
         UpdateDebugHeatInput();
-        if (combatStatus == null || !combatStatus.IsOutOfCombat)
+        if (!IsOutOfCombatForCooling)
         {
             // Sair de combate sempre inicia uma janela completa de retencao.
             // Enquanto houver combate, ela nao pode ser consumida.
@@ -250,7 +258,7 @@ public class PlayerHeat : MonoBehaviour
 
     private void UpdatePassiveHeat()
     {
-        if (combatStatus == null || !combatStatus.IsOutOfCombat)
+        if (!IsOutOfCombatForCooling)
         {
             ResetHeatCoolingRamp();
             return;
@@ -258,7 +266,9 @@ public class PlayerHeat : MonoBehaviour
         if (currentHeat < 0f)
         {
             ResetHeatCoolingRamp();
-            RecoverColdOutOfCombat();
+            // A agua so resfria Heat positivo: nunca "aquece" o Cold.
+            if (combatStatus != null && combatStatus.IsOutOfCombat)
+                RecoverColdOutOfCombat();
             return;
         }
         if (currentHeat <= 0f)
@@ -304,7 +314,7 @@ public class PlayerHeat : MonoBehaviour
         // Superheat so nasce do Heat que excede o maximo. Permanecer com
         // Heat alto nao o gera passivamente.
         float cooling = 0f;
-        if (combatStatus != null && combatStatus.IsOutOfCombat) cooling += passiveSuperheatCoolingPerSecond;
+        if (IsOutOfCombatForCooling) cooling += passiveSuperheatCoolingPerSecond;
         if (currentHeat < 0f) cooling += coldSuperheatCoolingPerSecond;
         RemoveSuperheat(cooling * Time.deltaTime);
     }

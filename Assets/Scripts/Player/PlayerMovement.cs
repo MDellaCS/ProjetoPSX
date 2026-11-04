@@ -9,6 +9,7 @@ public class PlayerMovement : MonoBehaviour
     private const float DefaultDashCooldown = 1.3f;
     private const float GroundedDownwardBias = -2f;
     private const float EnemyGroundContactGracePeriod = .12f;
+    private const float FloatContactTolerance = .4f;
 
     private enum RecoveryCancelAction
     {
@@ -112,14 +113,37 @@ public class PlayerMovement : MonoBehaviour
     public float VerticalSpeed => verticalVelocity;
     public int MovementCommitsInLastFrame => movementCommitsThisFrame;
     public int MovementCommitFrame => movementCommitFrame;
-    public bool IsGrounded => controller != null && controller.isGrounded &&
-        !IsStandingOnEnemy;
+    public bool IsGrounded => (controller != null && controller.isGrounded &&
+        !IsStandingOnEnemy) || IsFloatingOnWater;
+    /// <summary>Nadando na superficie de agua funda (sem tocar o chao).</summary>
+    public bool IsSwimming => waterSensor != null && waterSensor.IsSwimming;
+    public bool IsInWater => waterSensor != null && waterSensor.IsInWater;
+    /// <summary>Falso na agua funda quando o perfil proibe ataques.</summary>
+    public bool AllowsAttacksInWater => waterSensor == null ||
+        waterSensor.AllowsAttacks || !IsFloatingOnWater;
+    private bool WaterAllowsDash => waterSensor == null ||
+        waterSensor.AllowsDash || !IsFloatingOnWater;
+    private float WaterSpeedMultiplier => waterSensor != null ? waterSensor.SpeedMultiplier : 1f;
+    // Flutuando: na agua funda, sem pulo/launch em andamento e com os pes na
+    // altura de flutuacao. Conta como chao para pular e resetar acoes aereas.
+    private bool IsFloatingOnWater => IsSwimming && controller != null &&
+        !isJumpAscending && !isLaunched && !isAerialDiving &&
+        Mathf.Abs(waterSensor.FloatTargetFeetY - controller.bounds.min.y) <
+            FloatContactTolerance;
+    /// <summary>
+    /// Altura da capsula em pe dividida pela altura atual. Vale 1 em pe e
+    /// aumenta ao agachar/deslizar; a camera usa para ignorar o encolhimento.
+    /// </summary>
+    public float StandingHeightRatio => controller != null &&
+        hasCachedStandingControllerShape && controller.height > .01f
+            ? Mathf.Max(1f, standingControllerHeight / controller.height) : 1f;
     public float DashCooldownRemaining => dashCooldownTimer;
     public bool IsDashReady =>
         CanDash &&
         dashCooldownTimer <= 0f &&
         playerState != null &&
         playerState.IsNormal() &&
+        WaterAllowsDash &&
         (IsGrounded || (CanAirDash && !hasUsedAirDash));
     public bool IsCrouching => isCrouching;
     public bool IsLaunched => isLaunched;
@@ -183,6 +207,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isLaunched;
     private bool isAerialDiving;
     private bool isDashJump;
+    private WaterSensor waterSensor;
     private bool isStandardJump;
     private bool isJumpAscending;
     private bool wasAirborne;
@@ -232,6 +257,7 @@ public class PlayerMovement : MonoBehaviour
         attackController = GetComponent<PlayerAttackController>();
         playerHealth = GetComponent<PlayerHealth>();
         playerHeat = GetComponent<PlayerHeat>();
+        waterSensor = WaterSensor.GetOrAdd(gameObject);
         movesetController = GetComponent<PlayerMovesetController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
         PlayerSlideAttack.GetOrAdd(gameObject);
@@ -299,6 +325,12 @@ public class PlayerMovement : MonoBehaviour
         TryStartJump();
         UpdateCharacterControllerShape();
         UpdateVerticalVelocity();
+        if (wasAirborne && IsFloatingOnWater && verticalVelocity <= 0f)
+        {
+            if (movesetController != null)
+                movesetController.ResetAerialSequenceOnLanding();
+            wasAirborne = false;
+        }
 
         horizontalVelocity = CalculateHorizontalVelocity();
         RotateTowardsMovement();
@@ -411,7 +443,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void TryStartDash()
     {
-        if (!CanDash)
+        if (!CanDash || !WaterAllowsDash)
         {
             if (inputBuffer != null)
                 inputBuffer.TryConsume(PlayerBufferedInput.Dash);
@@ -473,7 +505,8 @@ public class PlayerMovement : MonoBehaviour
         // O Dash soma um impulso ao momentum atual. Consequentemente, dar
         // Dash na mesma direcao acelera o player; no sentido oposto, elimina
         // o momentum anterior antes de aplicar o novo impulso.
-        horizontalVelocity += DesiredDirection * GetDashImpulse();
+        horizontalVelocity += DesiredDirection * GetDashImpulse() *
+            (waterSensor != null ? waterSensor.DashDistanceMultiplier : 1f);
     }
 
     private void UpdateDashCooldown()
@@ -553,7 +586,25 @@ public class PlayerMovement : MonoBehaviour
             isDashJump = false;
         }
 
-        BeginJumpAscent(GetJumpHeight());
+        // Pulo para fora da agua funda: impulso horizontal extra na direcao do
+        // movimento (nao altera a altura do pulo).
+        float jumpHeightBonus = 0f;
+        if (waterSensor != null && waterSensor.IsSwimming)
+        {
+            if (waterSensor.Profile.deepJumpCompensatesDepth)
+                jumpHeightBonus = waterSensor.Profile.floatFeetDepth;
+            if (waterSensor.JumpExitBoost > 0f &&
+                DesiredDirection.sqrMagnitude > 0.0001f)
+            {
+                horizontalVelocity += DesiredDirection.normalized *
+                    waterSensor.JumpExitBoost;
+                // O impulso e preservado como num Dash Jump; sem isso o
+                // controle aereo o reduz ao limite de velocidade na agua.
+                isDashJump = true;
+            }
+        }
+
+        BeginJumpAscent(GetJumpHeight() + jumpHeightBonus);
         isStandardJump = true;
         isLaunched = false;
         jumpsUsed++;
@@ -594,7 +645,7 @@ public class PlayerMovement : MonoBehaviour
         // Enquanto o player sobe, o CharacterController pode ainda reportar
         // grounded por um frame. A velocidade vertical evita resetar o pulo
         // que acabou de começar.
-        if (verticalVelocity > 0f)
+        if (verticalVelocity > 0f && !IsFloatingOnWater)
         {
             wasAirborne = true;
             return;
@@ -616,7 +667,7 @@ public class PlayerMovement : MonoBehaviour
     {
         bool wantsToCrouch = GameInput.CrouchHeld;
 
-        bool canCrouch = IsGrounded &&
+        bool canCrouch = IsGrounded && !IsSwimming &&
             (playerState.IsNormal() || playerState.IsSliding());
 
         SetCrouching(wantsToCrouch && canCrouch);
@@ -787,6 +838,15 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        // Caindo (launch ou dive) dentro da agua funda: a trajetoria termina
+        // na superficie, onde a flutuacao assume.
+        if (IsSwimming && verticalVelocity <= 0f && (isLaunched || isAerialDiving))
+        {
+            isLaunched = false;
+            isAerialDiving = false;
+            aerialDiveFallSpeed = 0f;
+        }
+
         if (isLaunched)
         {
             AdvanceJumpPhysics(Time.deltaTime,
@@ -821,6 +881,20 @@ public class PlayerMovement : MonoBehaviour
             verticalVelocity = -aerialDiveFallSpeed;
             verticalDisplacementThisFrame = verticalVelocity *
                 Time.deltaTime;
+            isStandardJump = false;
+            return;
+        }
+
+        // Agua funda: sem gravidade. Os pes seguem suavemente a altura de
+        // flutuacao (mola de primeira ordem, sem oscilacao). Absorve a queda.
+        if (IsSwimming && !playerState.IsDead())
+        {
+            WaterProfile profile = waterSensor.Profile;
+            float error = waterSensor.FloatTargetFeetY - controller.bounds.min.y;
+            verticalVelocity = Mathf.Clamp(error * profile.floatSpringFrequency,
+                -profile.floatMaxVerticalSpeed, profile.floatMaxVerticalSpeed) +
+                waterSensor.FloatBobSpeedBoost;
+            verticalDisplacementThisFrame = verticalVelocity * Time.deltaTime;
             isStandardJump = false;
             return;
         }
@@ -975,7 +1049,7 @@ public class PlayerMovement : MonoBehaviour
     {
         bool onSteepSlope = TryGetSteepSlopeDownhillDirection(
             out Vector3 steepDownhillDirection);
-        if ((!IsGrounded && !onSteepSlope) || !IsCrouchHeld())
+        if ((!IsGrounded && !onSteepSlope) || !IsCrouchHeld() || IsSwimming)
         {
             EndSlide();
             return horizontalVelocity;
@@ -1117,7 +1191,9 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 CalculateWalkVelocity()
     {
-        if (verticalVelocity > 0f)
+        // Flutuando, o bobbing e a mola geram velocidade vertical positiva sem
+        // que o jogador esteja no ar: continua valendo o movimento de "chao".
+        if (verticalVelocity > 0f && !IsFloatingOnWater)
         {
             return CalculateAirVelocity();
         }
@@ -1137,6 +1213,18 @@ public class PlayerMovement : MonoBehaviour
             : movementSpeed;
         Vector3 targetVelocity = DesiredDirection * currentSpeed;
         float rate = GetGroundMovementRate(targetVelocity);
+
+        // Na agua a aceleracao e a desaceleracao tem limite proprio (inercia).
+        // So vale para a faixa de velocidade de caminhada/natacao: o momentum
+        // acima disso (dash, impulsos) segue a desaceleracao normal do chao.
+        if (waterSensor != null && waterSensor.IsInWater &&
+            horizontalVelocity.magnitude <= currentSpeed * 1.05f)
+        {
+            float waterRate = targetVelocity.sqrMagnitude <= 0.0001f
+                ? waterSensor.DecelerationLimit : waterSensor.AccelerationLimit;
+            if (waterRate > 0f)
+                rate = Mathf.Min(rate, waterRate);
+        }
 
         Vector3 walkVelocity = Vector3.MoveTowards(
             horizontalVelocity,
@@ -1282,7 +1370,7 @@ public class PlayerMovement : MonoBehaviour
             : DefaultDashImpulse;
     }
 
-    private float GetMovementSpeed() => speed *
+    private float GetMovementSpeed() => speed * WaterSpeedMultiplier *
         (movesetController != null && movesetController.Moveset != null
             ? movesetController.Moveset.movementSpeedMultiplier
             : 1f);
@@ -1800,6 +1888,8 @@ public class PlayerMovement : MonoBehaviour
             displacement.sqrMagnitude <= 0.000001f)
             return;
 
+        if (waterSensor != null)
+            displacement *= waterSensor.AttackMovementMultiplier;
         pendingExternalDisplacement += displacement;
         hasPendingMovementCommit = true;
     }

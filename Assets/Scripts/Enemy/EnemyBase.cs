@@ -95,6 +95,16 @@ public class EnemyBase : MonoBehaviour
         brain != null && !brain.IsWaitingForEncounter;
     public bool IsSpawning => isSpawning;
     public bool IsGrapplePulled => isGrapplePulled;
+
+    [Header("Agua")]
+    [Tooltip("Marque em chefes (ou qualquer inimigo) para ignorar a agua por completo: sem lentidao, flutuacao nem bloqueio de ataques.")]
+    [SerializeField] private bool ignoreWater;
+    private WaterSensor water;
+
+    public bool IgnoresWater => ignoreWater;
+    internal WaterSensor Water => water;
+    /// <summary>Falso para inimigos que nao nadam (voadores): a agua so atua como piso do voo.</summary>
+    internal virtual bool FloatsInWater => true;
     public int CurrentHealth => health != null ? health.CurrentHealth : 0;
     public int MaxHealth => health != null ? health.MaxHealth : 0;
     public float ImpactWeight => movement != null
@@ -146,6 +156,8 @@ public class EnemyBase : MonoBehaviour
         taunt = GetComponent<EnemyTaunt>();
         practiceDummy = GetComponent<PracticeDummy>();
         reactions = GetOrAdd<EnemyReactionController>();
+        water = GetOrAdd<WaterSensor>();
+        water.Immune = ignoreWater;
 
         movement.Initialize(this, health);
         attacks.Initialize(this, brain, movement);
@@ -290,7 +302,8 @@ public class EnemyBase : MonoBehaviour
     protected virtual void UpdateVerticalMovement(EnemyMovement locomotion) =>
         locomotion.ApplyGravity();
     protected virtual bool CanUseAttack(EnemyAttackDefinition attack) =>
-        practiceDummy == null || practiceDummy.AllowAttacks;
+        (practiceDummy == null || practiceDummy.AllowAttacks) &&
+        (water == null || water.AllowsAttacks);
     protected virtual bool TryChooseSpecialCombatAction() => false;
     protected virtual void OnAttackStarted(EnemyAttackDefinition attack) { }
     protected virtual void OnAttackActiveStarted(EnemyAttackDefinition attack) { }

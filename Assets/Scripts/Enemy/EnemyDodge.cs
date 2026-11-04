@@ -86,6 +86,9 @@ public sealed class EnemyDodge : MonoBehaviour
         if (!isActiveAndEnabled || owner == null ||
             !owner.CanPracticeDummyDodge)
             return false;
+        // Agua funda: sem esquiva (configuravel no WaterProfile).
+        if (owner.Water != null && !owner.Water.AllowsDash)
+            return false;
         if (owner != null && owner.CurrentState == EnemyBase.State.Taunting)
             return false;
         if (IsAvoidingPlayerAttacks)
@@ -177,6 +180,8 @@ public sealed class EnemyDodge : MonoBehaviour
             else
                 FinishDodge();
         }
+        if (owner != null && owner.Water != null)
+            retreatVelocity *= owner.Water.DashDistanceMultiplier;
         return retreatVelocity;
     }
 

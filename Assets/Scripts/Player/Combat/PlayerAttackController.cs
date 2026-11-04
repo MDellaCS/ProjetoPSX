@@ -112,6 +112,8 @@ public sealed class PlayerAttackController : MonoBehaviour
         if (definition == null || IsAttacking || playerState == null ||
             CutsceneController.IsPlayerControlLocked || !playerState.IsNormal() ||
             !CanStartAttack(definition)) return false;
+        // Agua funda: sem ataques (configuravel no WaterProfile).
+        if (movement != null && !movement.AllowsAttacksInWater) return false;
         if (!isGrappleAttack && definition.context == PlayerAttackContext.Ground &&
             movement != null && !movement.IsGrounded) return false;
         PlayerMovesetDefinition moveset = movesetController != null

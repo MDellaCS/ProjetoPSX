@@ -471,7 +471,6 @@ MonoBehaviour:
   lockPlayerControl: 1
   freezeEnemies: 1
   allowSkip: 1
-  skipKey: 1
   player: {fileID: 0}
   loadSceneOnFinish: 1
   sceneAssetOnFinish: {fileID: 102900000, guid: 457fc71132f12b24fa9c17694a461ef5, type: 3}
@@ -28706,7 +28705,6 @@ MonoBehaviour:
   lockPlayerControl: 1
   freezeEnemies: 1
   allowSkip: 1
-  skipKey: 1
   player: {fileID: 0}
   loadSceneOnFinish: 0
   sceneAssetOnFinish: {fileID: 0}
@@ -28991,6 +28989,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FixedCameraZone
   fixedCamera: {fileID: 1509485140}
+  cameraMode: 0
+  railSpline: {fileID: 0}
+  railOffset: {x: 0, y: 0, z: 0}
+  overrideFollowDelay: 0
+  followDelaySeconds: 0.08
   cameraPriority: 20
   activationVolume: {fileID: 1125831598}
   zoneShape: 0
@@ -29565,6 +29568,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FixedCameraZone
   fixedCamera: {fileID: 1124326355}
+  cameraMode: 0
+  railSpline: {fileID: 0}
+  railOffset: {x: 0, y: 0, z: 0}
+  overrideFollowDelay: 0
+  followDelaySeconds: 0.08
   cameraPriority: 20
   activationVolume: {fileID: 1623338457}
   zoneShape: 0

@@ -95,6 +95,9 @@ public sealed class EnemyAttackMovement : MonoBehaviour
         }
         Vector3 velocity = Time.deltaTime > 0f
             ? displacement / Time.deltaTime : Vector3.zero;
+        // Na agua os ataques avancam menos (WaterProfile).
+        if (owner != null && owner.Water != null)
+            velocity *= owner.Water.AttackMovementMultiplier;
         movement.Move(velocity);
     }
 

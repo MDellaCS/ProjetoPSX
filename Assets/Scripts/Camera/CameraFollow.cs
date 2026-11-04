@@ -17,6 +17,11 @@ public sealed class CameraFollow : MonoBehaviour
     public static CameraFollow Instance { get; private set; }
     public bool LocksCursorOnStart => lockCursorOnStart;
 
+    // Domain Reload desligado: sem este reset a instancia de uma sessao de
+    // Play anterior sobreviveria (destruida) na proxima.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => Instance = null;
+
     [Header("Target")]
     [Tooltip("Transform raiz do player acompanhado pela camera.")]
     [SerializeField] private Transform target;
@@ -74,6 +79,7 @@ public sealed class CameraFollow : MonoBehaviour
     [Range(1f, 179f)] [SerializeField] private float baseFieldOfView = 60f;
 
     private PlayerCharacterController targetController;
+    private CinemachineBrain brain;
     private CinemachineThirdPersonFollow thirdPersonFollow;
     private CinemachineCamera menuCamera;
     private bool ownsMenuCamera;
@@ -89,6 +95,7 @@ public sealed class CameraFollow : MonoBehaviour
     private bool fixedCameraActive;
     private Coroutine fixedCameraBlendRestoreRoutine;
     private Vector3 previousTargetCenter;
+    private PlayerMovement targetMovement;
     private float yaw;
     private float pitch;
     private readonly List<FixedCameraZone> fixedCameraZones = new();
@@ -98,6 +105,14 @@ public sealed class CameraFollow : MonoBehaviour
     public Transform Target => target;
     public Vector3 TargetCenter => GetTargetCenter();
     public CinemachineCamera GameplayCamera => gameplayCamera;
+    /// <summary>
+    /// Ponto que representa o centro do player para outras cameras (zonas de
+    /// camera estatica/trilho). Acompanha o mesmo centro usado pela camera de
+    /// gameplay, sem a rotacao da orbita.
+    /// </summary>
+    public Transform TrackingTarget => trackingPivot;
+    /// <summary>Atraso de acompanhamento (em segundos) da camera de gameplay.</summary>
+    public float FollowSmoothTime => followSmoothTime;
     internal int GameplayCameraPriority => gameplayCameraPriority;
     internal int MovementCameraVersion => movementCameraVersion;
 
@@ -172,6 +187,12 @@ public sealed class CameraFollow : MonoBehaviour
     {
         maximumPitch = Mathf.Max(minimumPitch, maximumPitch);
         initialPitch = Mathf.Clamp(initialPitch, minimumPitch, maximumPitch);
+
+        // As configuracoes de colisao deixaram de ser reaplicadas a cada
+        // frame; ajustes no Inspector durante o Play entram por aqui.
+        if (Application.isPlaying && thirdPersonFollow != null &&
+            gameplayCamera != null)
+            ConfigureCinemachineComponents();
     }
 
     private void Update()
@@ -288,8 +309,8 @@ public sealed class CameraFollow : MonoBehaviour
 
     private void EnsureCinemachineRig()
     {
-        if (GetComponent<CinemachineBrain>() == null)
-            gameObject.AddComponent<CinemachineBrain>();
+        if (brain == null && !TryGetComponent(out brain))
+            brain = gameObject.AddComponent<CinemachineBrain>();
 
         if (gameplayCamera == null)
         {
@@ -369,7 +390,6 @@ public sealed class CameraFollow : MonoBehaviour
             fixedCameraBlendRestoreRoutine = null;
         }
 
-        CinemachineBrain brain = GetComponent<CinemachineBrain>();
         if (brain == null)
             return;
 
@@ -397,7 +417,6 @@ public sealed class CameraFollow : MonoBehaviour
         // Aguarda o Brain confirmar que a camera de follow ja foi escolhida.
         // A coroutine retoma em Update, antes de o Brain avaliar LateUpdate;
         // restaurar no primeiro yield faria a saida usar o blend normal.
-        CinemachineBrain brain = GetComponent<CinemachineBrain>();
         int waitedFrames = 0;
         while (!fixedCameraActive && brain != null && gameplayCamera != null &&
             !System.Object.ReferenceEquals(brain.ActiveVirtualCamera,
@@ -423,7 +442,6 @@ public sealed class CameraFollow : MonoBehaviour
     /// <summary>Retoma o follow do jogador depois de sair do menu.</summary>
     public void ExitStaticMenuCamera(Transform persistentPlayer = null)
     {
-        CinemachineBrain brain = GetComponent<CinemachineBrain>();
         if (brain != null && hasSavedDefaultBlend)
         {
             brain.DefaultBlend = gameplayDefaultBlend;
@@ -549,15 +567,6 @@ public sealed class CameraFollow : MonoBehaviour
             179f
         );
         gameplayCamera.Priority = gameplayCameraPriority;
-        thirdPersonFollow.AvoidObstacles.Enabled =
-            cinemachineCollisionLayers.value != 0;
-        thirdPersonFollow.AvoidObstacles.CollisionFilter =
-            cinemachineCollisionLayers;
-        thirdPersonFollow.AvoidObstacles.CameraRadius = collisionRadius;
-        thirdPersonFollow.AvoidObstacles.DampingIntoCollision =
-            collisionInSmoothTime;
-        thirdPersonFollow.AvoidObstacles.DampingFromCollision =
-            collisionOutSmoothTime;
     }
 
     private Vector3 GetTargetCenter()
@@ -569,9 +578,18 @@ public sealed class CameraFollow : MonoBehaviour
         if (targetController != null)
         {
             Bounds bounds = targetController.bounds;
-            float heightOffset = bounds.size.y *
+            // Agachar e deslizar encolhem a capsula mantendo os pes no chao.
+            // A camera deve seguir sempre o centro da capsula EM PE, para nao
+            // descer junto com o encolhimento.
+            if (targetMovement == null)
+                target.TryGetComponent(out targetMovement);
+            float standingHeight = bounds.size.y *
+                (targetMovement != null ? targetMovement.StandingHeightRatio : 1f);
+            Vector3 standingCenter = new(bounds.center.x,
+                bounds.min.y + standingHeight * .5f, bounds.center.z);
+            float heightOffset = standingHeight *
                 (targetHeightOffsetPercent / 100f);
-            return bounds.center + Vector3.up * heightOffset;
+            return standingCenter + Vector3.up * heightOffset;
         }
 
         return target.position;

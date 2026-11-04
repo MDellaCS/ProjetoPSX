@@ -108,7 +108,13 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         get
         {
-            if (!IsControllerUsable || verticalVelocity > .05f)
+            if (!IsControllerUsable)
+                return false;
+            // Flutuando, o bobbing gera velocidade vertical positiva sem que
+            // o inimigo esteja no ar.
+            if (IsFloatingOnWater)
+                return true;
+            if (verticalVelocity > .05f)
                 return false;
             if (isLaunched && !hasGroundContact)
                 return false;
@@ -116,6 +122,62 @@ public sealed class EnemyMovement : MonoBehaviour
         }
     }
     public float VerticalVelocity => verticalVelocity;
+
+    private WaterSensor Water => owner != null ? owner.Water : null;
+    private float WaterSpeedMultiplier => Water != null ? Water.SpeedMultiplier : 1f;
+    private Vector3 waterInertiaVelocity;
+
+    // Na agua o inimigo ganha e perde velocidade gradualmente (WaterProfile).
+    // Fora da agua, sem limite configurado ou durante ataque/esquiva/guarda, a
+    // velocidade passa direto (os avancos autorados nao sao suavizados).
+    private bool WaterInertiaHandledThisFrame;
+
+    // Lentidao base e inercia da agua valem so para o movimento de andar; os
+    // avancos autorados (ataque, esquiva, guarda) tem os proprios
+    // multiplicadores e nao sao suavizados.
+    private Vector3 ApplyWaterWalking(Vector3 desired)
+    {
+        WaterSensor water = Water;
+        bool walking = owner != null && (owner.CurrentState == EnemyBase.State.Idle ||
+            owner.CurrentState == EnemyBase.State.Combat ||
+            owner.CurrentState == EnemyBase.State.TacticalIdle);
+        WaterInertiaHandledThisFrame = true;
+        if (water == null || !water.IsInWater || !walking)
+        {
+            waterInertiaVelocity = desired;
+            return desired;
+        }
+
+        return ApplyWaterInertia(desired * water.SpeedMultiplier, water);
+    }
+
+    private Vector3 ApplyWaterInertia(Vector3 desired, WaterSensor water)
+    {
+        float rate = desired.sqrMagnitude < waterInertiaVelocity.sqrMagnitude
+            ? water.DecelerationLimit : water.AccelerationLimit;
+        if (rate <= 0f)
+        {
+            waterInertiaVelocity = desired;
+            return desired;
+        }
+
+        waterInertiaVelocity = Vector3.MoveTowards(waterInertiaVelocity, desired,
+            rate * Time.deltaTime);
+        return waterInertiaVelocity;
+    }
+    // Flutuando na agua funda: sem lancamento e com os pes na altura de
+    // flutuacao. Conta como chao para a IA e para os efeitos.
+    private bool IsFloatingOnWater
+    {
+        get
+        {
+            WaterSensor water = Water;
+            return water != null && water.IsSwimming && controller != null &&
+                owner != null && owner.FloatsInWater &&
+                !isLaunched && Mathf.Abs(water.FloatTargetFeetY -
+                    controller.bounds.min.y) < .4f;
+        }
+    }
 
     /// <summary>Suspende temporariamente a separacao global entre inimigos durante movimentos especiais.</summary>
     public void SetTemporaryGroundEntitySeparationIgnored(bool ignored) =>
@@ -156,7 +218,7 @@ public sealed class EnemyMovement : MonoBehaviour
             playerHeadSeparationTimer > 0f ? playerHeadSeparationVelocity :
             hasSlideLaunchHorizontalImpulse ? slideLaunchHorizontalVelocity :
             knockbackTimer > 0f ? knockbackVelocity :
-            suppressAuthoredMovement ? Vector3.zero : horizontalVelocity;
+            suppressAuthoredMovement ? Vector3.zero : ApplyWaterWalking(horizontalVelocity);
 
         playerHeadSeparationTimer = Mathf.Max(0f, playerHeadSeparationTimer - Time.deltaTime);
         knockbackTimer = Mathf.Max(0f, knockbackTimer - Time.deltaTime);
@@ -169,6 +231,11 @@ public sealed class EnemyMovement : MonoBehaviour
         else
             velocity.y = verticalVelocity;
         lastMoveVelocity = velocity;
+        // Knockback, launch, grapple etc. nao passam pela inercia: acompanha a
+        // velocidade real para nao "voltar" deslizando na direcao antiga.
+        if (!WaterInertiaHandledThisFrame)
+            waterInertiaVelocity = new Vector3(velocity.x, 0f, velocity.z);
+        WaterInertiaHandledThisFrame = false;
         Vector3 displacement = velocity * Time.deltaTime;
         if (hasLaunchProfileForFrame)
             displacement.y = verticalDisplacementThisFrame;
@@ -220,6 +287,7 @@ public sealed class EnemyMovement : MonoBehaviour
 
     public void ResetForPracticeDummy(Vector3 position, Quaternion rotation)
     {
+        waterInertiaVelocity = Vector3.zero;
         if (controller != null)
             controller.enabled = false;
         transform.SetPositionAndRotation(position, rotation);
@@ -272,6 +340,42 @@ public sealed class EnemyMovement : MonoBehaviour
     public void ApplyGravity()
     {
         if (!IsControllerUsable) return;
+
+        // Agua funda: sem gravidade; os pes seguem a altura de flutuacao.
+        WaterSensor water = Water;
+        if (water != null && water.IsSwimming && !grapplePullActive)
+        {
+            // Lancado e caindo dentro da agua: a trajetoria termina aqui.
+            if (isLaunched && verticalVelocity <= 0f)
+            {
+                // Mesma limpeza do pouso (sem splat): impulsos horizontais do
+                // launch nao podem continuar derivando pela agua.
+                isLaunched = false;
+                launchGravity = gravity;
+                launchHoldElapsed = launchHoldDuration;
+                ResetJuggleMovement();
+                CancelSlideLaunchHorizontalImpulse();
+                ResetLaunchForwards();
+                if (owner != null && !owner.IsDead)
+                {
+                    owner.CurrentState = EnemyBase.State.Combat;
+                    brain.DecideImmediately();
+                }
+            }
+
+            if (!isLaunched)
+            {
+                WaterProfile profile = water.Profile;
+                float error = water.FloatTargetFeetY - controller.bounds.min.y;
+                verticalVelocity = Mathf.Clamp(error * profile.floatSpringFrequency,
+                    -profile.floatMaxVerticalSpeed, profile.floatMaxVerticalSpeed) +
+                    water.FloatBobSpeedBoost;
+                verticalDisplacementThisFrame = verticalVelocity * Time.deltaTime;
+                hasLaunchProfileForFrame = false;
+                return;
+            }
+        }
+
         if (!isLaunched && IsGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
         if (juggleTimer > 0f)

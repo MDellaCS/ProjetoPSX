@@ -1,6 +1,18 @@
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.Splines;
+
+/// <summary>Comportamento da camera enquanto uma zona de camera esta ativa.</summary>
+public enum CameraZoneMode
+{
+    /// <summary>Posicao e rotacao fixas, exatamente como autoradas na CinemachineCamera.</summary>
+    Fixed,
+    /// <summary>Posicao fixa; a camera gira para manter o player no centro da tela, com o atraso da camera de follow.</summary>
+    StaticLookAtTarget,
+    /// <summary>A camera desliza sobre um spline acompanhando o player, sem girar, e para ao chegar nas pontas do spline.</summary>
+    OnRails
+}
 
 /// <summary>
 /// Define uma area que troca temporariamente a camera de gameplay por um
@@ -18,8 +30,18 @@ public sealed class FixedCameraZone : MonoBehaviour
     }
 
     [Header("Enquadramento")]
-    [Tooltip("CinemachineCamera posicionada e rotacionada para este enquadramento. Deixe-a ativa na cena e sem Follow/LookAt para manter o angulo fixo.")]
+    [Tooltip("CinemachineCamera posicionada e rotacionada para este enquadramento. Deixe-a ativa na cena; Follow/LookAt sao configurados por esta zona conforme o modo.")]
     [SerializeField] private CinemachineCamera fixedCamera;
+    [Tooltip("Fixed: camera parada. Static Look At Target: camera parada que gira para enquadrar o player no centro. On Rails: camera que desliza por um spline seguindo o player, sem girar.")]
+    [SerializeField] private CameraZoneMode cameraMode = CameraZoneMode.Fixed;
+    [Tooltip("Usado no modo On Rails. Spline percorrido pela camera. Deve ser ABERTO: em um spline fechado a camera nao trava no fim.")]
+    [SerializeField] private SplineContainer railSpline;
+    [Tooltip("Usado no modo On Rails. Deslocamento da camera em relacao ao ponto do spline (X lateral, Y altura, Z ao longo do trilho).")]
+    [SerializeField] private Vector3 railOffset;
+    [Tooltip("Atraso de acompanhamento desta camera. Desmarcado usa o mesmo atraso (Follow Smooth Time) da camera de gameplay.")]
+    [SerializeField] private bool overrideFollowDelay;
+    [Tooltip("Atraso, em segundos, usado quando 'Override Follow Delay' esta marcado. Zero acompanha instantaneamente.")]
+    [Min(0f)] [SerializeField] private float followDelaySeconds = .08f;
     [Tooltip("Prioridade desta zona. Deve ser maior que a camera de gameplay. Em sobreposicao vence a prioridade maior; em empate, a zona que o jogador entrou mais recentemente vence.")]
     [SerializeField] private int cameraPriority = 20;
 
@@ -38,6 +60,9 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Min(0f)] [SerializeField] private float exitPaddingDistance = .5f;
 
     private CameraFollow registeredCameraFollow;
+    private CinemachineRotationComposer rotationComposer;
+    private CinemachineSplineDolly splineDolly;
+    private bool warnedInvalidRail;
     private SphereCollider sphereActivationVolume;
     private readonly List<ExitVolumePair> expandedExitVolumes = new();
     private bool playerWasInside;
@@ -420,14 +445,108 @@ public sealed class FixedCameraZone : MonoBehaviour
         fixedCamera.PreviousStateIsValid = false;
         if (!selected)
         {
+            SetModeComponentsEnabled(false, false);
             fixedCamera.Priority = 0;
             return;
         }
+
+        ApplyCameraMode();
 
         int minimumPriority = registeredCameraFollow != null
             ? registeredCameraFollow.GameplayCameraPriority + 2
             : 12;
         fixedCamera.Priority = Mathf.Max(cameraPriority, minimumPriority);
+    }
+
+    /// <summary>Atraso aplicado aos modos que acompanham o player.</summary>
+    private float ResolveFollowDelay()
+    {
+        if (overrideFollowDelay || registeredCameraFollow == null)
+            return Mathf.Max(0f, followDelaySeconds);
+        return registeredCameraFollow.FollowSmoothTime;
+    }
+
+    private void ApplyCameraMode()
+    {
+        Transform tracking = registeredCameraFollow != null
+            ? registeredCameraFollow.TrackingTarget : null;
+        CameraZoneMode mode = cameraMode;
+        if (mode != CameraZoneMode.Fixed && tracking == null)
+            mode = CameraZoneMode.Fixed;
+
+        if (mode == CameraZoneMode.OnRails && !IsRailSplineUsable())
+            mode = CameraZoneMode.Fixed;
+
+        SetModeComponentsEnabled(mode == CameraZoneMode.StaticLookAtTarget,
+            mode == CameraZoneMode.OnRails);
+        float delay = ResolveFollowDelay();
+
+        if (mode == CameraZoneMode.StaticLookAtTarget)
+        {
+            if (rotationComposer == null &&
+                !fixedCamera.TryGetComponent(out rotationComposer))
+                rotationComposer = fixedCamera.gameObject
+                    .AddComponent<CinemachineRotationComposer>();
+
+            rotationComposer.enabled = true;
+            rotationComposer.Composition.ScreenPosition = Vector2.zero;
+            rotationComposer.Composition.DeadZone.Enabled = false;
+            rotationComposer.Composition.HardLimits.Enabled = false;
+            rotationComposer.TargetOffset = Vector3.zero;
+            rotationComposer.CenterOnActivate = true;
+            rotationComposer.Damping = new Vector2(delay, delay);
+            fixedCamera.LookAt = tracking;
+        }
+        else if (mode == CameraZoneMode.OnRails)
+        {
+            if (splineDolly == null &&
+                !fixedCamera.TryGetComponent(out splineDolly))
+                splineDolly = fixedCamera.gameObject
+                    .AddComponent<CinemachineSplineDolly>();
+
+            splineDolly.enabled = true;
+            splineDolly.Spline = railSpline;
+            splineDolly.PositionUnits = PathIndexUnit.Normalized;
+            splineDolly.SplineOffset = railOffset;
+            // Default mantem a rotacao autorada da camera: ela nunca gira.
+            splineDolly.CameraRotation = CinemachineSplineDolly.RotationMode.Default;
+            // O ponto mais proximo do player, limitado as pontas de um spline
+            // aberto, faz a camera travar no inicio/fim do trilho.
+            splineDolly.AutomaticDolly.Enabled = true;
+            splineDolly.AutomaticDolly.Method =
+                new SplineAutoDolly.NearestPointToTarget();
+            splineDolly.Damping.Enabled = delay > 0f;
+            splineDolly.Damping.Position = Vector3.one * delay;
+            splineDolly.Damping.Angular = 0f;
+            fixedCamera.Follow = tracking;
+        }
+    }
+
+    private void SetModeComponentsEnabled(bool composer, bool dolly)
+    {
+        if (rotationComposer == null)
+            fixedCamera.TryGetComponent(out rotationComposer);
+        if (splineDolly == null)
+            fixedCamera.TryGetComponent(out splineDolly);
+        if (rotationComposer != null)
+            rotationComposer.enabled = composer;
+        if (splineDolly != null)
+            splineDolly.enabled = dolly;
+    }
+
+    private bool IsRailSplineUsable()
+    {
+        if (railSpline != null && railSpline.Splines != null &&
+            railSpline.Splines.Count > 0 && railSpline.Spline != null &&
+            railSpline.Spline.Count >= 2 && !railSpline.Spline.Closed)
+            return true;
+
+        if (!warnedInvalidRail)
+        {
+            warnedInvalidRail = true;
+            Debug.LogWarning($"FixedCameraZone '{name}': o modo On Rails precisa de um SplineContainer com um spline ABERTO de pelo menos 2 pontos. A camera ficara fixa.", this);
+        }
+        return false;
     }
 
     private void RegisterWithCameraFollow()

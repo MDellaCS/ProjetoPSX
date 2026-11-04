@@ -204,6 +204,24 @@ public class FlyingPuppet : EnemyBase
         return true;
     }
 
+    internal override bool FloatsInWater => false;
+
+    // Pes do voador ao nivel da superficie (ou abaixo): o mergulho termina ali
+    // em vez de afundar ate o leito.
+    private bool IsAtWaterSurface()
+    {
+        if (Water != null && Water.Immune)
+            return false;
+        Vector3 position = transform.position;
+        if (!WaterVolume.TryGetSurfaceAt(position.x, position.z,
+                position.y + groundProbeStartOffset, out float surfaceY))
+            return false;
+        CharacterController body = Movement != null
+            ? Movement.EntityCharacterController : null;
+        float feetY = body != null ? body.bounds.min.y : position.y;
+        return feetY <= surfaceY + .05f;
+    }
+
     protected override void UpdateVerticalMovement(EnemyMovement movement)
     {
         if (teleportDivePhase == TeleportDivePhase.Rising)
@@ -223,7 +241,7 @@ public class FlyingPuppet : EnemyBase
         }
         if (teleportDivePhase == TeleportDivePhase.GroundedRecovery)
         {
-            movement.SetVerticalVelocity(-2f);
+            movement.SetVerticalVelocity(IsAtWaterSurface() ? 0f : -2f);
             return;
         }
 
@@ -252,6 +270,24 @@ public class FlyingPuppet : EnemyBase
             -heightCorrectionSpeed,
             heightCorrectionSpeed
         ) + (bobbing != null ? bobbing.CurrentVerticalSpeedBoost : 0f));
+    }
+
+    // A agua funciona como chao para o voo: o voador paira acima da superficie
+    // (e nunca do leito) e os mergulhos pousam nela. Chefes imunes ignoram.
+    private bool ApplyWaterSurface(Vector3 position, ref float groundHeight,
+        bool foundGround)
+    {
+        if (Water != null && Water.Immune)
+            return foundGround;
+        if (WaterVolume.TryGetSurfaceAt(position.x, position.z,
+                position.y + groundProbeStartOffset, out float surfaceY) &&
+            (!foundGround || surfaceY > groundHeight))
+        {
+            groundHeight = surfaceY;
+            return true;
+        }
+
+        return foundGround;
     }
 
     private bool TryGetGroundHeight(out float groundHeight)
@@ -289,7 +325,7 @@ public class FlyingPuppet : EnemyBase
             foundGround = true;
         }
 
-        return foundGround;
+        return ApplyWaterSurface(transform.position, ref groundHeight, foundGround);
     }
 
     protected override void OnAttackStarted(EnemyAttackDefinition attack)
@@ -329,7 +365,7 @@ public class FlyingPuppet : EnemyBase
             teleportDivePhase != TeleportDivePhase.Descending)
             return false;
 
-        if (Movement != null && Movement.IsGrounded)
+        if (Movement != null && (Movement.IsGrounded || IsAtWaterSurface()))
             return false;
         if (teleportDiveDescentTimer > 0f)
             return true;
@@ -343,7 +379,7 @@ public class FlyingPuppet : EnemyBase
         return attack?.Definition != null &&
             attack.Definition.HasTag(TeleportDiveTag) &&
             teleportDivePhase == TeleportDivePhase.Descending &&
-            Movement != null && Movement.IsGrounded;
+            Movement != null && (Movement.IsGrounded || IsAtWaterSurface());
     }
 
     protected override void OnAttackRecoveryStarted(EnemyAttackDefinition attack)
@@ -496,7 +532,7 @@ public class FlyingPuppet : EnemyBase
             groundHeight = groundHits[index].point.y;
             foundGround = true;
         }
-        return foundGround;
+        return ApplyWaterSurface(position, ref groundHeight, foundGround);
     }
 
     private void CacheTeleportDivePresentation()
