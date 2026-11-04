@@ -29,15 +29,12 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
     [HideInInspector, SerializeField] private LayerMask targetObstructionMask = 243;
     [HideInInspector, SerializeField] private bool useTargetAssist = true;
 
-    [Header("Pull")]
-    [Tooltip("Distancia minima entre as superficies das colisões do jogador e do inimigo ao terminar o puxao. Use 0 para encostar as capsulas.")]
-    [Min(0f)] [SerializeField] private float pullStopDistance = 1.4f;
-    [Tooltip("Velocidade usada para puxar um inimigo mais leve ate o jogador.")]
-    [Min(0f)] [SerializeField] private float lighterEnemyPullSpeed = 18f;
-    [Tooltip("Velocidade usada para puxar o jogador ate um inimigo mais pesado.")]
-    [Min(0f)] [SerializeField] private float heavierEnemyPullSpeed = 16f;
-    [Tooltip("Tempo que o inimigo permanece em stagger depois que o puxao termina.")]
-    [Min(0f)] [SerializeField] private float postPullStaggerDuration = .35f;
+    // Alcance, velocidades e assistencia do gancho de combate sao globais:
+    // Assets/Resources/GrappleSettings (secao Combat).
+    private float pullStopDistance => GrappleSettings.Combat.pullStopDistance;
+    private float lighterEnemyPullSpeed => GrappleSettings.Combat.lighterEnemyPullSpeed;
+    private float heavierEnemyPullSpeed => GrappleSettings.Combat.heavierEnemyPullSpeed;
+    private float postPullStaggerDuration => GrappleSettings.Combat.postPullStaggerDuration;
 
     private PlayerAttackController attacks;
     private PlayerMovement movement;

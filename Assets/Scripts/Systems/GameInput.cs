@@ -63,6 +63,7 @@ public static class GameInput
     public static bool JumpHeld => Held("Jump");
     public static bool DashPressed => Pressed("Dash");
     public static bool CrouchHeld => Held("Crouch");
+    public static bool CrouchPressed => Pressed("Crouch");
     public static bool LockOnPressed => Pressed("LockOn");
     public static bool InteractPressed => Pressed("Interact");
     public static bool SwingPressed => Pressed("Swing");

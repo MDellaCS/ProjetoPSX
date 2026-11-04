@@ -5,7 +5,7 @@ using UnityEngine;
 /// a posicao desse alvo no instante em que o ataque comeca.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class PlayerTargetAssist : MonoBehaviour
+public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
 {
     [Header("Global Target Assist")]
     [Tooltip("Ativa a selecao de inimigos e o giro assistido no inicio dos ataques do jogador.")]
@@ -24,6 +24,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour
 
     private PlayerCharacterController characterController;
     private PlayerLockOn lockOn;
+    private PlayerState playerState;
     private Mesh assistAreaMesh;
     private float assistAreaMeshAngle = -1f;
     private float assistAreaMeshNearAngle = -1f;
@@ -32,6 +33,33 @@ public sealed class PlayerTargetAssist : MonoBehaviour
     public bool IsEnabled => targetAssistEnabled;
     public float MaximumRange => targetAssistRange;
     public EnemyBase CurrentBestTarget => FindBestTarget(targetAssistRange);
+
+    public int GrappleTargetPriority => 200;
+
+    private void OnEnable() => GrappleTargetSystem.Register(this);
+    private void OnDisable() => GrappleTargetSystem.Unregister(this);
+
+    /// <summary>Indicador do gancho: inimigo que o ataque de grapple miraria agora.</summary>
+    public bool TryGetGrappleTarget(out GrappleTarget target)
+    {
+        target = default;
+        if (playerState == null)
+            playerState = GetComponent<PlayerState>();
+        if (playerState != null && !playerState.IsNormal())
+            return false;
+
+        EnemyBase enemy = FindCombatGrappleTarget();
+        if (enemy == null)
+            return false;
+        Collider body = enemy.GetComponentInChildren<Collider>();
+        target = new GrappleTarget
+        {
+            kind = GrappleTargetKind.Enemy,
+            point = body != null ? body.bounds.center : enemy.transform.position + Vector3.up,
+            source = enemy
+        };
+        return true;
+    }
 
     private void Awake()
     {
@@ -83,10 +111,36 @@ public sealed class PlayerTargetAssist : MonoBehaviour
         return target != null;
     }
 
+    /// <summary>Alvo do gancho de combate: o travado ou o melhor dentro do alcance e da mira proprios (GrappleSettings.Combat).</summary>
+    public EnemyBase FindCombatGrappleTarget()
+    {
+        if (lockOn == null)
+            lockOn = GetComponent<PlayerLockOn>();
+        EnemyBase locked = lockOn != null ? lockOn.LockedEnemy : null;
+        if (locked != null)
+            return locked;
+
+        CombatGrappleSettings combat = GrappleSettings.Combat;
+        return FindBestTarget(combat.range, combat.assistAngle, combat.assistNearAngle);
+    }
+
+    public bool TryCaptureCombatGrappleTarget(out EnemyBase target, out Vector3 lockedPosition)
+    {
+        target = FindCombatGrappleTarget();
+        lockedPosition = target != null ? target.AttackOrigin : default;
+        return target != null;
+    }
+
     public EnemyBase FindBestTarget(float maximumRange)
     {
         if (!targetAssistEnabled)
             return null;
+        return FindBestTarget(maximumRange, targetAssistAngle, targetAssistNearAngle);
+    }
+
+    /// <summary>Melhor alvo com alcance e abertura de mira informados (nao depende de Target Assist Enabled).</summary>
+    public EnemyBase FindBestTarget(float maximumRange, float farAngle, float nearAngle)
+    {
 
         Vector3 origin = GetPlayerCenter();
         Vector3 forward = Vector3.ProjectOnPlane(transform.forward,
@@ -99,7 +153,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour
         foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
         {
             if (enemy == null || !IsEligibleTarget(enemy, origin, forward,
-                maximumRange))
+                maximumRange, farAngle, nearAngle))
                 continue;
 
             Vector3 offset = enemy.AttackOrigin - origin;
@@ -118,7 +172,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour
     }
 
     private bool IsEligibleTarget(EnemyBase enemy, Vector3 origin,
-        Vector3 forward, float maximumRange)
+        Vector3 forward, float maximumRange, float farAngle, float nearAngle)
     {
         if (enemy == null || !enemy.CanBeLockOnTarget)
             return false;
@@ -130,7 +184,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour
             return false;
 
         float angle = Vector3.Angle(forward, horizontal);
-        return angle <= GetAssistAngleAtDistance(distance) &&
+        return angle <= GetAssistAngleAtDistance(distance, maximumRange, farAngle, nearAngle) &&
             !IsTargetOccluded(origin, enemy);
     }
 
@@ -149,16 +203,16 @@ public sealed class PlayerTargetAssist : MonoBehaviour
             hit.collider.GetComponentInParent<EnemyBase>() != enemy;
     }
 
-    private float GetAssistAngleAtDistance(float distance)
+    private float GetAssistAngleAtDistance(float distance, float range,
+        float farAngle, float nearAngle)
     {
         float normalizedDistance = Mathf.Clamp01(
-            distance / Mathf.Max(.01f, targetAssistRange));
+            distance / Mathf.Max(.01f, range));
         float angleProgress = targetAssistNearAngleDistanceCurve == null ||
             targetAssistNearAngleDistanceCurve.length == 0
             ? normalizedDistance
             : targetAssistNearAngleDistanceCurve.Evaluate(normalizedDistance);
-        return Mathf.LerpUnclamped(targetAssistNearAngle, targetAssistAngle,
-            angleProgress);
+        return Mathf.LerpUnclamped(nearAngle, farAngle, angleProgress);
     }
 
     private Vector3 GetPlayerCenter()
@@ -243,7 +297,8 @@ public sealed class PlayerTargetAssist : MonoBehaviour
         {
             float radius = radialIndex / (float)radialSegments;
             float halfAngle = GetAssistAngleAtDistance(
-                radius * targetAssistRange);
+                radius * targetAssistRange, targetAssistRange,
+                targetAssistAngle, targetAssistNearAngle);
             for (int angleIndex = 0; angleIndex <= angularSegments; angleIndex++)
             {
                 float angle = Mathf.Lerp(-halfAngle, halfAngle,
@@ -318,7 +373,8 @@ public sealed class PlayerTargetAssist : MonoBehaviour
         for (int index = 1; index <= radialSegments; index++)
         {
             float distance = range * index / radialSegments;
-            float angle = GetAssistAngleAtDistance(distance);
+            float angle = GetAssistAngleAtDistance(distance, targetAssistRange,
+                targetAssistAngle, targetAssistNearAngle);
             Vector3 left = origin +
                 Quaternion.AngleAxis(-angle, Vector3.up) * forward * distance;
             Vector3 right = origin +

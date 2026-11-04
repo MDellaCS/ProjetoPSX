@@ -1,0 +1,74 @@
+#grapple-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/* O marcador e um ponto; os circulos se centram nele. */
+.grapple-marker {
+    position: absolute;
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+.grapple-glow {
+    position: absolute;
+    left: -64px;
+    top: -64px;
+    width: 128px;
+    height: 128px;
+    border-top-left-radius: 64px;
+    border-top-right-radius: 64px;
+    border-bottom-left-radius: 64px;
+    border-bottom-right-radius: 64px;
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+.grapple-disc {
+    position: absolute;
+    left: -36px;
+    top: -36px;
+    width: 72px;
+    height: 72px;
+    border-top-left-radius: 36px;
+    border-top-right-radius: 36px;
+    border-bottom-left-radius: 36px;
+    border-bottom-right-radius: 36px;
+    border-left-width: 6px;
+    border-top-width: 6px;
+    border-right-width: 6px;
+    border-bottom-width: 6px;
+    border-left-color: rgb(255, 255, 255);
+    border-top-color: rgb(255, 255, 255);
+    border-right-color: rgb(255, 255, 255);
+    border-bottom-color: rgb(255, 255, 255);
+    background-color: rgba(255, 255, 255, 0.9);
+    align-items: center;
+    justify-content: center;
+}
+
+.grapple-core {
+    width: 20px;
+    height: 20px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background-color: rgb(255, 255, 255);
+}
+
+/* Cores por tipo de alvo. */
+.grapple-marker--swing .grapple-glow { background-color: rgba(0, 240, 220, 0.32); }
+.grapple-marker--swing .grapple-disc { background-color: rgba(0, 225, 205, 0.9); }
+
+.grapple-marker--enemy .grapple-glow { background-color: rgba(255, 50, 30, 0.34); }
+.grapple-marker--enemy .grapple-disc { background-color: rgba(255, 45, 25, 0.92); }
+
+.grapple-marker--ladder .grapple-glow { background-color: rgba(255, 215, 0, 0.34); }
+.grapple-marker--ladder .grapple-disc { background-color: rgba(255, 205, 0, 0.92); }
+
+.grapple-marker--custom .grapple-glow { background-color: rgba(190, 90, 255, 0.34); }
+.grapple-marker--custom .grapple-disc { background-color: rgba(180, 70, 255, 0.92); }

@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Exibe um prompt contextual e inicia uma cutscene quando o jogador pressiona
-/// a acao Interact dentro da area.
+/// Inicia uma cutscene quando o jogador aperta Interagir dentro da area. O
+/// prompt e o input vem do sistema central de interacao.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
-public sealed class CutsceneInteraction : MonoBehaviour
+public sealed class CutsceneInteraction : InteractableBase
 {
     [Header("Cutscene")]
     [Tooltip("CutsceneController cuja Timeline sera iniciada ao interagir.")]
@@ -23,14 +23,14 @@ public sealed class CutsceneInteraction : MonoBehaviour
     [SerializeField] private Sprite promptIcon;
 
     private Collider interactionCollider;
-    private PlayerMovement playerMovement;
-    private TemporaryWorldPromptHUD promptHUD;
     private bool hasInteracted;
+
+    public override string InteractionMessage => promptMessage;
+    public override Sprite InteractionIcon => promptIcon;
 
     private void Reset()
     {
-        Collider trigger = GetComponent<Collider>();
-        if (trigger != null)
+        if (TryGetComponent(out Collider trigger))
             trigger.isTrigger = true;
     }
 
@@ -41,43 +41,33 @@ public sealed class CutsceneInteraction : MonoBehaviour
             interactionCollider.isTrigger = true;
     }
 
-    private void OnDisable()
+    public override bool ContainsPlayer(PlayerMovement player)
     {
-        if (promptHUD != null) promptHUD.HideContextualPrompt(this);
+        if (interactionCollider == null)
+            interactionCollider = GetComponent<Collider>();
+        return PlayerAreaOverlap.ContainsPlayer(interactionCollider, player);
     }
 
-    private void Update()
+    public override bool CanInteract(PlayerMovement player) =>
+        cutscene != null && !CutsceneController.IsPlaying &&
+        !DialogueController.IsInteractionCooldownActive &&
+        !(interactOnce && hasInteracted);
+
+    public override bool Interact(PlayerMovement player)
     {
-        if (playerMovement == null)
-            playerMovement = FindAnyObjectByType<PlayerMovement>();
-
-        bool playerInside = PlayerAreaOverlap.ContainsPlayer(
-            interactionCollider, playerMovement);
-        if (!playerInside || GamePauseController.IsPaused ||
-            CutsceneController.IsPlaying || DialogueController.IsDisplaying ||
-            DialogueController.IsInteractionCooldownActive || cutscene == null ||
-            (interactOnce && hasInteracted))
-        {
-            if (promptHUD != null) promptHUD.HideContextualPrompt(this);
-            return;
-        }
-
-        if (promptHUD == null)
-            promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
-
-        if (promptHUD != null) promptHUD.ShowContextualPrompt(
-            this,
-            GameInputBindings.GetDisplayString("Interact"),
-            promptMessage,
-            promptIcon);
-
-        if (!GameInput.InteractPressed || !cutscene.PlayCutscene())
-            return;
+        if (cutscene == null || !cutscene.PlayCutscene())
+            return false;
 
         hasInteracted = true;
-        if (promptHUD != null) promptHUD.HideContextualPrompt(this);
-
         if (disableAfterStart)
             gameObject.SetActive(false);
+        return true;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (InteractionGizmos.Visible)
+            InteractionGizmos.DrawCollider(GetComponent<Collider>(),
+                InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
     }
 }

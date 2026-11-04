@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Localiza pontos de balanco e aplica um movimento presetado no motor do jogador.</summary>
@@ -60,6 +61,9 @@ public sealed class PlayerSwingController : MonoBehaviour
     private PlayerAttackController attackController;
     private PlayerMovesetController movesetController;
     private PlayerGrappleAttackController grappleAttack;
+    private PlayerTargetAssist targetAssist;
+    private IGrappleTargetProvider anchorProvider;
+    private IGrappleTargetProvider ladderProvider;
     private PlayerSwingAnchor currentAnchor;
     private Vector3 swingPlaneForward;
     private float ropeLength;
@@ -91,6 +95,7 @@ public sealed class PlayerSwingController : MonoBehaviour
         movesetController = GetComponent<PlayerMovesetController>();
         grappleAttack = GetComponent<PlayerGrappleAttackController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
+        targetAssist = GetComponent<PlayerTargetAssist>();
         if (gameplayCamera == null)
             gameplayCamera = Camera.main;
         if (ropeRenderer != null)
@@ -197,11 +202,131 @@ public sealed class PlayerSwingController : MonoBehaviour
             return;
         }
 
+        // Sem inimigo para o ataque de grapple, o gancho atraca na escada mirada.
+        if (!HasEnemyTarget() &&
+            TryFindLadderTarget(out HandLadder ladder, out HandLadderGrip grip, out _) &&
+            movement.TryBeginLadderClimb(ladder, grip, GrappleSettings.Movement.pullSpeed))
+            return;
+
         grappleAttack?.TryFire();
+    }
+
+    private bool HasEnemyTarget()
+    {
+        if (targetAssist == null)
+            targetAssist = GetComponent<PlayerTargetAssist>();
+        return targetAssist != null && targetAssist.FindCombatGrappleTarget() != null;
+    }
+
+    // Provedores do indicador global: pontos de balanco e escadas. Mesma ordem de
+    // prioridade do input (balanco > inimigo > escada).
+    private sealed class AnchorProvider : IGrappleTargetProvider
+    {
+        private readonly PlayerSwingController owner;
+        public AnchorProvider(PlayerSwingController owner) => this.owner = owner;
+        public int GrappleTargetPriority => 300;
+
+        public bool TryGetGrappleTarget(out GrappleTarget target)
+        {
+            target = default;
+            if (owner.playerState == null || !owner.playerState.IsNormal() || owner.isSwinging)
+                return false;
+            PlayerSwingAnchor anchor = owner.FindBestAnchor();
+            if (anchor == null)
+                return false;
+            target = new GrappleTarget
+            {
+                kind = GrappleTargetKind.SwingAnchor,
+                point = anchor.Position,
+                source = anchor
+            };
+            return true;
+        }
+    }
+
+    private sealed class LadderProvider : IGrappleTargetProvider
+    {
+        private readonly PlayerSwingController owner;
+        public LadderProvider(PlayerSwingController owner) => this.owner = owner;
+        public int GrappleTargetPriority => 100;
+
+        public bool TryGetGrappleTarget(out GrappleTarget target)
+        {
+            target = default;
+            if (owner.playerState == null || !owner.playerState.IsNormal() ||
+                owner.isSwinging || owner.HasEnemyTarget() ||
+                !owner.TryFindLadderTarget(out HandLadder ladder, out _, out Vector3 point))
+                return false;
+            target = new GrappleTarget
+            {
+                kind = GrappleTargetKind.Ladder,
+                point = point,
+                source = ladder
+            };
+            return true;
+        }
+    }
+
+    // Degrau mais proximo da mira: raio do centro do jogador na direcao da camera.
+    private bool TryFindLadderTarget(out HandLadder best, out HandLadderGrip bestGrip,
+        out Vector3 bestPoint)
+    {
+        best = null;
+        bestGrip = default;
+        bestPoint = default;
+        if (movement == null || !movement.CanBeginLadderClimb ||
+            HandLadder.ActiveLadders.Count == 0)
+            return false;
+
+        if (gameplayCamera == null)
+            gameplayCamera = Camera.main;
+        Vector3 aim = gameplayCamera != null
+            ? gameplayCamera.transform.forward : transform.forward;
+        Vector3 center = GetPlayerCenter();
+        float bestAngle = float.MaxValue;
+        IReadOnlyList<HandLadder> ladders = HandLadder.ActiveLadders;
+        for (int i = 0; i < ladders.Count; i++)
+        {
+            HandLadder ladder = ladders[i];
+            if (ladder == null || !ladder.isActiveAndEnabled ||
+                !ladder.TryGetGrappleTarget(center, aim, center,
+                    out HandLadderGrip grip, out Vector3 point, out float angle) ||
+                angle >= bestAngle || IsBlockedToPoint(center, point, ladder))
+                continue;
+
+            best = ladder;
+            bestGrip = grip;
+            bestPoint = point;
+            bestAngle = angle;
+        }
+
+        return best != null;
+    }
+
+    private bool IsBlockedToPoint(Vector3 from, Vector3 point, HandLadder ladder)
+    {
+        Vector3 toPoint = point - from;
+        float distance = toPoint.magnitude;
+        if (distance < .01f || !Physics.Raycast(from, toPoint / distance,
+            out RaycastHit hit, distance, obstructionMask, QueryTriggerInteraction.Ignore))
+            return false;
+        return hit.collider != null &&
+            hit.collider.GetComponentInParent<HandLadder>() != ladder &&
+            hit.distance < distance - anchorSurfaceTolerance;
+    }
+
+    private void OnEnable()
+    {
+        anchorProvider ??= new AnchorProvider(this);
+        ladderProvider ??= new LadderProvider(this);
+        GrappleTargetSystem.Register(anchorProvider);
+        GrappleTargetSystem.Register(ladderProvider);
     }
 
     private void OnDisable()
     {
+        GrappleTargetSystem.Unregister(anchorProvider);
+        GrappleTargetSystem.Unregister(ladderProvider);
         if (isSwinging && movement != null && playerState != null &&
             playerState.IsSwinging())
         {
@@ -257,6 +382,7 @@ public sealed class PlayerSwingController : MonoBehaviour
             float distance = toAnchor.magnitude;
             if (distance > anchor.InteractionRange ||
                 anchor.Position.y - playerCenter.y < minimumAnchorHeight ||
+                !IsWithinAnchorAimAngle(anchor) ||
                 IsBlocked(playerCenter, anchor) ||
                 (!allowOffscreenAnchors &&
                     !IsVisibleToCamera(anchor, gameplayCamera)))
@@ -325,6 +451,21 @@ public sealed class PlayerSwingController : MonoBehaviour
 
         BeginSwing(anchor, playerCenter);
         return isSwinging;
+    }
+
+    // Assistencia de mira do gancho de movimento (GrappleSettings.Movement).
+    private bool IsWithinAnchorAimAngle(PlayerSwingAnchor anchor)
+    {
+        float limit = GrappleSettings.Movement.anchorAimAngle;
+        if (limit >= 179f)
+            return true;
+        if (gameplayCamera == null)
+            gameplayCamera = Camera.main;
+        if (gameplayCamera == null)
+            return true;
+        Vector3 toAnchor = anchor.Position - GetPlayerCenter();
+        return toAnchor.sqrMagnitude < .0001f ||
+            Vector3.Angle(gameplayCamera.transform.forward, toAnchor) <= limit;
     }
 
     private bool IsVisibleToCamera(PlayerSwingAnchor anchor, Camera camera)

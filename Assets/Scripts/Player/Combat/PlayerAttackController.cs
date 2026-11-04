@@ -134,9 +134,13 @@ public sealed class PlayerAttackController : MonoBehaviour
             ? targetAssist.MaximumRange
             : definition.GetTargetAssistRange(moveset != null
                 ? moveset.targetAssistRangePadding : 0f);
-        if (targetAssist != null && targetAssist.TryCaptureTarget(
-            targetAssistRange, out assistedTarget,
-            out assistedTargetPosition))
+        // O gancho de combate tem alcance e mira proprios (GrappleSettings.Combat).
+        bool hasAssistedTarget = targetAssist != null && (isGrappleAttack
+            ? targetAssist.TryCaptureCombatGrappleTarget(out assistedTarget,
+                out assistedTargetPosition)
+            : targetAssist.TryCaptureTarget(targetAssistRange, out assistedTarget,
+                out assistedTargetPosition));
+        if (hasAssistedTarget)
         {
             if (isGrappleAttack)
             {

@@ -91,12 +91,29 @@ public sealed class WorldObjectHealthBarHUD : MonoBehaviour
             return;
 
         root = rootVisualElement;
-        layer = rootVisualElement.Q<VisualElement>("world-bar-layer");
+        layer = null;
         bars.Clear();
+    }
+
+    // O PanelRenderer pode notificar com a arvore vazia: resolve sob demanda e,
+    // se continuar vazia, instancia o UXML manualmente.
+    private void EnsureLayer()
+    {
+        if (layer != null || root == null)
+            return;
+
+        layer = root.Q<VisualElement>("world-bar-layer");
+        if (layer == null && root.childCount == 0 && panelRenderer != null &&
+            panelRenderer.visualTreeAsset != null)
+        {
+            panelRenderer.visualTreeAsset.CloneTree(root);
+            layer = root.Q<VisualElement>("world-bar-layer");
+        }
     }
 
     private void LateUpdate()
     {
+        EnsureLayer();
         if (layer == null || root == null || barTemplate == null)
             return;
 

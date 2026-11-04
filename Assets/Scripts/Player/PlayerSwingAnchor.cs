@@ -18,8 +18,8 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
     [SerializeField] private Transform anchorPoint;
     [Tooltip("Transform cuja direcao azul (Z) define o eixo horizontal do balanco. Se vazio, usa este objeto.")]
     [SerializeField] private Transform swingPlaneReference;
-    [Tooltip("Distancia maxima do jogador ao ponto em que ainda e permitido iniciar o Swing nesta ancora.")]
-    [Min(.1f)] [SerializeField] private float interactionRange = 12f;
+    [Tooltip("Alcance proprio desta ancora, em metros. 0 usa o alcance global do gancho de movimento (GrappleSettings.Movement). Ancoras antigas mantem o valor salvo.")]
+    [Min(0f)] [SerializeField] private float interactionRange;
     [Tooltip("Comprimento fixo da corda invisivel desta ancora durante todo o Swing.")]
     [Min(.1f)] [SerializeField] private float ropeLength = 7f;
     [Tooltip("Raio visual permanente do ponto de ancoragem na Scene View.")]
@@ -28,7 +28,8 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
     public static HashSet<PlayerSwingAnchor> ActiveAnchors => activeAnchors;
     public bool CanAttach => canAttach && isActiveAndEnabled;
     public Vector3 Position => (anchorPoint != null ? anchorPoint : transform).position;
-    public float InteractionRange => Mathf.Max(.1f, interactionRange);
+    public float InteractionRange => interactionRange > .01f
+        ? interactionRange : GrappleSettings.Movement.range;
     public float RopeLength => Mathf.Max(.1f, ropeLength);
 
     public Vector3 SwingForward
@@ -50,7 +51,7 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
 
     private void OnValidate()
     {
-        interactionRange = Mathf.Max(.1f, interactionRange);
+        interactionRange = Mathf.Max(0f, interactionRange);
         ropeLength = Mathf.Max(.1f, ropeLength);
         debugGizmoRadius = Mathf.Max(.01f, debugGizmoRadius);
     }
