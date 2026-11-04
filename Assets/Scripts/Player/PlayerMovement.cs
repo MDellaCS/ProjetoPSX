@@ -10,6 +10,7 @@ public class PlayerMovement : MonoBehaviour
     private const float GroundedDownwardBias = -2f;
     private const float EnemyGroundContactGracePeriod = .12f;
     private const float FloatContactTolerance = .4f;
+    private const float LadderJumpAwaySpeed = 7f;
 
     private enum RecoveryCancelAction
     {
@@ -218,6 +219,8 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 standingControllerCenter;
     private bool hasCachedStandingControllerShape;
     private Collider[] standingOverlapBuffer = new Collider[16];
+    private HandLadder activeLadder;
+    private float ladderProgress;
 
     private bool IsStandingOnEnemy => enemyGroundContactTimer > 0f;
     private bool CanAirJump => movesetController == null ||
@@ -280,6 +283,12 @@ public class PlayerMovement : MonoBehaviour
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
+
+        if (playerState != null && playerState.IsClimbingLadder())
+        {
+            DesiredDirection = ReadMovementDirection();
+            if (HandleLadderClimb()) return;
+        }
 
         // Stagger (leve ou pesado) encerra o dash-jump em qualquer entrada,
         // com ou sem empurrao, devolvendo o controle aereo ao player.
@@ -355,6 +364,115 @@ public class PlayerMovement : MonoBehaviour
         lastSwingMovementCollisionFlags = CollisionFlags.None;
         movementCommitFrame = -1;
         movementCommitsThisFrame = 0;
+        if (playerState != null && playerState.IsClimbingLadder())
+            playerState.ChangeState(PlayerState.State.Normal);
+        activeLadder = null;
+    }
+
+    public bool TryBeginLadderClimb(HandLadder ladder)
+    {
+        if (ladder == null || controller == null || playerState == null ||
+            !playerState.IsNormal() ||
+            isCrouching || IsSwimming || playerState.IsClimbingLadder() ||
+            playerState.IsAttacking() || playerState.IsDashing() ||
+            playerState.IsSliding() || !ladder.isActiveAndEnabled ||
+            !ladder.TryGetEntry(transform.position, out Vector3 entry,
+                out Quaternion facing))
+            return false;
+
+        activeLadder = ladder;
+        Vector3 climbDirection = ladder.ClimbDirection;
+        ladderProgress = Mathf.Clamp(Vector3.Dot(entry - ladder.transform.position,
+            climbDirection), 0f, ladder.Height);
+        playerState.ChangeState(PlayerState.State.ClimbingLadder);
+        ClearTraversalInputBuffer();
+        horizontalVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        verticalDisplacementThisFrame = 0f;
+        transform.rotation = facing;
+        QueueLadderPosition(ladder.GetDefaultRailPosition(transform.position), facing);
+        return true;
+    }
+
+    private bool HandleLadderClimb()
+    {
+        if (activeLadder == null || !activeLadder.isActiveAndEnabled)
+        {
+            FinishLadderClimb(false);
+            return true;
+        }
+
+        if (GameInput.CrouchHeld || GameInput.InteractPressed)
+        {
+            FinishLadderClimb(false);
+            return true;
+        }
+
+        if (GameInput.JumpPressed)
+        {
+            Vector3 away = activeLadder.ApproachDirection;
+            FinishLadderClimb(false);
+            horizontalVelocity = away * LadderJumpAwaySpeed;
+            BeginJumpAscent(GetJumpHeight());
+            isStandardJump = true;
+            isDashJump = false;
+            jumpsUsed = 1;
+            wasAirborne = true;
+            return true;
+        }
+
+        if (inputBuffer != null) inputBuffer.ClearBufferedInputs();
+        Vector3 ladderUp = activeLadder.ClimbDirection;
+        Vector3 ladderForward = activeLadder.ApproachDirection;
+        Quaternion facing = Quaternion.LookRotation(-ladderForward, ladderUp);
+        float verticalInput = GameInput.Move.y;
+        float nextProgress = Mathf.Clamp(ladderProgress + verticalInput * activeLadder.ClimbSpeed * Time.deltaTime,
+            0f, activeLadder.Height);
+        bool reachedTop = verticalInput > .05f && ladderProgress >= activeLadder.Height - .001f;
+        bool reachedBottom = verticalInput < -.05f && ladderProgress <= .001f;
+        if (reachedTop || reachedBottom)
+        {
+            Vector3 exit = activeLadder.GetExitPosition(reachedTop);
+            FinishLadderClimb(true, exit, facing);
+            return true;
+        }
+
+        ladderProgress = nextProgress;
+        Vector3 target = activeLadder.transform.position + ladderUp * ladderProgress +
+            ladderForward * activeLadder.PlayerForwardOffset;
+        QueueLadderPosition(target, facing);
+        horizontalVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        verticalDisplacementThisFrame = 0f;
+        return true;
+    }
+
+    private void QueueLadderPosition(Vector3 position, Quaternion facing)
+    {
+        transform.rotation = facing;
+        pendingExternalDisplacement += position - transform.position;
+        hasPendingMovementCommit = true;
+    }
+
+    private void FinishLadderClimb(bool useExit, Vector3 exit = default,
+        Quaternion facing = default)
+    {
+        if (useExit && activeLadder != null)
+            QueueLadderPosition(exit, facing == default ? transform.rotation : facing);
+        activeLadder = null;
+        ladderProgress = 0f;
+        if (playerState != null && playerState.IsClimbingLadder())
+            playerState.ChangeState(PlayerState.State.Normal);
+        horizontalVelocity = Vector3.zero;
+        verticalVelocity = 0f;
+        verticalDisplacementThisFrame = 0f;
+        ClearTraversalInputBuffer();
+    }
+
+    private void ClearTraversalInputBuffer()
+    {
+        if (inputBuffer != null)
+            inputBuffer.ClearBufferedInputs(ignoreNextFrame: true);
     }
 
     /// <summary>Deslocamento planejado deste frame, usado na separacao antes do commit.</summary>
@@ -1576,7 +1694,8 @@ public class PlayerMovement : MonoBehaviour
     public void ApplyGroundEntitySeparation(Vector3 displacement)
     {
         if (!isActiveAndEnabled || controller == null || !controller.enabled ||
-            !gameObject.activeInHierarchy)
+            !gameObject.activeInHierarchy ||
+            (playerState != null && playerState.IsClimbingLadder()))
         {
             return;
         }
@@ -1598,7 +1717,8 @@ public class PlayerMovement : MonoBehaviour
     public void ApplyEntityDomeContact(Vector3 correction, float maxFallSpeed)
     {
         if (!isActiveAndEnabled || controller == null || !controller.enabled ||
-            !gameObject.activeInHierarchy)
+            !gameObject.activeInHierarchy ||
+            (playerState != null && playerState.IsClimbingLadder()))
         {
             return;
         }
@@ -1771,6 +1891,8 @@ public class PlayerMovement : MonoBehaviour
     /// <summary>Interrompe traversal ao iniciar Burn, sem alterar o estado.</summary>
     public void InterruptForBurn()
     {
+        if (activeLadder != null)
+            FinishLadderClimb(false);
         dashTimer = 0f;
         dashStartedGrounded = false;
         isDashJump = false;
@@ -1830,6 +1952,8 @@ public class PlayerMovement : MonoBehaviour
         isJumpAscending = false;
         wasAirborne = false;
         queuedRecoveryCancelAction = RecoveryCancelAction.None;
+        activeLadder = null;
+        ladderProgress = 0f;
         pendingLocomotionDisplacement = Vector3.zero;
         pendingExternalDisplacement = Vector3.zero;
         hasPendingMovementCommit = false;
@@ -1885,7 +2009,8 @@ public class PlayerMovement : MonoBehaviour
     public void ApplyAttackMovement(Vector3 displacement)
     {
         if (!isActiveAndEnabled || controller == null ||
-            displacement.sqrMagnitude <= 0.000001f)
+            displacement.sqrMagnitude <= 0.000001f ||
+            (playerState != null && playerState.IsClimbingLadder()))
             return;
 
         if (waterSensor != null)

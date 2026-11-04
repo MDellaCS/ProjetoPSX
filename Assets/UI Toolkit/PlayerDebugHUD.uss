@@ -19,6 +19,23 @@
     border-bottom-color: rgb(120, 180, 255);
 }
 
+#water-state-label {
+    position: absolute;
+    display: none;
+    width: 150px;
+    height: 42px;
+    padding-top: 2px;
+    background-color: rgba(225, 241, 255, 0.88);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    color: rgb(15, 43, 75);
+    font-size: 30px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
 #debug-text {
     color: rgb(225, 240, 255);
     font-size: 16px;

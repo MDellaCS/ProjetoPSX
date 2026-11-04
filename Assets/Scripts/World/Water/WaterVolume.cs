@@ -276,18 +276,25 @@ public sealed class WaterVolume : MonoBehaviour
 
         Bounds bounds = collider.bounds;
         float surface = bounds.max.y + surfaceOffset;
-        Gizmos.color = new Color(.2f, .6f, 1f, .15f);
+        Gizmos.color = new Color(.035f, .12f, .28f, .42f);
         Gizmos.DrawCube(bounds.center, bounds.size);
-        Gizmos.color = new Color(.2f, .7f, 1f, .95f);
+        Gizmos.color = new Color(.025f, .09f, .23f, .9f);
         Gizmos.DrawWireCube(bounds.center, bounds.size);
         // Plano da superficie.
-        Gizmos.color = new Color(.5f, .9f, 1f, .9f);
+        Gizmos.color = new Color(.08f, .25f, .48f, .4f);
+        Gizmos.DrawCube(new Vector3(bounds.center.x, surface, bounds.center.z),
+            new Vector3(bounds.size.x, .035f, bounds.size.z));
+        Gizmos.color = new Color(.12f, .34f, .58f, .95f);
         Gizmos.DrawWireCube(new Vector3(bounds.center.x, surface, bounds.center.z),
             new Vector3(bounds.size.x, 0f, bounds.size.z));
         // Limite entre agua rasa e funda.
-        Gizmos.color = new Color(1f, .8f, .2f, .6f);
+        float depthLimitY = surface - Profile.deepWaterMinDepth;
+        Gizmos.color = new Color(.055f, .2f, .4f, .28f);
+        Gizmos.DrawCube(new Vector3(bounds.center.x, depthLimitY, bounds.center.z),
+            new Vector3(bounds.size.x, .025f, bounds.size.z));
+        Gizmos.color = new Color(.16f, .4f, .66f, .88f);
         Gizmos.DrawWireCube(
-            new Vector3(bounds.center.x, surface - Profile.deepWaterMinDepth, bounds.center.z),
+            new Vector3(bounds.center.x, depthLimitY, bounds.center.z),
             new Vector3(bounds.size.x, 0f, bounds.size.z));
     }
 }

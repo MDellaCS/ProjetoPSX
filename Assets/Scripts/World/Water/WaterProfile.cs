@@ -150,6 +150,19 @@ public sealed class WaterProfile : ScriptableObject
         _ => false
     };
 
+    /// <summary>
+    /// Classifica a coluna local medida da superficie ate o leito. O sensor
+    /// chama este metodo a cada frame com a profundidade atual, entao mudancas
+    /// no relevo ou em plataformas abaixo da agua atualizam a zona sem estado
+    /// armazenado no volume.
+    /// </summary>
+    public WaterZone ClassifyDepth(float columnDepth, bool wasDeep)
+    {
+        float threshold = deepWaterMinDepth -
+            (wasDeep ? deepExitHysteresis : 0f);
+        return columnDepth >= threshold ? WaterZone.Deep : WaterZone.Shallow;
+    }
+
     private void OnValidate()
     {
         deepWaterMinDepth = Mathf.Max(.1f, deepWaterMinDepth);

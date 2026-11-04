@@ -13,5 +13,6 @@ public enum PlayerVisualState
     Slide,
     Attack,
     Stunned,
-    Dead
+    Dead,
+    LadderClimb
 }

@@ -32,9 +32,13 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerMovesetController movesetController;
     private PlayerLockOn playerLockOn;
     private PlayerCurrencyWallet playerCurrency;
+    private PlayerCharacterController playerCharacterController;
+    private WaterSensor waterSensor;
 
+    private VisualElement rootVisualElement;
     private VisualElement debugPanel;
     private Label debugText;
+    private Label waterStateLabel;
     private VisualElement enemyDebugPanel;
     private Label enemyDebugText;
     private VisualElement cutsceneDebugPanel;
@@ -105,8 +109,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (rootVisualElement == null)
             return;
 
+        this.rootVisualElement = rootVisualElement;
         debugPanel = rootVisualElement.Q<VisualElement>("debug-panel");
         debugText = rootVisualElement.Q<Label>("debug-text");
+        waterStateLabel = rootVisualElement.Q<Label>("water-state-label");
         enemyDebugPanel = rootVisualElement.Q<VisualElement>("enemy-debug-panel");
         enemyDebugText = rootVisualElement.Q<Label>("enemy-debug-text");
         cutsceneDebugPanel = rootVisualElement.Q<VisualElement>("cutscene-debug-panel");
@@ -116,6 +122,59 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         testShortcutsText = rootVisualElement.Q<Label>("test-shortcuts-text");
 
         SetVisible(isVisible);
+        if (waterStateLabel != null)
+            waterStateLabel.style.display = DisplayStyle.None;
+    }
+
+    private void LateUpdate()
+    {
+        if (waterStateLabel == null)
+            return;
+
+        if (!isVisible || waterSensor == null || !waterSensor.IsInWater ||
+            playerTransform == null)
+        {
+            waterStateLabel.style.display = DisplayStyle.None;
+            return;
+        }
+
+        Camera worldCamera = Camera.main;
+        if (worldCamera == null || rootVisualElement == null)
+        {
+            waterStateLabel.style.display = DisplayStyle.None;
+            return;
+        }
+
+        Bounds playerBounds = playerCharacterController != null
+            ? playerCharacterController.bounds
+            : new Bounds(playerTransform.position, Vector3.up * 2f);
+        Vector3 screen = worldCamera.WorldToScreenPoint(new Vector3(
+            playerBounds.center.x, playerBounds.max.y + .2f,
+            playerBounds.center.z));
+        if (screen.z <= 0f)
+        {
+            waterStateLabel.style.display = DisplayStyle.None;
+            return;
+        }
+
+        float scaleX = rootVisualElement.resolvedStyle.width /
+            Mathf.Max(1f, Screen.width);
+        float scaleY = rootVisualElement.resolvedStyle.height /
+            Mathf.Max(1f, Screen.height);
+        if (scaleX <= 0f || scaleY <= 0f)
+        {
+            waterStateLabel.style.display = DisplayStyle.None;
+            return;
+        }
+
+        const float labelWidth = 150f;
+        const float labelHeight = 42f;
+        waterStateLabel.text = waterSensor.Zone == WaterZone.Deep
+            ? "FUNDA" : "RASA";
+        waterStateLabel.style.left = screen.x * scaleX - labelWidth * .5f;
+        waterStateLabel.style.top = (Screen.height - screen.y) * scaleY -
+            labelHeight;
+        waterStateLabel.style.display = DisplayStyle.Flex;
     }
 
     private void ResolvePlayerComponents()
@@ -141,6 +200,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         movesetController = playerTransform.GetComponent<PlayerMovesetController>();
         playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
         playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
+        playerCharacterController = playerTransform.GetComponent<PlayerCharacterController>();
+        waterSensor = playerTransform.GetComponent<WaterSensor>();
     }
 
     private bool HasPlayerComponents()

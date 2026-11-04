@@ -89,6 +89,11 @@ public class PlayerInputBuffer : MonoBehaviour
             ClearBufferedInputs();
             return;
         }
+        if (playerState != null && playerState.IsClimbingLadder())
+        {
+            ClearBufferedInputs();
+            return;
+        }
         if (playerState != null && playerState.IsGrapplePulling())
         {
             CaptureInputsForCurrentFrame();

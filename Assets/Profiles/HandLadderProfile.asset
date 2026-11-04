@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a96a83d11c441439496dc0fb6bc1111, type: 3}
+  m_Name: HandLadderProfile
+  m_EditorClassIdentifier: Assembly-CSharp::HandLadderProfile
+  rungPrefab: {fileID: 6757627815255845784, guid: d26acfa2bdb73d945897ff556c40ee28, type: 3}
+  railPrefab: {fileID: 8178648107482002820, guid: c8f08ad22b15e7f478a0434330b03933, type: 3}
+  rungSpacing: 0.32
+  defaultWidth: 1.2
+  railThickness: 0.08

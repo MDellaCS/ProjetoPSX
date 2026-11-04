@@ -130,4 +130,56 @@ public static class PlayerMovementFrameRegression
             throw new System.InvalidOperationException(message);
     }
 }
+
+/// <summary>Verifica a classificacao dinamica de profundidade sem abrir cena.</summary>
+public static class WaterDepthRegression
+{
+    [MenuItem("Tools/Tests/Run Water Depth Regression")]
+    public static void Run()
+    {
+        WaterProfile profile = ScriptableObject.CreateInstance<WaterProfile>();
+        try
+        {
+            profile.deepWaterMinDepth = 1.4f;
+            profile.deepExitHysteresis = .15f;
+
+            Assert(profile.ClassifyDepth(1.39f, false) == WaterZone.Shallow,
+                "Coluna menor que o limite deve ser rasa.");
+            Assert(profile.ClassifyDepth(1.4f, false) == WaterZone.Deep,
+                "Coluna igual ao limite deve ser funda.");
+            Assert(profile.ClassifyDepth(1.3f, true) == WaterZone.Deep,
+                "Agua funda deve manter histerese ao ficar um pouco mais rasa.");
+            Assert(profile.ClassifyDepth(1.24f, true) == WaterZone.Shallow,
+                "Abaixo do limite com histerese a coluna deve voltar a rasa.");
+
+            // Simula o mesmo volume enquanto um leito se eleva e depois desce.
+            Assert(profile.ClassifyDepth(2f, false) == WaterZone.Deep &&
+                profile.ClassifyDepth(.8f, false) == WaterZone.Shallow &&
+                profile.ClassifyDepth(2f, false) == WaterZone.Deep,
+                "Alterar a profundidade amostrada deve alterar a zona no mesmo volume.");
+
+            Debug.Log("PASS: Water depth classification regression.");
+            if (Application.isBatchMode)
+                EditorApplication.Exit(0);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError("FAIL: Water depth classification regression: " +
+                exception);
+            if (Application.isBatchMode)
+                EditorApplication.Exit(1);
+        }
+        finally
+        {
+            Object.DestroyImmediate(profile);
+        }
+    }
+
+    private static void Assert(bool condition, string message)
+    {
+        if (!condition)
+            throw new System.InvalidOperationException(message);
+    }
+}
+
 #endif

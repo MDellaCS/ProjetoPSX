@@ -175,9 +175,21 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         hasPresentedState = true;
         lastPresentedState = visualState;
 
-        if (animator == null || !animator.isActiveAndEnabled ||
-            !stateHashes.TryGetValue(visualState, out int stateHash) ||
-            !animator.HasState(layerIndex, stateHash))
+        if (animator == null || !animator.isActiveAndEnabled)
+            return;
+
+        if (!stateHashes.TryGetValue(visualState, out int stateHash))
+        {
+            // Sem clip especifico para escalada, usa Idle como pose neutra.
+            if (visualState != PlayerVisualState.LadderClimb ||
+                !stateHashes.TryGetValue(PlayerVisualState.Idle,
+                    out stateHash))
+            {
+                return;
+            }
+        }
+
+        if (!animator.HasState(layerIndex, stateHash))
         {
             return;
         }

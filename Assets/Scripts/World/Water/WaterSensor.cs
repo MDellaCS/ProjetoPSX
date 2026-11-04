@@ -110,11 +110,10 @@ public sealed class WaterSensor : MonoBehaviour
         }
 
         WaterProfile profile = sample.Profile;
-        float deepThreshold = Zone == WaterZone.Deep && currentVolume == sample.volume
-            ? profile.deepWaterMinDepth - profile.deepExitHysteresis
-            : profile.deepWaterMinDepth;
-        WaterZone zone = sample.ColumnDepth >= deepThreshold
-            ? WaterZone.Deep : WaterZone.Shallow;
+        bool wasDeepInSameVolume = Zone == WaterZone.Deep &&
+            currentVolume == sample.volume;
+        WaterZone zone = profile.ClassifyDepth(sample.ColumnDepth,
+            wasDeepInSameVolume);
         SetZone(zone, sample.volume, sample.surfaceY, sample.floorY,
             sample.surfaceY - feetY);
     }

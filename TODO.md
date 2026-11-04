@@ -1,3 +1,7 @@
+## Traversal
+
+- Ledge grab (Pending): refazer do zero, sem reutilizar a implementação removida. Definir uma forma explícita e fácil de autorizar superfícies agarráveis, incluindo bordas de `MeshCollider`; permitir deslocamento lateral contínuo pelas bordas, com validação segura de extremidades e cantos. Incluir soltura e salto direcional, animações/alinhamento, ferramentas de configuração no Editor, custo baixo de física e testes de movimento em cena. Revisar a integração com `HandLadder` para evitar disputa de controle.
+
 ## Sistema de animação desacoplado
 
 ### Iteração 4 — Reações e interrupções

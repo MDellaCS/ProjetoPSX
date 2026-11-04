@@ -13,12 +13,19 @@ MonoBehaviour:
   m_Name: WaterProfile
   m_EditorClassIdentifier: Assembly-CSharp::WaterProfile
   minimumContactDepth: 0.15
+  contactHysteresis: 0.05
   deepWaterMinDepth: 2.28
   deepExitHysteresis: 0.15
-  shallowSpeedMultiplier: 0.8
+  shallowSpeedMultiplier: 0.7
   shallowDashDistanceMultiplier: 0.75
   shallowAttackMovementMultiplier: 0.6
-  deepSpeedMultiplier: 1.37
+  shallowAcceleration: 45
+  shallowDeceleration: 35
+  deepAcceleration: 14
+  deepDeceleration: 8
+  deepJumpCompensatesDepth: 1
+  deepJumpExitBoost: 2.5
+  deepSpeedMultiplier: 0.3
   floatFeetDepth: 1.69
   floatSpringFrequency: 6
   floatMaxVerticalSpeed: 6

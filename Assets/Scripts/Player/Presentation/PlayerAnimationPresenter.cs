@@ -97,6 +97,9 @@ public class PlayerAnimationPresenter : MonoBehaviour
         if (playerState != null && playerState.IsStaggered())
             return PlayerVisualState.Stunned;
 
+        if (playerState != null && playerState.IsClimbingLadder())
+            return PlayerVisualState.LadderClimb;
+
         if (playerState != null && playerState.IsDashing())
             return PlayerVisualState.Dash;
 
