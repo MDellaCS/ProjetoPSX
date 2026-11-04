@@ -15,6 +15,7 @@ using UnityEngine.InputSystem;
 public sealed class CameraFollow : MonoBehaviour
 {
     public static CameraFollow Instance { get; private set; }
+    public bool LocksCursorOnStart => lockCursorOnStart;
 
     [Header("Target")]
     [Tooltip("Transform raiz do player acompanhado pela camera.")]
@@ -43,6 +44,8 @@ public sealed class CameraFollow : MonoBehaviour
     [Header("Input")]
     [Tooltip("Sensibilidade horizontal do mouse em graus por pixel.")]
     [Min(0f)] [SerializeField] private float horizontalMouseSensitivity = .05f;
+    [Tooltip("Velocidade de giro em graus por segundo ao usar o analógico direito.")]
+    [Min(0f)] [SerializeField] private float gamepadLookSpeed = 180f;
     [Tooltip("Sensibilidade vertical do mouse em graus por pixel.")]
     [Min(0f)] [SerializeField] private float verticalMouseSensitivity = .04f;
     [Tooltip("Inverte o movimento vertical da camera.")]
@@ -580,11 +583,17 @@ public sealed class CameraFollow : MonoBehaviour
 
         Vector2 mouseDelta = GameInput.Look;
         float sensitivity = GameSettingsService.Applied.cameraSensitivity;
-        yaw += mouseDelta.x * horizontalMouseSensitivity * sensitivity;
+        float lookScale = GameInput.LookIsMouseDelta
+            ? horizontalMouseSensitivity
+            : gamepadLookSpeed * Time.unscaledDeltaTime;
+        yaw += mouseDelta.x * lookScale * sensitivity;
         float verticalSign = invertVerticalInput ^
             GameSettingsService.Applied.invertCameraY ? 1f : -1f;
         pitch = Mathf.Clamp(
-            pitch + mouseDelta.y * verticalMouseSensitivity * sensitivity * verticalSign,
+            pitch + mouseDelta.y * (GameInput.LookIsMouseDelta
+                ? verticalMouseSensitivity
+                : gamepadLookSpeed * Time.unscaledDeltaTime) *
+                sensitivity * verticalSign,
             minimumPitch,
             maximumPitch
         );
@@ -600,7 +609,7 @@ public sealed class CameraFollow : MonoBehaviour
         }
         if (Cursor.lockState == CursorLockMode.Locked)
             return true;
-        if (GameInput.LightPressed)
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             LockCursor();
         return Cursor.lockState == CursorLockMode.Locked;
     }

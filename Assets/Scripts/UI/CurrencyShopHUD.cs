@@ -45,7 +45,8 @@ public sealed class CurrencyShopHUD : MonoBehaviour
     {
         if (instance != null && instance != this) { enabled = false; return; }
         instance = this;
-        panelRenderer ??= GetComponent<PanelRenderer>();
+        if (panelRenderer == null)
+            panelRenderer = GetComponent<PanelRenderer>();
         panelRenderer.RegisterUIReloadCallback(HandleUIReload);
         EnsureUI(GetComponent<PauseMenuHUD>()?.UIRoot);
     }
@@ -76,7 +77,9 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         hud.progression.Initialize();
         if (hud.progression.Catalog == null)
             return OpenFailed(source, "Catalogo ausente: crie Assets/Resources/PlayerUpgradeCatalog.asset pelo menu Progression.");
-        hud.wallet = player.GetComponent<PlayerCurrencyWallet>() ?? player.gameObject.AddComponent<PlayerCurrencyWallet>();
+        hud.wallet = player.GetComponent<PlayerCurrencyWallet>();
+        if (hud.wallet == null)
+            hud.wallet = player.gameObject.AddComponent<PlayerCurrencyWallet>();
         hud.terminal = source;
         hud.isOpen = true;
         hud.wallet.Changed += hud.OnCurrencyChanged;

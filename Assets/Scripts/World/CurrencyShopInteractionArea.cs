@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>Area separada do collider fisico; so o terminal mais proximo responde ao input E.</summary>
 [RequireComponent(typeof(Collider))]
@@ -20,7 +19,8 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
     private TemporaryWorldPromptHUD promptHUD;
     private void Awake()
     {
-        terminal ??= GetComponentInParent<CurrencyShopTerminal>();
+        if (terminal == null)
+            terminal = GetComponentInParent<CurrencyShopTerminal>();
         areaCollider = GetComponent<Collider>();
         areaCollider.isTrigger = true;
     }
@@ -39,7 +39,8 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
     private bool ContainsPlayer(Transform target)
     {
         if (target == null || !isActiveAndEnabled) return false;
-        areaCollider ??= GetComponent<Collider>();
+        if (areaCollider == null)
+            areaCollider = GetComponent<Collider>();
         if (areaCollider == null || !areaCollider.enabled) return false;
         PlayerCharacterController controller = target.GetComponent<PlayerCharacterController>();
         Vector3 center = controller != null ? controller.bounds.center : target.position;
@@ -74,14 +75,16 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
     private void Update()
     {
         ResolvePlayer();
-        if (terminal == null) terminal = GetComponentInParent<CurrencyShopTerminal>();
+        if (terminal == null)
+            terminal = GetComponentInParent<CurrencyShopTerminal>();
         if (player == null || terminal == null || terminal.IsDestroyed || !ContainsPlayer(player))
         { promptHUD?.HideContextualPrompt(this); return; }
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked || !IsNearest())
         { promptHUD?.HideContextualPrompt(this); return; }
         if (promptHUD == null) promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
-        promptHUD?.ShowContextualPrompt(this, "E", interactionMessage, interactionIcon);
-        if (Keyboard.current?.eKey.wasPressedThisFrame == true && terminal.OpenShop(player))
+        string interactLabel = GameInputBindings.GetDisplayString("Interact");
+        promptHUD?.ShowContextualPrompt(this, interactLabel, interactionMessage, interactionIcon);
+        if (GameInput.InteractPressed && terminal.OpenShop(player))
             promptHUD?.HideContextualPrompt(this);
     }
     private void OnDrawGizmos()

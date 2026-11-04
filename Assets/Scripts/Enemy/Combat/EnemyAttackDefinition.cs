@@ -16,6 +16,8 @@ public sealed class EnemyAttackMovementDefinition
     public bool approachTargetUntilPreferredRange;
     [Tooltip("Velocidade horizontal durante a aproximacao. Zero usa a Fast Speed configurada no movimento deste inimigo.")]
     [Min(0f)] public float approachSpeed;
+    [Tooltip("Tempo maximo para alcancar a Preferred Range. Ao expirar, o ataque e cancelado e o inimigo libera seu turno.")]
+    [Min(.1f)] public float approachTimeout = 6f;
     [Tooltip("Distancia total percorrida para frente durante Windup e Active.")]
     public float forwardDistance;
     [Tooltip("Distancia lateral total durante Windup e Active. Valores positivos movem para a direita.")]

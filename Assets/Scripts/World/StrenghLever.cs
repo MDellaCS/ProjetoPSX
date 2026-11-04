@@ -48,7 +48,7 @@ public sealed class StrenghLever : MonoBehaviour, IPlayerAttackTarget
     public bool ReceivePlayerAttack(int damage, Vector3 impactPosition,
         Vector3 impactDirection)
     {
-        if (activated && singleUse)
+        if (activated)
             return false;
 
         int appliedDamage = Mathf.Max(0, damage);
@@ -87,6 +87,12 @@ public sealed class StrenghLever : MonoBehaviour, IPlayerAttackTarget
         if (objectToHide != null)
             objectToHide.SetActive(false);
         onActivated?.Invoke();
+        if (!singleUse)
+        {
+            activated = false;
+            accumulatedDamage = 0;
+            lastDamageTime = float.NegativeInfinity;
+        }
     }
 
     private void OnDrawGizmos()

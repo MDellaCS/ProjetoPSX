@@ -16,7 +16,6 @@ public static class GameInputBindings
     {
         CancelRebind();
         asset = inputAsset;
-        BindingsChanged = null;
         LastRebindFrame = -1;
         asset.RemoveAllBindingOverrides();
         string json = PlayerPrefs.GetString(SaveKey, string.Empty);
@@ -106,11 +105,12 @@ public static class GameInputBindings
                 if (!conflict && (action.name == "Pause" || action.name == "DebugHUD"))
                 {
                     InputAction twin = asset.FindAction("UI/" + action.name);
-                    if (twin != null && twin.bindings.Count > 0)
+                    int twinBindingIndex = FindMatchingBindingIndex(twin, path);
+                    if (twinBindingIndex >= 0)
                     {
-                        conflict = HasConflict(twin, 0, path);
+                        conflict = HasConflict(twin, twinBindingIndex, path);
                         if (!conflict)
-                            twin.ApplyBindingOverride(0, path);
+                            twin.ApplyBindingOverride(twinBindingIndex, path);
                     }
                 }
                 DisposeOperation();
@@ -129,6 +129,28 @@ public static class GameInputBindings
                 finished?.Invoke(false, "Alteração cancelada.");
             });
         operation.Start();
+    }
+
+    private static int FindMatchingBindingIndex(InputAction action, string path)
+    {
+        if (action == null || string.IsNullOrEmpty(path))
+            return -1;
+        int separator = path.IndexOf('/');
+        string device = separator >= 0 ? path.Substring(0, separator) : path;
+        for (int i = 0; i < action.bindings.Count; i++)
+        {
+            InputBinding binding = action.bindings[i];
+            if (binding.isComposite || binding.isPartOfComposite)
+                continue;
+            string candidate = binding.effectivePath;
+            int candidateSeparator = candidate.IndexOf('/');
+            string candidateDevice = candidateSeparator >= 0
+                ? candidate.Substring(0, candidateSeparator) : candidate;
+            if (string.Equals(device, candidateDevice,
+                StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        return -1;
     }
 
     public static void CancelRebind() => operation?.Cancel();

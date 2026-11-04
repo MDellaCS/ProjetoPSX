@@ -98,7 +98,7 @@ public sealed class DialogueController : MonoBehaviour
             return;
         }
 
-        lineElapsed += Time.deltaTime;
+        lineElapsed += Time.unscaledDeltaTime;
         bool canConfirm = lineElapsed >= GetMinimumDisplayDuration(line);
         if (canConfirm && line.allowEarlyAdvance && GameInput.InteractPressed)
         {

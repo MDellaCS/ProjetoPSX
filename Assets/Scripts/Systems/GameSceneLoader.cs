@@ -136,7 +136,7 @@ public sealed class GameSceneLoader : MonoBehaviour
 
     private void Update()
     {
-        if (!enableDebugSceneShortcuts || isLoading || Keyboard.current == null)
+        if (!Debug.isDebugBuild || !enableDebugSceneShortcuts || isLoading || Keyboard.current == null)
             return;
 
         if (Keyboard.current.f9Key.wasPressedThisFrame)
@@ -204,6 +204,7 @@ public sealed class GameSceneLoader : MonoBehaviour
         if (isLoading || string.IsNullOrWhiteSpace(resolvedScenePath) ||
             !CanLoadScene(resolvedScenePath))
         {
+            Debug.LogError($"Nao foi possivel carregar a cena '{scenePath}'. Caminho resolvido: '{resolvedScenePath ?? "<invalido>"}'. A cena precisa existir no projeto e estar no Build Settings fora do Editor.", this);
             return;
         }
 

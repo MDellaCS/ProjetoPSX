@@ -26,6 +26,7 @@ public sealed class EnemyAttackController : MonoBehaviour
     private string queuedSpecialAttackId;
     private bool approachHasStarted;
     private bool approachReachedPreferredRange;
+    private float approachElapsed;
 
     public EnemyMovesetDefinition Moveset => moveset;
     public EnemyAttackRuntime CurrentAttack { get; private set; }
@@ -122,6 +123,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         pendingContinuationDelay = 0f;
         approachHasStarted = false;
         approachReachedPreferredRange = false;
+        approachElapsed = 0f;
         attacksInSequence++;
         authoredMovement.Begin(CurrentAttack);
         hitboxes.Begin(CurrentAttack);
@@ -153,6 +155,16 @@ public sealed class EnemyAttackController : MonoBehaviour
                 phaseTimer -= Time.deltaTime;
                 if (phaseTimer <= 0f)
                     EnterActive();
+                return;
+            }
+
+            approachElapsed += Time.deltaTime;
+            if (approachElapsed >= Mathf.Max(.1f,
+                CurrentAttack.Definition.movement.approachTimeout))
+            {
+                CancelAttack();
+                owner.CurrentState = EnemyBase.State.Combat;
+                brain.ScheduleNextDecision();
                 return;
             }
 
@@ -204,9 +216,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         if (pendingContinuation != null &&
             recoveryElapsed >= pendingContinuationDelay)
         {
-            owner.NotifyAttackEnded(CurrentAttack.Definition);
-            AttackEnded?.Invoke(CurrentAttack);
-            BeginAttack(pendingContinuation);
+            BeginContinuation();
             return;
         }
         if (phaseTimer <= 0f) FinishOrContinue();
@@ -265,14 +275,47 @@ public sealed class EnemyAttackController : MonoBehaviour
         if (pendingContinuation != null &&
             recoveryElapsed >= pendingContinuationDelay)
         {
-            owner.NotifyAttackEnded(CurrentAttack.Definition);
-            AttackEnded?.Invoke(CurrentAttack);
-            BeginAttack(pendingContinuation);
+            BeginContinuation();
             return;
         }
         CancelAttack();
         owner.CurrentState = EnemyBase.State.Combat;
         brain.ScheduleNextDecision();
+    }
+
+    private void BeginContinuation()
+    {
+        EnemyMoveNode continuation = pendingContinuation;
+        EnemyAttackRuntime ended = CurrentAttack;
+        if (continuation?.attack == null || ended == null)
+        {
+            CancelAttack();
+            owner.CurrentState = EnemyBase.State.Combat;
+            brain.ScheduleNextDecision();
+            return;
+        }
+
+        // Libera os recursos do ataque atual sem liberar o turno reservado;
+        // a continuação continua pertencendo à mesma sequência e atacante.
+        CurrentAttack = null;
+        CurrentPhase = EnemyAttackPhase.None;
+        phaseTimer = 0f;
+        recoveryElapsed = 0f;
+        if (!string.IsNullOrWhiteSpace(queuedSpecialAttackId))
+        {
+            EnemySpecialAttackQueue.Release(owner, queuedSpecialAttackId);
+            queuedSpecialAttackId = null;
+        }
+        authoredMovement?.End();
+        hitboxes?.End();
+        owner.NotifyAttackEnded(ended.Definition);
+        AttackEnded?.Invoke(ended);
+        if (!BeginOrQueueAttack(continuation, null))
+        {
+            CancelAttack();
+            owner.CurrentState = EnemyBase.State.Combat;
+            brain.ScheduleNextDecision();
+        }
     }
 
     public void CancelAttack()
@@ -292,6 +335,7 @@ public sealed class EnemyAttackController : MonoBehaviour
         pendingContinuationDelay = 0f;
         approachHasStarted = false;
         approachReachedPreferredRange = false;
+        approachElapsed = 0f;
         authoredMovement?.End();
         hitboxes?.End();
         if (ended != null)
@@ -299,6 +343,7 @@ public sealed class EnemyAttackController : MonoBehaviour
             owner.NotifyAttackEnded(ended.Definition);
             AttackEnded?.Invoke(ended);
         }
+        EnemyDirector.ReleaseAttackTurn(owner);
     }
 
     internal void OnSpecialAttackQueueFailed(string queueId)

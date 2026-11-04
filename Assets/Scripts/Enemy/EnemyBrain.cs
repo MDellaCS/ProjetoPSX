@@ -25,6 +25,23 @@ public sealed class EnemyBrain : MonoBehaviour
     private static Plane[] cachedVisibilityPlanes;
     private static int nextGroupSeparationOrder;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticCaches()
+    {
+        cachedVisibilityFrame = -1;
+        cachedVisibilityCamera = null;
+        cachedVisibilityPlanes = null;
+        nextGroupSeparationOrder = 0;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RebuildGroupSeparationOrder()
+    {
+        foreach (EnemyBrain brain in Object.FindObjectsByType<EnemyBrain>(
+            FindObjectsInactive.Exclude))
+            brain.groupSeparationOrder = ++nextGroupSeparationOrder;
+    }
+
     [Header("Detection")]
     [Tooltip("Alcance para encontrar o jogador antes de entrar em combate.")]
     [Min(0f)] [SerializeField] private float detectionRange = 8f;

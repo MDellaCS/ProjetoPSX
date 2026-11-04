@@ -1,0 +1,11 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="LoadingScreenHUD.uss" />
+    <ui:VisualElement name="loading-screen-overlay" class="loading-screen-overlay">
+        <ui:VisualElement class="loading-screen-card">
+            <ui:Label name="loading-label" class="loading-screen-title" text="CARREGANDO" />
+            <ui:VisualElement class="loading-progress-track">
+                <ui:VisualElement name="loading-progress-fill" class="loading-progress-fill" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

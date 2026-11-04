@@ -9,21 +9,16 @@ public sealed class CombatParticleCollisionFilter : MonoBehaviour
 
     private void OnEnable()
     {
-        ownCollider ??= GetComponent<Collider>();
-        CombatParticleSystem system = CombatParticleSystem.Instance;
-
-        foreach (Collider other in FindObjectsByType<Collider>(FindObjectsInactive.Exclude))
-        {
-            if (other == null || other == ownCollider) continue;
-            Physics.IgnoreCollision(ownCollider, other,
-                !system.CanParticleCollideWith(other));
-        }
+        if (ownCollider == null)
+            ownCollider = GetComponent<Collider>();
+        if (ownCollider != null)
+            ownCollider.gameObject.layer = LayerMask.NameToLayer("CombatParticle");
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         Collider other = collision != null ? collision.collider : null;
-        if (other == null ||
+        if (other == null || CombatParticleSystem.Instance == null ||
             CombatParticleSystem.Instance.CanParticleCollideWith(other)) return;
         Physics.IgnoreCollision(ownCollider, other, true);
     }

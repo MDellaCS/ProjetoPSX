@@ -59,6 +59,8 @@ public sealed class EnemyGore : MonoBehaviour
     /// <summary>Usado apenas pelo Enemy Death Loop Test.</summary>
     public void SpawnTestGore(int lethalDamage, Vector3 impactDirection)
     {
+        if (!Debug.isDebugBuild)
+            return;
         Renderer source = GetComponentInChildren<Renderer>(true);
         Vector3 position = source != null ? source.bounds.center : transform.position;
         CombatParticleSystem.Instance.EmitTestDeath(deathProfile, position,

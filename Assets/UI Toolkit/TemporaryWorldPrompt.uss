@@ -1,3 +1,7 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
 .temporary-world-prompt {
     position: absolute;
     left: 50%;
@@ -39,7 +43,7 @@
     margin-right: 4px;
     color: rgb(255, 193, 60);
     font-size: 16px;
-    unity-font-style: bold;
+    -unity-font-style: bold;
 }
 
 .temporary-world-prompt__key-fallback {
@@ -50,13 +54,13 @@
     padding-right: 6px;
     color: rgb(20, 22, 26);
     background-color: rgb(235, 240, 245);
-    unity-text-align: middle-center;
+    -unity-text-align: middle-center;
     font-size: 14px;
-    unity-font-style: bold;
+    -unity-font-style: bold;
 }
 
 .temporary-world-prompt__body {
     color: rgb(235, 240, 245);
     font-size: 18px;
-    unity-font-style: bold;
+    -unity-font-style: bold;
 }

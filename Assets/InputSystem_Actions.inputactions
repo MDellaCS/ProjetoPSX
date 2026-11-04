@@ -42,6 +42,24 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Swing",
+                    "type": "Button",
+                    "id": "7238d86d-761d-4eae-b7c2-8f458d4d07b4",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CutsceneSkip",
+                    "type": "Button",
+                    "id": "8a84cf79-f17d-49e8-b93a-2e5c1d7fb84b",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Crouch",
                     "type": "Button",
                     "id": "27c5f898-bc57-4ee1-8800-db469aca5fe3",
@@ -476,10 +494,18 @@
                     "isPartOfComposite": false
                 },
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e21","path":"<Mouse>/backButton","action":"Crouch"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e22","path":"<Mouse>/rightButton","action":"HeavyAttack"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e23","path":"<Mouse>/middleButton","action":"LockOn"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e24","path":"<Mouse>/scroll","action":"CycleTarget"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e25","path":"<Keyboard>/q","action":"Pause"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e22","path":"<Mouse>/rightButton","action":"HeavyAttack","groups":"Keyboard&Mouse"},
+                {"name":"","id":"89518af9-dd92-454f-ad04-82193951fd6c","path":"<Gamepad>/rightShoulder","action":"HeavyAttack","groups":"Gamepad"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e23","path":"<Mouse>/middleButton","action":"LockOn","groups":"Keyboard&Mouse"},
+                {"name":"","id":"ece1c16c-84a3-4bda-8068-613abdb2d814","path":"<Gamepad>/leftShoulder","action":"LockOn","groups":"Gamepad"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e24","path":"<Mouse>/scroll","action":"CycleTarget","groups":"Keyboard&Mouse"},
+                {"name":"","id":"97777f91-f7ce-43d7-a0e5-2965791402d4","path":"<Gamepad>/dpad","action":"CycleTarget","groups":"Gamepad"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e25","path":"<Keyboard>/q","action":"Pause","groups":"Keyboard&Mouse"},
+                {"name":"","id":"eff0b601-79dd-4e59-877b-c7c014ad32a8","path":"<Gamepad>/start","action":"Pause","groups":"Gamepad"},
+                {"name":"","id":"88b1f686-493a-4b55-b173-45084c1dfb09","path":"<Keyboard>/f","action":"Swing","groups":"Keyboard&Mouse"},
+                {"name":"","id":"85b2a4fd-a877-4f13-860f-1a23109a5911","path":"<Gamepad>/leftTrigger","action":"Swing","groups":"Gamepad"},
+                {"name":"","id":"03f30217-e329-43ba-8496-4ae030ef574c","path":"<Keyboard>/space","action":"CutsceneSkip","groups":"Keyboard&Mouse"},
+                {"name":"","id":"a2fe1f06-c765-46b3-9273-96b5c7bed1e3","path":"<Gamepad>/buttonSouth","action":"CutsceneSkip","groups":"Gamepad"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e26","path":"<Keyboard>/escape","action":"UnlockCursor"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e27","path":"<Keyboard>/f3","action":"DebugHUD"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e28","path":"<Keyboard>/f4","action":"DebugHeatDown"},
@@ -589,7 +615,8 @@
                 }
             ],
             "bindings": [
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e33","path":"<Keyboard>/q","action":"Pause"},
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e33","path":"<Keyboard>/q","action":"Pause","groups":"Keyboard&Mouse"},
+                {"name":"","id":"e096f45b-03f3-4c04-aeef-53a16ccb8103","path":"<Gamepad>/start","action":"Pause","groups":"Gamepad"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e34","path":"<Keyboard>/f3","action":"DebugHUD"},
                 {
                     "name": "Gamepad",

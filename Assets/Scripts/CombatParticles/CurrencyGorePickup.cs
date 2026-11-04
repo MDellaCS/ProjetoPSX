@@ -9,10 +9,12 @@ public sealed class CurrencyGorePickup : MonoBehaviour
     private float collectableAt;
     private float attractionElapsed;
     private PlayerCurrencyWallet wallet;
+    public bool HasCurrency => value > 0;
 
     public void Initialize(int newValue)
     {
         value = Mathf.Max(0, newValue);
+        attractionElapsed = 0f;
         wallet = value > 0 ? PlayerCurrencyWallet.FindOrCreate() : null;
         collectableAt = Time.time + (wallet != null ? wallet.AttractionDelay : 0f);
     }
@@ -53,7 +55,8 @@ public sealed class CurrencyGorePickup : MonoBehaviour
         if (distance > wallet.AttractionRadius)
             return;
 
-        body ??= GetComponent<Rigidbody>();
+        if (body == null)
+            body = GetComponent<Rigidbody>();
         attractionElapsed += Time.deltaTime;
         float acceleration = wallet.EvaluateAttractionAcceleration(
             attractionElapsed);

@@ -6,6 +6,17 @@ using UnityEngine;
 public sealed class EnemyEncounter : MonoBehaviour
 {
     private static readonly HashSet<EnemyEncounter> active = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetActiveEncounters() => active.Clear();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RebuildActiveEncounters()
+    {
+        foreach (EnemyEncounter encounter in Object.FindObjectsByType<
+            EnemyEncounter>(FindObjectsInactive.Exclude))
+            active.Add(encounter);
+    }
     public enum EncounterState { Inactive, Active, Completed }
 
     [Header("Arena")]
@@ -102,6 +113,13 @@ public sealed class EnemyEncounter : MonoBehaviour
         EnemyBase.EnemyDied += OnEnemyDied;
     }
 
+    internal void RefreshEnemyDeathSubscription()
+    {
+        EnemyBase.EnemyDied -= OnEnemyDied;
+        if (isActiveAndEnabled)
+            EnemyBase.EnemyDied += OnEnemyDied;
+    }
+
     private void OnDisable()
     {
         active.Remove(this);
@@ -172,15 +190,19 @@ public sealed class EnemyEncounter : MonoBehaviour
 
     private bool AllStartedWavesComplete()
     {
-        for (int i = 0; i < nextWaveIndex; i++)
-            if (!waves[i].IsComplete) return false;
+        int startedWaveCount = Mathf.Min(nextWaveIndex,
+            waves != null ? waves.Count : 0);
+        for (int i = 0; i < startedWaveCount; i++)
+            if (waves[i] != null && !waves[i].IsComplete) return false;
         return true;
     }
 
     private bool HasUnfinishedSustainWave()
     {
-        for (int i = 0; i < nextWaveIndex; i++)
-            if (waves[i].SpawnMode == EnemyEncounterWaveSpawnMode.Sustain &&
+        int startedWaveCount = Mathf.Min(nextWaveIndex,
+            waves != null ? waves.Count : 0);
+        for (int i = 0; i < startedWaveCount; i++)
+            if (waves[i] != null && waves[i].SpawnMode == EnemyEncounterWaveSpawnMode.Sustain &&
                 !waves[i].IsComplete) return true;
         return false;
     }

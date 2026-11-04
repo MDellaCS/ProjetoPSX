@@ -587,10 +587,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void SetCrouching(bool value)
     {
-        if (!value && !CanStandUp())
+        if (isCrouching == value)
             return;
 
-        if (isCrouching == value)
+        if (!value && !CanStandUp())
             return;
 
         isCrouching = value;
@@ -835,6 +835,9 @@ public class PlayerMovement : MonoBehaviour
         {
             return Vector3.zero;
         }
+
+        if (playerState.IsDead())
+            return horizontalVelocity;
 
         if (playerState.IsBurnStunned())
             return Vector3.zero;
@@ -1506,6 +1509,7 @@ public class PlayerMovement : MonoBehaviour
         float duration)
     {
         CancelStaggerPush();
+        isDashJump = false;
         launchForwardsVelocity = Vector3.zero;
         launchForwardsDeceleration = 0f;
         horizontalVelocity = Vector3.zero;
@@ -1533,7 +1537,12 @@ public class PlayerMovement : MonoBehaviour
         dashStartedGrounded = false;
         isDashJump = false;
         isStandardJump = false;
-        isCrouching = false;
+        isLaunched = false;
+        isAerialDiving = false;
+        isJumpAscending = false;
+        aerialDiveFallSpeed = 0f;
+        verticalVelocity = Mathf.Min(verticalVelocity, 0f);
+        SetCrouching(false);
         aerialLightTimer = 0f;
         aerialGravityMultiplier = 1f;
         horizontalVelocity = Vector3.zero;

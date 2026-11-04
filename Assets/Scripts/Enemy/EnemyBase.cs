@@ -52,6 +52,25 @@ public class EnemyBase : MonoBehaviour
     private bool isTemporarilyUntargetable;
     private bool isGrapplePulled;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        activeEnemies.Clear();
+        EnemyDied = null;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RebuildActiveEnemies()
+    {
+        foreach (EnemyBase enemy in UnityEngine.Object.FindObjectsByType<EnemyBase>(
+            FindObjectsInactive.Exclude))
+            activeEnemies.Add(enemy);
+
+        foreach (EnemyEncounter encounter in
+            UnityEngine.Object.FindObjectsByType<EnemyEncounter>(FindObjectsInactive.Exclude))
+            encounter.RefreshEnemyDeathSubscription();
+    }
+
     private State currentState = State.Idle;
     public State CurrentState
     {
@@ -146,7 +165,7 @@ public class EnemyBase : MonoBehaviour
     }
 
     private void OnEnable() => activeEnemies.Add(this);
-    private void OnDisable()
+    protected virtual void OnDisable()
     {
         if (isGrapplePulled)
             health?.EndGrappleStagger(0f);
@@ -155,7 +174,10 @@ public class EnemyBase : MonoBehaviour
         EnemySpecialAttackQueue.Release(this);
     }
 
-    internal static IEnumerable<EnemyBase> ActiveEnemies => activeEnemies;
+    // Return the concrete collection so foreach uses HashSet's struct
+    // enumerator instead of boxing an IEnumerable enumerator in hot paths.
+    internal static HashSet<EnemyBase> ActiveEnemies => activeEnemies;
+    internal EnemyMovement SeparationMovement => movement;
     internal bool HasAvailableOpening => attacks != null &&
         attacks.HasAvailableOpening();
     internal void CancelGuardForAirborne() => guard?.CancelForAirborne();

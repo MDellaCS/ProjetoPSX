@@ -24,7 +24,9 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
     private readonly Dictionary<EnemyHitboxTrackDefinition, TrackState> tracks = new();
     private readonly HashSet<(EnemyAttackStrikeDefinition, int)> hitGroups = new();
     private readonly Dictionary<EnemyHitboxTrackDefinition, float> repeatTimes = new();
-    private readonly Collider[] overlapBuffer = new Collider[64];
+    private Collider[] overlapBuffer = new Collider[64];
+    [Tooltip("Camadas consultadas pelos volumes de ataque dos inimigos. Inclua a camada do jogador e remova camadas que nunca podem receber dano.")]
+    [SerializeField] private LayerMask hitboxQueryMask = Physics.DefaultRaycastLayers;
     private readonly List<DebugVolume> debugVolumes = new();
     private EnemyBase owner;
     private EnemyAttackRuntime runtime;
@@ -119,17 +121,25 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
         EnemyHitboxTrackDefinition track, Vector3 center, Quaternion rotation,
         Vector3 a, Vector3 b, float radius)
     {
-        int count = track.shape switch
+        int count;
+        while (true)
         {
-            EnemyHitboxShape.Capsule => Physics.OverlapCapsuleNonAlloc(a, b,
-                radius, overlapBuffer, Physics.AllLayers,
-                QueryTriggerInteraction.Collide),
-            EnemyHitboxShape.Box => Physics.OverlapBoxNonAlloc(center,
-                track.boxSize * .5f, overlapBuffer, rotation,
-                Physics.AllLayers, QueryTriggerInteraction.Collide),
-            _ => Physics.OverlapSphereNonAlloc(center, radius, overlapBuffer,
-                Physics.AllLayers, QueryTriggerInteraction.Collide)
-        };
+            count = track.shape switch
+            {
+                EnemyHitboxShape.Capsule => Physics.OverlapCapsuleNonAlloc(a,
+                    b, radius, overlapBuffer, hitboxQueryMask,
+                    QueryTriggerInteraction.Collide),
+                EnemyHitboxShape.Box => Physics.OverlapBoxNonAlloc(center,
+                    track.boxSize * .5f, overlapBuffer, rotation,
+                    hitboxQueryMask, QueryTriggerInteraction.Collide),
+                _ => Physics.OverlapSphereNonAlloc(center, radius,
+                    overlapBuffer, hitboxQueryMask,
+                    QueryTriggerInteraction.Collide)
+            };
+            if (count < overlapBuffer.Length)
+                break;
+            System.Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);
+        }
         ResolveHits(strike, track, count);
     }
 
@@ -137,8 +147,15 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
         EnemyHitboxTrackDefinition track, Vector3 origin, Vector3 center,
         float radius)
     {
-        int count = Physics.OverlapCapsuleNonAlloc(origin, center, radius,
-            overlapBuffer, Physics.AllLayers, QueryTriggerInteraction.Collide);
+        int count;
+        while (true)
+        {
+            count = Physics.OverlapCapsuleNonAlloc(origin, center, radius,
+                overlapBuffer, hitboxQueryMask, QueryTriggerInteraction.Collide);
+            if (count < overlapBuffer.Length)
+                break;
+            System.Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);
+        }
         ResolveHits(strike, track, count);
     }
 
@@ -163,8 +180,8 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
             int poise = Mathf.RoundToInt(runtime.PoiseDamage *
                 strike.poiseMultiplier);
             runtime.HitTargetPosition = player.transform.position;
-            runtime.HitConfirmed = true;
-            player.TakeDamage(damage, owner.AttackOrigin, poise,
+            runtime.HitConfirmed = player.TakeDamage(damage,
+                owner.AttackOrigin, poise,
                 strike.reaction, true, transform,
                 runtime.Definition.causesHeavyStagger);
             hitGroups.Add(group);

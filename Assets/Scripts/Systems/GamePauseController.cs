@@ -42,6 +42,7 @@ public static class GamePauseController
             return;
 
         Time.timeScale = timeScaleBeforePause;
+        GameTimeScaleEffects.Reapply();
         PauseChanged?.Invoke(false);
     }
 }

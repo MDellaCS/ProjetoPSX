@@ -1,3 +1,7 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
 #debug-panel {
     position: absolute;
     left: 16px;
@@ -18,7 +22,7 @@
 #debug-text {
     color: rgb(225, 240, 255);
     font-size: 16px;
-    unity-font-style: normal;
+    -unity-font-style: normal;
     white-space: normal;
 }
 
@@ -59,14 +63,14 @@
 #test-shortcuts-text {
     color: rgb(255, 240, 200);
     font-size: 16px;
-    unity-font-style: normal;
+    -unity-font-style: normal;
     white-space: normal;
 }
 
 #enemy-debug-text {
     color: rgb(220, 255, 225);
     font-size: 16px;
-    unity-font-style: normal;
+    -unity-font-style: normal;
     white-space: normal;
 }
 
@@ -90,7 +94,7 @@
 #cutscene-debug-text {
     color: rgb(255, 235, 190);
     font-size: 16px;
-    unity-font-style: normal;
+    -unity-font-style: normal;
     white-space: normal;
 }
 

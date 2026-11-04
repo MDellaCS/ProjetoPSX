@@ -1,3 +1,7 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
 #game-over-overlay {
     position: absolute;
     left: 0px;
@@ -26,7 +30,7 @@
 #game-over-title {
     color: rgb(235, 68, 76);
     font-size: 42px;
-    unity-font-style: bold;
+    -unity-font-style: bold;
     -unity-text-align: middle-center;
     margin-bottom: 16px;
 }

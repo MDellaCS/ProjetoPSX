@@ -46,6 +46,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
     private CharacterController legacyController;
     private RaycastHit[] hitBuffer;
     private Collider[] overlapBuffer;
+    private PlayerSlideAttack slideAttack;
     private bool grounded;
     private bool hasGroundContact;
     private Vector3 groundNormal = Vector3.up;
@@ -158,11 +159,12 @@ public sealed class PlayerCharacterController : MonoBehaviour
             remaining -= direction * travel;
             CollisionFlags hitFlag = GetCollisionFlag(hit.normal);
             lastCollisionFlags |= hitFlag;
-            if (hit.normal.y > .0001f)
+            float supportAngle = Vector3.Angle(hit.normal, Vector3.up);
+            if (hit.normal.y > .0001f && supportAngle < 89f)
             {
                 groundNormal = hit.normal.normalized;
                 hasGroundContact = true;
-                grounded = Vector3.Angle(groundNormal, Vector3.up) <= slopeLimit;
+                grounded = supportAngle <= slopeLimit;
             }
             if (wasGrounded && displacement.y <= 0f &&
                 (hitFlag & CollisionFlags.Sides) != 0 &&
@@ -386,7 +388,7 @@ public sealed class PlayerCharacterController : MonoBehaviour
         {
             RaycastHit hit = hitBuffer[i];
             if (hit.collider == null || IsIgnoredForMovement(hit.collider) ||
-                hit.normal.y <= .0001f || hit.distance >= nearestDistance)
+                hit.normal.y <= .05f || hit.distance >= nearestDistance)
                 continue;
             nearestDistance = hit.distance;
             nearestNormal = hit.normal.normalized;
@@ -443,6 +445,11 @@ public sealed class PlayerCharacterController : MonoBehaviour
         EnemyBase enemy = other.GetComponentInParent<EnemyBase>();
         if (enemy == null)
             return false;
+
+        if (slideAttack == null)
+            slideAttack = GetComponent<PlayerSlideAttack>();
+        if (slideAttack != null && slideAttack.IsIgnoringMovementCollision(enemy))
+            return true;
 
         // Inimigos terrestres continuam sendo separados pelo sistema
         // centralizado. O FlyingPuppet usa a colisao do proprio motor do

@@ -1,3 +1,7 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
 #heat-thermometer {
     position: absolute;
     left: 50%;

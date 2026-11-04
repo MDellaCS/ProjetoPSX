@@ -181,7 +181,7 @@ public sealed class EnemyHealth : MonoBehaviour
             ref damage, ref poiseDamage);
         int finalHitDamage = Mathf.Max(0, damage);
         int healthBeforeDamage = CurrentHealth;
-        CurrentHealth -= damage;
+        CurrentHealth -= finalHitDamage;
         if (damage > 0)
             damageNumbers?.ShowDamage(damage);
         poiseResult = poise.ReceiveHit(poiseDamage, maxPoise);

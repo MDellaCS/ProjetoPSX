@@ -39,6 +39,13 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
 
     public void ShowContextualPrompt(Object owner, string key, string message, Sprite icon)
     {
+        if (contextualOwner == owner && contextualKey == key &&
+            contextualMessage == message && contextualIcon == icon)
+        {
+            SetVisible(!GamePauseController.IsPaused);
+            return;
+        }
+
         contextualOwner = owner;
         contextualKey = key;
         contextualMessage = message;
@@ -97,7 +104,7 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     {
         if (contextualOwner != null)
         {
-            if (GamePauseController.IsPaused) SetVisible(false);
+            SetVisible(!GamePauseController.IsPaused);
             return;
         }
         if (PauseMenuHUD.IsOpen)
@@ -146,7 +153,7 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
 
         SetPromptContent(prompt);
 
-        SetVisible(true);
+        SetVisible(!GamePauseController.IsPaused);
         PauseGameIfRequested(prompt);
         return true;
     }

@@ -8,10 +8,12 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(PanelRenderer))]
 public class GameOverHUD : MonoBehaviour
 {
+    [Tooltip("PanelRenderer que exibe a tela de Game Over em UI Toolkit.")]
     [SerializeField] private PanelRenderer panelRenderer;
 
     private VisualElement overlay;
     private Label deathMessageText;
+    private Label retryText;
 
     private void Awake()
     {
@@ -48,6 +50,14 @@ public class GameOverHUD : MonoBehaviour
 
         overlay = rootVisualElement.Q<VisualElement>("game-over-overlay");
         deathMessageText = rootVisualElement.Q<Label>("game-over-message");
+        retryText = rootVisualElement.Q<Label>("game-over-retry");
+        if (retryText != null)
+        {
+            string binding = GameInputBindings.GetDisplayString("Restart");
+            retryText.text = string.IsNullOrWhiteSpace(binding)
+                ? "CONFIRME PARA RECOMECAR"
+                : $"PRESSIONE {binding} PARA RECOMECAR";
+        }
 
         SetVisible(false);
     }

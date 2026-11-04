@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(PlayerState))]
 public class PlayerHealth : MonoBehaviour
 {
     [Header("Vida")]
@@ -43,10 +44,6 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
 
     [Header("Reset de Progresso")]
-    [Tooltip("Permite limpar todos os dados salvos mantendo Y pressionado. O progresso e apagado apenas ao completar o tempo configurado.")]
-    [SerializeField] private bool holdToResetAllSavesEnabled = true;
-    [Tooltip("Tempo em segundos que Y precisa ficar pressionado para apagar todos os saves, incluindo progresso, currency, opcoes e configuracoes de teclas.")]
-    [Min(.1f)] [SerializeField] private float resetAllSavesHoldDuration = 3f;
 
     private Material[] playerMaterials = System.Array.Empty<Material>();
 
@@ -59,8 +56,6 @@ public class PlayerHealth : MonoBehaviour
     private PlayerHeat playerHeat;
     private DamageNumberSpawner damageNumbers;
     private bool godMode;
-    private float resetAllSavesHoldElapsed;
-    private bool resetAllSavesTriggered;
 
     private float staggerTimer;
     private float activeStaggerDuration;
@@ -80,10 +75,11 @@ public class PlayerHealth : MonoBehaviour
     public bool CanExitHeavyStaggerEarly => IsHeavyStaggered &&
         staggerTimer <= activeStaggerDuration *
             (1f - Mathf.Clamp01(heavyStaggerMinimumDurationPercent)) + .0001f;
-    public bool IsHoldingResetAllSaves => resetAllSavesHoldElapsed > 0f;
-    public float ResetAllSavesHoldProgress => holdToResetAllSavesEnabled
-        ? Mathf.Clamp01(resetAllSavesHoldElapsed / Mathf.Max(.1f, resetAllSavesHoldDuration))
-        : 0f;
+
+    private void Awake()
+    {
+        currentHealth = MaxHealth;
+    }
 
     void Start()
     {
@@ -100,7 +96,6 @@ public class PlayerHealth : MonoBehaviour
         if (damageNumbers == null)
             damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
         poise.Initialize(maxPoise);
-        currentHealth = MaxHealth;
 
         if (playerMaterials.Length > 0)
             normalColor = playerMaterials[0].color;
@@ -146,41 +141,15 @@ public class PlayerHealth : MonoBehaviour
     private void UpdateDebugShortcuts()
     {
         if (GamePauseController.IsPaused)
-        {
-            resetAllSavesHoldElapsed = 0f;
-            resetAllSavesTriggered = false;
             return;
-        }
 
-        UpdateResetAllSavesShortcut();
-
+        if (!Debug.isDebugBuild)
+            return;
         if (GameInput.DebugGodModePressed)
             godMode = !godMode;
 
         if (GameInput.DebugMaxHeatPressed)
             playerHeat?.FillHeatAndSuperheatForDebug();
-    }
-
-    private void UpdateResetAllSavesShortcut()
-    {
-        if (!holdToResetAllSavesEnabled || CutsceneController.IsPlayerControlLocked ||
-            Keyboard.current == null ||
-            !Keyboard.current.yKey.isPressed)
-        {
-            resetAllSavesHoldElapsed = 0f;
-            resetAllSavesTriggered = false;
-            return;
-        }
-
-        if (resetAllSavesTriggered)
-            return;
-
-        resetAllSavesHoldElapsed += Time.unscaledDeltaTime;
-        if (resetAllSavesHoldElapsed < Mathf.Max(.1f, resetAllSavesHoldDuration))
-            return;
-
-        resetAllSavesTriggered = true;
-        GameSaveResetService.ResetAllSavesAndReload(gameObject);
     }
 
     /// <summary>Retorna estados temporarios de dano ao estado inicial de uma nova campanha.</summary>
@@ -190,8 +159,6 @@ public class PlayerHealth : MonoBehaviour
         staggerTimer = 0f;
         activeStaggerDuration = 0f;
         waitingForForcedReactionEnd = false;
-        resetAllSavesHoldElapsed = 0f;
-        resetAllSavesTriggered = false;
         poise.Initialize(maxPoise);
         currentHealth = MaxHealth;
         playerState?.ResetForNewGame();
@@ -283,7 +250,7 @@ public class PlayerHealth : MonoBehaviour
         StartStagger(false, defenderPosition);
     }
 
-    public void TakeDamage(
+    public bool TakeDamage(
         int damage,
         Vector3 attackerPosition,
         int poiseDamage,
@@ -294,7 +261,7 @@ public class PlayerHealth : MonoBehaviour
     )
     {
         if (playerState.IsDead() || playerState.IsHeavyStaggered())
-            return;
+            return false;
 
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
@@ -344,19 +311,20 @@ public class PlayerHealth : MonoBehaviour
         // PlayerHeat já colocou o jogador
         // no estado Dead.
         if (playerState.IsDead())
-            return;
+            return true;
 
         // Burn continua vulneravel a dano, mas nao pode ser substituido por
         // knockback/stagger: durante Burning o unico movimento permitido e
         // a caminhada lenta controlada por PlayerHeat.
         if (playerState.IsBurnStunned() || playerState.IsBurnWalking())
-            return;
+            return true;
 
         if (!poiseHit.CanReact)
-            return;
+            return true;
 
         ApplyPoiseReaction(poiseHit, requestedReaction, attackerPosition,
             damage, causesHeavyStagger);
+        return true;
     }
 
     private void ApplyPoiseReaction(CombatPoiseHitResult poiseHit,

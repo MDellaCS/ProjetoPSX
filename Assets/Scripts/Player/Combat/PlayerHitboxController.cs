@@ -13,7 +13,10 @@ public sealed class PlayerHitboxController : MonoBehaviour
     private readonly HashSet<PlayerAttackStrikeDefinition> startedStrikes = new();
     private readonly HashSet<PlayerHitboxTrackDefinition> activeTrackWindows = new();
     private readonly Dictionary<(PlayerHitboxTrackDefinition, EnemyBase), float> repeatTimes = new();
-    private readonly Collider[] overlapBuffer = new Collider[64];
+    [Tooltip("Camadas consultadas pelas hitboxes de ataques. Inclua os inimigos e objetos interativos que podem receber golpes.")]
+    [SerializeField] private LayerMask hitboxQueryMask = Physics.DefaultRaycastLayers;
+    private Collider[] overlapBuffer = new Collider[64];
+    private readonly List<MonoBehaviour> componentBuffer = new();
     private readonly List<DebugVolume> debugVolumes = new();
     private PlayerAttackRuntime runtime;
     private PlayerAttackResolver resolver;
@@ -169,9 +172,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
     {
         int count = track.shape switch
         {
-            PlayerHitboxShape.Capsule => Physics.OverlapCapsuleNonAlloc(a, b, effectiveRadius, overlapBuffer),
-            PlayerHitboxShape.Box => Physics.OverlapBoxNonAlloc(center, track.boxSize * .5f, overlapBuffer, rotation),
-            _ => Physics.OverlapSphereNonAlloc(center, effectiveRadius, overlapBuffer)
+            PlayerHitboxShape.Capsule => QueryCapsule(a, b, effectiveRadius),
+            PlayerHitboxShape.Box => QueryBox(center, track.boxSize * .5f, rotation),
+            _ => QuerySphere(center, effectiveRadius)
         };
         float reach = CalculateHorizontalReach(track, center, rotation, a, b,
             effectiveRadius);
@@ -182,8 +185,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
         PlayerHitboxTrackDefinition track, Vector3 playerCenter,
         Vector3 hitboxCenter, float radius, Vector3 impactDirection)
     {
-        int count = Physics.OverlapCapsuleNonAlloc(playerCenter,
-            hitboxCenter, radius, overlapBuffer);
+        int count = QueryCapsule(playerCenter, hitboxCenter, radius);
         float reach = Vector2.Distance(ToHorizontal(playerCenter),
             ToHorizontal(hitboxCenter)) + radius;
         ResolveHits(strike, track, count, reach, hitboxCenter, impactDirection);
@@ -236,12 +238,56 @@ public sealed class PlayerHitboxController : MonoBehaviour
         }
     }
 
-    private static IPlayerAttackTarget FindUtilityTarget(Collider collider)
+    private IPlayerAttackTarget FindUtilityTarget(Collider collider)
     {
         if (collider == null) return null;
-        foreach (MonoBehaviour behaviour in collider.GetComponentsInParent<MonoBehaviour>())
-            if (behaviour is IPlayerAttackTarget target) return target;
+        componentBuffer.Clear();
+        collider.GetComponentsInParent(true, componentBuffer);
+        foreach (MonoBehaviour behaviour in componentBuffer)
+            if (behaviour is IPlayerAttackTarget target)
+                return target;
         return null;
+    }
+
+    private int QueryCapsule(Vector3 a, Vector3 b, float radius)
+    {
+        int count;
+        while (true)
+        {
+            count = Physics.OverlapCapsuleNonAlloc(a, b, radius,
+                overlapBuffer, hitboxQueryMask, QueryTriggerInteraction.Collide);
+            if (count < overlapBuffer.Length)
+                return count;
+            System.Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);
+        }
+    }
+
+    private int QueryBox(Vector3 center, Vector3 halfExtents,
+        Quaternion rotation)
+    {
+        int count;
+        while (true)
+        {
+            count = Physics.OverlapBoxNonAlloc(center, halfExtents,
+                overlapBuffer, rotation, hitboxQueryMask,
+                QueryTriggerInteraction.Collide);
+            if (count < overlapBuffer.Length)
+                return count;
+            System.Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);
+        }
+    }
+
+    private int QuerySphere(Vector3 center, float radius)
+    {
+        int count;
+        while (true)
+        {
+            count = Physics.OverlapSphereNonAlloc(center, radius,
+                overlapBuffer, hitboxQueryMask, QueryTriggerInteraction.Collide);
+            if (count < overlapBuffer.Length)
+                return count;
+            System.Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);
+        }
     }
 
     /// <summary>

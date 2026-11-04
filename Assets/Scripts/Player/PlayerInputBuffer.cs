@@ -34,6 +34,7 @@ public class PlayerInputBuffer : MonoBehaviour
     private PlayerAttackController attackController;
 
     public bool HasMouseDevice => Mouse.current != null;
+    private float GameplayTime => CombatImpactSystem.GetGameplayTime(this);
     public int LightPressesDetected { get; private set; }
     public int HeavyPressesDetected { get; private set; }
 
@@ -124,7 +125,7 @@ public class PlayerInputBuffer : MonoBehaviour
         }
         CaptureInputsForCurrentFrame();
         ClearExpiredInput();
-        return expirationTime >= Time.time && bufferedInput == input;
+        return expirationTime >= GameplayTime && bufferedInput == input;
     }
 
     public bool TryConsume(PlayerBufferedInput input)
@@ -149,12 +150,12 @@ public class PlayerInputBuffer : MonoBehaviour
         }
 
         ClearExpiredInput();
-        if (expirationTime >= Time.time)
+        if (expirationTime >= GameplayTime)
             return false;
 
         bufferedInput = PlayerBufferedInput.Grapple;
-        capturedTime = Time.time;
-        expirationTime = Time.time + bufferDuration;
+        capturedTime = GameplayTime;
+        expirationTime = GameplayTime + bufferDuration;
         return true;
     }
 
@@ -271,13 +272,13 @@ public class PlayerInputBuffer : MonoBehaviour
     private void Buffer(PlayerBufferedInput input, int attackPressSequence = 0)
     {
         ClearExpiredInput();
-        if (expirationTime >= Time.time)
+        if (expirationTime >= GameplayTime)
             return;
 
         bufferedInput = input;
-        capturedTime = Time.time;
+        capturedTime = GameplayTime;
         bufferedAttackPressSequence = attackPressSequence;
-        expirationTime = Time.time + bufferDuration;
+        expirationTime = GameplayTime + bufferDuration;
     }
 
     private void ClearExpiredInput()
@@ -297,7 +298,7 @@ public class PlayerInputBuffer : MonoBehaviour
             return;
         }
 
-        if (expirationTime < Time.time)
+        if (expirationTime < GameplayTime)
         {
             expirationTime = -1f;
             capturedTime = -1f;
@@ -308,7 +309,7 @@ public class PlayerInputBuffer : MonoBehaviour
     private void KeepBufferedInputAliveDuringGrapplePull()
     {
         if (expirationTime >= 0f)
-            expirationTime = Time.time + bufferDuration;
+            expirationTime = GameplayTime + bufferDuration;
     }
 
     private void KeepBufferedGrappleAliveDuringAttack()
@@ -317,7 +318,7 @@ public class PlayerInputBuffer : MonoBehaviour
             attackController != null && attackController.IsAttacking &&
             expirationTime >= 0f)
         {
-            expirationTime = Time.time + bufferDuration;
+            expirationTime = GameplayTime + bufferDuration;
         }
     }
 }

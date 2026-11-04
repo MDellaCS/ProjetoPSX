@@ -20,9 +20,16 @@ public sealed class GameTimeScaleEffects : MonoBehaviour
     public static bool IsCompletionSlowMotionActive =>
         instance != null && instance.isEffectActive;
 
+    public static void Reapply()
+    {
+        if (instance != null)
+            instance.ApplyCurrentScale();
+    }
+
     /// <summary>Volta a escala global ao normal antes de recarregar apos Game Over.</summary>
     public static void ResetForGameRestart()
     {
+        GameDebugTimeScale.ResetForGameRestart();
         if (instance == null)
         {
             Time.timeScale = 1f;
@@ -109,7 +116,8 @@ public sealed class GameTimeScaleEffects : MonoBehaviour
         if (slowMotionSettings != null)
             return slowMotionSettings;
 
-        fallbackSettings ??= ScriptableObject.CreateInstance<GameSlowMotionSettings>();
+        if (fallbackSettings == null)
+            fallbackSettings = ScriptableObject.CreateInstance<GameSlowMotionSettings>();
         return fallbackSettings;
     }
 

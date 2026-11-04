@@ -33,8 +33,17 @@ public static class GameInput
 
     public static Vector2 Move => ReadVector2("Move");
     public static Vector2 Look => ReadVector2("Look");
+    public static bool LookIsMouseDelta
+    {
+        get
+        {
+            EnsureInitialized();
+            return gameplay?.FindAction("Look")?.activeControl?.device is Mouse;
+        }
+    }
     public static Vector2 CycleTarget => ReadVector2("CycleTarget");
-    public static bool LightPressed => Pressed("LightAttack");
+    public static bool LightPressed => !MouseClickWillLockCursor() &&
+        Pressed("LightAttack");
     public static bool HeavyPressed => Pressed("HeavyAttack");
     public static bool LightHeld => Held("LightAttack");
     public static bool HeavyHeld => Held("HeavyAttack");
@@ -44,20 +53,32 @@ public static class GameInput
     public static bool CrouchHeld => Held("Crouch");
     public static bool LockOnPressed => Pressed("LockOn");
     public static bool InteractPressed => Pressed("Interact");
+    public static bool SwingPressed => Pressed("Swing");
+    public static bool CutsceneSkipPressed
+    {
+        get
+        {
+            if (LoadingScreenHUD.BlocksGameplayInput)
+                return false;
+            EnsureInitialized();
+            return gameplay?.FindAction("CutsceneSkip")?.WasPressedThisFrame() == true;
+        }
+    }
     public static bool UnlockCursorPressed => Pressed("UnlockCursor");
     public static bool RestartPressed => Pressed("Restart");
-    public static bool DebugHeatDownHeld => Held("DebugHeatDown");
-    public static bool DebugHeatUpHeld => Held("DebugHeatUp");
-    public static bool DebugCombatPressed => Pressed("DebugCombat");
-    public static bool DebugGodModePressed => Pressed("DebugGodMode");
-    public static bool DebugMaxHeatPressed => Pressed("DebugMaxHeat");
-    public static bool DebugSlowMotionPressed => Pressed("DebugSlowMotion");
+    public static bool DebugHeatDownHeld => Debug.isDebugBuild && Held("DebugHeatDown");
+    public static bool DebugHeatUpHeld => Debug.isDebugBuild && Held("DebugHeatUp");
+    public static bool DebugCombatPressed => Debug.isDebugBuild && Pressed("DebugCombat");
+    public static bool DebugGodModePressed => Debug.isDebugBuild && Pressed("DebugGodMode");
+    public static bool DebugMaxHeatPressed => Debug.isDebugBuild && Pressed("DebugMaxHeat");
+    public static bool DebugSlowMotionPressed => Debug.isDebugBuild && Pressed("DebugSlowMotion");
 
     public static bool PausePressed
     {
         get
         {
-            if (CutsceneController.IsPlaying)
+            if (CutsceneController.IsPlaying ||
+                LoadingScreenHUD.BlocksGameplayInput)
                 return false;
             EnsureInitialized();
             return CurrentMap()?.FindAction("Pause")?.WasPressedThisFrame() == true;
@@ -68,6 +89,8 @@ public static class GameInput
     {
         get
         {
+            if (!Debug.isDebugBuild || LoadingScreenHUD.BlocksGameplayInput)
+                return false;
             EnsureInitialized();
             return CurrentMap()?.FindAction("DebugHUD")?.WasPressedThisFrame() == true;
         }
@@ -77,6 +100,8 @@ public static class GameInput
     {
         get
         {
+            if (LoadingScreenHUD.BlocksGameplayInput)
+                return false;
             EnsureInitialized();
             return ui?.FindAction("Click")?.WasPressedThisFrame() == true;
         }
@@ -86,6 +111,8 @@ public static class GameInput
     {
         get
         {
+            if (LoadingScreenHUD.BlocksGameplayInput)
+                return Vector2.zero;
             EnsureInitialized();
             return ui?.FindAction("Point")?.ReadValue<Vector2>() ?? Vector2.zero;
         }
@@ -97,27 +124,39 @@ public static class GameInput
 
     private static bool PressedUI(string actionName)
     {
+        if (LoadingScreenHUD.BlocksGameplayInput)
+            return false;
         EnsureInitialized();
         return ui?.FindAction(actionName)?.WasPressedThisFrame() == true;
     }
 
     private static Vector2 ReadUIVector2(string actionName)
     {
+        if (LoadingScreenHUD.BlocksGameplayInput)
+            return Vector2.zero;
         EnsureInitialized();
         return ui?.FindAction(actionName)?.ReadValue<Vector2>() ?? Vector2.zero;
     }
 
     private static bool Pressed(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked)
+        if (CutsceneController.IsPlayerControlLocked ||
+            LoadingScreenHUD.BlocksGameplayInput)
             return false;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.WasPressedThisFrame() == true;
     }
 
+    private static bool MouseClickWillLockCursor() =>
+        CameraFollow.Instance != null &&
+        CameraFollow.Instance.LocksCursorOnStart &&
+        Cursor.lockState != CursorLockMode.Locked && Mouse.current != null &&
+        Mouse.current.leftButton.wasPressedThisFrame;
+
     private static bool Held(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked)
+        if (CutsceneController.IsPlayerControlLocked ||
+            LoadingScreenHUD.BlocksGameplayInput)
             return false;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.IsPressed() == true;
@@ -125,7 +164,8 @@ public static class GameInput
 
     private static Vector2 ReadVector2(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked)
+        if (CutsceneController.IsPlayerControlLocked ||
+            LoadingScreenHUD.BlocksGameplayInput)
             return Vector2.zero;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.ReadValue<Vector2>() ?? Vector2.zero;

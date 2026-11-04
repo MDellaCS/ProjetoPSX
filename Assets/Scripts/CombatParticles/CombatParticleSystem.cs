@@ -210,8 +210,11 @@ public sealed class CombatParticleSystem : MonoBehaviour
     private void SpawnVisual(CombatParticleProfile profile, Vector3 position,
         Vector3 velocity, float size, Material material, int currencyValue = 0)
     {
-        CombatVisualParticle particle = freeVisual.Count > 0 ? freeVisual.Dequeue() :
-            activeVisual.Count < maximumVisualParticles ? CreateVisual() : ReuseOldest(activeVisual, freeVisual);
+        CombatVisualParticle particle = freeVisual.Count > 0
+            ? freeVisual.Dequeue()
+            : activeVisual.Count < maximumVisualParticles
+                ? CreateVisual()
+                : ReuseOldestNonCurrencyVisual();
         particle.Initialize(profile, position, velocity, size, material, particleLayer,
             currencyValue, CurrencyGoreMaterial, currencyGoreLifetimeMultiplier,
             minimumCurrencyGoreLifetime, particleFadeStartRemainingPercent,
@@ -219,6 +222,25 @@ public sealed class CombatParticleSystem : MonoBehaviour
             currencyFastBlinkStartRemainingPercent,
             currencyBlinkFrequency, currencyFastBlinkFrequency);
         activeVisual.Add(particle);
+    }
+
+    private CombatVisualParticle ReuseOldestNonCurrencyVisual()
+    {
+        for (int i = 0; i < activeVisual.Count; i++)
+        {
+            CombatVisualParticle candidate = activeVisual[i];
+            CurrencyGorePickup pickup = candidate != null
+                ? candidate.GetComponent<CurrencyGorePickup>() : null;
+            if (pickup != null && pickup.HasCurrency)
+                continue;
+
+            activeVisual.RemoveAt(i);
+            candidate.gameObject.SetActive(false);
+            return candidate;
+        }
+
+        // Currency ja conquistada nao pode sumir para respeitar o limite visual.
+        return CreateVisual();
     }
 
     public void EmitBodyPart(Mesh mesh, bool ownsMesh, Vector3 position,

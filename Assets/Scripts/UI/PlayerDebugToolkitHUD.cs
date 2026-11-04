@@ -66,6 +66,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private void OnDisable()
     {
+        isVisible = false;
+        SetVisible(false);
         IsVisible = false;
     }
 
@@ -195,11 +197,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         testShortcutsTextBuilder.AppendLine("U   NEXT PLAYER MOVESET");
         testShortcutsTextBuilder.Append("F11 TIME: ")
             .AppendLine(GameDebugTimeScale.IsSlowMotion ? "0.25x" : "1x");
-        testShortcutsTextBuilder.Append("HOLD Y RESET ALL SAVES: ")
-            .Append((playerHealth != null
-                ? playerHealth.ResetAllSavesHoldProgress * 100f
-                : 0f).ToString("0"))
-            .AppendLine("%");
         testShortcutsTextBuilder.AppendLine("R   RESTART");
         testShortcutsText.text = testShortcutsTextBuilder.ToString();
     }

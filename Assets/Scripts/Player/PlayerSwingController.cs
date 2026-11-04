@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>Localiza pontos de balanco e aplica um movimento presetado no motor do jogador.</summary>
 [DisallowMultipleComponent]
@@ -8,8 +7,6 @@ using UnityEngine.InputSystem;
 public sealed class PlayerSwingController : MonoBehaviour
 {
     [Header("Input")]
-    [Tooltip("Tecla principal de grapple. Usa ponto de balanco visivel quando houver; caso contrario, dispara o ataque especial.")]
-    [SerializeField] private Key swingKey = Key.F;
     [Tooltip("Permite soltar a corda ao pressionar o input normal de pulo.")]
     [SerializeField] private bool releaseOnJump = true;
 
@@ -69,6 +66,7 @@ public sealed class PlayerSwingController : MonoBehaviour
     private float swingAngle;
     private float swingBaseAngle;
     private float swingElapsed;
+    private Vector3 lastSwingVelocity;
     private bool isSwinging;
     private PlayerInputBuffer inputBuffer;
 
@@ -206,7 +204,7 @@ public sealed class PlayerSwingController : MonoBehaviour
         if (isSwinging && movement != null && playerState != null &&
             playerState.IsSwinging())
         {
-            movement.EndSwingMotion(Vector3.zero);
+            movement.EndSwingMotion(lastSwingVelocity);
         }
         ClearSwingState();
     }
@@ -217,9 +215,7 @@ public sealed class PlayerSwingController : MonoBehaviour
 
     private bool SwingPressed()
     {
-        Keyboard keyboard = Keyboard.current;
-        return keyboard != null && swingKey != Key.None &&
-            keyboard[swingKey].wasPressedThisFrame;
+        return GameInput.SwingPressed;
     }
 
     private PlayerSwingAnchor FindBestAnchor(bool allowAttacking = false)
@@ -390,6 +386,7 @@ public sealed class PlayerSwingController : MonoBehaviour
             -relative.y);
         swingAngle = swingBaseAngle;
         swingElapsed = 0f;
+        lastSwingVelocity = Vector3.zero;
 
         Vector3 targetCenter = GetPendulumPosition();
         CollisionFlags collision = movement.MoveDuringSwing(
@@ -420,6 +417,7 @@ public sealed class PlayerSwingController : MonoBehaviour
 
         Vector3 targetCenter = GetPendulumPosition();
         Vector3 displacement = targetCenter - GetPlayerCenter();
+        lastSwingVelocity = displacement / deltaTime;
         CollisionFlags collision = movement.MoveDuringSwing(displacement);
         if (detachOnWorldCollision && collision != CollisionFlags.None)
         {
@@ -481,7 +479,7 @@ public sealed class PlayerSwingController : MonoBehaviour
         swingElapsed = 0f;
         if (ropeRenderer != null)
             ropeRenderer.enabled = false;
-        movement.EndSwingMotion(Vector3.zero, releasedByJump,
+        movement.EndSwingMotion(lastSwingVelocity, releasedByJump,
             jumpReleaseUpwardSpeed);
     }
 

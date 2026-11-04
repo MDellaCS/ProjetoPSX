@@ -69,6 +69,7 @@ public sealed class EnemySpawnPresentation : MonoBehaviour
 
         if (routine != null)
             StopCoroutine(routine);
+        DestroySphere();
         RestoreEnemy();
         routine = StartCoroutine(PlayRoutine());
         return true;
@@ -168,8 +169,11 @@ public sealed class EnemySpawnPresentation : MonoBehaviour
         Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
         if (shader == null) shader = Shader.Find("Sprites/Default");
         if (shader == null) shader = Shader.Find("Standard");
-        sphereMaterial = new Material(shader) { color = sphereColor };
-        renderer.sharedMaterial = sphereMaterial;
+        if (shader != null)
+        {
+            sphereMaterial = new Material(shader) { color = sphereColor };
+            renderer.sharedMaterial = sphereMaterial;
+        }
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         renderer.receiveShadows = false;
         SetSphereScale(initialSphereScale);

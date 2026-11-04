@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 using UnityEngine.Serialization;
 #if UNITY_EDITOR
@@ -29,8 +28,6 @@ public sealed class CutsceneController : MonoBehaviour
     [SerializeField] private bool freezeEnemies = true;
     [Tooltip("Permite encerrar a cutscene pela tecla configurada, avançando a Timeline para seu estado final.")]
     [SerializeField] private bool allowSkip = true;
-    [Tooltip("Tecla usada para pular esta cutscene quando Allow Skip estiver ativo.")]
-    [SerializeField] private Key skipKey = Key.Space;
     [Tooltip("Player afetado pela cutscene. Se vazio, procura o objeto com a tag Player ao iniciar.")]
     [SerializeField] private Transform player;
 
@@ -123,7 +120,7 @@ public sealed class CutsceneController : MonoBehaviour
     public DirectorUpdateMode TimelineUpdateMode => director != null
         ? director.timeUpdateMode : DirectorUpdateMode.GameTime;
     public bool CanSkip => allowSkip;
-    public string SkipKeyName => skipKey.ToString();
+    public string SkipKeyName => GameInputBindings.GetDisplayString("CutsceneSkip");
 
     private void Awake()
     {
@@ -151,9 +148,9 @@ public sealed class CutsceneController : MonoBehaviour
 
     private void Update()
     {
-        if (!isRunning || !allowSkip || Keyboard.current == null)
+        if (!isRunning || !allowSkip || GamePauseController.IsPaused)
             return;
-        if (Keyboard.current[skipKey].wasPressedThisFrame)
+        if (GameInput.CutsceneSkipPressed)
             SkipCutscene();
     }
 

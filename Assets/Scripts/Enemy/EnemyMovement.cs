@@ -41,6 +41,8 @@ public sealed class EnemyMovement : MonoBehaviour
     [Min(.01f)] [SerializeField] private float impactWeight = 1f;
     [Tooltip("Aumento percentual do raio e da altura da capsula invisivel que detecta inimigos durante Launch Forwards. Nao altera o CharacterController normal.")]
     [Range(0f, 300f)] [SerializeField] private float launchedBodyImpactHitboxSizeIncreasePercent = 50f;
+    [Tooltip("Camadas consultadas pela hitbox de impacto corporal durante Launch Forwards.")]
+    [SerializeField] private LayerMask bodyImpactQueryMask = Physics.DefaultRaycastLayers;
 
     [Header("Separacao de Entidades")]
     [Tooltip("Ignora a separacao horizontal entre entidades terrestres. Use para inimigos rastejadores ou outras criaturas que devem poder passar por baixo/de dentro de outras entidades. Flyers ja sao ignorados automaticamente.")]
@@ -80,7 +82,7 @@ public sealed class EnemyMovement : MonoBehaviour
     private bool suppressAuthoredMovement;
     private Vector3 grapplePullVelocity;
     private readonly HashSet<EnemyBase> bodyImpactTargets = new();
-    private readonly Collider[] bodyImpactOverlapBuffer = new Collider[64];
+    private Collider[] bodyImpactOverlapBuffer = new Collider[64];
 
     public float SlowSpeed => slowSpeed;
     public float StandardSpeed => standardSpeed;
@@ -633,6 +635,7 @@ public sealed class EnemyMovement : MonoBehaviour
         isLaunched = true;
         verticalVelocity = -Mathf.Max(0f, fallSpeed);
         hasGroundContact = false;
+        launchGravity = gravity;
         ResetJuggleMovement();
     }
 
@@ -795,8 +798,17 @@ public sealed class EnemyMovement : MonoBehaviour
 
         GetBodyImpactCapsule(out Vector3 first, out Vector3 second,
             out float radius);
-        int count = Physics.OverlapCapsuleNonAlloc(first, second, radius,
-            bodyImpactOverlapBuffer);
+        int count;
+        while (true)
+        {
+            count = Physics.OverlapCapsuleNonAlloc(first, second, radius,
+                bodyImpactOverlapBuffer, bodyImpactQueryMask,
+                QueryTriggerInteraction.Collide);
+            if (count < bodyImpactOverlapBuffer.Length)
+                break;
+            System.Array.Resize(ref bodyImpactOverlapBuffer,
+                bodyImpactOverlapBuffer.Length * 2);
+        }
         for (int index = 0; index < count; index++)
         {
             Collider hit = bodyImpactOverlapBuffer[index];

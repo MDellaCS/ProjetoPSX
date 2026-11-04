@@ -66,6 +66,10 @@ public class PlayerHUDToolkit : MonoBehaviour
     private PlayerHeat playerHeat;
     private PlayerHealth playerHealth;
     private PlayerMovesetController movesetController;
+    private PlayerLockOn playerLockOn;
+    private Camera lockOnCamera;
+    private VisualElement playerHudRoot;
+    private VisualElement lockOnMarker;
     private VisualElement heatThermometer;
     private VisualElement healthBar;
     private VisualElement healthFill;
@@ -117,6 +121,9 @@ public class PlayerHUDToolkit : MonoBehaviour
     {
         if (playerHeat == null || playerHealth == null || movesetController == null)
             ResolvePlayerComponents();
+        if (playerLockOn == null && playerTransform != null)
+            playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
+        UpdateLockOnMarker();
         if (playerHeat == null || playerHealth == null)
             return;
 
@@ -138,15 +145,16 @@ public class PlayerHUDToolkit : MonoBehaviour
         if (root == null)
             return;
 
-        VisualElement hudRoot = root.Q<VisualElement>("player-hud") ?? root;
-        hudRoot.style.position = Position.Absolute;
-        hudRoot.style.left = 0f;
-        hudRoot.style.top = 0f;
-        hudRoot.style.right = 0f;
-        hudRoot.style.bottom = 0f;
-        hudRoot.style.width = Length.Percent(100f);
-        hudRoot.style.height = Length.Percent(100f);
-        hudRoot.style.overflow = Overflow.Visible;
+        playerHudRoot = root.Q<VisualElement>("player-hud") ?? root;
+        playerHudRoot.style.position = Position.Absolute;
+        playerHudRoot.style.left = 0f;
+        playerHudRoot.style.top = 0f;
+        playerHudRoot.style.right = 0f;
+        playerHudRoot.style.bottom = 0f;
+        playerHudRoot.style.width = Length.Percent(100f);
+        playerHudRoot.style.height = Length.Percent(100f);
+        playerHudRoot.style.overflow = Overflow.Visible;
+        lockOnMarker = root.Q<VisualElement>("lock-on-marker");
 
         heatPowerText = root.Q<Label>("heat-power-value");
         heatThermometer = root.Q<VisualElement>("heat-thermometer");
@@ -202,6 +210,44 @@ public class PlayerHUDToolkit : MonoBehaviour
             thermometer.style.marginTop = -evt.newRect.height * .5f;
     }
 
+    private void UpdateLockOnMarker()
+    {
+        if (lockOnMarker == null)
+            return;
+
+        Transform target = playerLockOn != null
+            ? playerLockOn.LockedTarget : null;
+        if (target == null)
+        {
+            lockOnMarker.style.display = DisplayStyle.None;
+            return;
+        }
+
+        if (lockOnCamera == null || !lockOnCamera.isActiveAndEnabled)
+            lockOnCamera = Camera.main;
+        if (lockOnCamera == null)
+        {
+            lockOnMarker.style.display = DisplayStyle.None;
+            return;
+        }
+
+        Vector3 screen = lockOnCamera.WorldToScreenPoint(
+            playerLockOn.LockPoint);
+        if (screen.z <= 0f || playerHudRoot == null ||
+            playerHudRoot.resolvedStyle.width <= 0f ||
+            playerHudRoot.resolvedStyle.height <= 0f)
+        {
+            lockOnMarker.style.display = DisplayStyle.None;
+            return;
+        }
+
+        float scaleX = playerHudRoot.resolvedStyle.width / Screen.width;
+        float scaleY = playerHudRoot.resolvedStyle.height / Screen.height;
+        lockOnMarker.style.left = screen.x * scaleX - 8f;
+        lockOnMarker.style.top = (Screen.height - screen.y) * scaleY - 8f;
+        lockOnMarker.style.display = DisplayStyle.Flex;
+    }
+
     private static void BuildNotches(VisualElement parent,
         List<VisualElement> output, int count, string className)
     {
@@ -236,6 +282,7 @@ public class PlayerHUDToolkit : MonoBehaviour
             playerHeat = playerTransform.GetComponent<PlayerHeat>();
             playerHealth = playerTransform.GetComponent<PlayerHealth>();
             movesetController = playerTransform.GetComponent<PlayerMovesetController>();
+            playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
         }
     }
 

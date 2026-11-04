@@ -14,6 +14,8 @@ public sealed class EnemyGuard : MonoBehaviour
     [Range(0f, 100f)] [SerializeField] private float maximumAggressionPercentToConsiderGuard = 50f;
     [Tooltip("Distancia horizontal maxima ao jogador para o Brain considerar levantar guarda.")]
     [Min(0f)] [SerializeField] private float guardStartMaximumRange = 3f;
+    [Tooltip("Angulo frontal maximo, em graus, dentro do qual a guarda bloqueia golpes. Golpes por tras ultrapassam a defesa.")]
+    [Range(0f, 180f)] [SerializeField] private float maximumBlockAngle = 110f;
     [Tooltip("Menor tempo que a guarda permanece levantada antes de poder baixar.")]
     [Min(0f)] [SerializeField] private float minimumGuardDuration = .35f;
     [Tooltip("Maior tempo sorteado para a guarda permanecer levantada.")]
@@ -190,7 +192,11 @@ public sealed class EnemyGuard : MonoBehaviour
     internal bool TryBlock(PlayerAttackType attackType,
         Vector3 attackerPosition, ref int damage, ref int poiseDamage)
     {
-        if (!IsGuarding || !CanBlockAttackType(attackType))
+        Vector3 toAttacker = attackerPosition - transform.position;
+        toAttacker.y = 0f;
+        if (!IsGuarding || !CanBlockAttackType(attackType) ||
+            toAttacker.sqrMagnitude <= .0001f ||
+            Vector3.Angle(transform.forward, toAttacker) > maximumBlockAngle)
         {
             return false;
         }

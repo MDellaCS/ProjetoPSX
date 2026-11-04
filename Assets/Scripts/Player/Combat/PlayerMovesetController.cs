@@ -38,6 +38,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private AttackGesture currentGesture;
     private AttackGesture pendingGesture;
     private bool startingMovesetNode;
+    private float GameplayTime => CombatImpactSystem.GetGameplayTime(this);
 
     public PlayerMovesetDefinition Moveset => moveset;
     public bool UsesHealth => moveset != null && moveset.resourceMode == PlayerResourceMode.Health;
@@ -72,7 +73,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
         if (playerState != null && playerState.IsDead()) return;
-        if (Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
+        if (Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
             CycleMoveset();
         if (moveset == null) return;
         if (inputBuffer.HasBuffered(PlayerBufferedInput.HeavyAttack)) TryInput(PlayerAttackInput.Heavy);
@@ -256,7 +257,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
             inputBuffer.GetLatestAttackPressSequence(currentGesture.Input),
             inputBuffer.IsAttackButtonHeld(currentGesture.Input),
             currentGesture.HeldBranchConsumed,
-            Time.time - currentGesture.PressedAt,
+            GameplayTime - currentGesture.PressedAt,
             moveset.heldAttackBranchThreshold))
             return;
 
@@ -275,7 +276,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
         // O buffer pode ter capturado o clique durante o Windup ou enquanto
         // o Node anterior ainda aguardava sua continuacao. Avalia a janela no
         // instante em que o input pode ser resolvido contra o ataque atual.
-        float sinceActive = Time.time - activeStartedAt;
+        float sinceActive = GameplayTime - activeStartedAt;
         if (!allowOutsideContinuationWindow &&
             (sinceActive < timing.minimumDelayAfterWindup ||
              sinceActive > timing.continuationWindow))
@@ -311,7 +312,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
             pendingNode = null;
             pendingGesture = default;
         }
-        activeStartedAt = Time.time + (_.WindupDuration);
+        activeStartedAt = GameplayTime + (_.WindupDuration);
     }
     private void OnAttackFinished(PlayerAttackRuntime _)
     {

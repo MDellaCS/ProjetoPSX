@@ -21,6 +21,7 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
     [Min(0f)] [SerializeField] private float verticalContactTolerance = .3f;
 
     private readonly List<GroundEntity> entities = new();
+    private PlayerMovement cachedPlayer;
 
     private struct GroundEntity
     {
@@ -60,12 +61,19 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
     {
         entities.Clear();
 
-        foreach (PlayerMovement player in FindObjectsByType<PlayerMovement>(FindObjectsInactive.Exclude))
-            TryAdd(player, null);
+        if (cachedPlayer == null || !cachedPlayer.isActiveAndEnabled ||
+            !cachedPlayer.gameObject.activeInHierarchy)
+            cachedPlayer = FindAnyObjectByType<PlayerMovement>(
+                FindObjectsInactive.Exclude);
+        if (cachedPlayer != null)
+            TryAdd(cachedPlayer, null);
 
-        foreach (EnemyMovement enemy in FindObjectsByType<EnemyMovement>(FindObjectsInactive.Exclude))
+        foreach (EnemyBase enemyBase in EnemyBase.ActiveEnemies)
         {
-            if (enemy.ParticipatesInGroundEntitySeparation)
+            if (enemyBase == null)
+                continue;
+            EnemyMovement enemy = enemyBase.SeparationMovement;
+            if (enemy != null && enemy.ParticipatesInGroundEntitySeparation)
                 TryAdd(null, enemy);
         }
     }

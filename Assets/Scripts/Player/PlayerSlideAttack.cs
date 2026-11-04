@@ -17,6 +17,8 @@ public class PlayerSlideAttack : MonoBehaviour
     [Min(0f)] public float hitboxDepthMultiplier = 1.75f;
     [Tooltip("Tempo em que o player atravessa apenas o inimigo que o Slide acabou de lancar.")]
     [Min(0f)] public float launchedEnemyCollisionIgnoreDuration = .15f;
+    [Tooltip("Camadas consultadas pelo hitbox do Slide para encontrar inimigos atingidos.")]
+    [SerializeField] private LayerMask slideHitboxLayers = Physics.DefaultRaycastLayers;
     [Tooltip("Converte a velocidade atual do Slide em impulso horizontal para o inimigo lancado.")]
     [Min(0f)] public float launchForwardConversion = 0f;
     [Tooltip("Dano de Poise causado pelo impacto do Slide. O Launch Up acontece somente quando este golpe deixa o Poise do inimigo em zero ou menos.")]
@@ -24,6 +26,7 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private readonly HashSet<EnemyBase> enemiesHitThisSlide = new();
     private readonly List<IgnoredEnemyCollision> ignoredEnemyCollisions = new();
+    private Collider[] hitBuffer = new Collider[32];
 
     private PlayerMovement playerMovement;
     private PlayerState playerState;
@@ -33,8 +36,19 @@ public class PlayerSlideAttack : MonoBehaviour
 
     private sealed class IgnoredEnemyCollision
     {
+        public EnemyBase enemy;
         public float restoreTime;
-        public readonly List<Collider> colliders = new();
+    }
+
+    internal bool IsIgnoringMovementCollision(EnemyBase enemy)
+    {
+        for (int index = 0; index < ignoredEnemyCollisions.Count; index++)
+        {
+            IgnoredEnemyCollision ignored = ignoredEnemyCollisions[index];
+            if (ignored.enemy == enemy && Time.time < ignored.restoreTime)
+                return true;
+        }
+        return false;
     }
 
     public bool IsActive => playerMovement != null && playerState != null &&
@@ -79,16 +93,20 @@ public class PlayerSlideAttack : MonoBehaviour
         Vector3 hitboxHalfExtents = GetHitboxHalfExtents();
         float horizontalAttackRadius = new Vector2(
             hitboxHalfExtents.x, hitboxHalfExtents.z).magnitude;
-        Collider[] hits = Physics.OverlapBox(
-            GetHitboxCenter(),
-            hitboxHalfExtents,
-            transform.rotation,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Ignore
-        );
-
-        foreach (Collider hit in hits)
+        int hitCount;
+        while (true)
         {
+            hitCount = Physics.OverlapBoxNonAlloc(GetHitboxCenter(),
+                hitboxHalfExtents, hitBuffer, transform.rotation,
+                slideHitboxLayers, QueryTriggerInteraction.Ignore);
+            if (hitCount < hitBuffer.Length)
+                break;
+            System.Array.Resize(ref hitBuffer, hitBuffer.Length * 2);
+        }
+
+        for (int index = 0; index < hitCount; index++)
+        {
+            Collider hit = hitBuffer[index];
             EnemyBase enemy = hit.GetComponentInParent<EnemyBase>();
             if (enemy == null || enemiesHitThisSlide.Contains(enemy))
             {
@@ -121,22 +139,21 @@ public class PlayerSlideAttack : MonoBehaviour
             return;
         }
 
-        IgnoredEnemyCollision ignored = new()
+        for (int index = 0; index < ignoredEnemyCollisions.Count; index++)
         {
-            restoreTime = Time.time + launchedEnemyCollisionIgnoreDuration
-        };
-
-        foreach (Collider enemyCollider in enemy.GetComponentsInChildren<Collider>())
-        {
-            if (enemyCollider == null || enemyCollider == controller.Collider)
+            IgnoredEnemyCollision existing = ignoredEnemyCollisions[index];
+            if (existing.enemy != enemy)
                 continue;
-
-            Physics.IgnoreCollision(controller.Collider, enemyCollider, true);
-            ignored.colliders.Add(enemyCollider);
+            existing.restoreTime = Time.time +
+                launchedEnemyCollisionIgnoreDuration;
+            return;
         }
 
-        if (ignored.colliders.Count > 0)
-            ignoredEnemyCollisions.Add(ignored);
+        ignoredEnemyCollisions.Add(new IgnoredEnemyCollision
+        {
+            enemy = enemy,
+            restoreTime = Time.time + launchedEnemyCollisionIgnoreDuration
+        });
     }
 
     private void RestoreExpiredEnemyCollisions()
@@ -147,33 +164,11 @@ public class PlayerSlideAttack : MonoBehaviour
             if (Time.time < ignored.restoreTime)
                 continue;
 
-            RestoreEnemyCollision(ignored);
             ignoredEnemyCollisions.RemoveAt(index);
         }
     }
 
-    private void RestoreAllEnemyCollisions()
-    {
-        foreach (IgnoredEnemyCollision ignored in ignoredEnemyCollisions)
-            RestoreEnemyCollision(ignored);
-
-        ignoredEnemyCollisions.Clear();
-    }
-
-    private void RestoreEnemyCollision(IgnoredEnemyCollision ignored)
-    {
-        if (controller == null || ignored == null)
-            return;
-
-        foreach (Collider enemyCollider in ignored.colliders)
-        {
-            if (enemyCollider != null)
-                Physics.IgnoreCollision(controller.Collider, enemyCollider, false);
-        }
-    }
-
-    private void OnDisable() => RestoreAllEnemyCollisions();
-    private void OnDestroy() => RestoreAllEnemyCollisions();
+    private void OnDisable() => ignoredEnemyCollisions.Clear();
 
     private Vector3 GetHitboxCenter()
     {

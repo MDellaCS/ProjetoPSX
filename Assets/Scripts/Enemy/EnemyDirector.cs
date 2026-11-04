@@ -9,6 +9,7 @@ using UnityEngine;
 public class EnemyDirector : MonoBehaviour
 {
     private static EnemyDirector activeDirector;
+    private static readonly List<EnemyDirector> enabledDirectors = new();
 
     [Header("Lead Budget")]
     [Tooltip("Ativa a escolha de atacantes, a alternancia de turnos e os modificadores de agressividade do Director.")]
@@ -41,6 +42,7 @@ public class EnemyDirector : MonoBehaviour
     private readonly HashSet<EnemyBase> activeAttackers = new();
     private readonly Dictionary<EnemyBase, float> lastAttackAt = new();
     private readonly Dictionary<EnemyBase, float> runtimeWeights = new();
+    private readonly Dictionary<EnemyBase, (int frame, bool available)> openingCache = new();
     private readonly List<EnemyBase> releasedEnemies = new();
     private readonly List<EnemyBase> replacementLeads = new();
     private EnemyBase nextAttacker;
@@ -69,7 +71,37 @@ public class EnemyDirector : MonoBehaviour
                 ? activeDirector.airborneDodgeChanceMultiplier : .5f
             : 1f;
 
-    private void OnEnable() => activeDirector = this;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        enabledDirectors.Clear();
+        activeDirector = null;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RebuildDirectors()
+    {
+        enabledDirectors.Clear();
+        activeDirector = null;
+        foreach (EnemyDirector director in Object.FindObjectsByType<EnemyDirector>(
+            FindObjectsInactive.Exclude))
+        {
+            director.activeAttackers.Clear();
+            director.lastAttackAt.Clear();
+            director.runtimeWeights.Clear();
+            director.openingCache.Clear();
+            director.nextAttacker = null;
+            enabledDirectors.Add(director);
+            activeDirector = director;
+        }
+    }
+
+    private void OnEnable()
+    {
+        enabledDirectors.Remove(this);
+        enabledDirectors.Add(this);
+        activeDirector = this;
+    }
 
     private void OnValidate()
     {
@@ -83,12 +115,26 @@ public class EnemyDirector : MonoBehaviour
 
     private void OnDisable()
     {
+        enabledDirectors.Remove(this);
         if (activeDirector == this)
+        {
             activeDirector = null;
+            for (int index = enabledDirectors.Count - 1; index >= 0; index--)
+            {
+                EnemyDirector candidate = enabledDirectors[index];
+                if (candidate != null && candidate.isActiveAndEnabled)
+                {
+                    activeDirector = candidate;
+                    break;
+                }
+                enabledDirectors.RemoveAt(index);
+            }
+        }
         activeAttackers.Clear();
         lastAttackAt.Clear();
         nextAttacker = null;
         runtimeWeights.Clear();
+        openingCache.Clear();
     }
 
     private void Update()
@@ -110,6 +156,15 @@ public class EnemyDirector : MonoBehaviour
     {
         if (activeDirector != null && enemy != null)
             activeDirector.RemoveEnemy(enemy);
+    }
+
+    public static void ReleaseAttackTurn(EnemyBase enemy)
+    {
+        if (activeDirector == null || enemy == null)
+            return;
+        activeDirector.activeAttackers.Remove(enemy);
+        if (activeDirector.nextAttacker == enemy)
+            activeDirector.nextAttacker = null;
     }
 
     public static float GetAggressionModifier(EnemyBase enemy)
@@ -230,7 +285,13 @@ public class EnemyDirector : MonoBehaviour
             activeAttackers.Contains(enemy))
             return false;
 
-        return enemy.HasAvailableOpening;
+        if (openingCache.TryGetValue(enemy, out var cached) &&
+            cached.frame == Time.frameCount)
+            return cached.available;
+
+        bool available = enemy.HasAvailableOpening;
+        openingCache[enemy] = (Time.frameCount, available);
+        return available;
     }
 
     private static float HorizontalDistanceToTarget(EnemyBase enemy)
@@ -369,6 +430,7 @@ public class EnemyDirector : MonoBehaviour
         activeAttackers.Remove(enemy);
         lastAttackAt.Remove(enemy);
         runtimeWeights.Remove(enemy);
+        openingCache.Remove(enemy);
         if (nextAttacker == enemy)
             nextAttacker = null;
     }

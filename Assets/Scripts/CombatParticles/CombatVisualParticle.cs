@@ -75,7 +75,8 @@ public sealed class CombatVisualParticle : MonoBehaviour
         Material selectedMaterial = currencyValue > 0 && currencyMaterial != null
             ? currencyMaterial : material;
         ConfigureFadeMaterials(new[] { selectedMaterial });
-        body ??= GetComponent<Rigidbody>();
+        if (body == null)
+            body = GetComponent<Rigidbody>();
         body.mass = profile.mass;
         body.linearDamping = profile.linearDamping;
         body.angularDamping = profile.angularDamping;
@@ -131,7 +132,8 @@ public sealed class CombatVisualParticle : MonoBehaviour
             boxCollider.center = mesh.bounds.center;
         }
 
-        body ??= GetComponent<Rigidbody>();
+        if (body == null)
+            body = GetComponent<Rigidbody>();
         body.mass = bodyPartProfile.mass;
         body.linearDamping = bodyPartProfile.linearDamping;
         body.angularDamping = bodyPartProfile.angularDamping;

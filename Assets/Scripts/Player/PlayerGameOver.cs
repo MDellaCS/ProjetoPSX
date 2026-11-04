@@ -7,6 +7,7 @@ public class PlayerGameOver : MonoBehaviour
     [SerializeField] private GameOverHUD gameOverHUD;
 
     [Header("Timing")]
+    [Tooltip("Tempo em segundos reais entre a morte e a exibicao da tela de Game Over.")]
     [SerializeField] private float showDelay = 1.5f;
 
     private PlayerState playerState;
@@ -81,6 +82,7 @@ public class PlayerGameOver : MonoBehaviour
         // uma fase. Limpa primeiro os estados da campanha anterior.
         GetComponent<PlayerHealth>()?.ResetForNewGame();
         playerHeat?.ResetForNewGame();
+        GetComponent<PlayerProgression>()?.ReapplyActiveEffects();
         GetComponent<PlayerMovement>()?.ResetForNewGame();
         gameOverHUD?.Hide();
         GameTimeScaleEffects.ResetForGameRestart();

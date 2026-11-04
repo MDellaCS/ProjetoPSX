@@ -27,6 +27,8 @@ public sealed class EnemyEncounterWave : MonoBehaviour
     [Min(0f)] [SerializeField] private float delayBetweenSpawns;
     [Tooltip("Largura e profundidade da area de spawn centrada neste objeto.")]
     [SerializeField] private Vector2 areaSize = new(8f, 8f);
+    [Tooltip("Limite maximo da ampliacao da area de spawn apos tentativas sem local valido.")]
+    [Min(1f)] [SerializeField] private float maximumAreaMultiplier = 1.5f;
 
     private EnemyEncounter encounter;
     private readonly List<EnemyBase> enemies = new();
@@ -140,7 +142,8 @@ public sealed class EnemyEncounterWave : MonoBehaviour
 
         if (!encounter.TryFindSpawnPosition(this, areaMultiplier, out Vector3 position))
         {
-            areaMultiplier += encounter.AreaGrowthPerRetry;
+            areaMultiplier = Mathf.Min(maximumAreaMultiplier,
+                areaMultiplier + encounter.AreaGrowthPerRetry);
             retryTimer = encounter.RetryDelay;
             return false;
         }

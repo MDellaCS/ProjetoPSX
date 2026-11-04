@@ -25,7 +25,8 @@ public sealed class EnemyBodyPartDeathParticles : MonoBehaviour
                 bodyPartRenderers.Add(renderer);
             }
             else if (renderer is MeshRenderer meshRenderer &&
-                meshRenderer.GetComponent<MeshFilter>()?.sharedMesh != null)
+                meshRenderer.TryGetComponent(out MeshFilter meshFilter) &&
+                meshFilter.sharedMesh != null)
             {
                 bodyPartRenderers.Add(renderer);
             }

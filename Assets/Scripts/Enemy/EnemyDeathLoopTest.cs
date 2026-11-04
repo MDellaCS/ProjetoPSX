@@ -49,6 +49,8 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
     {
         if (playOnStart)
             RestartLoop();
+        else
+            enabled = false;
     }
 
     private void Update()
@@ -66,6 +68,11 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
     [ContextMenu("Restart Test Loop")]
     public void RestartLoop()
     {
+        if (!Debug.isDebugBuild)
+        {
+            enabled = false;
+            return;
+        }
         SetAliveVisual(true);
         isAlive = true;
         stateTimer = aliveDuration;

@@ -9,6 +9,8 @@ public static class GameDebugTimeScale
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetSession() => IsSlowMotion = false;
 
+    public static void ResetForGameRestart() => IsSlowMotion = false;
+
     /// <summary>Alterna entre tempo normal e 25% do tempo normal.</summary>
     public static void Toggle()
     {

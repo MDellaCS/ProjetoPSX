@@ -30,11 +30,25 @@ public class CombatImpactSystem : MonoBehaviour
     {
         public Transform combatantRoot;
         public float restoreAt;
+        public float gameplayElapsed;
     }
 
     private static CombatImpactSystem instance;
     private static readonly List<FrozenAnimator> frozenAnimators = new();
     private static readonly List<FrozenGameplay> frozenGameplay = new();
+    private static readonly Dictionary<Transform, float> completedGameplayFreezeTime = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSession()
+    {
+        foreach (FrozenAnimator frozen in frozenAnimators)
+            if (frozen.animator != null)
+                frozen.animator.speed = frozen.originalSpeed;
+        frozenAnimators.Clear();
+        frozenGameplay.Clear();
+        completedGameplayFreezeTime.Clear();
+        instance = null;
+    }
 
     [Header("Player Attack Impact")]
     [SerializeField] private ImpactProfile lightAttackImpact = new ImpactProfile
@@ -126,8 +140,23 @@ public class CombatImpactSystem : MonoBehaviour
         for (int index = frozenGameplay.Count - 1; index >= 0; index--)
         {
             FrozenGameplay frozen = frozenGameplay[index];
-            if (frozen.combatantRoot == null || now >= frozen.restoreAt)
+            if (frozen.combatantRoot == null)
+            {
                 frozenGameplay.RemoveAt(index);
+                continue;
+            }
+
+            if (now < frozen.restoreAt)
+            {
+                frozen.gameplayElapsed += Time.deltaTime;
+                continue;
+            }
+
+            completedGameplayFreezeTime.TryGetValue(frozen.combatantRoot,
+                out float elapsed);
+            completedGameplayFreezeTime[frozen.combatantRoot] =
+                elapsed + frozen.gameplayElapsed;
+            frozenGameplay.RemoveAt(index);
         }
     }
 
@@ -140,6 +169,7 @@ public class CombatImpactSystem : MonoBehaviour
         }
         frozenAnimators.Clear();
         frozenGameplay.Clear();
+        completedGameplayFreezeTime.Clear();
     }
 
     public static void ReportPlayerAttackImpact(
@@ -173,9 +203,13 @@ public class CombatImpactSystem : MonoBehaviour
             return false;
 
         float now = Time.unscaledTime;
-        return frozenAnimators.Exists(
-            frozen => frozen.animator == animator && now < frozen.restoreAt
-        );
+        for (int i = 0; i < frozenAnimators.Count; i++)
+        {
+            FrozenAnimator frozen = frozenAnimators[i];
+            if (frozen.animator == animator && now < frozen.restoreAt)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -188,10 +222,35 @@ public class CombatImpactSystem : MonoBehaviour
             return false;
 
         Transform combatantRoot = GetCombatantRoot(participant.transform);
-        FrozenGameplay frozen = frozenGameplay.Find(
-            entry => entry.combatantRoot == combatantRoot
-        );
-        return frozen != null && Time.unscaledTime < frozen.restoreAt;
+        float now = Time.unscaledTime;
+        for (int i = 0; i < frozenGameplay.Count; i++)
+        {
+            FrozenGameplay frozen = frozenGameplay[i];
+            if (frozen.combatantRoot == combatantRoot &&
+                now < frozen.restoreAt)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Relogio local que nao avanca durante hitstop do participante.</summary>
+    public static float GetGameplayTime(Component participant)
+    {
+        if (participant == null)
+            return Time.time;
+
+        Transform root = GetCombatantRoot(participant.transform);
+        completedGameplayFreezeTime.TryGetValue(root, out float frozenElapsed);
+        for (int i = 0; i < frozenGameplay.Count; i++)
+        {
+            FrozenGameplay entry = frozenGameplay[i];
+            if (entry.combatantRoot != root ||
+                Time.unscaledTime >= entry.restoreAt)
+                continue;
+            frozenElapsed += entry.gameplayElapsed;
+            break;
+        }
+        return Time.time - frozenElapsed;
     }
 
     public static void ReportEnemyAttackImpact(
@@ -299,9 +358,13 @@ public class CombatImpactSystem : MonoBehaviour
             if (animator == null)
                 continue;
 
-            FrozenAnimator existing = frozenAnimators.Find(
-                frozen => frozen.animator == animator
-            );
+            FrozenAnimator existing = null;
+            for (int i = 0; i < frozenAnimators.Count; i++)
+                if (frozenAnimators[i].animator == animator)
+                {
+                    existing = frozenAnimators[i];
+                    break;
+                }
             if (existing != null)
             {
                 existing.restoreAt = Mathf.Max(existing.restoreAt, restoreAt);
@@ -324,9 +387,13 @@ public class CombatImpactSystem : MonoBehaviour
 
         Transform combatantRoot = GetCombatantRoot(participant);
         float freezeUntil = Time.unscaledTime + duration;
-        FrozenGameplay existing = frozenGameplay.Find(
-            entry => entry.combatantRoot == combatantRoot
-        );
+        FrozenGameplay existing = null;
+        for (int i = 0; i < frozenGameplay.Count; i++)
+            if (frozenGameplay[i].combatantRoot == combatantRoot)
+            {
+                existing = frozenGameplay[i];
+                break;
+            }
         if (existing != null)
             existing.restoreAt = Mathf.Max(existing.restoreAt, freezeUntil);
         else
@@ -334,7 +401,8 @@ public class CombatImpactSystem : MonoBehaviour
             frozenGameplay.Add(new FrozenGameplay
             {
                 combatantRoot = combatantRoot,
-                restoreAt = freezeUntil
+                restoreAt = freezeUntil,
+                gameplayElapsed = 0f
             });
         }
     }

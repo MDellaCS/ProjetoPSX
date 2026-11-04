@@ -121,7 +121,8 @@ public class PlayerHeat : MonoBehaviour
     // A pequena tolerancia evita que 100 armazenado como 99.99999 por
     // operacoes de ponto flutuante deixe o ultimo quadrado apagado.
     public int CurrentHeatNotch => GetSignedNotch(currentHeat, MaxHeat, maxColdMagnitude);
-    public int CurrentSuperheatNotch => GetPositiveNotch(currentSuperheat, maxSuperheat, 5);
+    public int CurrentSuperheatNotch => GetPositiveNotch(currentSuperheat,
+        maxSuperheat, Mathf.CeilToInt(maxSuperheat / HeatPerNotch));
     public bool IsBurning => burnPhase != BurnPhase.None;
     public bool IsRaging => burnPhase == BurnPhase.Rage;
     public float RageTimeRemaining => IsRaging ? Mathf.Max(0f, burnPhaseTimer) : 0f;
@@ -292,7 +293,11 @@ public class PlayerHeat : MonoBehaviour
     private void RecoverColdOutOfCombat()
     {
         float recoveryLimit = Mathf.Clamp(MinHeat * coldRecoveryLimitPercent, MinHeat, 0f);
-        currentHeat = Mathf.Min(recoveryLimit, currentHeat + passiveColdRecoveryPerSecond * Time.deltaTime);
+        if (currentHeat >= recoveryLimit)
+            return;
+
+        currentHeat = Mathf.Min(recoveryLimit,
+            currentHeat + passiveColdRecoveryPerSecond * Time.deltaTime);
     }
 
     private void UpdatePassiveSuperheat()
@@ -375,8 +380,9 @@ public class PlayerHeat : MonoBehaviour
         }
         float availablePositiveHeat = Mathf.Max(0f, currentHeat);
         float consumedNotch = GetHeavyPowerNotches(availablePositiveHeat);
-        float damageMultiplier = GetHeavyDamageMultiplier(consumedNotch);
-        float poiseMultiplier = GetHeavyPoiseMultiplier(consumedNotch);
+        float currentPowerNotch = GetHeavyPowerNotches(currentHeat);
+        float damageMultiplier = GetHeavyDamageMultiplier(currentPowerNotch);
+        float poiseMultiplier = GetHeavyPoiseMultiplier(currentPowerNotch);
         // O poder ainda e discreto por notch, mas o gasto tambem: um pesado
         // consome blocos completos de 10 Heat e a fracao extra de capacidade
         // quando a barra estiver cheia. O restante fica para o proximo golpe.

@@ -60,6 +60,11 @@ public sealed class PlayerAttackController : MonoBehaviour
 
     private void Update()
     {
+        if (playerState != null && playerState.IsDead())
+        {
+            CancelAttack();
+            return;
+        }
         if (!IsAttacking || GamePauseController.IsPaused ||
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;

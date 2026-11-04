@@ -1,7 +1,8 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="PlayerHUD.uss" />
     <Style src="PlayerHeatHUD.uss" />
-    <ui:VisualElement name="player-hud">
+    <ui:VisualElement name="player-hud" picking-mode="Ignore">
+        <ui:VisualElement name="lock-on-marker" class="lock-on-marker" />
         <ui:VisualElement name="human-health-bar" class="human-health-bar">
             <ui:Label name="human-health-title" text="VIDA" class="human-health-title" />
             <ui:VisualElement name="human-health-track" class="human-health-track">

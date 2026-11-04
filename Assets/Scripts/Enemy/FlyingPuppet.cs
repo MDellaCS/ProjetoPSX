@@ -545,8 +545,9 @@ public class FlyingPuppet : EnemyBase
         teleportDivePhase = TeleportDivePhase.None;
     }
 
-    private void OnDisable()
+    protected override void OnDisable()
     {
+        base.OnDisable();
         RestoreTeleportDivePresentation();
         RestoreOtherEnemyCollisionsAfterTeleportDive();
     }
@@ -581,9 +582,12 @@ public class FlyingPuppet : EnemyBase
         if (animator == null || !animator.isHuman)
             return;
 
-        headGizmoAnchor ??= animator.GetBoneTransform(HumanBodyBones.Head);
-        leftHandGizmoAnchor ??= animator.GetBoneTransform(HumanBodyBones.LeftHand);
-        rightHandGizmoAnchor ??= animator.GetBoneTransform(HumanBodyBones.RightHand);
+        if (headGizmoAnchor == null)
+            headGizmoAnchor = animator.GetBoneTransform(HumanBodyBones.Head);
+        if (leftHandGizmoAnchor == null)
+            leftHandGizmoAnchor = animator.GetBoneTransform(HumanBodyBones.LeftHand);
+        if (rightHandGizmoAnchor == null)
+            rightHandGizmoAnchor = animator.GetBoneTransform(HumanBodyBones.RightHand);
     }
 
     private void DrawBoneGizmoLine(Transform anchor, Color color)

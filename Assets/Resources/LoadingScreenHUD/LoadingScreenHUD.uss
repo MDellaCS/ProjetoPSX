@@ -1,0 +1,49 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
+.loading-screen-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(13, 17, 25);
+    opacity: 1;
+}
+
+.loading-screen-card {
+    width: 72%;
+    max-width: 960px;
+    align-items: stretch;
+}
+
+.loading-screen-title {
+    margin-bottom: 18px;
+    color: rgb(245, 235, 216);
+    font-size: 64px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.loading-progress-track {
+    height: 18px;
+    padding: 3px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+    border-top-color: rgba(245, 235, 216, .65);
+    border-right-color: rgba(245, 235, 216, .65);
+    border-bottom-color: rgba(245, 235, 216, .65);
+    border-left-color: rgba(245, 235, 216, .65);
+    background-color: rgba(0, 0, 0, .5);
+}
+
+.loading-progress-fill {
+    width: 0%;
+    height: 100%;
+    background-color: rgb(177, 55, 46);
+}

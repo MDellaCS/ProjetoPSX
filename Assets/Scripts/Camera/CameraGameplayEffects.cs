@@ -117,6 +117,15 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     private float baseSaturation;
     private float baseContrast;
     private bool thermalProfileInitialized;
+    private static Volume cachedGlobalVolume;
+    private static bool hasSearchedGlobalVolume;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetGlobalVolumeCache()
+    {
+        cachedGlobalVolume = null;
+        hasSearchedGlobalVolume = false;
+    }
 
     internal void Initialize(Transform playerTarget, CameraEffectStack stack)
     {
@@ -269,15 +278,20 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
         if (thermalVolume == null)
         {
-            foreach (Volume volume in FindObjectsByType<Volume>(
-                         FindObjectsInactive.Exclude))
+            if (cachedGlobalVolume == null && !hasSearchedGlobalVolume)
             {
-                if (volume.isGlobal)
+                hasSearchedGlobalVolume = true;
+                foreach (Volume volume in FindObjectsByType<Volume>(
+                             FindObjectsInactive.Exclude))
                 {
-                    thermalVolume = volume;
-                    break;
+                    if (volume != null && volume.isGlobal)
+                    {
+                        cachedGlobalVolume = volume;
+                        break;
+                    }
                 }
             }
+            thermalVolume = cachedGlobalVolume;
         }
         if (thermalVolume == null)
             return;

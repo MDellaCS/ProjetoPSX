@@ -15,7 +15,13 @@ public sealed class PlayerProgression : MonoBehaviour
     public PlayerUpgradeCatalog Catalog { get; private set; }
 
     public static PlayerProgression GetOrAdd(GameObject player) =>
-        player.GetComponent<PlayerProgression>() ?? player.AddComponent<PlayerProgression>();
+        GetOrAddComponent(player);
+
+    private static PlayerProgression GetOrAddComponent(GameObject player)
+    {
+        PlayerProgression progression = player.GetComponent<PlayerProgression>();
+        return progression != null ? progression : player.AddComponent<PlayerProgression>();
+    }
 
     private void Start() => Initialize();
     public void Initialize()
@@ -54,6 +60,26 @@ public sealed class PlayerProgression : MonoBehaviour
         Changed?.Invoke();
     }
 
+    public void DeleteStoredProgress()
+    {
+        Initialize();
+        if (Catalog == null)
+            return;
+        foreach (PlayerUpgradeDefinition attribute in Catalog.attributes)
+        {
+            if (attribute != null && !string.IsNullOrWhiteSpace(attribute.id))
+                PlayerPrefs.DeleteKey(SavePrefix + attribute.id);
+        }
+    }
+
+    public void ReapplyActiveEffects()
+    {
+        Initialize();
+        foreach (PlayerUpgradeEffect effect in appliedEffects)
+            if (effect != null)
+                effect.Apply(this);
+    }
+
     public bool TryPurchase(PlayerUpgradeDefinition attribute, out string message)
     {
         Initialize();
@@ -63,7 +89,9 @@ public sealed class PlayerProgression : MonoBehaviour
         int level = Level(attribute);
         if (level >= attribute.MaximumLevel) { message = "Nivel maximo."; return false; }
         if (attribute.GetLevel(level + 1) == null) { message = "Nivel nao configurado."; return false; }
-        PlayerCurrencyWallet wallet = GetComponent<PlayerCurrencyWallet>() ?? gameObject.AddComponent<PlayerCurrencyWallet>();
+        PlayerCurrencyWallet wallet = GetComponent<PlayerCurrencyWallet>();
+        if (wallet == null)
+            wallet = gameObject.AddComponent<PlayerCurrencyWallet>();
         if (!wallet.TrySpend(attribute.Price(level + 1))) { message = "Currency insuficiente."; return false; }
         levels[attribute.id] = level + 1;
         PlayerPrefs.SetInt(SavePrefix + attribute.id, level + 1);

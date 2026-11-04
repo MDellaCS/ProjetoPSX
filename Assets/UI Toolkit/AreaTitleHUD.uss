@@ -1,3 +1,7 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
 .area-title-card {
     position: absolute;
     right: 64px;
@@ -27,7 +31,7 @@
     width: 100%;
     color: rgba(255, 255, 255, 0.8);
     font-size: 22px;
-    unity-font-style: italic;
+    -unity-font-style: italic;
     white-space: normal;
     -unity-text-align: upper-right;
 }

@@ -25,7 +25,7 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
     [Tooltip("Raio visual permanente do ponto de ancoragem na Scene View.")]
     [Min(.01f)] [SerializeField] private float debugGizmoRadius = .18f;
 
-    public static IEnumerable<PlayerSwingAnchor> ActiveAnchors => activeAnchors;
+    public static HashSet<PlayerSwingAnchor> ActiveAnchors => activeAnchors;
     public bool CanAttach => canAttach && isActiveAndEnabled;
     public Vector3 Position => (anchorPoint != null ? anchorPoint : transform).position;
     public float InteractionRange => Mathf.Max(.1f, interactionRange);
@@ -56,7 +56,20 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetRegistry() => activeAnchors.Clear();
+    private static void ResetRegistry()
+    {
+        activeAnchors.Clear();
+        cachedPlayerMovement = null;
+        cachedPlayerController = null;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RebuildRegistry()
+    {
+        foreach (PlayerSwingAnchor anchor in Object.FindObjectsByType<
+            PlayerSwingAnchor>(FindObjectsInactive.Exclude))
+            activeAnchors.Add(anchor);
+    }
 
     private void OnDrawGizmos()
     {

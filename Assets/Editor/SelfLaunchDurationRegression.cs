@@ -35,16 +35,20 @@ public static class SelfLaunchDurationRegression
     private static float enemyStartHeight;
     private static float enemyPeakHeight;
     private static bool launched;
+    private static bool launchMetricsCaptured;
     private static int jumpTestStage;
     private static float jumpTestStartTime;
     private static float jumpTestStartHeight;
     private static float doubleJumpStartHeight;
     private static float expectedJumpSpeed;
+    private static SceneAsset previousPlayModeStartScene;
 
     static SelfLaunchDurationRegression()
     {
         EditorApplication.update -= OnEditorUpdate;
         EditorApplication.update += OnEditorUpdate;
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
 
     [MenuItem("Tools/Tests/Run Self Launch Duration Regression")]
@@ -52,11 +56,24 @@ public static class SelfLaunchDurationRegression
     {
         Results.Clear();
         scenario = 0;
+        previousPlayModeStartScene = EditorSceneManager.playModeStartScene;
         EditorSceneManager.playModeStartScene = null;
-        EditorSceneManager.OpenScene("Assets/Scenes/TestArena.unity",
+        EditorSceneManager.OpenScene("Assets/Scenes/999. TestArena.unity",
             OpenSceneMode.Single);
+        EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(
+            "Assets/Scenes/999. TestArena.unity");
         EditorPrefs.SetBool(RunKey, true);
         EditorApplication.isPlaying = true;
+    }
+
+    private static void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+        if (state != PlayModeStateChange.ExitingPlayMode ||
+            !EditorPrefs.GetBool(RunKey))
+            return;
+
+        EditorPrefs.SetBool(RunKey, false);
+        EditorSceneManager.playModeStartScene = previousPlayModeStartScene;
     }
 
     private static void OnEditorUpdate()
@@ -97,9 +114,6 @@ public static class SelfLaunchDurationRegression
         if (Time.frameCount <= setupFrame + 1)
             return;
 
-        if (!RunDoubleJumpSceneCheck())
-            return;
-
         if (attacks.CurrentAttack == null && !launched)
         {
             launchBaselineHeight = player.transform.position.y;
@@ -128,24 +142,32 @@ public static class SelfLaunchDurationRegression
         if (!launched)
             return;
 
-        peakHeight = Mathf.Max(peakHeight, player.transform.position.y);
-        if (Time.time - launchTime < 1.1f)
-            return;
+        if (!launchMetricsCaptured)
+        {
+            peakHeight = Mathf.Max(peakHeight, player.transform.position.y);
+            if (Time.time - launchTime < 1.1f)
+                return;
 
-        Results.Add($"Active {ActiveDurations[scenario]:0.00}s: ataque ativo=" +
+            Results.Add($"Active {ActiveDurations[scenario]:0.00}s: ataque ativo=" +
             $"{attacks.IsAttacking}, pico de subida " +
             $"{peakHeight - startHeight:0.000}m, " +
             $"posicao final {player.transform.position.y - startHeight:0.000}m, " +
                 $"pico do inimigo {enemyPeakHeight - enemyStartHeight:0.000}m, " +
             $"inimigo lancado={enemyLaunched}, " +
             $"velocidade vertical {movement.VerticalSpeed:0.000}m/s.");
-        if (!enemyLaunched)
-            Results.Add("FAIL: o inimigo nao recebeu Launch Up no TestArena.");
-        else if (Mathf.Abs((peakHeight - startHeight) -
-            (enemyPeakHeight - enemyStartHeight)) > .2f)
-            Results.Add("FAIL: os picos do player e do inimigo divergiram mais de 0,2m.");
-        else
-            Results.Add("PASS: Launch Up do player e do inimigo atingiu alturas equivalentes no TestArena.");
+            if (!enemyLaunched)
+                Results.Add("FAIL: o inimigo nao recebeu Launch Up no TestArena.");
+            else if (Mathf.Abs((peakHeight - startHeight) -
+                (enemyPeakHeight - enemyStartHeight)) > .2f)
+                Results.Add("FAIL: os picos do player e do inimigo divergiram mais de 0,2m.");
+            else
+                Results.Add("PASS: Launch Up do player e do inimigo atingiu alturas equivalentes no TestArena.");
+            launchMetricsCaptured = true;
+        }
+
+        if (jumpTestStage < 4 && !RunDoubleJumpSceneCheck())
+            return;
+
         Object.Destroy(player);
         if (attackDefinition != null)
             Object.Destroy(attackDefinition);
@@ -160,7 +182,10 @@ public static class SelfLaunchDurationRegression
     {
         dummy = Object.FindAnyObjectByType<PracticeDummy>();
         if (dummy == null)
+        {
             Fail("TestArena nao contem Practice Dummy ativo.");
+            return;
+        }
         targetMovement = dummy.GetComponent<EnemyMovement>();
         dummyStartPosition = dummy.transform.position;
         enemyStartHeight = dummyStartPosition.y;
@@ -210,6 +235,7 @@ public static class SelfLaunchDurationRegression
         startHeight = 0f;
         peakHeight = 0f;
         launched = false;
+        launchMetricsCaptured = false;
         enemyLaunched = false;
         jumpTestStage = 0;
         jumpTestStartTime = 0f;
@@ -237,8 +263,8 @@ public static class SelfLaunchDurationRegression
         if (jumpTestStage == 0)
         {
             jumpTestStartHeight = player.transform.position.y;
-            queueJump.Invoke(buffer, new object[] { PlayerBufferedInput.Jump });
-            startJump.Invoke(movement, null);
+            InvokeBufferJump(queueJump, buffer);
+            InvokeWithDefaultParameters(startJump, movement);
             expectedJumpSpeed = movement.VerticalSpeed;
             if (expectedJumpSpeed <= 0f || (int)jumpsUsed.GetValue(movement) != 1)
             {
@@ -257,8 +283,8 @@ public static class SelfLaunchDurationRegression
                 Fail("O jogador nao ganhou altura no primeiro pulo em cena.");
                 return false;
             }
-            queueJump.Invoke(buffer, new object[] { PlayerBufferedInput.Jump });
-            startJump.Invoke(movement, null);
+            InvokeBufferJump(queueJump, buffer);
+            InvokeWithDefaultParameters(startJump, movement);
             if ((int)jumpsUsed.GetValue(movement) != 2 ||
                 Mathf.Abs(movement.VerticalSpeed - expectedJumpSpeed) > .05f)
             {
@@ -301,20 +327,47 @@ public static class SelfLaunchDurationRegression
         return jumpTestStage >= 4;
     }
 
+    private static void InvokeBufferJump(MethodInfo bufferMethod,
+        PlayerInputBuffer buffer)
+    {
+        ParameterInfo[] parameters = bufferMethod.GetParameters();
+        object[] arguments = CreateDefaultArguments(parameters);
+        arguments[0] = PlayerBufferedInput.Jump;
+        bufferMethod.Invoke(buffer, arguments);
+    }
+
+    private static void InvokeWithDefaultParameters(MethodInfo method,
+        object target) => method.Invoke(target,
+            CreateDefaultArguments(method.GetParameters()));
+
+    private static object[] CreateDefaultArguments(ParameterInfo[] parameters)
+    {
+        object[] arguments = new object[parameters.Length];
+        for (int i = 0; i < parameters.Length; i++)
+            arguments[i] = parameters[i].HasDefaultValue
+                ? parameters[i].DefaultValue
+                : parameters[i].ParameterType.IsValueType
+                    ? System.Activator.CreateInstance(parameters[i].ParameterType)
+                    : null;
+        return arguments;
+    }
+
     private static void Finish()
     {
         if (Results.Count < 4)
             Results.Add("INCOMPLETO: um dos ataques nao iniciou o SelfLaunchUp.");
         if (Results.Count >= 4)
         {
-            float shortPeak = GetPeak(Results, "Active 0,13s: ataque");
-            float longPeak = GetPeak(Results, "Active 1,00s: ataque");
-            if (Mathf.Abs(shortPeak - longPeak) > .2f)
+            float shortPeak = GetPeak(Results, "Active 0");
+            float longPeak = GetPeak(Results, "Active 1");
+            if (float.IsInfinity(shortPeak) || float.IsInfinity(longPeak))
+                Results.Add("FAIL: nao foi possivel comparar os dois picos de lancamento.");
+            else if (Mathf.Abs(shortPeak - longPeak) > .2f)
                 Results.Add($"FAIL: diferenca de pico acima de tolerancia: " +
                     $"{Mathf.Abs(shortPeak - longPeak):0.000}m.");
             else
                 Results.Add($"PASS: diferenca de pico {Mathf.Abs(shortPeak - longPeak):0.000}m.");
-            if (!enemyLaunched)
+            if (!enemyLaunched && !Results.Exists(result => result.StartsWith("FAIL:")))
                 Results.Add("FAIL: o inimigo nao recebeu Launch Up no TestArena.");
         }
         string report = string.Join("\n", Results);
@@ -328,7 +381,7 @@ public static class SelfLaunchDurationRegression
         if (attackDefinition != null) Object.Destroy(attackDefinition);
         player = null;
         floor = null;
-        EditorSceneManager.playModeStartScene = null;
+        EditorSceneManager.playModeStartScene = previousPlayModeStartScene;
         EditorApplication.isPlaying = false;
         if (Application.isBatchMode)
             EditorApplication.Exit(0);
@@ -352,8 +405,12 @@ public static class SelfLaunchDurationRegression
                 "pico de subida ".Length;
             int end = result.IndexOf('m', start);
             string number = result.Substring(start, end - start);
-            return float.Parse(number.Replace(',', '.'),
-                System.Globalization.CultureInfo.InvariantCulture);
+            if (float.TryParse(number.Replace(',', '.'),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out float value))
+                return value;
+            return float.PositiveInfinity;
         }
         return float.PositiveInfinity;
     }

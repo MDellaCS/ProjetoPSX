@@ -68,7 +68,8 @@ public sealed class PlayerTargetAssist : MonoBehaviour
     public bool TryCaptureTarget(float attackRange, out EnemyBase target,
         out Vector3 lockedPosition)
     {
-        lockOn ??= GetComponent<PlayerLockOn>();
+        if (lockOn == null)
+            lockOn = GetComponent<PlayerLockOn>();
         EnemyBase lockedEnemy = lockOn != null ? lockOn.LockedEnemy : null;
         // Lock-on e uma escolha explicita do jogador: ele sempre vence a
         // selecao automatica, inclusive fora do alcance da hitbox.

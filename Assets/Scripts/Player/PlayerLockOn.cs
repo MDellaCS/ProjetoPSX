@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// Controla um unico alvo travado pelo player. O alvo e escolhido entre os
@@ -9,15 +8,11 @@ using UnityEngine.InputSystem;
 public class PlayerLockOn : MonoBehaviour
 {
     [Header("Targeting")]
+    [Tooltip("Distancia maxima, em unidades do mundo, para selecionar e manter um alvo travado.")]
     [Min(0f)] [SerializeField] private float maximumLockDistance = 14f;
-
-    [Header("Marker")]
-    [Min(1f)] [SerializeField] private float markerScreenSize = 16f;
-    [SerializeField] private Color markerColor = new(.15f, 1f, .15f, 1f);
 
     private readonly List<Component> candidates = new();
     private Component lockedEnemy;
-    private static Texture2D markerTexture;
 
     public bool IsLockedOn => lockedEnemy != null && CanTarget(lockedEnemy);
     public EnemyBase LockedEnemy => IsLockedOn ? lockedEnemy as EnemyBase : null;
@@ -28,10 +23,10 @@ public class PlayerLockOn : MonoBehaviour
 
     private void Update()
     {
-        ValidateLockedTarget();
-
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked)
             return;
+
+        ValidateLockedTarget();
 
         if (GameInput.LockOnPressed)
         {
@@ -50,36 +45,6 @@ public class PlayerLockOn : MonoBehaviour
                 CycleTarget(-1);
         }
 
-    }
-
-    private void OnGUI()
-    {
-        if (!IsLockedOn)
-            return;
-
-        Camera gameCamera = Camera.main;
-        if (gameCamera == null)
-            return;
-
-        Vector3 screenPosition = gameCamera.WorldToScreenPoint(LockPoint);
-        if (screenPosition.z <= 0f)
-            return;
-
-        float halfSize = markerScreenSize * .5f;
-        Rect markerRect = new(
-            screenPosition.x - halfSize,
-            Screen.height - screenPosition.y - halfSize,
-            markerScreenSize,
-            markerScreenSize
-        );
-
-        Color previousColor = GUI.color;
-        int previousDepth = GUI.depth;
-        GUI.depth = -100;
-        GUI.color = markerColor;
-        GUI.DrawTexture(markerRect, GetMarkerTexture());
-        GUI.color = previousColor;
-        GUI.depth = previousDepth;
     }
 
     public Vector3 GetDirectionToLockedTarget()
@@ -167,9 +132,7 @@ public class PlayerLockOn : MonoBehaviour
     private void RefreshCandidates()
     {
         candidates.Clear();
-        EnemyBase[] enemies = Object.FindObjectsByType<EnemyBase>();
-
-        foreach (EnemyBase enemy in enemies)
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
         {
             if (enemy == null || !enemy.CanBeLockOnTarget ||
                 Vector3.Distance(transform.position, enemy.transform.position) >
@@ -178,19 +141,24 @@ public class PlayerLockOn : MonoBehaviour
                 continue;
             }
 
-            candidates.Add(enemy);
+            InsertCandidateByDistance(enemy);
         }
 
-        foreach (WorldLockOnTarget target in Object.FindObjectsByType<WorldLockOnTarget>())
+        foreach (WorldLockOnTarget target in WorldLockOnTarget.ActiveTargets)
             if (target.IsAvailable && Vector3.Distance(transform.position, target.Center) <= maximumLockDistance)
-                candidates.Add(target);
+                InsertCandidateByDistance(target);
+    }
 
-        candidates.Sort((first, second) =>
-            Vector3.SqrMagnitude(first.transform.position - transform.position)
-                .CompareTo(Vector3.SqrMagnitude(
-                    second.transform.position - transform.position
-                ))
-        );
+    private void InsertCandidateByDistance(Component candidate)
+    {
+        float candidateDistance = (candidate.transform.position -
+            transform.position).sqrMagnitude;
+        int index = candidates.Count;
+        while (index > 0 &&
+            (candidates[index - 1].transform.position - transform.position)
+                .sqrMagnitude > candidateDistance)
+            index--;
+        candidates.Insert(index, candidate);
     }
 
     private void SetLock(Component enemy)
@@ -219,47 +187,14 @@ public class PlayerLockOn : MonoBehaviour
 
     private static Vector3 GetEnemyCenter(Component enemy)
     {
-        if (enemy is WorldLockOnTarget worldTarget) return worldTarget.Center;
-        Renderer enemyRenderer = enemy.GetComponentInChildren<Renderer>();
-        if (enemyRenderer != null)
-            return enemyRenderer.bounds.center;
-
-        CharacterController controller = enemy.GetComponent<CharacterController>();
-        return controller != null
-            ? controller.bounds.center
+        if (enemy is WorldLockOnTarget worldTarget)
+            return worldTarget.Center;
+        return enemy is EnemyBase enemyBase
+            ? enemyBase.AttackOrigin
             : enemy.transform.position + Vector3.up;
     }
 
     private static bool CanTarget(Component target) => target is EnemyBase enemy
         ? enemy.CanBeLockOnTarget : target is WorldLockOnTarget world && world.IsAvailable;
 
-    private static Texture2D GetMarkerTexture()
-    {
-        if (markerTexture != null)
-            return markerTexture;
-
-        const int textureSize = 16;
-        markerTexture = new Texture2D(
-            textureSize,
-            textureSize,
-            TextureFormat.RGBA32,
-            false
-        );
-        markerTexture.filterMode = FilterMode.Point;
-
-        Vector2 center = Vector2.one * (textureSize - 1) * .5f;
-        float radius = textureSize * .5f;
-        for (int y = 0; y < textureSize; y++)
-        {
-            for (int x = 0; x < textureSize; x++)
-            {
-                float distance = Vector2.Distance(new Vector2(x, y), center);
-                float alpha = distance <= radius ? 1f : 0f;
-                markerTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-            }
-        }
-
-        markerTexture.Apply();
-        return markerTexture;
-    }
 }

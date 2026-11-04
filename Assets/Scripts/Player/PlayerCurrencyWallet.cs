@@ -30,6 +30,8 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
     public event Action<int> Changed;
 
     public int Current { get; private set; }
+    private bool hasUnsavedChanges;
+    private float nextAutomaticSaveAt;
     public float CollectRadius => collectRadius;
     public float AttractionRadius => attractionRadius;
     public float PlayerCurrencyCenterHeightOffset => playerCurrencyCenterHeightOffset;
@@ -53,6 +55,21 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
         Current = Mathf.Max(0, PlayerPrefs.GetInt(SaveKey, 0));
     }
 
+    private void Update()
+    {
+        if (!hasUnsavedChanges || Time.unscaledTime < nextAutomaticSaveAt)
+            return;
+        SavePendingCurrency();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            SavePendingCurrency();
+    }
+
+    private void OnApplicationQuit() => SavePendingCurrency();
+
     /// <summary>Encontra ou instala a carteira no Player atual.</summary>
     public static PlayerCurrencyWallet FindOrCreate()
     {
@@ -72,7 +89,7 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
 
         Current = Mathf.Max(0, Current + amount);
         PlayerPrefs.SetInt(SaveKey, Current);
-        PlayerPrefs.Save();
+        MarkCurrencyDirty();
         Changed?.Invoke(Current);
     }
 
@@ -84,6 +101,7 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
 
         Current -= amount;
         PlayerPrefs.SetInt(SaveKey, Current);
+        hasUnsavedChanges = false;
         PlayerPrefs.Save();
         Changed?.Invoke(Current);
         return true;
@@ -93,6 +111,23 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
     public void ResetProgress()
     {
         Current = 0;
+        PlayerPrefs.DeleteKey(SaveKey);
+        hasUnsavedChanges = false;
         Changed?.Invoke(Current);
+    }
+
+    private void MarkCurrencyDirty()
+    {
+        hasUnsavedChanges = true;
+        if (nextAutomaticSaveAt <= Time.unscaledTime)
+            nextAutomaticSaveAt = Time.unscaledTime + 1f;
+    }
+
+    private void SavePendingCurrency()
+    {
+        if (!hasUnsavedChanges)
+            return;
+        PlayerPrefs.Save();
+        hasUnsavedChanges = false;
     }
 }
