@@ -85,7 +85,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
     {
         if (catalog == null)
             catalog = PlayerMovesetCatalog.Load();
-        if (catalog?.availableMovesets == null || catalog.availableMovesets.Count == 0)
+        if (catalog == null || catalog.availableMovesets == null ||
+            catalog.availableMovesets.Count == 0)
             return;
 
         int currentIndex = catalog.availableMovesets.IndexOf(moveset);
@@ -105,8 +106,10 @@ public sealed class PlayerMovesetController : MonoBehaviour
             inputBuffer?.ClearBufferedInputs(ignoreNextFrame: true);
             attacks?.CancelAttack();
             moveset = next;
-            GetComponent<PlayerHealth>()?.ResetHealthForResourceMode();
-            GetComponent<PlayerHeat>()?.ResetHeatForResourceMode();
+            if (TryGetComponent(out PlayerHealth health))
+                health.ResetHealthForResourceMode();
+            if (TryGetComponent(out PlayerHeat heat))
+                heat.ResetHeatForResourceMode();
             return;
         }
     }

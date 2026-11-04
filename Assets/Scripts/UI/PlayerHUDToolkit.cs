@@ -92,7 +92,8 @@ public class PlayerHUDToolkit : MonoBehaviour
     {
         if (panelRenderer == null)
             panelRenderer = GetComponent<PanelRenderer>();
-        panelRenderer?.RegisterUIReloadCallback(HandleUIReload);
+        if (panelRenderer != null)
+            panelRenderer.RegisterUIReloadCallback(HandleUIReload);
         ResolvePlayerComponents();
     }
 

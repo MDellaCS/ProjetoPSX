@@ -2,7 +2,7 @@
     <Style src="PlayerHUD.uss" />
     <Style src="PlayerHeatHUD.uss" />
     <ui:VisualElement name="player-hud" picking-mode="Ignore">
-        <ui:VisualElement name="lock-on-marker" class="lock-on-marker" />
+        <ui:VisualElement name="lock-on-marker" class="lock-on-marker" picking-mode="Ignore" />
         <ui:VisualElement name="human-health-bar" class="human-health-bar">
             <ui:Label name="human-health-title" text="VIDA" class="human-health-title" />
             <ui:VisualElement name="human-health-track" class="human-health-track">

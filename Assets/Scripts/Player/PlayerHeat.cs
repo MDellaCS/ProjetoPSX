@@ -185,11 +185,11 @@ public class PlayerHeat : MonoBehaviour
         burnStartHeat = 0f;
         rageGrants.Clear();
         rageDuration = 0f;
-        attackController?.CancelAttack();
-        playerMovement?.InterruptForBurn();
-        movesetController?.ResetSequence();
-        GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
-        playerState?.ResetForNewGame();
+        InterruptActions();
+        if (movesetController != null)
+            movesetController.ResetSequence();
+        if (playerState != null)
+            playerState.ResetForNewGame();
     }
 
     /// <summary>Zera apenas o estado termico ao trocar para ou desde um moveset Health.</summary>
@@ -205,11 +205,10 @@ public class PlayerHeat : MonoBehaviour
         burnPhaseTimer = 0f;
         burnElapsed = 0f;
         burnStartHeat = 0f;
-        attackController?.CancelAttack();
-        playerMovement?.InterruptForBurn();
-        GetComponent<PlayerMovesetController>()?.ResetSequence();
-        GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
-        if (wasThermalStateActive)
+        InterruptActions();
+        if (TryGetComponent(out PlayerMovesetController moveset))
+            moveset.ResetSequence();
+        if (wasThermalStateActive && playerState != null)
             playerState.ChangeState(PlayerState.State.Normal);
     }
 
@@ -490,9 +489,12 @@ public class PlayerHeat : MonoBehaviour
         burnPhaseTimer = burnPreExplosionDuration;
         burnElapsed = 0f;
         burnStartHeat = currentHeat;
-        attackController?.CancelAttack();
-        playerMovement?.InterruptForBurn();
-        playerState?.ChangeState(PlayerState.State.BurnPreExplosion);
+        if (attackController != null)
+            attackController.CancelAttack();
+        if (playerMovement != null)
+            playerMovement.InterruptForBurn();
+        if (playerState != null)
+            playerState.ChangeState(PlayerState.State.BurnPreExplosion);
     }
 
     private void UpdateBurn()
@@ -561,17 +563,28 @@ public class PlayerHeat : MonoBehaviour
         burnPhaseTimer = burningDuration;
         burnElapsed = 0f;
         burnStartHeat = currentHeat;
-        attackController?.CancelAttack();
-        GetComponent<PlayerMovesetController>()?.ResetSequence();
-        GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(ignoreNextFrame: true);
-        playerMovement?.InterruptForBurn();
+        InterruptActions();
+        if (TryGetComponent(out PlayerMovesetController moveset))
+            moveset.ResetSequence();
         playerState.ChangeState(PlayerState.State.Burning);
+    }
+
+    /// <summary>Cancela ataque, buffer de input e movimento em andamento.</summary>
+    private void InterruptActions()
+    {
+        if (attackController != null)
+            attackController.CancelAttack();
+        if (TryGetComponent(out PlayerInputBuffer inputBuffer))
+            inputBuffer.ClearBufferedInputs(ignoreNextFrame: true);
+        if (playerMovement != null)
+            playerMovement.InterruptForBurn();
     }
 
     private void BeginBurnBlast()
     {
         if (burnExplosionAttack != null)
-            attackController?.TryStartExternalAttack(burnExplosionAttack);
+            if (attackController != null)
+                attackController.TryStartExternalAttack(burnExplosionAttack);
     }
 
     private void UpdateDebugHeatInput()

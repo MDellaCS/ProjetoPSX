@@ -66,16 +66,40 @@ public static class GameInputBindings
 
     public static string GetDisplayString(string actionName)
     {
-        InputAction action = GameInput.Asset?.FindAction("Gameplay/" + actionName);
+        InputActionAsset inputAsset = GameInput.Asset;
+        InputAction action = inputAsset != null
+            ? inputAsset.FindAction("Gameplay/" + actionName) : null;
         if (action == null)
             return "?";
+
+        // Mostra o binding do dispositivo usado mais recentemente.
+        bool preferGamepad = IsGamepadMoreRecent();
+        string fallback = null;
         for (int i = 0; i < action.bindings.Count; i++)
         {
             InputBinding binding = action.bindings[i];
-            if (!binding.isComposite && IsKeyboardOrMouse(binding))
-                return action.GetBindingDisplayString(i);
+            if (binding.isComposite || binding.isPartOfComposite)
+                continue;
+            bool keyboard = IsKeyboardOrMouse(binding);
+            string display = action.GetBindingDisplayString(i);
+            if (keyboard != preferGamepad)
+                return display;
+            if (fallback == null)
+                fallback = display;
         }
-        return "?";
+        return fallback ?? "?";
+    }
+
+    private static bool IsGamepadMoreRecent()
+    {
+        Gamepad pad = Gamepad.current;
+        if (pad == null)
+            return false;
+        double keyboardTime = Keyboard.current != null
+            ? Keyboard.current.lastUpdateTime : 0d;
+        double mouseTime = Mouse.current != null
+            ? Mouse.current.lastUpdateTime : 0d;
+        return pad.lastUpdateTime > Math.Max(keyboardTime, mouseTime);
     }
 
     public static bool IsKeyboardOrMouse(InputBinding binding)

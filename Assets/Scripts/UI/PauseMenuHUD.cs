@@ -50,7 +50,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
         IsOpen = false;
         if (panelRenderer == null)
             panelRenderer = GetComponent<PanelRenderer>();
-        panelRenderer?.RegisterUIReloadCallback(HandleUIReload);
+        if (panelRenderer != null)
+            panelRenderer.RegisterUIReloadCallback(HandleUIReload);
         SetVisible(false);
         if (GetComponent<CurrencyShopHUD>() == null)
             gameObject.AddComponent<CurrencyShopHUD>();
@@ -71,7 +72,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private void OnDestroy()
     {
-        panelRenderer?.UnregisterUIReloadCallback(HandleUIReload);
+        if (panelRenderer != null)
+            panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
         Resume();
     }
 

@@ -41,6 +41,13 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
 
     private void Awake()
     {
+        // Ferramenta de teste: fica inerte em builds de release.
+        if (!Debug.isDebugBuild)
+        {
+            enabled = false;
+            return;
+        }
+
         CacheComponents();
         SetAliveVisual(true);
     }
@@ -82,7 +89,7 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
     [ContextMenu("Kill Now (Test)")]
     public void PerformTestDeath()
     {
-        if (!isAlive)
+        if (!Debug.isDebugBuild || !isAlive)
             return;
 
         Vector3 worldDamageDirection = transform.TransformDirection(
@@ -95,8 +102,10 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
             if (gore == null)
                 gore = gameObject.AddComponent<EnemyGore>();
             gore.SpawnTestGore(testDamage, worldDamageDirection);
-            GetComponent<EnemyBodyPartDeathParticles>()?.EmitDeathParts(
-                worldDamageDirection, testDamage);
+            EnemyBodyPartDeathParticles deathParts =
+                GetComponent<EnemyBodyPartDeathParticles>();
+            if (deathParts != null)
+                deathParts.EmitDeathParts(worldDamageDirection, testDamage);
         }
 
         SetAliveVisual(false);
@@ -107,6 +116,9 @@ public sealed class EnemyDeathLoopTest : MonoBehaviour
     [ContextMenu("Revive Now (Test)")]
     public void ReviveForTest()
     {
+        if (!Debug.isDebugBuild)
+            return;
+
         SetAliveVisual(true);
         isAlive = true;
         stateTimer = aliveDuration;

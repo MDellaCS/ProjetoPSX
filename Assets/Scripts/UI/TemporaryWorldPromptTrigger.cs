@@ -136,7 +136,8 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
         }
         else if (!playerInside)
         {
-            promptHUD?.HidePrompt(this);
+            if (promptHUD != null)
+                promptHUD.HidePrompt(this);
         }
 
         if (isConsumed || promptType != TemporaryWorldPromptType.Interaction ||
@@ -217,7 +218,8 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
             return;
 
         ResolveHUD();
-        promptHUD?.NotifyInteractionCompleted(this);
+        if (promptHUD != null)
+            promptHUD.NotifyInteractionCompleted(this);
     }
 
     public void Consume()

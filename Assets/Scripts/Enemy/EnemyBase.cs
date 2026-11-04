@@ -167,8 +167,8 @@ public class EnemyBase : MonoBehaviour
     private void OnEnable() => activeEnemies.Add(this);
     protected virtual void OnDisable()
     {
-        if (isGrapplePulled)
-            health?.EndGrappleStagger(0f);
+        if (isGrapplePulled && health != null)
+            health.EndGrappleStagger(0f);
         activeEnemies.Remove(this);
         EnemyDirector.ReleaseEnemy(this);
         EnemySpecialAttackQueue.Release(this);

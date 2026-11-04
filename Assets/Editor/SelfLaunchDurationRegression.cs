@@ -54,14 +54,22 @@ public static class SelfLaunchDurationRegression
     [MenuItem("Tools/Tests/Run Self Launch Duration Regression")]
     public static void Run()
     {
+        const string scenePath = "Assets/Scenes/999. TestArena.unity";
+        SceneAsset testScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+        if (testScene == null)
+        {
+            Debug.LogError("SelfLaunchDurationRegression: cena nao encontrada em " + scenePath);
+            return;
+        }
+
         Results.Clear();
         scenario = 0;
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
         previousPlayModeStartScene = EditorSceneManager.playModeStartScene;
         EditorSceneManager.playModeStartScene = null;
-        EditorSceneManager.OpenScene("Assets/Scenes/999. TestArena.unity",
-            OpenSceneMode.Single);
-        EditorSceneManager.playModeStartScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(
-            "Assets/Scenes/999. TestArena.unity");
+        EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        EditorSceneManager.playModeStartScene = testScene;
         EditorPrefs.SetBool(RunKey, true);
         CreateArena();
         Debug.Log("Iniciando Self Launch Duration Regression em TestArena.");

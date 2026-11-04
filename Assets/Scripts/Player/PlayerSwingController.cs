@@ -172,7 +172,8 @@ public sealed class PlayerSwingController : MonoBehaviour
             return;
         }
 
-        movesetController?.ResetSequence();
+        if (movesetController != null)
+            movesetController.ResetSequence();
         if (!attackController.RequestCancel(PlayerAttackCancelAction.Grapple))
         {
             inputBuffer.ClearBufferedInput(PlayerBufferedInput.Grapple);

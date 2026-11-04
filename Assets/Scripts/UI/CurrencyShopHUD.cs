@@ -53,7 +53,8 @@ public sealed class CurrencyShopHUD : MonoBehaviour
     private void OnDisable() => Close();
     private void OnDestroy()
     {
-        panelRenderer?.UnregisterUIReloadCallback(HandleUIReload);
+        if (panelRenderer != null)
+            panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
         Close();
         if (instance == this) instance = null;
     }

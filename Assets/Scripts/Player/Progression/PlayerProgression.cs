@@ -131,7 +131,8 @@ public sealed class PlayerProgression : MonoBehaviour
         foreach (PlayerUpgradeEffect effect in desiredEffects)
             if (!appliedEffects.Contains(effect)) effect.Apply(this);
         appliedEffects.Clear(); appliedEffects.UnionWith(desiredEffects);
-        GetComponent<PlayerHeat>()?.SetChargeMaxHeatBonus(StatBonus("max-heat"));
+        if (TryGetComponent(out PlayerHeat heat))
+            heat.SetChargeMaxHeatBonus(StatBonus("max-heat"));
     }
     private void OnDestroy()
     {

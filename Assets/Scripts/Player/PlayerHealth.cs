@@ -43,8 +43,6 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Cor dos numeros de dano recebido pelo player.")]
     [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
 
-    [Header("Reset de Progresso")]
-
     private Material[] playerMaterials = System.Array.Empty<Material>();
 
     private PlayerState playerState;
@@ -149,7 +147,8 @@ public class PlayerHealth : MonoBehaviour
             godMode = !godMode;
 
         if (GameInput.DebugMaxHeatPressed)
-            playerHeat?.FillHeatAndSuperheatForDebug();
+            if (playerHeat != null)
+                playerHeat.FillHeatAndSuperheatForDebug();
     }
 
     /// <summary>Retorna estados temporarios de dano ao estado inicial de uma nova campanha.</summary>
@@ -161,7 +160,8 @@ public class PlayerHealth : MonoBehaviour
         waitingForForcedReactionEnd = false;
         poise.Initialize(maxPoise);
         currentHealth = MaxHealth;
-        playerState?.ResetForNewGame();
+        if (playerState != null)
+            playerState.ResetForNewGame();
         SetPlayerColor(normalColor);
     }
 
@@ -186,7 +186,8 @@ public class PlayerHealth : MonoBehaviour
             : Mathf.Max(0f, lightStaggerDuration);
         staggerTimer = activeStaggerDuration;
         waitingForForcedReactionEnd = false;
-        playerMovement?.CancelStaggerPush();
+        if (playerMovement != null)
+            playerMovement.CancelStaggerPush();
 
         if (applyStandardPush)
         {
@@ -198,14 +199,17 @@ public class PlayerHealth : MonoBehaviour
                 ? heavyStaggerDistance : lightStaggerDistance;
             float pushDuration = heavyStagger
                 ? heavyStaggerPushDuration : lightStaggerPushDuration;
-            playerMovement?.ApplyStaggerPush(pushDirection, distance,
-                Mathf.Min(activeStaggerDuration, Mathf.Max(.01f, pushDuration)));
+            if (playerMovement != null)
+                playerMovement.ApplyStaggerPush(pushDirection, distance,
+                    Mathf.Min(activeStaggerDuration, Mathf.Max(.01f, pushDuration)));
         }
 
         SetPlayerColor(Color.yellow);
 
-        attackController?.CancelAttack();
-        movesetController?.ResetSequence();
+        if (attackController != null)
+            attackController.CancelAttack();
+        if (movesetController != null)
+            movesetController.ResetSequence();
     }
 
     void EndStagger()
@@ -218,7 +222,8 @@ public class PlayerHealth : MonoBehaviour
         staggerTimer = 0f;
         activeStaggerDuration = 0f;
         waitingForForcedReactionEnd = false;
-        playerMovement?.CancelStaggerPush();
+        if (playerMovement != null)
+            playerMovement.CancelStaggerPush();
 
         SetPlayerColor(normalColor);
 
@@ -266,15 +271,21 @@ public class PlayerHealth : MonoBehaviour
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {
-            combatStatus?.RegisterDamageTakenFromEnemy();
+            if (combatStatus != null)
+                combatStatus.RegisterDamageTakenFromEnemy();
             EnemyBase.NotifyPlayerDamagedByEnemy();
-            if (damage > 0)
-                attacker?.GetComponentInParent<EnemyBase>()?.OnDamageDealtToPlayer();
+            if (damage > 0 && attacker != null)
+            {
+                EnemyBase enemy = attacker.GetComponentInParent<EnemyBase>();
+                if (enemy != null)
+                    enemy.OnDamageDealtToPlayer();
+            }
             GameplayAudioSystem.Play(GameplayAudioCueId.PlayerHurt,
                 transform.position);
         }
 
-        damageNumbers?.ShowDamage(damage, incomingDamageNumberColor);
+        if (damageNumbers != null)
+            damageNumbers.ShowDamage(damage, incomingDamageNumberColor);
 
         PlayerMovesetController activeMoveset = movesetController != null
             ? movesetController : GetComponent<PlayerMovesetController>();
@@ -290,7 +301,8 @@ public class PlayerHealth : MonoBehaviour
         }
         else if (!godMode)
         {
-            playerHeat?.RemoveHeat(damage);
+            if (playerHeat != null)
+                playerHeat.RemoveHeat(damage);
         }
         CombatPoiseHitResult poiseHit = poise.ReceiveHit(poiseDamage, maxPoise);
 

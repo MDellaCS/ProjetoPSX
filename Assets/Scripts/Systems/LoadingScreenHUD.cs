@@ -207,6 +207,16 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         if (rootVisualElement == null)
             return;
 
+        // O PanelRenderer pode notificar um reload com a arvore ainda vazia
+        // (antes de clonar o UXML). Espera o proximo reload em vez de errar.
+        if (rootVisualElement.childCount == 0)
+        {
+            overlay = null;
+            progressFill = null;
+            loadingLabel = null;
+            return;
+        }
+
         overlay = rootVisualElement.Q<VisualElement>("loading-screen-overlay");
         progressFill = rootVisualElement.Q<VisualElement>("loading-progress-fill");
         loadingLabel = rootVisualElement.Q<Label>("loading-label");

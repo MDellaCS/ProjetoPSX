@@ -13,6 +13,7 @@ public class PlayerLockOn : MonoBehaviour
 
     private readonly List<Component> candidates = new();
     private Component lockedEnemy;
+    private int lastCycleDirection;
 
     public bool IsLockedOn => lockedEnemy != null && CanTarget(lockedEnemy);
     public EnemyBase LockedEnemy => IsLockedOn ? lockedEnemy as EnemyBase : null;
@@ -39,10 +40,18 @@ public class PlayerLockOn : MonoBehaviour
         if (IsLockedOn)
         {
             float scroll = GameInput.CycleTarget.y;
-            if (scroll > .01f)
-                CycleTarget(1);
-            else if (scroll < -.01f)
-                CycleTarget(-1);
+            int cycleDirection = scroll > .01f ? 1 : scroll < -.01f ? -1 : 0;
+            // O D-pad mantem o valor enquanto pressionado; so troca na borda.
+            bool isNewPress = cycleDirection != 0 &&
+                (cycleDirection != lastCycleDirection ||
+                 !GameInput.CycleTargetIsHeldInput);
+            if (isNewPress)
+                CycleTarget(cycleDirection);
+            lastCycleDirection = cycleDirection;
+        }
+        else
+        {
+            lastCycleDirection = 0;
         }
 
     }

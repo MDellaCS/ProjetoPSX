@@ -28,10 +28,14 @@ public static class GameSaveResetService
 
             if (player != null)
             {
-                player.GetComponent<PlayerProgression>()?.ResetProgress();
-                player.GetComponent<PlayerCurrencyWallet>()?.ResetProgress();
-                player.GetComponent<PlayerHeat>()?.ResetForNewGame();
-                player.GetComponent<PlayerHealth>()?.ResetForNewGame();
+                if (player.TryGetComponent(out PlayerProgression progression))
+                    progression.ResetProgress();
+                if (player.TryGetComponent(out PlayerCurrencyWallet wallet))
+                    wallet.ResetProgress();
+                if (player.TryGetComponent(out PlayerHeat heat))
+                    heat.ResetForNewGame();
+                if (player.TryGetComponent(out PlayerHealth health))
+                    health.ResetForNewGame();
             }
 
             PlayerPrefs.Save();
@@ -58,8 +62,8 @@ public static class GameSaveResetService
             PlayerPrefs.DeleteKey(key);
         if (player != null)
         {
-            PlayerProgression progression = player.GetComponent<PlayerProgression>();
-            progression?.DeleteStoredProgress();
+            if (player.TryGetComponent(out PlayerProgression progression))
+                progression.DeleteStoredProgress();
         }
     }
 }

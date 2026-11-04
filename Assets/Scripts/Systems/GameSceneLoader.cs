@@ -121,9 +121,13 @@ public sealed class GameSceneLoader : MonoBehaviour
         ResolveLoadingScreen();
         if (!string.IsNullOrWhiteSpace(mainMenuScenePath))
         {
-            SetGameplayPanelsEnabled(false);
+            // So esconde os paineis se o menu puder mesmo ser carregado;
+            // caso contrario o jogo ficaria sem HUD e sem menu.
+            if (HasStartupSceneConfigured)
+                SetGameplayPanelsEnabled(false);
             LoadScene(mainMenuScenePath);
-            yield break;
+            if (HasStartupSceneConfigured)
+                yield break;
         }
 
         // A primeira cena ja estava carregada quando o GameRoot nasceu, logo
@@ -131,7 +135,8 @@ public sealed class GameSceneLoader : MonoBehaviour
         // garante que todos os Spawn Points dela ja executaram Awake/OnEnable.
         yield return null;
         PlacePlayerAtSceneSpawn(SceneManager.GetActiveScene(), defaultSpawnId);
-        loadingScreen?.HideAfterSceneReady();
+        if (loadingScreen != null)
+            loadingScreen.HideAfterSceneReady();
     }
 
     private void Update()
@@ -200,8 +205,11 @@ public sealed class GameSceneLoader : MonoBehaviour
 
     public void LoadScene(string scenePath, string spawnId)
     {
+        if (isLoading)
+            return;
+
         string resolvedScenePath = ResolveScenePath(scenePath);
-        if (isLoading || string.IsNullOrWhiteSpace(resolvedScenePath) ||
+        if (string.IsNullOrWhiteSpace(resolvedScenePath) ||
             !CanLoadScene(resolvedScenePath))
         {
             Debug.LogError($"Nao foi possivel carregar a cena '{scenePath}'. Caminho resolvido: '{resolvedScenePath ?? "<invalido>"}'. A cena precisa existir no projeto e estar no Build Settings fora do Editor.", this);
@@ -210,7 +218,8 @@ public sealed class GameSceneLoader : MonoBehaviour
 
         pendingSpawnId = spawnId;
         ResolveLoadingScreen();
-        loadingScreen?.Show();
+        if (loadingScreen != null)
+            loadingScreen.Show();
         StartCoroutine(LoadSceneRoutine(resolvedScenePath));
     }
 
@@ -228,15 +237,18 @@ public sealed class GameSceneLoader : MonoBehaviour
         {
             while (!operation.isDone)
             {
-                loadingScreen?.SetProgress(operation.progress / .9f);
+                if (loadingScreen != null)
+                    loadingScreen.SetProgress(operation.progress / .9f);
                 yield return null;
             }
-            loadingScreen?.SetProgress(1f);
+            if (loadingScreen != null)
+                loadingScreen.SetProgress(1f);
         }
         else
         {
             Debug.LogError($"Falha ao iniciar o carregamento da cena '{scenePath}'.", this);
-            loadingScreen?.HideAfterSceneReady();
+            if (loadingScreen != null)
+                loadingScreen.HideAfterSceneReady();
         }
         isLoading = false;
     }
@@ -301,8 +313,10 @@ public sealed class GameSceneLoader : MonoBehaviour
         BindSceneCutscenesToPersistentCamera(scene);
         pendingSpawnId = null;
         ResolveLoadingScreen();
-        loadingScreen?.SetProgress(1f);
-        loadingScreen?.HideAfterSceneReady();
+        if (loadingScreen != null)
+            loadingScreen.SetProgress(1f);
+        if (loadingScreen != null)
+            loadingScreen.HideAfterSceneReady();
     }
 
     private void ResolveLoadingScreen()
@@ -356,15 +370,19 @@ public sealed class GameSceneLoader : MonoBehaviour
         {
             CinemachineCamera menuCamera = FindSceneMenuCamera(scene);
             if (menuCamera != null)
-                cameraFollow?.EnterMenuCamera(menuCamera);
+                if (cameraFollow != null)
+                    cameraFollow.EnterMenuCamera(menuCamera);
             else
                 SetMenuCameraPose(cameraFollow);
-            pauseMenu?.ShowMainMenu(BeginNewGame);
+            if (pauseMenu != null)
+                pauseMenu.ShowMainMenu(BeginNewGame);
         }
         else
         {
-            pauseMenu?.CloseMainMenu();
-            cameraFollow?.ExitStaticMenuCamera(player);
+            if (pauseMenu != null)
+                pauseMenu.CloseMainMenu();
+            if (cameraFollow != null)
+                cameraFollow.ExitStaticMenuCamera(player);
         }
     }
 
@@ -374,18 +392,23 @@ public sealed class GameSceneLoader : MonoBehaviour
         CutsceneController intro = FindNewGameCutscene(menuScene);
         if (intro == null)
         {
-            FindAnyObjectByType<PauseMenuHUD>()?.SetMainMenuMessage(
+            PauseMenuHUD missingMenu = FindAnyObjectByType<PauseMenuHUD>();
+            if (missingMenu != null)
+                missingMenu.SetMainMenuMessage(
                 $"Adicione um CutsceneController em um objeto chamado '{newGameCutsceneObjectName}' nesta cena.");
             return;
         }
 
         PauseMenuHUD menu = FindAnyObjectByType<PauseMenuHUD>();
-        menu?.SetMainMenuMessage(string.Empty);
-        menu?.CloseMainMenu();
+        if (menu != null)
+            menu.SetMainMenuMessage(string.Empty);
+        if (menu != null)
+            menu.CloseMainMenu();
 
         CameraFollow cameraFollow = CameraFollow.Instance != null
             ? CameraFollow.Instance : FindAnyObjectByType<CameraFollow>();
-        cameraFollow?.ExitStaticMenuCamera(player);
+        if (cameraFollow != null)
+            cameraFollow.ExitStaticMenuCamera(player);
 
         PlayableDirector director = intro.GetComponent<PlayableDirector>();
         if (director != null)
@@ -396,11 +419,14 @@ public sealed class GameSceneLoader : MonoBehaviour
                 director.stopped -= OnNewGameCutsceneStopped;
             CinemachineCamera menuCamera = FindSceneMenuCamera(menuScene);
             if (menuCamera != null)
-                cameraFollow?.EnterMenuCamera(menuCamera);
+                if (cameraFollow != null)
+                    cameraFollow.EnterMenuCamera(menuCamera);
             else
                 SetMenuCameraPose(cameraFollow);
-            menu?.ShowMainMenu(BeginNewGame);
-            menu?.SetMainMenuMessage("A cutscene de início não pôde ser iniciada.");
+            if (menu != null)
+                menu.ShowMainMenu(BeginNewGame);
+            if (menu != null)
+                menu.SetMainMenuMessage("A cutscene de início não pôde ser iniciada.");
         }
     }
 
@@ -443,8 +469,9 @@ public sealed class GameSceneLoader : MonoBehaviour
 
     private void SetMenuCameraPose(CameraFollow cameraFollow)
     {
-        cameraFollow?.EnterStaticMenuCamera(mainMenuCameraPosition,
-            mainMenuCameraEulerAngles);
+        if (cameraFollow != null)
+            cameraFollow.EnterStaticMenuCamera(mainMenuCameraPosition,
+                mainMenuCameraEulerAngles);
     }
 
     private static void SetGameplayPanelsEnabled(bool enabled)

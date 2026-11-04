@@ -23,3 +23,10 @@ Atualizado em 03/11/2026. Implementação concluída; validação de gameplay em
 ## Ação necessária no Editor
 
 No Unity 6000.6.4f1, abra `Assets/Scenes/999. TestArena.unity` e rode **Tools > Tests > Run Self Launch Duration Regression**. Se falhar, envie o erro completo do Console; investigue especialmente por que o PlayerMovement criado pelo teste não registra commit e por que o ataque D1 não inicia. Depois do PASS, faça a validação manual de pulo, pulo duplo, dash, dash-jump, slide, launch, dive, swing, grapple, separação e ataques terrestres/aéreos. Não salve mudanças de cena sem revisar as referências serializadas.
+
+## Revisao (03/11/2026)
+
+- Revisado `CommitMovement`, acumuladores, ordem de execucao (PlayerMovement -1000, CameraFollow -100, separacao 1000: o commit em `LateUpdate` ocorre antes da camera) e callbacks de swing/grapple. Nenhum segundo `controller.Move` foi encontrado.
+- Causa provavel da falha "0 commits": o `LateUpdate` zerava `movementCommitsThisFrame` em todo frame sem commit (hitstop, pausa, estados que pulam o `Update`), e a regressao lia esse 0 como violacao. Removido o reset; o contador agora vale para o ultimo frame que fez commit. `Assembly-CSharp` e `Assembly-CSharp-Editor` compilam com 0 erros e 0 avisos.
+- Nao foi possivel rodar a regressao em cena (so a pedido do usuario e com Editors abertos); a hipotese acima continua nao confirmada. Se a regressao ainda falhar, envie o log do Console.
+- Observacao de projeto: `MoveDuringSwing` devolve o `CollisionFlags` do commit anterior (um frame de atraso); o resultado do frame atual chega por `OnMovementCommitted`.

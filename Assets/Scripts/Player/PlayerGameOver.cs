@@ -21,7 +21,7 @@ public class PlayerGameOver : MonoBehaviour
     void Awake()
     {
         playerState = GetComponent<PlayerState>();
-        playerHeat = GetComponent<PlayerHeat>();
+        TryGetComponent(out playerHeat);
     }
 
     void Update()
@@ -54,7 +54,8 @@ public class PlayerGameOver : MonoBehaviour
         gameOverVisible = true;
         ResolveGameOverHUD();
 
-        gameOverHUD?.Show(GetDeathMessage());
+        if (gameOverHUD != null)
+            gameOverHUD.Show(GetDeathMessage());
     }
 
     private string GetDeathMessage()
@@ -80,11 +81,16 @@ public class PlayerGameOver : MonoBehaviour
 
         // O Player vive no GameRoot persistente e nao e recriado ao recarregar
         // uma fase. Limpa primeiro os estados da campanha anterior.
-        GetComponent<PlayerHealth>()?.ResetForNewGame();
-        playerHeat?.ResetForNewGame();
-        GetComponent<PlayerProgression>()?.ReapplyActiveEffects();
-        GetComponent<PlayerMovement>()?.ResetForNewGame();
-        gameOverHUD?.Hide();
+        if (TryGetComponent(out PlayerHealth health))
+            health.ResetForNewGame();
+        if (playerHeat != null)
+            playerHeat.ResetForNewGame();
+        if (TryGetComponent(out PlayerProgression progression))
+            progression.ReapplyActiveEffects();
+        if (TryGetComponent(out PlayerMovement movement))
+            movement.ResetForNewGame();
+        if (gameOverHUD != null)
+            gameOverHUD.Hide();
         GameTimeScaleEffects.ResetForGameRestart();
 
         deathDetected = false;
@@ -100,7 +106,9 @@ public class PlayerGameOver : MonoBehaviour
         }
 
         restartRequested = false;
-        LoadingScreenHUD.Instance?.LoadSceneWithoutSceneLoader(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
+        LoadingScreenHUD loadingScreen = LoadingScreenHUD.Instance;
+        if (loadingScreen != null)
+            loadingScreen.LoadSceneWithoutSceneLoader(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
     }
 }

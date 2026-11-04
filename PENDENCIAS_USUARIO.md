@@ -25,3 +25,16 @@ No Unity 6000.6.4f1:
 - Configurar estrutura NUnit/CI; os testes atuais continuam sendo ações de menu do Editor.
 
 Detalhes técnicos e status estão em `REVISAO_PROJETO.md` e `RETRABALHO_PLAYERMOVEMENT.md`.
+
+## Validação de código (03/11/2026): feito e restante
+
+Feito: revisão estática dos itens corrigidos, com correções em Build Settings (Bootstrap volta a ser a cena 0), `GameSceneLoader`, lock-on com D-pad, `?.` em componentes Unity, `EnemyDeathLoopTest` (inerte fora de build de desenvolvimento), prompts que mostram o binding do dispositivo usado por último e `SelfLaunchDurationRegression`. `Assembly-CSharp` e `Assembly-CSharp-Editor` compilam com 0 erros e 0 avisos. Nada foi executado em cena.
+
+Precisa de você:
+
+- Conferir em Play que o Bootstrap abre o MainMenu e que o menu aparece mesmo se a cena configurada falhar ao carregar.
+- Conferir que o lock-on troca de alvo uma vez por toque no D-pad.
+- Os prompts de binding só atualizam quando o texto é reconstruído; trocar de teclado para gamepad com o prompt já aberto não o atualiza na hora.
+- `ResetAllSavesAndReload` não tem chamador; decida em qual menu ele deve aparecer.
+- `OnGUI` restante (`PlayerDpsMeter`, `DamageNumber`, `EnemyDebug`, `PlayerAttackDebug`) e `CurrencyShopHUD` programático: exigem desenho de UXML/USS e posicionamento, já listados acima.
+- A worktree `C:\Users\mathe\ProjetoPSX_validacao` (branch `revisao-validacao`) pode ser removida com `git worktree remove ../ProjetoPSX_validacao` e `git branch -D revisao-validacao`.

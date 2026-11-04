@@ -291,8 +291,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (movementCommitFrame != Time.frameCount)
-            movementCommitsThisFrame = 0;
+        // O contador pertence ao ultimo frame que fez commit (CommitMovement o
+        // reinicia ao mudar de frame). Zera-lo aqui fazia frames sem commit,
+        // como hitstop ou pausa, parecerem uma violacao de 'um Move por frame'.
         CommitMovement();
     }
 

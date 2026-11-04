@@ -42,6 +42,18 @@ public static class GameInput
         }
     }
     public static Vector2 CycleTarget => ReadVector2("CycleTarget");
+    /// <summary>Verdadeiro quando CycleTarget vem de um controle mantido (D-pad), nao de pulsos do scroll.</summary>
+    public static bool CycleTargetIsHeldInput
+    {
+        get
+        {
+            EnsureInitialized();
+            InputAction action = gameplay != null
+                ? gameplay.FindAction("CycleTarget") : null;
+            return action != null && action.activeControl != null &&
+                !(action.activeControl.device is Mouse);
+        }
+    }
     public static bool LightPressed => !MouseClickWillLockCursor() &&
         Pressed("LightAttack");
     public static bool HeavyPressed => Pressed("HeavyAttack");

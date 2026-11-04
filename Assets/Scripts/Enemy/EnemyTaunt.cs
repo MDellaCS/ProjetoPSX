@@ -53,7 +53,10 @@ public sealed class EnemyTaunt : MonoBehaviour
             visualAnimator = GetComponentInChildren<Animator>(true);
 
         hasTauntingBool = false;
-        if (visualAnimator == null || string.IsNullOrEmpty(tauntingBoolParameter))
+        // Sem AnimatorController (ex.: Animator vazio ou ainda sem controller),
+        // ler 'parameters' gera um aviso a cada Awake; nao ha o que consultar.
+        if (visualAnimator == null || visualAnimator.runtimeAnimatorController == null ||
+            string.IsNullOrEmpty(tauntingBoolParameter))
             return;
 
         tauntingBoolHash = Animator.StringToHash(tauntingBoolParameter);
