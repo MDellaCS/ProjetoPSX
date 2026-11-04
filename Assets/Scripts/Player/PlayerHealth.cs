@@ -372,7 +372,7 @@ public class PlayerHealth : MonoBehaviour
         switch (reaction)
         {
             case CombatReactionType.LaunchUp:
-                playerMovement.ApplySelfLaunchUp();
+                playerMovement.ApplyLaunchUpReaction();
                 break;
             case CombatReactionType.LaunchDown:
                 playerMovement.BeginAerialDive(

@@ -1,11 +1,3 @@
-# TODO
-
-## Colisão de inimigo arremessado — expansões futuras
-
-- Combate (Pending): avaliar modificadores de peso por classe (brutamonte/chefe) após testar o peso configurável atual por inimigo.
-- Combate (Pending): avaliar interação com guarda e esquiva, além de imunidade curta a novos Body Impacts.
-- Combate (Pending): avaliar dano no próprio inimigo arremessado e feedback audiovisual dedicado às colisões de corpos.
-
 ## Sistema de animação desacoplado
 
 ### Iteração 4 — Reações e interrupções
@@ -38,12 +30,5 @@
 
 - Dialogo/Cutscene (Pending): integrar DialogueController a Timeline. Um Signal deve abrir uma fala modal, pausar somente o PlayableDirector, retomar a Timeline ao confirmar e concluir corretamente quando a cutscene for pulada. Nao implementar ate a proxima iteracao de dialogos em cutscene.
 
-- Programação (Pending): refatorar `PlayerMovement` sem mudar gameplay. Manter `PlayerMovement` como fachada/orquestrador e único dono de `CharacterController.Move`; extrair responsabilidades para `PlayerMovementMotor`, `PlayerGrounding`, `PlayerLocomotion`, `PlayerDash`, `PlayerJump` e `PlayerCrouchSlide`. Migrar em etapas, preservando a API pública usada por combate e outros sistemas.
-- Combate (Pending): avaliar pisão/bounce na cabeça do inimigo, inspirado em Super Mario e Crash. Deve devolver o player para cima, causar muito Poise e pouco dano.
-- Combate (Pending): avaliar inimigos com ataque de grab anti-pisão, que prende o player pelo pé quando ele tenta cair sobre eles.
+- Combate (Pending): avaliar pisão/bounce na cabeça do inimigo, inspirado em Super Mario e Crash. Deve devolver o player para cima, causar muito Poise e pouco dano. Avaliar inimigos com ataque de grab anti-pisão, que prende o player pelo pé quando ele tenta cair sobre eles.
 - Combate (Pending): completar os casos de direção de impacto que não têm amostra móvel anterior: preservar uma amostra de Windup para tracks `Follow Anchors` e usar `player → ponto atingido` como último fallback. Validar hitboxes que voltam, como bumerangues, para confirmar que a volta lança na direção do jogador.
-- Pending: revisar a reformulação de Heat/Cold/Superheat para uma barra de vida comum em que Heat alto aumenta dano causado e recebido.
-- Pending: melhorias da câmera — revisar suavização de retorno após colisão e comportamento de rotação.
-- Pending: revisar eventuais frames transitórios de `GROUNDED: NO` após dash; marcar como observado e ainda sem reprodução confiável.
-- Pending: permitir configurações próprias para o segundo pulo.
-- Pending: right shoulder camera offset, caso seja retomado após novos testes.

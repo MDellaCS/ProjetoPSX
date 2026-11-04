@@ -90,7 +90,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 1
       launchBackwards: 0
       juggle: 0

@@ -24,6 +24,3 @@
 - `EnemyBase.OnDisable` e um ponto comum de liberacao dos registros do Director e da fila de ataques. Classes derivadas que implementem `OnDisable` devem sobrescrever o metodo base.
 - A UI Toolkit deve corrigir propriedades USS com os nomes suportados (`-unity-font-style`, `-unity-text-align`) e ignorar picking no UXML com `picking-mode="Ignore"`, nao com propriedades USS inexistentes.
 - Testes de cena devem abrir a cena correta sem salvar alteracoes; quando o projeto for configurado para iniciar Play pelo Bootstrap, um teste que precise de outra cena deve definir explicitamente sua cena inicial e restaurar a configuracao anterior ao terminar.
-- `PlayerMovement` acumula locomocao e deslocamentos externos e executa um unico `PlayerCharacterController.Move` em `LateUpdate`; manter esse contrato ao adicionar novas fontes de movimento. Consumidores de colisao devem usar os flags do commit/callback, nunca assumir resultado sincrono ao enfileirar deslocamento.
-- A separacao de entidades do jogador deve ocorrer antes do commit, em `Update` com ordem 1000. Ground snap so pode ocorrer se o jogador iniciou o movimento apoiado e nao esta subindo; parede nao conta como suporte de chao.
-- A regressao de movimento deve consultar o frame do ultimo commit, pois callbacks de Editor podem rodar antes do `LateUpdate` do frame atual.

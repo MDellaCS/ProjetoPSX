@@ -154,8 +154,6 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         return true;
     }
 
-    public void ApplySelfLaunchUp() => movement?.ApplySelfLaunchUp();
-
     public void ApplySelfLaunchDown() =>
         movement?.BeginAerialDive(CombatPoiseSystem.Instance.MinimumLaunchForce);
 

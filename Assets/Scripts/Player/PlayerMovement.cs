@@ -1822,7 +1822,7 @@ public class PlayerMovement : MonoBehaviour
     public float GetJumpLaunchHoldGravityMultiplier() =>
         jumpHoldGravityMultiplier;
 
-    public void ApplySelfLaunchUp()
+    public void ApplyLaunchUpReaction()
     {
         // Igual ao Launch Up do inimigo, limpa forças concorrentes e mantém
         // o estado aereo ate o CharacterController confirmar o pouso.

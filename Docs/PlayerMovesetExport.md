@@ -599,7 +599,6 @@ MonoBehaviour:
       launchDown: 1
       selfLaunchDown: 1
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -803,7 +802,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -1108,7 +1106,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -1413,7 +1410,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -1718,7 +1714,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -2023,7 +2018,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -2328,7 +2322,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -2633,7 +2626,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -2939,7 +2931,6 @@ MonoBehaviour:
       launchDown: 1
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -3143,7 +3134,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 1
-      selfLaunchUp: 0
       launchForwards: 1
       juggle: 0
     hitboxes:
@@ -3294,7 +3284,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 1
       launchBackwards: 0
       juggle: 0
@@ -3500,7 +3489,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 1
@@ -3705,7 +3693,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 1
       juggle: 0
     hitboxes:
@@ -3908,7 +3895,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -4213,7 +4199,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 1
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 0
@@ -4417,7 +4402,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -4722,7 +4706,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 0
@@ -5328,7 +5311,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 0
@@ -6934,7 +6916,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       launchBackwards: 0
       juggle: 0
@@ -7239,7 +7220,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 1
       launchBackwards: 0
       juggle: 0
@@ -7545,7 +7525,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 1
-      selfLaunchUp: 0
       launchForwards: 1
       launchBackwards: 0
       juggle: 0
@@ -7868,7 +7847,6 @@ MonoBehaviour:
       launchDown: 1
       selfLaunchDown: 1
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -8072,7 +8050,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 1
     hitboxes:
@@ -8276,7 +8253,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 1
     hitboxes:
@@ -8480,7 +8456,6 @@ MonoBehaviour:
       launchDown: 1
       selfLaunchDown: 1
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -8684,7 +8659,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -8888,7 +8862,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -9092,7 +9065,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -9296,7 +9268,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -9700,7 +9671,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -10004,7 +9974,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:
@@ -10208,7 +10177,6 @@ MonoBehaviour:
       launchDown: 0
       selfLaunchDown: 0
       launchUp: 0
-      selfLaunchUp: 0
       launchForwards: 0
       juggle: 0
     hitboxes:

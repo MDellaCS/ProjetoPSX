@@ -18,9 +18,6 @@ internal static class BootstrapPlayModeStartScene
     [MenuItem("Projeto PSX/Play Mode/Usar Bootstrap como cena inicial")]
     private static void SetBootstrapAsPlayModeStartScene()
     {
-        if (EditorPrefs.GetBool("SelfLaunchDurationRegression.Run"))
-            return;
-
         SceneAsset bootstrap = null;
         string[] sceneGuids = AssetDatabase.FindAssets("t:Scene",
             new[] { ScenesFolder });
