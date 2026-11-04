@@ -11,8 +11,10 @@ public sealed class CombatParticleCollisionFilter : MonoBehaviour
     {
         if (ownCollider == null)
             ownCollider = GetComponent<Collider>();
-        if (ownCollider != null)
-            ownCollider.gameObject.layer = LayerMask.NameToLayer("CombatParticle");
+        // NameToLayer retorna -1 se a layer nao existir; atribuir -1 lancaria excecao.
+        int particleLayer = LayerMask.NameToLayer("CombatParticle");
+        if (ownCollider != null && particleLayer >= 0)
+            ownCollider.gameObject.layer = particleLayer;
     }
 
     private void OnCollisionEnter(Collision collision)

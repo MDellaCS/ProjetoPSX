@@ -69,6 +69,8 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
                 continue;
             float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized,
                 strike.activeEndNormalized, activeProgress);
+            if (strike.hitboxes == null)
+                continue;
             foreach (EnemyHitboxTrackDefinition track in strike.hitboxes)
                 EvaluateTrack(strike, track, strikeProgress);
         }
@@ -180,10 +182,13 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
             int poise = Mathf.RoundToInt(runtime.PoiseDamage *
                 strike.poiseMultiplier);
             runtime.HitTargetPosition = player.transform.position;
-            runtime.HitConfirmed = player.TakeDamage(damage,
+            // Um golpe posterior ignorado (i-frames, bloqueio) nao deve
+            // desfazer um acerto ja confirmado neste ataque.
+            if (player.TakeDamage(damage,
                 owner.AttackOrigin, poise,
                 strike.reaction, true, transform,
-                runtime.Definition.causesHeavyStagger);
+                runtime.Definition.causesHeavyStagger))
+                runtime.HitConfirmed = true;
             hitGroups.Add(group);
             repeatTimes[track] = Time.time + track.repeatHitInterval;
             return;

@@ -44,10 +44,10 @@ public sealed class EnemyAttackController : MonoBehaviour
         owner = enemy;
         brain = enemyBrain;
         locomotion = enemyMovement;
-        authoredMovement = GetComponent<EnemyAttackMovement>() ??
-            gameObject.AddComponent<EnemyAttackMovement>();
-        hitboxes = GetComponent<EnemyAttackHitboxController>() ??
-            gameObject.AddComponent<EnemyAttackHitboxController>();
+        if (!TryGetComponent(out authoredMovement))
+            authoredMovement = gameObject.AddComponent<EnemyAttackMovement>();
+        if (!TryGetComponent(out hitboxes))
+            hitboxes = gameObject.AddComponent<EnemyAttackHitboxController>();
         authoredMovement.Initialize(owner, brain, locomotion);
         hitboxes.Initialize(owner);
         selector = new EnemyAttackSelector(owner, brain, locomotion, moveset);
@@ -65,7 +65,12 @@ public sealed class EnemyAttackController : MonoBehaviour
             return false;
 
         attacksInSequence = 0;
-        return BeginOrQueueAttack(node, windupDuration);
+        if (BeginOrQueueAttack(node, windupDuration))
+            return true;
+        // O turno do Director foi reservado acima; sem ataque iniciado ele
+        // ficaria preso ocupando o orcamento de Lead.
+        EnemyDirector.ReleaseAttackTurn(owner);
+        return false;
     }
 
     public bool TryBeginSelectedOpening()
@@ -76,7 +81,11 @@ public sealed class EnemyAttackController : MonoBehaviour
         if (needsDirector && !EnemyDirector.RequestAttackTurn(owner))
             return false;
         attacksInSequence = 0;
-        return BeginOrQueueAttack(node, null);
+        if (BeginOrQueueAttack(node, null))
+            return true;
+        if (needsDirector)
+            EnemyDirector.ReleaseAttackTurn(owner);
+        return false;
     }
 
     private bool BeginOrQueueAttack(EnemyMoveNode node,
@@ -366,6 +375,9 @@ public sealed class EnemyAttackController : MonoBehaviour
     {
         if (queuedSpecialAttackId == queueId)
             queuedSpecialAttackId = null;
+        // A reserva falhou antes de o ataque comecar: devolve o turno do Director.
+        if (CurrentAttack == null)
+            EnemyDirector.ReleaseAttackTurn(owner);
     }
 
     private float GetPhaseDuration(EnemyAttackPhase phase) =>

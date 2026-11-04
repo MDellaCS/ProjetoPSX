@@ -145,6 +145,7 @@ public class PlayerHUDToolkit : MonoBehaviour
     {
         if (root == null)
             return;
+        lastHealthTextCurrent = int.MinValue;
 
         playerHudRoot = root.Q<VisualElement>("player-hud") ?? root;
         playerHudRoot.style.position = Position.Absolute;
@@ -296,8 +297,21 @@ public class PlayerHUDToolkit : MonoBehaviour
         if (healthFill != null)
             healthFill.style.width = Length.Percent(percent * 100f);
         if (healthValue != null)
-            healthValue.text = $"{playerHealth.CurrentHealth} / {playerHealth.MaxHealth}";
+        {
+            int currentHp = playerHealth.CurrentHealth;
+            int maxHp = playerHealth.MaxHealth;
+            if (currentHp != lastHealthTextCurrent || maxHp != lastHealthTextMax)
+            {
+                lastHealthTextCurrent = currentHp;
+                lastHealthTextMax = maxHp;
+                healthValue.text = $"{currentHp} / {maxHp}";
+            }
+        }
     }
+
+    // Cache do texto de vida para evitar alocar string e invalidar layout a cada frame.
+    private int lastHealthTextCurrent = int.MinValue;
+    private int lastHealthTextMax = int.MinValue;
 
     private void UpdateThermometer()
     {

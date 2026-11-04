@@ -152,7 +152,7 @@ public sealed class EnemyEncounter : MonoBehaviour
         if (enteringPlayer != null) player = enteringPlayer;
         ResolvePlayer();
         state = EncounterState.Active;
-        foreach (EncounterBarrier barrier in barriers) barrier?.Lock();
+        SetBarriersLocked(true);
         ScheduleNextWave();
         TryComplete();
     }
@@ -226,7 +226,22 @@ public sealed class EnemyEncounter : MonoBehaviour
             return;
 
         state = EncounterState.Completed;
-        foreach (EncounterBarrier barrier in barriers) barrier?.Unlock();
+        SetBarriersLocked(false);
+    }
+
+    private void SetBarriersLocked(bool locked)
+    {
+        if (barriers == null)
+            return;
+        foreach (EncounterBarrier barrier in barriers)
+        {
+            if (barrier == null)
+                continue;
+            if (locked)
+                barrier.Lock();
+            else
+                barrier.Unlock();
+        }
     }
 
     internal bool TryFindSpawnPosition(EnemyEncounterWave wave, float multiplier,

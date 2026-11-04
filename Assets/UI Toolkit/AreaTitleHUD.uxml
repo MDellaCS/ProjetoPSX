@@ -1,6 +1,6 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="AreaTitleHUD.uss" />
-    <ui:VisualElement name="area-title-card" class="area-title-card">
+    <ui:VisualElement name="area-title-card" class="area-title-card" picking-mode="Ignore">
         <ui:Label name="area-title-name" text="Area name" class="area-title-name" />
         <ui:VisualElement name="area-title-divider" class="area-title-divider" />
         <ui:Label name="area-title-subtitle" text="Optional subtitle" class="area-title-subtitle" />

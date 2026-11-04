@@ -162,6 +162,10 @@ public sealed class EnemyBrain : MonoBehaviour
     private Transform target;
     private PlayerHeat playerHeat;
     private PlayerMovement playerMovement;
+    private PlayerHealth playerHealth;
+    private PlayerCharacterController playerCharacterController;
+    private Transform cachedComponentsTarget;
+    private float nextPlayerLookupTime;
     private float decisionTimer;
     private float repositionTimer;
     private float actionMovementSpeed;
@@ -195,6 +199,9 @@ public sealed class EnemyBrain : MonoBehaviour
     private bool skipTacticalIdleOnNextDecision;
 
     public Transform Target => target;
+    internal PlayerMovement TargetMovement => playerMovement;
+    internal PlayerCharacterController TargetCharacterController =>
+        playerCharacterController;
     public bool IsWaitingForEncounter => isWaitingForEncounter;
     public bool IsEncounterEngaged => isEncounterEngaged;
     public float CurrentAggressionPercent => currentAggressionPercent;
@@ -315,14 +322,25 @@ public sealed class EnemyBrain : MonoBehaviour
     {
         if (target == null)
         {
+            // Sem jogador na cena, evita uma busca por tag em todo frame.
+            if (Time.unscaledTime < nextPlayerLookupTime)
+                return;
+            nextPlayerLookupTime = Time.unscaledTime + .5f;
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
                 target = player.transform;
         }
-        if (target != null && playerHeat == null)
-            playerHeat = target.GetComponent<PlayerHeat>();
-        if (target != null && playerMovement == null)
-            playerMovement = target.GetComponent<PlayerMovement>();
+        if (target != null && cachedComponentsTarget != target)
+            CacheTargetComponents();
+    }
+
+    private void CacheTargetComponents()
+    {
+        cachedComponentsTarget = target;
+        playerHeat = target.GetComponent<PlayerHeat>();
+        playerMovement = target.GetComponent<PlayerMovement>();
+        playerHealth = target.GetComponent<PlayerHealth>();
+        playerCharacterController = target.GetComponent<PlayerCharacterController>();
     }
 
     internal void TickIdle()
@@ -729,8 +747,8 @@ public sealed class EnemyBrain : MonoBehaviour
         if (encounterPlayer == null || owner.IsDead)
             return;
         target = encounterPlayer;
-        playerHeat = target.GetComponent<PlayerHeat>();
-        playerMovement = target.GetComponent<PlayerMovement>();
+        if (cachedComponentsTarget != target)
+            CacheTargetComponents();
         isWaitingForEncounter = false;
         isEncounterEngaged = true;
         if (owner.CurrentState == EnemyBase.State.Idle)
@@ -857,8 +875,7 @@ public sealed class EnemyBrain : MonoBehaviour
             velocity += playerBackTurnedAggressionGain;
         if (!IsInsideCameraVisibilityPadding())
             velocity -= outOfCameraAggressionLoss;
-        PlayerHealth targetHealth = target != null
-            ? target.GetComponent<PlayerHealth>() : null;
+        PlayerHealth targetHealth = target != null ? playerHealth : null;
         bool targetUsesHealth = playerHeat != null && !playerHeat.IsHeatModeActive;
         float playerHealthPercent = targetUsesHealth && targetHealth != null
             ? targetHealth.HealthPercent

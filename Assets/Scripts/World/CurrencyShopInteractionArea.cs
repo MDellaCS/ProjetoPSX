@@ -17,6 +17,13 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
     private Transform player;
     private Collider areaCollider;
     private TemporaryWorldPromptHUD promptHUD;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        active.Clear();
+        nextOrder = 0;
+    }
+
     private void Awake()
     {
         if (terminal == null)
@@ -32,7 +39,7 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
     private void OnDisable()
     {
         active.Remove(this);
-        promptHUD?.HideContextualPrompt(this);
+        if (promptHUD != null) promptHUD.HideContextualPrompt(this);
         player = null;
     }
     private void Reset() => GetComponent<Collider>().isTrigger = true;
@@ -78,14 +85,14 @@ public sealed class CurrencyShopInteractionArea : MonoBehaviour
         if (terminal == null)
             terminal = GetComponentInParent<CurrencyShopTerminal>();
         if (player == null || terminal == null || terminal.IsDestroyed || !ContainsPlayer(player))
-        { promptHUD?.HideContextualPrompt(this); return; }
+        { if (promptHUD != null) promptHUD.HideContextualPrompt(this); return; }
         if (GamePauseController.IsPaused || CutsceneController.IsPlayerControlLocked || !IsNearest())
-        { promptHUD?.HideContextualPrompt(this); return; }
+        { if (promptHUD != null) promptHUD.HideContextualPrompt(this); return; }
         if (promptHUD == null) promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
         string interactLabel = GameInputBindings.GetDisplayString("Interact");
-        promptHUD?.ShowContextualPrompt(this, interactLabel, interactionMessage, interactionIcon);
+        if (promptHUD != null) promptHUD.ShowContextualPrompt(this, interactLabel, interactionMessage, interactionIcon);
         if (GameInput.InteractPressed && terminal.OpenShop(player))
-            promptHUD?.HideContextualPrompt(this);
+            if (promptHUD != null) promptHUD.HideContextualPrompt(this);
     }
     private void OnDrawGizmos()
     {

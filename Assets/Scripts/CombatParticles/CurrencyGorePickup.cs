@@ -44,7 +44,8 @@ public sealed class CurrencyGorePickup : MonoBehaviour
             value = 0;
             // O pickup deixa de existir visualmente no mesmo frame e o
             // CombatParticleSystem o devolve ao pool no Update seguinte.
-            GetComponent<CombatVisualParticle>()?.ExpireNow();
+            if (TryGetComponent(out CombatVisualParticle visual))
+                visual.ExpireNow();
             gameObject.SetActive(false);
             return;
         }

@@ -198,6 +198,10 @@ public sealed class PlayerHitboxController : MonoBehaviour
         { hitSet = new HashSet<EnemyBase>(); groupHits.Add(groupKey, hitSet); }
         for (int i = 0; i < count; i++)
         {
+            // Um acerto anterior pode ter encerrado o ataque (ex.: grapple
+            // ou cutscene); nao resolver os demais colliders sem runtime.
+            if (runtime == null)
+                return;
             if (overlapBuffer[i] != null &&
                 overlapBuffer[i].GetComponent<CurrencyShopInteractionArea>() != null)
                 continue;

@@ -53,6 +53,9 @@ public sealed class CutsceneController : MonoBehaviour
     private static CutsceneController active;
     private bool isRunning;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => active = null;
+
     private void OnValidate()
     {
 #if UNITY_EDITOR
@@ -253,13 +256,15 @@ public sealed class CutsceneController : MonoBehaviour
     {
         if (!lockPlayerControl || player == null)
             return;
-        player.GetComponent<PlayerAttackController>()?.CancelAttack();
+        if (player.TryGetComponent(out PlayerAttackController attackController))
+            attackController.CancelAttack();
         ClearPlayerInputBuffer();
     }
 
     private void ClearPlayerInputBuffer()
     {
-        if (player != null)
-            player.GetComponent<PlayerInputBuffer>()?.ClearBufferedInputs(true);
+        if (player != null &&
+            player.TryGetComponent(out PlayerInputBuffer inputBuffer))
+            inputBuffer.ClearBufferedInputs(true);
     }
 }

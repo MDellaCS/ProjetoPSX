@@ -370,8 +370,10 @@ public sealed class GameSceneLoader : MonoBehaviour
         {
             CinemachineCamera menuCamera = FindSceneMenuCamera(scene);
             if (menuCamera != null)
+            {
                 if (cameraFollow != null)
                     cameraFollow.EnterMenuCamera(menuCamera);
+            }
             else
                 SetMenuCameraPose(cameraFollow);
             if (pauseMenu != null)
@@ -419,8 +421,10 @@ public sealed class GameSceneLoader : MonoBehaviour
                 director.stopped -= OnNewGameCutsceneStopped;
             CinemachineCamera menuCamera = FindSceneMenuCamera(menuScene);
             if (menuCamera != null)
+            {
                 if (cameraFollow != null)
                     cameraFollow.EnterMenuCamera(menuCamera);
+            }
             else
                 SetMenuCameraPose(cameraFollow);
             if (menu != null)
@@ -479,7 +483,10 @@ public sealed class GameSceneLoader : MonoBehaviour
         foreach (PanelRenderer panel in FindObjectsByType<PanelRenderer>(
                      FindObjectsInactive.Include))
         {
-            if (panel != null && panel.GetComponent<PauseMenuHUD>() == null)
+            // O menu e a tela de loading precisam continuar ativos: o loading
+            // aparece justamente durante as trocas de cena.
+            if (panel != null && panel.GetComponent<PauseMenuHUD>() == null &&
+                panel.GetComponent<LoadingScreenHUD>() == null)
                 panel.enabled = enabled;
         }
     }

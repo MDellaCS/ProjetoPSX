@@ -361,7 +361,10 @@ public class FlyingPuppet : EnemyBase
         if (attack != null && attack.HasTag(TeleportDiveTag))
         {
             RestoreOtherEnemyCollisionsAfterTeleportDive();
-            teleportDivePhase = TeleportDivePhase.None;
+            // Se o ataque for cancelado (stagger, reset) enquanto o Flyer esta
+            // invisivel, a fase None impedia a restauracao posterior e ele
+            // ficaria sem renderer, collider e alvo.
+            RestoreTeleportDivePresentation();
         }
     }
 

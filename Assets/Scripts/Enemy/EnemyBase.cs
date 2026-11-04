@@ -81,7 +81,8 @@ public class EnemyBase : MonoBehaviour
                 return;
 
             currentState = value;
-            health?.SetStateVisual(currentState);
+            if (health != null)
+                health.SetStateVisual(currentState);
         }
     }
     public bool IsDead => health != null && health.IsDead;
@@ -311,6 +312,8 @@ public class EnemyBase : MonoBehaviour
         if (practiceDummy != null)
         {
             brain?.ResetForPracticeDummy();
+            if (reactions != null)
+                reactions.ResetPending();
             CurrentState = State.Idle;
         }
     }

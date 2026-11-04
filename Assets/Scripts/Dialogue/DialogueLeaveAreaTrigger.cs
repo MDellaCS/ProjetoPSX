@@ -21,7 +21,8 @@ public sealed class DialogueLeaveAreaTrigger : MonoBehaviour
         if (!playerColliders.Remove(other) || playerColliders.Count > 0)
             return;
 
-        owner?.OnLeaveAreaExited();
+        if (owner != null)
+            owner.OnLeaveAreaExited();
     }
 
     private void OnDisable() => playerColliders.Clear();

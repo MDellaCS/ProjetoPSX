@@ -77,7 +77,8 @@ public sealed class FixedCameraZone : MonoBehaviour
                 registeredCameraFollow.UnregisterFixedCameraZone(this);
 
             registeredCameraFollow = CameraFollow.Instance;
-            registeredCameraFollow?.RegisterFixedCameraZone(this);
+            if (registeredCameraFollow != null)
+            registeredCameraFollow.RegisterFixedCameraZone(this);
         }
     }
 
@@ -438,7 +439,8 @@ public sealed class FixedCameraZone : MonoBehaviour
             registeredCameraFollow.UnregisterFixedCameraZone(this);
 
         registeredCameraFollow = CameraFollow.Instance;
-        registeredCameraFollow?.RegisterFixedCameraZone(this);
+        if (registeredCameraFollow != null)
+            registeredCameraFollow.RegisterFixedCameraZone(this);
     }
 
     private void ResolveReferences()

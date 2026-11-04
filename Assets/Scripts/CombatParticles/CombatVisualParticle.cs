@@ -96,7 +96,8 @@ public sealed class CombatVisualParticle : MonoBehaviour
             secondCurrencyBlinkStartPercent,
             firstCurrencyBlinkFrequency, secondCurrencyBlinkFrequency);
         noiseSeed = Random.value * 1000f;
-        GetComponent<CurrencyGorePickup>()?.Initialize(currencyValue);
+        if (TryGetComponent(out CurrencyGorePickup pickup))
+            pickup.Initialize(currencyValue);
     }
 
     /// <summary>Inicializa uma peca real do modelo como particula fisica.</summary>
@@ -145,7 +146,8 @@ public sealed class CombatVisualParticle : MonoBehaviour
         body.WakeUp();
         ConfigureLifetime(bodyPartProfile.lifetime, false, fadeStartPercent,
             0f, 0f, 0f, 0f);
-        GetComponent<CurrencyGorePickup>()?.Initialize(0);
+        if (TryGetComponent(out CurrencyGorePickup meshPartPickup))
+            meshPartPickup.Initialize(0);
     }
 
     private void ConfigureLifetime(float lifetime, bool currency,

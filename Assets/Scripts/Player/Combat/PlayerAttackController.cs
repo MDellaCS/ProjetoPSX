@@ -68,10 +68,16 @@ public sealed class PlayerAttackController : MonoBehaviour
         if (!IsAttacking || GamePauseController.IsPaused ||
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
+        PlayerAttackRuntime tickedAttack = CurrentAttack;
         attackMovement.Tick(CurrentPhase, Time.deltaTime);
         if (CurrentPhase == PlayerAttackPhase.Active)
         {
             hitboxes.Tick(CurrentPhaseProgress);
+            // Um acerto (grapple, alvo interativo) pode encerrar o ataque, ou
+            // iniciar outro via AttackFinished, durante o Tick. Nao avance as
+            // fases de um ataque que ja nao e o deste frame.
+            if (CurrentAttack != tickedAttack)
+                return;
         }
         phaseTimer -= Time.deltaTime;
         if (phaseTimer > 0f) return;

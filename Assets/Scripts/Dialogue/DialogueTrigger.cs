@@ -15,6 +15,7 @@ public sealed class DialogueTrigger : MonoBehaviour
     private bool hasPlayed;
     private bool playerInside;
     private PlayerMovement playerMovement;
+    private Collider triggerCollider;
 
     private void Reset()
     {
@@ -28,8 +29,10 @@ public sealed class DialogueTrigger : MonoBehaviour
         if (playerMovement == null)
             playerMovement = FindAnyObjectByType<PlayerMovement>();
 
+        if (triggerCollider == null)
+            triggerCollider = GetComponent<Collider>();
         bool insideNow = PlayerAreaOverlap.ContainsPlayer(
-            GetComponent<Collider>(), playerMovement);
+            triggerCollider, playerMovement);
         if (!insideNow)
         {
             playerInside = false;

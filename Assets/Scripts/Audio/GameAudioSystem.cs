@@ -49,14 +49,24 @@ public class AudioCue
         if (!HasClip)
             return null;
 
-        List<AudioClip> validClips = new();
+        // Sem alocar lista a cada impacto: sorteia o indice entre os clips validos.
+        int validCount = 0;
         foreach (AudioClip clip in clips)
         {
             if (clip != null)
-                validClips.Add(clip);
+                validCount++;
         }
 
-        return validClips[UnityEngine.Random.Range(0, validClips.Count)];
+        int pick = UnityEngine.Random.Range(0, validCount);
+        foreach (AudioClip clip in clips)
+        {
+            if (clip == null)
+                continue;
+            if (pick-- == 0)
+                return clip;
+        }
+
+        return null;
     }
 }
 

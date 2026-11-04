@@ -8,8 +8,10 @@ public enum StrenghLeverActivationMode
 }
 
 /// <summary>
-/// Gatilho de mundo ativado pelo dano dos ataques do player. Pode representar
-/// uma alavanca, cristal, botao ou outro objeto destrutivel de uma encounter.
+/// Gatilho de mundo simples ativado pelo dano dos ataques do player. A regra de
+/// dano usa os mesmos modelos do WorldObject. Para novos objetos (com estados,
+/// particulas, dinheiro, barra de vida e lock-on) prefira o componente
+/// WorldObject; esta classe continua para as alavancas ja existentes nas cenas.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
@@ -31,15 +33,28 @@ public sealed class StrenghLever : MonoBehaviour, IPlayerAttackTarget
     [Tooltip("Acoes extras disparadas quando a StrenghLever ativa. Serve para portas, animacoes, encounters e outros sistemas.")]
     [SerializeField] private UnityEvent onActivated;
 
-    private int accumulatedDamage;
-    private float lastDamageTime = float.NegativeInfinity;
+    private WorldDamageModel damageModel;
     private bool activated;
     private Collider hurtbox;
 
     public bool IsActivated => activated;
-    public int AccumulatedDamage => accumulatedDamage;
+    public int AccumulatedDamage => damageModel is AccumulatedDamageModel accumulated
+        ? accumulated.GetAccumulatedDamage(Time.time) : 0;
 
-    private void Awake() => hurtbox = GetComponent<Collider>();
+    private void Awake()
+    {
+        hurtbox = GetComponent<Collider>();
+        BuildDamageModel();
+    }
+
+    private void BuildDamageModel()
+    {
+        damageModel = activationMode == StrenghLeverActivationMode.SingleHitOnly
+            ? new SingleHitDamageModel(requiredDamage)
+            : new AccumulatedDamageModel(requiredDamage, Mathf.Max(.01f, damageWindow),
+                AccumulatedDamageWindowMode.ResetAfterIdle);
+        damageModel.Initialize();
+    }
 
     /// <summary>
     /// Todo golpe valido confirma impacto para que o ataque produza Heat,
@@ -55,43 +70,31 @@ public sealed class StrenghLever : MonoBehaviour, IPlayerAttackTarget
         if (appliedDamage <= 0)
             return false;
 
-        if (activationMode == StrenghLeverActivationMode.SingleHitOnly)
-        {
-            if (appliedDamage >= requiredDamage)
-                Activate();
-            return true;
-        }
-
-        if (Time.time - lastDamageTime > damageWindow)
-            accumulatedDamage = 0;
-
-        accumulatedDamage += appliedDamage;
-        lastDamageTime = Time.time;
-        if (accumulatedDamage >= requiredDamage)
+        if (damageModel == null)
+            BuildDamageModel();
+        WorldDamageResult result = damageModel.ApplyDamage(appliedDamage, Time.time);
+        if (result.Depleted)
             Activate();
-        return true;
+        return result.Accepted;
     }
 
     [ContextMenu("Reset Lever")]
     public void ResetLever()
     {
         activated = false;
-        accumulatedDamage = 0;
-        lastDamageTime = float.NegativeInfinity;
+        BuildDamageModel();
     }
 
     private void Activate()
     {
         activated = true;
-        accumulatedDamage = requiredDamage;
         if (objectToHide != null)
             objectToHide.SetActive(false);
         onActivated?.Invoke();
         if (!singleUse)
         {
             activated = false;
-            accumulatedDamage = 0;
-            lastDamageTime = float.NegativeInfinity;
+            BuildDamageModel();
         }
     }
 

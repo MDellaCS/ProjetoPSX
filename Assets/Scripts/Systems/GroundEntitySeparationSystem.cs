@@ -20,6 +20,14 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
     [Tooltip("Margem vertical usada para reconhecer uma entidade apoiada sobre outra. Ela remove o empilhamento sem empurrar entidades que apenas passam muito acima.")]
     [Min(0f)] [SerializeField] private float verticalContactTolerance = .3f;
 
+    [Header("Deslizamento sobre a cabeca (domo)")]
+    [Tooltip("Velocidade horizontal minima, em m/s, com que uma entidade que cai sobre a cabeca de outra e empurrada para fora do domo. Garante que ela nunca fique em equilibrio no topo.")]
+    [Min(0f)] [SerializeField] private float domeSlideSpeed = 5f;
+    [Tooltip("Velocidade maxima de queda, em m/s, mantida enquanto a entidade desliza pelo domo. Evita atravessar a cabeca de outra entidade em quedas muito rapidas.")]
+    [Min(0f)] [SerializeField] private float domeMaxFallSpeed = 6f;
+    [Tooltip("Fracao do deslize horizontal aplicada, no sentido oposto, a entidade de baixo. Impede que a de cima fique presa quando esta encostada em uma parede.")]
+    [Range(0f, 1f)] [SerializeField] private float domeLowerPushShare = .25f;
+
     private readonly List<GroundEntity> entities = new();
     private PlayerMovement cachedPlayer;
 
@@ -129,6 +137,15 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
             return;
         }
 
+        // Pouso sobre a cabeca: a entidade de cima desliza pela curva do
+        // topo da capsula de baixo, como numa esfera sem atrito. Qualquer
+        // subida (pulo, launch) ignora este contato e nao e alterada.
+        if (TryResolveDomeContact(first, second) ||
+            TryResolveDomeContact(second, first))
+        {
+            return;
+        }
+
         if (!HasRelevantVerticalContact(first, second))
             return;
 
@@ -172,6 +189,76 @@ public sealed class GroundEntitySeparationSystem : MonoBehaviour
 
         MarkTopContact(first, second);
         MarkTopContact(second, first);
+    }
+
+    private bool TryResolveDomeContact(GroundEntity upper, GroundEntity lower)
+    {
+        const float ascendingThreshold = .05f;
+        if (upper.VerticalVelocity > ascendingThreshold)
+            return false;
+
+        Bounds upperBounds = upper.Bounds;
+        Bounds lowerBounds = lower.Bounds;
+        float upperRadius = upper.Radius;
+        float lowerRadius = lower.Radius;
+
+        // Centros das semiesferas que se tocam: base da capsula de cima e
+        // topo da capsula de baixo.
+        Vector3 upperCenter = new(upperBounds.center.x,
+            upperBounds.min.y + upperRadius, upperBounds.center.z);
+        Vector3 lowerCenter = new(lowerBounds.center.x,
+            lowerBounds.max.y - lowerRadius, lowerBounds.center.z);
+        if (upperCenter.y <= lowerCenter.y)
+            return false;
+
+        Vector3 offset = upperCenter - lowerCenter;
+        float requiredDistance = upperRadius + lowerRadius + horizontalClearance;
+        float distance = offset.magnitude;
+        if (distance >= requiredDistance)
+            return false;
+
+        Vector3 horizontal = new(offset.x, 0f, offset.z);
+        Vector3 outward;
+        if (horizontal.sqrMagnitude > .0004f)
+        {
+            outward = horizontal.normalized;
+        }
+        else
+        {
+            // Exatamente sobre o eixo: o topo e um ponto de equilibrio
+            // instavel. Uma direcao estavel (lateral da entidade de baixo)
+            // quebra a simetria sem depender de aleatoriedade.
+            outward = lower.Transform.right;
+            outward.y = 0f;
+            outward = outward.sqrMagnitude > .0001f
+                ? outward.normalized : Vector3.right;
+            offset = outward * .001f + Vector3.up * Mathf.Max(offset.y, .001f);
+            distance = offset.magnitude;
+        }
+
+        Vector3 normal = offset / Mathf.Max(distance, .0001f);
+        float penetration = requiredDistance - distance;
+        Vector3 correction = normal * penetration +
+            outward * (domeSlideSpeed * Time.deltaTime);
+        ApplyDomeCorrection(upper, correction);
+
+        if (domeLowerPushShare > 0f)
+        {
+            Vector3 lowerPush = -outward *
+                (Vector3.ProjectOnPlane(correction, Vector3.up).magnitude *
+                    domeLowerPushShare);
+            ApplyDisplacement(lower, lowerPush);
+        }
+
+        return true;
+    }
+
+    private void ApplyDomeCorrection(GroundEntity entity, Vector3 correction)
+    {
+        if (entity.player != null)
+            entity.player.ApplyEntityDomeContact(correction, domeMaxFallSpeed);
+        else
+            entity.enemy.ApplyEntityDomeContact(correction, domeMaxFallSpeed);
     }
 
     private bool HasRelevantVerticalContact(GroundEntity first, GroundEntity second)

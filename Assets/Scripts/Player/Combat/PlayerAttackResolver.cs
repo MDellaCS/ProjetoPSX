@@ -6,7 +6,6 @@ public sealed class PlayerAttackResolver : MonoBehaviour
     private PlayerHeat heat;
     private PlayerMovement movement;
     private PlayerCombatStatus combatStatus;
-    private PlayerDpsMeter dpsMeter;
     private PlayerGrappleAttackController grappleAttack;
     private bool cameraShakeReported;
     private int lastSelfJuggleFrame = -1;
@@ -17,9 +16,6 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         movement = GetComponent<PlayerMovement>();
         combatStatus = GetComponent<PlayerCombatStatus>();
         grappleAttack = GetComponent<PlayerGrappleAttackController>();
-        dpsMeter = GetComponent<PlayerDpsMeter>();
-        if (dpsMeter == null)
-            dpsMeter = gameObject.AddComponent<PlayerDpsMeter>();
     }
 
     public void BeginAttack()
@@ -73,7 +69,6 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             hitboxTrack, audioSurfaceTarget, impactPosition);
         if (strike.effects.juggle)
             ApplyJuggleToPlayer();
-        dpsMeter?.ReportDamage(dealt);
         CombatImpactSystem.ReportPlayerAttackImpact(transform, enemy.transform,
             runtime.Definition.kind == PlayerAttackKind.Heavy, dealt, !cameraShakeReported);
         cameraShakeReported = true;

@@ -131,6 +131,10 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     {
         player = playerTarget;
         effects = stack;
+        // Uma troca de cena destroi o Volume global antigo; sem isso a busca em
+        // cache nunca seria refeita e o grading termico pararia silenciosamente.
+        if (cachedGlobalVolume == null)
+            hasSearchedGlobalVolume = false;
         ResolvePlayerComponents();
         EnsureThermalProfile();
     }
@@ -148,9 +152,12 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
     private void OnDisable()
     {
-        effects?.RemoveModifier(CombatModifierId);
-        effects?.RemoveModifier(HeatModifierId);
-        effects?.RemoveModifier(ColdModifierId);
+        if (effects != null)
+        {
+            effects.RemoveModifier(CombatModifierId);
+            effects.RemoveModifier(HeatModifierId);
+            effects.RemoveModifier(ColdModifierId);
+        }
         Shader.SetGlobalFloat(HeatPeripheralBlurId, 0f);
         Shader.SetGlobalFloat(PlayerCenteredFogEnabledId, 0f);
     }
@@ -274,7 +281,19 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     private void EnsureThermalProfile()
     {
         if (thermalProfileInitialized)
-            return;
+        {
+            // Volume/profile destruidos (troca de cena): descarta o estado e
+            // procura o novo Volume global.
+            if (thermalVolume != null && whiteBalance != null &&
+                colorAdjustments != null)
+                return;
+
+            thermalProfileInitialized = false;
+            whiteBalance = null;
+            colorAdjustments = null;
+            if (cachedGlobalVolume == null)
+                hasSearchedGlobalVolume = false;
+        }
 
         if (thermalVolume == null)
         {

@@ -1,6 +1,6 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="TemporaryWorldPrompt.uss" />
-    <ui:VisualElement name="temporary-world-prompt" class="temporary-world-prompt">
+    <ui:VisualElement name="temporary-world-prompt" class="temporary-world-prompt" picking-mode="Ignore">
         <ui:VisualElement class="temporary-world-prompt__content">
             <ui:VisualElement name="temporary-world-prompt-keys" class="temporary-world-prompt__keys" />
             <ui:Label name="temporary-world-prompt-body" class="temporary-world-prompt__body" text="PRESS" />

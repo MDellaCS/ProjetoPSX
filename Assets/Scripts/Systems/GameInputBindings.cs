@@ -12,6 +12,19 @@ public static class GameInputBindings
     public static bool IsRebinding => operation != null;
     public static int LastRebindFrame { get; private set; } = -1;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        // Com Domain Reload desligado, a operacao de rebind e os assinantes do
+        // evento sobreviveriam entre execucoes do Play Mode.
+        if (operation != null)
+            operation.Dispose();
+        operation = null;
+        asset = null;
+        BindingsChanged = null;
+        LastRebindFrame = -1;
+    }
+
     internal static void InitializeSession(InputActionAsset inputAsset)
     {
         CancelRebind();
@@ -34,8 +47,12 @@ public static class GameInputBindings
         }
     }
 
-    public static string Snapshot() =>
-        GameInput.Asset?.SaveBindingOverridesAsJson() ?? string.Empty;
+    public static string Snapshot()
+    {
+        InputActionAsset actions = GameInput.Asset;
+        return actions != null
+            ? actions.SaveBindingOverridesAsJson() : string.Empty;
+    }
 
     public static void Restore(string json)
     {

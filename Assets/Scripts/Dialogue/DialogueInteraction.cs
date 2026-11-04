@@ -54,7 +54,8 @@ public sealed class DialogueInteraction : MonoBehaviour
     {
         playerInside = false;
         dialogueStartedByInteraction = false;
-        promptHUD?.HideContextualPrompt(this);
+        if (promptHUD != null)
+            promptHUD.HideContextualPrompt(this);
     }
 
     private void Update()
@@ -73,7 +74,8 @@ public sealed class DialogueInteraction : MonoBehaviour
 
         if (interactOnce && hasInteracted)
         {
-            promptHUD?.HideContextualPrompt(this);
+            if (promptHUD != null)
+            promptHUD.HideContextualPrompt(this);
             return;
         }
 
@@ -81,14 +83,16 @@ public sealed class DialogueInteraction : MonoBehaviour
             CutsceneController.IsPlayerControlLocked ||
             DialogueController.IsDisplaying)
         {
-            promptHUD?.HideContextualPrompt(this);
+            if (promptHUD != null)
+            promptHUD.HideContextualPrompt(this);
             return;
         }
 
         if (promptHUD == null)
             promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
 
-        promptHUD?.ShowContextualPrompt(this,
+        if (promptHUD != null)
+            promptHUD.ShowContextualPrompt(this,
             GameInputBindings.GetDisplayString("Interact"),
             promptMessage, promptIcon);
 
@@ -100,7 +104,8 @@ public sealed class DialogueInteraction : MonoBehaviour
 
         hasInteracted = true;
         dialogueStartedByInteraction = true;
-        promptHUD?.HideContextualPrompt(this);
+        if (promptHUD != null)
+            promptHUD.HideContextualPrompt(this);
     }
 
     private void CreateLeaveAreaTrigger()
@@ -140,7 +145,8 @@ public sealed class DialogueInteraction : MonoBehaviour
 
         playerInside = isInsideNow;
         if (!playerInside)
-            promptHUD?.HideContextualPrompt(this);
+            if (promptHUD != null)
+            promptHUD.HideContextualPrompt(this);
     }
 
     private bool IsPlayerOverlapping(Collider area)
@@ -207,7 +213,8 @@ public sealed class DialogueInteraction : MonoBehaviour
             return;
 
         playerInside = false;
-        promptHUD?.HideContextualPrompt(this);
+        if (promptHUD != null)
+            promptHUD.HideContextualPrompt(this);
     }
 
     private void OnDrawGizmosSelected()

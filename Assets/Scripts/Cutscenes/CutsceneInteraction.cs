@@ -43,7 +43,7 @@ public sealed class CutsceneInteraction : MonoBehaviour
 
     private void OnDisable()
     {
-        promptHUD?.HideContextualPrompt(this);
+        if (promptHUD != null) promptHUD.HideContextualPrompt(this);
     }
 
     private void Update()
@@ -58,14 +58,14 @@ public sealed class CutsceneInteraction : MonoBehaviour
             DialogueController.IsInteractionCooldownActive || cutscene == null ||
             (interactOnce && hasInteracted))
         {
-            promptHUD?.HideContextualPrompt(this);
+            if (promptHUD != null) promptHUD.HideContextualPrompt(this);
             return;
         }
 
         if (promptHUD == null)
             promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
 
-        promptHUD?.ShowContextualPrompt(
+        if (promptHUD != null) promptHUD.ShowContextualPrompt(
             this,
             GameInputBindings.GetDisplayString("Interact"),
             promptMessage,
@@ -75,7 +75,7 @@ public sealed class CutsceneInteraction : MonoBehaviour
             return;
 
         hasInteracted = true;
-        promptHUD?.HideContextualPrompt(this);
+        if (promptHUD != null) promptHUD.HideContextualPrompt(this);
 
         if (disableAfterStart)
             gameObject.SetActive(false);

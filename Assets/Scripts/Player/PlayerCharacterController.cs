@@ -256,7 +256,8 @@ public sealed class PlayerCharacterController : MonoBehaviour
             RaycastHit candidate = hitBuffer[i];
             if (candidate.collider == null || IsIgnoredForMovement(candidate.collider) ||
                 Vector3.Dot(direction, candidate.normal) >= -.0001f ||
-                candidate.distance >= nearestDistance)
+                candidate.distance >= nearestDistance ||
+                IsEntityTopSurface(candidate.collider, candidate.normal))
                 continue;
 
             // Casts que partem com o pe apoiado podem reportar o chao como
@@ -402,7 +403,8 @@ public sealed class PlayerCharacterController : MonoBehaviour
             RaycastHit hit = hitBuffer[i];
             if (hit.collider == null || IsIgnoredForMovement(hit.collider) ||
                 !PlayerMovementFrameMath.IsGroundSupport(hit.normal) ||
-                hit.distance >= nearestDistance)
+                hit.distance >= nearestDistance ||
+                IsEntityTopSurface(hit.collider, hit.normal))
                 continue;
             nearestDistance = hit.distance;
             nearestNormal = hit.normal.normalized;
@@ -484,6 +486,21 @@ public sealed class PlayerCharacterController : MonoBehaviour
         // jogador enquanto voa, exceto durante o ataque de teleporte.
         FlyingPuppet flyingPuppet = classification.flyingPuppet;
         return flyingPuppet == null || flyingPuppet.IgnoresPlayerCollision;
+    }
+
+    /// <summary>
+    /// A parte de cima de um inimigo nunca e piso. Inimigos terrestres ja sao
+    /// ignorados pelo motor; o FlyingPuppet usa colisao real e, sem esta
+    /// regra, o jogador poderia pousar nele. O deslize e feito pelo sistema
+    /// central de separacao.
+    /// </summary>
+    private bool IsEntityTopSurface(Collider other, Vector3 normal)
+    {
+        if (normal.y <= .3f)
+            return false;
+        return movementCollisionCache.TryGetValue(other,
+            out MovementCollisionClassification classification) &&
+            classification.enemy != null;
     }
 
     private CollisionFlags GetCollisionFlag(Vector3 normal)

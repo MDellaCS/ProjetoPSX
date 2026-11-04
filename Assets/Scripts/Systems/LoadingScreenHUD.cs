@@ -19,6 +19,7 @@ public sealed class LoadingScreenHUD : MonoBehaviour
 
     private static LoadingScreenHUD instance;
     private PanelRenderer panelRenderer;
+    private VisualElement uiRoot;
     private VisualElement overlay;
     private VisualElement progressFill;
     private Label loadingLabel;
@@ -104,7 +105,10 @@ public sealed class LoadingScreenHUD : MonoBehaviour
 
     private void Update()
     {
-        if (!isVisible || loadingLabel == null)
+        if (!isVisible)
+            return;
+        EnsureElements();
+        if (loadingLabel == null)
             return;
 
         dotTimer += Time.unscaledDeltaTime;
@@ -128,6 +132,7 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         shownAt = Time.unscaledTime;
         isVisible = true;
         GamePauseController.RequestPause(this);
+        EnsureElements();
         SetProgress(0f);
         if (overlay != null)
             overlay.style.opacity = 1f;
@@ -137,6 +142,7 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     /// <summary>Atualiza o preenchimento da barra entre zero e um.</summary>
     public void SetProgress(float progress)
     {
+        EnsureElements();
         if (progressFill != null)
             progressFill.style.width = Length.Percent(
                 Mathf.Clamp01(progress) * 100f);
@@ -207,6 +213,8 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         if (rootVisualElement == null)
             return;
 
+        uiRoot = rootVisualElement;
+
         // O PanelRenderer pode notificar um reload com a arvore ainda vazia
         // (antes de clonar o UXML). Espera o proximo reload em vez de errar.
         if (rootVisualElement.childCount == 0)
@@ -230,8 +238,26 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         SetVisible(isVisible);
     }
 
+    // O PanelRenderer pode recriar a arvore (por exemplo ao ser reativado)
+    // sem um novo callback com os elementos prontos. Resolve sob demanda.
+    private void EnsureElements()
+    {
+        if (overlay != null && progressFill != null && loadingLabel != null)
+            return;
+        VisualElement root = uiRoot;
+        if (root == null || root.childCount == 0)
+            return;
+
+        overlay = root.Q<VisualElement>("loading-screen-overlay");
+        progressFill = root.Q<VisualElement>("loading-progress-fill");
+        loadingLabel = root.Q<Label>("loading-label");
+        if (overlay != null)
+            overlay.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
     private void SetVisible(bool value)
     {
+        EnsureElements();
         if (overlay != null)
             overlay.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
     }

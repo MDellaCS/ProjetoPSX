@@ -171,14 +171,14 @@ public sealed class EnemyAttackSelector
     private bool IsTargetGrounded()
     {
         PlayerMovement player = brain.Target != null
-            ? brain.Target.GetComponent<PlayerMovement>() : null;
+            ? brain.TargetMovement : null;
         return player == null || player.IsGrounded;
     }
 
     private Vector3 GetTargetCenter()
     {
         PlayerCharacterController targetController = brain.Target != null
-            ? brain.Target.GetComponent<PlayerCharacterController>() : null;
+            ? brain.TargetCharacterController : null;
         return targetController != null
             ? targetController.bounds.center
             : brain.Target.position;

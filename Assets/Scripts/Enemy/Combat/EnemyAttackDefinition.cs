@@ -202,7 +202,16 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     [Tooltip("Cria uma Capsule entre o centro do inimigo e cada Track ativa.")]
     public bool usesExtendedArmHitbox;
 
-    public bool HasTag(string tag) => !string.IsNullOrWhiteSpace(tag) &&
-        tags != null && tags.Exists(value =>
-            string.Equals(value, tag, StringComparison.OrdinalIgnoreCase));
+    public bool HasTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag) || tags == null)
+            return false;
+        // Laco manual: evita a closure/delegate alocada por List.Exists em
+        // consultas por frame.
+        for (int index = 0; index < tags.Count; index++)
+            if (string.Equals(tags[index], tag,
+                StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
 }

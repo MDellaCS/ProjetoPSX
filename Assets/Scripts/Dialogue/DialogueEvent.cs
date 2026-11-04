@@ -11,6 +11,8 @@ public sealed class DialogueEvent : MonoBehaviour
 
     public void Show()
     {
-        DialogueController.Instance?.TryShow(sequence);
+        DialogueController controller = DialogueController.Instance;
+        if (controller != null)
+            controller.TryShow(sequence);
     }
 }

@@ -254,6 +254,21 @@ public sealed class EnemyMovement : MonoBehaviour
             controller.Move(displacement);
     }
 
+    /// <summary>
+    /// Correcao de contato do sistema central quando este inimigo cai sobre a
+    /// cabeca de outra entidade: desliza pelo domo em vez de se apoiar nela.
+    /// </summary>
+    public void ApplyEntityDomeContact(Vector3 correction, float maxFallSpeed)
+    {
+        if (!IsControllerUsable)
+            return;
+
+        if (correction.sqrMagnitude > .0000001f)
+            controller.Move(correction);
+        if (!hasLaunchProfileForFrame && verticalVelocity < -maxFallSpeed)
+            verticalVelocity = -maxFallSpeed;
+    }
+
     public void ApplyGravity()
     {
         if (!IsControllerUsable) return;
@@ -639,24 +654,57 @@ public sealed class EnemyMovement : MonoBehaviour
         ResetJuggleMovement();
     }
 
+    private struct HitClassification
+    {
+        public PlayerMovement player;
+        public EnemyBase enemy;
+    }
+
+    // OnControllerColliderHit dispara quase todo frame (inclusive no chao).
+    // Classificar o collider uma unica vez evita GetComponentInParent repetido.
+    private const int HitClassificationCacheLimit = 64;
+    private readonly Dictionary<Collider, HitClassification>
+        hitClassificationCache = new();
+
+    private HitClassification ClassifyHitCollider(Collider collider)
+    {
+        if (hitClassificationCache.TryGetValue(collider,
+            out HitClassification cached) &&
+            (cached.player == null || cached.player) &&
+            (cached.enemy == null || cached.enemy))
+        {
+            return cached;
+        }
+
+        if (hitClassificationCache.Count >= HitClassificationCacheLimit)
+            hitClassificationCache.Clear();
+        HitClassification result = new()
+        {
+            player = collider.GetComponentInParent<PlayerMovement>(),
+            enemy = collider.GetComponentInParent<EnemyBase>()
+        };
+        hitClassificationCache[collider] = result;
+        return result;
+    }
+
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
         if (owner == null || hit == null || hit.collider == null) return;
-        PlayerMovement player = hit.collider.GetComponentInParent<PlayerMovement>();
-        if (player != null && IsLandingOnPlayerTop(player))
+        Collider obstacle = hit.collider;
+        HitClassification classification = ClassifyHitCollider(obstacle);
+        PlayerMovement player = classification.player;
+        if (player != null)
         {
-            SeparateFromPlayerHead(player);
+            if (IsLandingOnPlayerTop(player))
+                SeparateFromPlayerHead(player);
             return;
         }
-        Collider obstacle = hit.collider;
-        EnemyBase impactedEnemy = obstacle.GetComponentInParent<EnemyBase>();
+        EnemyBase impactedEnemy = classification.enemy;
         if (impactedEnemy != null)
         {
             TryApplyThrownBodyImpact(impactedEnemy);
             return;
         }
-        if (obstacle.GetComponentInParent<PlayerMovement>() != null)
-            return;
         if (Mathf.Abs(hit.normal.y) > .5f) return;
         CombatPoiseSystem rules = CombatPoiseSystem.Instance;
         if ((rules.StaticImpactLayers.value &

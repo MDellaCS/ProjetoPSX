@@ -109,6 +109,21 @@ public sealed class CombatParticleSystem : MonoBehaviour
             source, particleCountMultiplier);
     }
 
+    /// <summary>
+    /// Emissao para objetos de mundo. Sem perfil, usa o padrao de golpe ou o de
+    /// morte do sistema. Com currency, cada moeda vira um fragmento coletavel.
+    /// </summary>
+    public void EmitWorldObjectParticles(CombatParticleProfile profile,
+        bool useDeathDefault, Vector3 position, Vector3 direction,
+        int damageDealt, Renderer source, float countMultiplier,
+        Vector2Int currencyValueRange = default, int currencyPieces = 0)
+    {
+        EnsureDefaults();
+        Emit(profile, useDeathDefault ? defaultGore : defaultHit, position,
+            direction, damageDealt, source, countMultiplier, currencyValueRange,
+            currencyPieces);
+    }
+
     public void EmitCurrencyDeath(CombatParticleProfile profile, Vector3 position,
         Vector3 direction, int damage, Renderer source, float countMultiplier,
         Vector2Int valueRange, int currencyPieces)
@@ -229,9 +244,14 @@ public sealed class CombatParticleSystem : MonoBehaviour
         for (int i = 0; i < activeVisual.Count; i++)
         {
             CombatVisualParticle candidate = activeVisual[i];
-            CurrencyGorePickup pickup = candidate != null
-                ? candidate.GetComponent<CurrencyGorePickup>() : null;
-            if (pickup != null && pickup.HasCurrency)
+            if (candidate == null)
+            {
+                // Particula destruida externamente: descarta o registro e tenta o proximo.
+                activeVisual.RemoveAt(i--);
+                continue;
+            }
+            if (candidate.TryGetComponent(out CurrencyGorePickup pickup) &&
+                pickup.HasCurrency)
                 continue;
 
             activeVisual.RemoveAt(i);
@@ -329,7 +349,9 @@ public sealed class CombatParticleSystem : MonoBehaviour
 
     private static Material CreateMaterial(Color color)
     {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+            shader = Shader.Find("Standard");
         Material material = new(shader) { color = color }; return material;
     }
 

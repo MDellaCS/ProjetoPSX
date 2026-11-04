@@ -113,7 +113,8 @@ public sealed class PracticeDummy : MonoBehaviour
             characterController.enabled = false;
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
         {
-            if (renderer == null) continue;
+            // Renderers ja desligados na prefab nao devem ser religados depois.
+            if (renderer == null || !renderer.enabled) continue;
             hiddenRenderers.Add(renderer);
             renderer.enabled = false;
         }
@@ -138,6 +139,8 @@ public sealed class PracticeDummy : MonoBehaviour
 
     private void ReturnToStart()
     {
+        if (enemy != null && enemy.IsGrapplePulled)
+            enemy.EndGrappleStagger(0f);
         attacks?.CancelAttack();
         guard?.CancelGuardForPracticeDummy();
         dodge?.CancelDodge();

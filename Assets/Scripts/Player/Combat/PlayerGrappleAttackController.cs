@@ -44,7 +44,6 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
     private PlayerCharacterController characterController;
     private PlayerState playerState;
     private PlayerHeat heat;
-    private PlayerDpsMeter dpsMeter;
     private PlayerCombatStatus combatStatus;
     private PlayerMovesetController movesetController;
     private EnemyBase pulledEnemy;
@@ -69,7 +68,6 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         characterController = movement.EntityCharacterController;
         playerState = GetComponent<PlayerState>();
         heat = GetComponent<PlayerHeat>();
-        dpsMeter = GetComponent<PlayerDpsMeter>();
         combatStatus = GetComponent<PlayerCombatStatus>();
         movesetController = GetComponent<PlayerMovesetController>();
     }
@@ -214,7 +212,6 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         GetComponent<PlayerAttackAudioController>()?.NotifyHit(runtime,
             hitboxTrack, impactCollider != null ? impactCollider : enemy,
             impactPosition);
-        dpsMeter?.ReportDamage(damageDealt);
         CombatImpactSystem.ReportPlayerAttackImpact(transform, enemy.transform,
             runtime.Definition.kind == PlayerAttackKind.Heavy, damageDealt, true);
 

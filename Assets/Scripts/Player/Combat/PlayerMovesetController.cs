@@ -76,6 +76,10 @@ public sealed class PlayerMovesetController : MonoBehaviour
         if (Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
             CycleMoveset();
         if (moveset == null) return;
+        // Ataque externo (explosao de Burn) nao pertence ao moveset: um input
+        // de ataque nao pode cancela-lo nem enfileirar continuacoes.
+        if (attacks.IsAttacking && playerState != null &&
+            !playerState.IsAttacking()) return;
         if (inputBuffer.HasBuffered(PlayerBufferedInput.HeavyAttack)) TryInput(PlayerAttackInput.Heavy);
         else if (inputBuffer.HasBuffered(PlayerBufferedInput.LightAttack)) TryInput(PlayerAttackInput.Light);
         TryHeldContinuation();

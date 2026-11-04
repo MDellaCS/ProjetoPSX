@@ -20,6 +20,14 @@ public sealed class EnemyReactionController : MonoBehaviour
         movement = enemyMovement;
     }
 
+    /// <summary>Descarta Stagger pendente de uma reacao anterior (reset do boneco de treino).</summary>
+    internal void ResetPending()
+    {
+        pendingStagger = false;
+        pendingSuperStagger = false;
+        wasInForcedMovement = false;
+    }
+
     internal void Tick()
     {
         bool forced = movement.IsLaunched || movement.IsLaunchedForwards;

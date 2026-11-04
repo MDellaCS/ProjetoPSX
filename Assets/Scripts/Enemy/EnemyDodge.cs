@@ -90,6 +90,9 @@ public sealed class EnemyDodge : MonoBehaviour
             return false;
         if (IsAvoidingPlayerAttacks)
             return true;
+        // Durante o puxao do grapple o movimento e controlado externamente.
+        if (owner != null && owner.IsGrapplePulled)
+            return false;
         if (owner == null || owner.IsDead || brain == null ||
             movement == null || movement.IsLaunchedForwards ||
             !CanInterruptCurrentState() ||

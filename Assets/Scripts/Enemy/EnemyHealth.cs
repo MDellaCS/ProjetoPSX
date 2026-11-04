@@ -61,6 +61,7 @@ public sealed class EnemyHealth : MonoBehaviour
     private EnemyDodge dodge;
     private EnemyGore gore;
     private EnemyAttackReflector attackReflector;
+    private static readonly List<Renderer> rendererScratch = new();
     private readonly List<RendererColorState> enemyRenderers = new();
     private readonly HashSet<Renderer> cachedEnemyRenderers = new();
     private MaterialPropertyBlock colorBlock;
@@ -450,7 +451,9 @@ public sealed class EnemyHealth : MonoBehaviour
 
     private void CacheEnemyRenderers()
     {
-        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        // Lista reutilizada: esta rotina roda a cada mudanca de estado visual.
+        GetComponentsInChildren(true, rendererScratch);
+        foreach (Renderer renderer in rendererScratch)
         {
             if (renderer == null || !cachedEnemyRenderers.Add(renderer))
                 continue;
@@ -463,6 +466,7 @@ public sealed class EnemyHealth : MonoBehaviour
                 originalBlock = originalBlock.isEmpty ? null : originalBlock
             });
         }
+        rendererScratch.Clear();
     }
 
     private void SetEnemyColor(Color color)

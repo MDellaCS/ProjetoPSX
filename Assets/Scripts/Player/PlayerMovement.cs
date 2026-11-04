@@ -255,6 +255,23 @@ public class PlayerMovement : MonoBehaviour
             CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
+        // Stagger (leve ou pesado) encerra o dash-jump em qualquer entrada,
+        // com ou sem empurrao, devolvendo o controle aereo ao player.
+        if (isDashJump && playerState != null &&
+            (playerState.IsStaggered() || playerState.IsHeavyStaggered()))
+            isDashJump = false;
+
+        // Um cancelamento de ataque enfileirado nao pode sobreviver a um
+        // stagger, morte, Burn, swing ou grapple: dispararia um dash/pulo
+        // fantasma quando o player voltasse ao estado Normal.
+        if (queuedRecoveryCancelAction != RecoveryCancelAction.None &&
+            playerState != null && !playerState.IsNormal() &&
+            !playerState.IsAttacking() && !playerState.IsDashing() &&
+            !playerState.IsSliding())
+        {
+            queuedRecoveryCancelAction = RecoveryCancelAction.None;
+        }
+
         // O PlayerSwingController calcula e aplica o deslocamento enquanto
         // esse estado estÃ¡ ativo, usando o mesmo motor de colisao do jogador.
         if (playerState != null && (playerState.IsSwinging() ||
@@ -1482,6 +1499,28 @@ public class PlayerMovement : MonoBehaviour
             pendingExternalDisplacement += displacement;
             hasPendingMovementCommit = true;
         }
+    }
+
+    /// <summary>
+    /// Correcao de contato aplicada pelo sistema central quando o jogador cai
+    /// sobre a cabeca de outra entidade. Inclui a componente vertical e limita
+    /// a velocidade de queda para o jogador deslizar pelo domo em vez de
+    /// atravessa-lo. Nao altera input, ataque nem estado.
+    /// </summary>
+    public void ApplyEntityDomeContact(Vector3 correction, float maxFallSpeed)
+    {
+        if (!isActiveAndEnabled || controller == null || !controller.enabled ||
+            !gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        pendingExternalDisplacement += correction;
+        hasPendingMovementCommit = true;
+        enemyGroundContactTimer = Mathf.Max(enemyGroundContactTimer,
+            EnemyGroundContactGracePeriod);
+        if (verticalVelocity < -maxFallSpeed)
+            verticalVelocity = -maxFallSpeed;
     }
 
     /// <summary>Inicia movimento externo controlado pelo sistema de balanco.</summary>

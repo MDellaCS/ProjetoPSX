@@ -488,9 +488,12 @@ public sealed class CameraFollow : MonoBehaviour
         gameplayCamera.LookAt = trackingPivot;
         gameplayCamera.PreviousStateIsValid = false;
 
-        effectStack?.Initialize(gameplayCamera);
-        gameplayEffects?.Initialize(target, effectStack);
-        playerVisibility?.Initialize(target, GetComponent<Camera>());
+        if (effectStack != null)
+            effectStack.Initialize(gameplayCamera);
+        if (gameplayEffects != null)
+            gameplayEffects.Initialize(target, effectStack);
+        if (playerVisibility != null)
+            playerVisibility.Initialize(target, GetComponent<Camera>());
         initialized = true;
     }
 
