@@ -197,6 +197,13 @@ public sealed class GameSceneLoader : MonoBehaviour
     /// <summary>Carrega a fase principal configurada. Pode ser chamado por UnityEvent.</summary>
     public void LoadGameplayScene() => LoadScene(gameplayScenePath);
 
+    /// <summary>Volta ao menu inicial (usado pelo menu de pausa).</summary>
+    public void LoadMainMenu()
+    {
+        if (!string.IsNullOrWhiteSpace(mainMenuScenePath))
+            LoadScene(mainMenuScenePath);
+    }
+
     /// <summary>Recarrega somente a fase atual; GameRoot e Player permanecem.</summary>
     public void ReloadCurrentScene() =>
         LoadScene(SceneManager.GetActiveScene().path, defaultSpawnId);
@@ -236,13 +243,7 @@ public sealed class GameSceneLoader : MonoBehaviour
         if (operation != null)
         {
             while (!operation.isDone)
-            {
-                if (loadingScreen != null)
-                    loadingScreen.SetProgress(operation.progress / .9f);
                 yield return null;
-            }
-            if (loadingScreen != null)
-                loadingScreen.SetProgress(1f);
         }
         else
         {
@@ -313,8 +314,6 @@ public sealed class GameSceneLoader : MonoBehaviour
         BindSceneCutscenesToPersistentCamera(scene);
         pendingSpawnId = null;
         ResolveLoadingScreen();
-        if (loadingScreen != null)
-            loadingScreen.SetProgress(1f);
         if (loadingScreen != null)
             loadingScreen.HideAfterSceneReady();
     }

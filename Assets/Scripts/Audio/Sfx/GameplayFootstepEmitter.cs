@@ -38,7 +38,7 @@ public sealed class GameplayFootstepEmitter : MonoBehaviour
         frameMovement.y = 0f;
         float distance = frameMovement.magnitude;
         if (distance / Time.deltaTime <
-            GameplayAudioSystem.Instance.Settings.minimumFootstepSpeed)
+            SfxAudio.CurrentSettings.minimumFootstepSpeed)
         {
             distanceSinceLastStep = 0f;
             return;
@@ -46,8 +46,8 @@ public sealed class GameplayFootstepEmitter : MonoBehaviour
 
         distanceSinceLastStep += distance;
         float stepDistance = IsPlayer
-            ? GameplayAudioSystem.Instance.Settings.playerFootstepDistance
-            : GameplayAudioSystem.Instance.Settings.enemyFootstepDistance;
+            ? SfxAudio.CurrentSettings.playerFootstepDistance
+            : SfxAudio.CurrentSettings.enemyFootstepDistance;
         // Teletransportes de spawn/reset nao devem soar como uma longa corrida.
         if (distance >= stepDistance * 3f)
         {
@@ -59,11 +59,11 @@ public sealed class GameplayFootstepEmitter : MonoBehaviour
             return;
 
         distanceSinceLastStep %= stepDistance;
-        GameplayAudioSettings settings = GameplayAudioSystem.Instance.Settings;
-        GameplayAudioCueId cue = IsPlayer
-            ? GameplayAudioCueId.PlayerFootstep
-            : GameplayAudioCueId.EnemyFootstep;
-        GameplayAudioSystem.Play(cue, transform.position +
+        SfxAudioSettings settings = SfxAudio.CurrentSettings;
+        SfxCueId cue = IsPlayer
+            ? SfxCueId.PlayerFootstep
+            : SfxCueId.EnemyFootstep;
+        SfxAudio.Play(cue, transform.position +
             Vector3.up * settings.footstepHeightOffset);
     }
 

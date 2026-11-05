@@ -362,7 +362,6 @@ Transform:
   - {fileID: 873526959}
   - {fileID: 1033277074}
   - {fileID: 960078787}
-  - {fileID: 2015301418}
   - {fileID: 1501661495}
   - {fileID: 1841670994}
   - {fileID: 832575519}
@@ -1244,7 +1243,6 @@ MonoBehaviour:
   displaySound: {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
   soundVolume: 0.036
   soundPitch: 1
-  soundMixerGroup: {fileID: 0}
   titleFontSize: 54.6
   subtitleFontSize: 29
   titleColor: {r: 1, g: 1, b: 1, a: 1}
@@ -1525,7 +1523,7 @@ MonoBehaviour:
   burnFinalColdPercent: 0.8
   burnExplosionAttack: {fileID: 11400000, guid: c43e4c5dbbe741f98d30da582a2619c9, type: 2}
   debugHeatInputEnabled: 1
-  debugHeatPerSecond: 35
+  debugHeatPerSecond: 60
 --- !u!114 &825647905
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1746,10 +1744,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 243
   useTargetAssist: 1
-  pullStopDistance: 1
-  lighterEnemyPullSpeed: 50
-  heavierEnemyPullSpeed: 30
-  postPullStaggerDuration: 0.05
 --- !u!114 &825647914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3039,88 +3033,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 311817224}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2015301417
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2015301418}
-  - component: {fileID: 2015301420}
-  m_Layer: 0
-  m_Name: GameAudioSystem
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2015301418
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2015301417}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 311817224}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2015301420
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2015301417}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f4904d9eb5858b40b13c97205624e2b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameAudioSystem
-  initialSourceCount: 50
-  maximumSourceCount: 80
-  focusSound:
-    clip: {fileID: 8300000, guid: f42e196c430e4e743abf84316e9cf06b, type: 3}
-    volume: 0.123
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  confirmSound:
-    clip: {fileID: 8300000, guid: 2750985d67757c44b82dea5033572e56, type: 3}
-    volume: 0.123
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  backSound:
-    clip: {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-    volume: 0.123
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  adjustSound:
-    clip: {fileID: 0}
-    volume: 0.7
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  unavailableSound:
-    clip: {fileID: 0}
-    volume: 0.7
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  successSound:
-    clip: {fileID: 0}
-    volume: 0.7
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  warningSound:
-    clip: {fileID: 0}
-    volume: 0.7
-    pitch: 1
-    outputMixerGroup: {fileID: 0}
-  focusSoundMinimumInterval: 0.06
 --- !u!1 &2139451642
 GameObject:
   m_ObjectHideFlags: 0
@@ -3372,6 +3284,10 @@ PrefabInstance:
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burningDuration
       value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: debugHeatPerSecond
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burnFinalColdPercent

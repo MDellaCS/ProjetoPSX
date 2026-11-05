@@ -80,6 +80,12 @@ public sealed class HandLadder : InteractableBase
     [Tooltip("Direcao local que aponta para fora da escada, para onde o jogador sobe. Numa escada em parede e a normal da parede.")]
     [SerializeField] private Vector3 approachAxis = Vector3.forward;
 
+    [Header("Funcao")]
+    [Tooltip("Escalavel: o jogador pode agarrar (Interagir ou gancho). Desmarque para uma escada apenas cosmetica: sem prompt, zona de entrada nem alvo do gancho.")]
+    [SerializeField] private bool isClimbable = true;
+    [Tooltip("Colisao: degraus e trilhos gerados bloqueiam o jogador e os inimigos. A colisao e ignorada enquanto o jogador escala (e por um instante depois de soltar). Ao mudar, o visual e regerado.")]
+    [SerializeField] private bool hasCollision;
+
     [Header("Escada de teto (monkey bars)")]
     [Tooltip("Escada horizontal no teto: o jogador fica pendurado por baixo e anda ao longo dela. O eixo de subida vira a direcao das barras (projetada no plano horizontal; se vertical, usa a frente do objeto) e a normal e sempre para baixo. Agachar solta, Pular salta para a frente e as pontas soltam o jogador.")]
     [SerializeField] private bool overhead;
@@ -109,20 +115,14 @@ public sealed class HandLadder : InteractableBase
     [SerializeField] private bool autoSnapToSurface = true;
 
     [Header("Visual gerado (opcional)")]
-    [Tooltip("Perfil dos degraus. Vazio = sem visual gerado (use sua propria malha; a escada continua funcionando).")]
+    [Tooltip("Perfil da escada: visual (prefabs), espacamento dos degraus e todo o comportamento (prompt, velocidades, encaixe, salto, saidas). Vazio = comportamento padrao, sem visual gerado e subida continua (use sua propria malha). Crie um perfil sem prefabs para ter degraus na sua malha.")]
     [SerializeField] private HandLadderProfile profile;
     [Tooltip("Espaco adicional entre degraus, somado ao espacamento do perfil.")]
     [Min(0f)] [SerializeField] private float extraGap;
     [Tooltip("Gera os dois trilhos laterais quando o perfil tem um prefab de trilho.")]
     [SerializeField] private bool generateSideRails = true;
 
-    [Header("Interacao")]
-    [Tooltip("Texto do prompt enquanto o jogador esta na zona de entrada.")]
-    [SerializeField] private string interactionMessage = "Escalar";
-    [Tooltip("Icone opcional do botao Interagir no prompt.")]
-    [SerializeField] private Sprite interactionIcon;
-    [Tooltip("Em sobreposicao com outras interacoes vence a maior prioridade; em empate, a mais proxima.")]
-    [SerializeField] private int interactionPriority;
+    [Header("Zona de entrada")]
     [Tooltip("Usa a zona de entrada calculada (desenhada em ciano). Desmarque para entrar somente pelas zonas extras (HandLadderInteractionArea).")]
     [SerializeField] private bool useAutomaticEntryZone = true;
     [Tooltip("Quanto a zona de entrada avanca para a frente da escada, em metros.")]
@@ -132,41 +132,9 @@ public sealed class HandLadder : InteractableBase
     [Tooltip("Folga extra, em metros, nas laterais, na base e no topo da zona de entrada.")]
     [Min(0f)] [SerializeField] private float entryMargin = .35f;
 
-    [Header("Escalada")]
-    [Tooltip("Velocidade ao longo do eixo de subida, em metros por segundo.")]
-    [Min(.1f)] [SerializeField] private float climbSpeed = 2.2f;
-    [Tooltip("Sem perfil: distancia entre os degraus da sua malha, em metros, para o jogador subir de degrau em degrau. 0 = subida continua. Com perfil vale o espacamento do perfil.")]
-    [Min(0f)] [SerializeField] private float customRungSpacing;
-    [Tooltip("Onde o jogador para entre dois degraus: 0 = na altura de um degrau, 0,5 = no meio do vao, 1 = no degrau de cima. Ajuste ate os pes/maos do personagem baterem com os degraus.")]
-    [Range(0f, 1f)] [SerializeField] private float stepPhase = .5f;
-    [Tooltip("Velocidade lateral, em m/s, em escadas largas (muros de escalada). 0 = so sobe e desce.")]
-    [Min(0f)] [SerializeField] private float lateralClimbSpeed;
-    [Tooltip("Distancia do centro do jogador ao plano da escada, em metros.")]
-    [SerializeField] private float playerForwardOffset = .38f;
-    [Tooltip("Distancia, em metros, entre o topo da escada e onde o jogador para ao subir. 0,9 deixa o topo da escada perto do meio do corpo, como nos jogos; depois disso a saida pre-feita leva o jogador ate o topo.")]
-    [Min(0f)] [SerializeField] private float topGripClearance = .9f;
-    [Tooltip("Velocidade, em m/s, do movimento pre-feito que encaixa o jogador na escada. Vale tambem para quem agarra no ar ou em alta velocidade: o encaixe parte de onde ele estiver.")]
-    [Min(1f)] [SerializeField] private float mountSpeed = 12f;
-    [Tooltip("Duracao minima, em segundos, do movimento de encaixe na escada.")]
-    [Min(.05f)] [SerializeField] private float mountMinDuration = .15f;
-
-    [Header("Saltar e soltar")]
-    [Tooltip("Velocidade horizontal, em m/s, ao pular da escada. A direcao e a normal da escada (para onde ela aponta).")]
-    [Min(0f)] [SerializeField] private float jumpOffSpeed = 7f;
-    [Tooltip("Multiplica a altura do pulo ao saltar da escada.")]
-    [Min(0f)] [SerializeField] private float jumpOffHeightMultiplier = 1f;
-    [Tooltip("Velocidade horizontal, em m/s, ao soltar com Agachar. Afasta o jogador da escada para ele cair livre.")]
-    [Min(0f)] [SerializeField] private float dropAwaySpeed = 1.5f;
-
     [Header("Saidas")]
     [Tooltip("Lado por onde o topo sai. Auto: escada solta sai pela frente; escada em superficie sai por tras (sobre a borda).")]
     [SerializeField] private HandLadderExitSide topExitSide = HandLadderExitSide.Auto;
-    [Tooltip("Distancia horizontal, em metros, da saida a partir do plano da escada.")]
-    [Min(.1f)] [SerializeField] private float exitDistance = .55f;
-    [Tooltip("Subida extra da saida do topo, em metros, antes de procurar o chao.")]
-    [Min(0f)] [SerializeField] private float topExitRise = .05f;
-    [Tooltip("Duracao, em segundos, do movimento pre-feito que leva o jogador da escada ate o ponto de saida (topo ou base).")]
-    [Min(.1f)] [SerializeField] private float exitDuration = .5f;
     [Tooltip("Ao sair por tras no topo, ate onde procurar o piso (a partir de Exit Distance), em metros. Aumente se houver um vao entre a escada e a caixa.")]
     [Min(0f)] [SerializeField] private float ledgeSearchDepth = 1f;
     [Tooltip("Camadas usadas para encontrar o chao nas saidas. Gatilhos e o proprio jogador sao ignorados.")]
@@ -189,6 +157,52 @@ public sealed class HandLadder : InteractableBase
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => activeLadders.Clear();
 
+    private readonly List<Collider> solidColliders = new();
+    private Coroutine restoreCollision;
+    private const float CollisionRestoreDelay = .35f;
+
+    /// <summary>
+    /// Liga/desliga a colisao da propria escada (degraus e trilhos gerados e
+    /// colisores nao-gatilho dos filhos). Chamado pelo jogador: a colisao e
+    /// ignorada enquanto ele escala e volta pouco depois de soltar.
+    /// </summary>
+    public void SetPlayerClimbing(bool climbing)
+    {
+        if (restoreCollision != null)
+        {
+            StopCoroutine(restoreCollision);
+            restoreCollision = null;
+        }
+
+        if (climbing)
+            SetSolidCollidersEnabled(false);
+        else if (isActiveAndEnabled)
+            restoreCollision = StartCoroutine(RestoreCollisionLater());
+        else
+            SetSolidCollidersEnabled(true);
+    }
+
+    private System.Collections.IEnumerator RestoreCollisionLater()
+    {
+        yield return new WaitForSeconds(CollisionRestoreDelay);
+        restoreCollision = null;
+        SetSolidCollidersEnabled(true);
+    }
+
+    private void SetSolidCollidersEnabled(bool value)
+    {
+        solidColliders.Clear();
+        GetComponentsInChildren(true, solidColliders);
+        for (int i = 0; i < solidColliders.Count; i++)
+        {
+            Collider collider = solidColliders[i];
+            if (collider != null && !collider.isTrigger && !extraZones.Contains(collider))
+                collider.enabled = value;
+        }
+
+        solidColliders.Clear();
+    }
+
     private void Awake()
     {
         // Escada em superficie: a posicao salva pode ter ficado sem encaixe.
@@ -205,26 +219,33 @@ public sealed class HandLadder : InteractableBase
 
     protected override void OnDisable()
     {
+        restoreCollision = null;
         base.OnDisable();
         activeLadders.Remove(this);
     }
 
     public float Height => height;
-    public float ClimbSpeed => climbSpeed;
-    public float LateralClimbSpeed => lateralClimbSpeed;
-    public float PlayerForwardOffset => playerForwardOffset;
-    public float MountSpeed => mountSpeed;
+    public bool IsClimbable => isClimbable;
+    public bool HasCollision => hasCollision;
+    // Comportamento vem do perfil (ou do padrao, sem perfil).
+    private HandLadderProfile Feel => profile != null ? profile : HandLadderProfile.Default;
+    public float ClimbSpeed => Feel.climbSpeed;
+    public float LateralClimbSpeed => Feel.lateralClimbSpeed;
+    public float PlayerForwardOffset => Feel.playerForwardOffset;
+    public float MountSpeed => Feel.mountSpeed;
+    public float ExitDistance => Feel.exitDistance;
+    public float TopExitRise => Feel.topExitRise;
     public bool IsOverhead => overhead;
     public bool AllowGrapple => allowGrapple;
     /// <summary>Distancia do jogador ao plano da escada (ou das barras aos pes, na escada de teto).</summary>
-    public float GripOffset => overhead ? hangDepth : playerForwardOffset;
-    public float MountMinDuration => mountMinDuration;
-    public float ExitDuration => exitDuration;
+    public float GripOffset => overhead ? hangDepth : PlayerForwardOffset;
+    public float MountMinDuration => Feel.mountMinDuration;
+    public float ExitDuration => Feel.exitDuration;
     /// <summary>Altura maxima, a partir da base, em que o jogador fica agarrado.</summary>
-    public float MaxProgress => overhead ? height : Mathf.Max(0f, height - topGripClearance);
-    public float JumpOffSpeed => jumpOffSpeed;
-    public float JumpOffHeightMultiplier => jumpOffHeightMultiplier;
-    public float DropAwaySpeed => dropAwaySpeed;
+    public float MaxProgress => overhead ? height : Mathf.Max(0f, height - Feel.topGripClearance);
+    public float JumpOffSpeed => Feel.jumpOffSpeed;
+    public float JumpOffHeightMultiplier => Feel.jumpOffHeightMultiplier;
+    public float DropAwaySpeed => Feel.dropAwaySpeed;
     public HandLadderAttachment Attachment => attachment;
     public bool ClimbableFromBothSides => climbableFromBothSides;
     public LayerMask SurfaceLayers => surfaceLayers;
@@ -249,7 +270,7 @@ public sealed class HandLadder : InteractableBase
             return surfaceStandoff + thickness * .5f;
         }
     }
-    public float StepPhase => stepPhase;
+    public float StepPhase => Feel.stepPhase;
     public Transform TopExit => topExit;
     public Transform BottomExit => bottomExit;
     public HandLadderProfile Profile => profile;
@@ -262,18 +283,18 @@ public sealed class HandLadder : InteractableBase
     /// <summary>Distancia entre degraus (perfil + Extra Gap, ou o valor manual). 0 = sem degraus (subida continua).</summary>
     public float RungSpacing => profile != null
         ? Mathf.Max(.05f, profile.rungSpacing + extraGap)
-        : customRungSpacing > 0f ? Mathf.Max(.05f, customRungSpacing) : 0f;
+        : 0f;
 
     public int RungCount => RungSpacing > 0f
         ? Mathf.Max(1, Mathf.FloorToInt(height / RungSpacing + .0001f) + 1) : 0;
 
     /// <summary>Posicoes em que o jogador pode parar: uma por vao entre degraus.</summary>
     public int SlotCount => RungSpacing > 0f
-        ? Mathf.Max(1, Mathf.FloorToInt(MaxProgress / RungSpacing - stepPhase + .0001f) + 1) : 0;
+        ? Mathf.Max(1, Mathf.FloorToInt(MaxProgress / RungSpacing - StepPhase + .0001f) + 1) : 0;
 
     /// <summary>Altura (a partir da base) da posicao de parada <paramref name="slot"/>.</summary>
     public float SlotHeight(int slot) => RungSpacing > 0f
-        ? Mathf.Min(MaxProgress, (Mathf.Clamp(slot, 0, SlotCount - 1) + stepPhase) * RungSpacing)
+        ? Mathf.Min(MaxProgress, (Mathf.Clamp(slot, 0, SlotCount - 1) + StepPhase) * RungSpacing)
         : Mathf.Clamp(slot, 0, 0);
 
     /// <summary>Posicao de parada mais proxima de uma altura.</summary>
@@ -436,23 +457,85 @@ public sealed class HandLadder : InteractableBase
         float maxDeviation = 0f;
         float maxTilt = 0f;
         bool anyHit = false;
+        // Cada faixa parte de uma amostra "semente" (a mais proxima do meio onde o
+        // raio reto acha a superficie) e segue para os dois lados, amostra a
+        // amostra: o raio parte da superficie anterior, ao longo da normal
+        // anterior. Assim a escada continua na superficie mesmo quando ela se
+        // afasta muito do plano reto (cano, curva fechada, tubo inclinado), nas
+        // duas pontas. Um raio reto fixo perderia a superficie e a ponta ficaria solta.
+        float step = height / (count - 1);
+        Vector3[][] surface = { new Vector3[count], new Vector3[count], new Vector3[count] };
+        Vector3[][] normals = { new Vector3[count], new Vector3[count], new Vector3[count] };
+        int middle = count / 2;
         for (int i = 0; i < count; i++)
+            result.progress[i] = step * i;
+
+        for (int lane = -1; lane <= 1; lane++)
         {
-            float progress = height * i / (count - 1);
-            result.progress[i] = progress;
+            int index = lane + 1;
+            int seed = -1;
+            RaycastHit seedHit = default;
+            for (int k = 0; k < count && seed < 0; k++)
+            {
+                // 0, +1, -1, +2, -2...: do meio para as pontas.
+                int candidate = middle + ((k & 1) == 1 ? (k + 1) / 2 : -k / 2);
+                if (candidate < 0 || candidate >= count)
+                    continue;
+                Vector3 plane = origin + climb * (step * candidate) + across * (half * lane);
+                if (HandLadderSurfaceProbe.CastInitial(this, plane, out seedHit))
+                    seed = candidate;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                surface[index][i] = origin + climb * (step * i) + across * (half * lane);
+                normals[index][i] = approach;
+            }
+
+            if (seed < 0)
+                continue;
+
+            anyHit = true;
+            surface[index][seed] = seedHit.point;
+            normals[index][seed] = seedHit.normal;
+            for (int direction = -1; direction <= 1; direction += 2)
+            {
+                Vector3 lastPoint = seedHit.point;
+                Vector3 lastNormal = seedHit.normal;
+                for (int i = seed + direction; i >= 0 && i < count; i += direction)
+                {
+                    Vector3 tangent = Vector3.ProjectOnPlane(climb * direction, lastNormal);
+                    tangent = tangent.sqrMagnitude > 1e-4f ? tangent.normalized : climb * direction;
+                    Vector3 expected = lastPoint + tangent * step;
+                    float reach = frontProbe + Mathf.Max(surfaceSearchDistance, step * 2f);
+                    if (HandLadderSurfaceProbe.Cast(this, expected + lastNormal * frontProbe,
+                            -lastNormal, reach, out RaycastHit hit) &&
+                        Vector3.Dot(hit.normal, lastNormal) > .2f)
+                    {
+                        lastPoint = hit.point;
+                        lastNormal = hit.normal;
+                    }
+                    else
+                    {
+                        // Sem superficie a frente: segue em linha pela tangente anterior.
+                        lastPoint = expected;
+                    }
+
+                    surface[index][i] = lastPoint;
+                    normals[index][i] = lastNormal;
+                }
+            }
+        }
+
+        for (int i = 0; i < count; i++)
             for (int lane = -1; lane <= 1; lane++)
             {
-                Vector3 plane = origin + climb * progress + across * (half * lane);
-                Vector3 point = plane;
-                Vector3 normal = approach;
-                if (HandLadderSurfaceProbe.Cast(this, plane + approach * frontProbe, -approach,
-                        frontProbe + surfaceSearchDistance, out RaycastHit hit))
-                {
-                    anyHit = true;
-                    normal = hit.normal;
-                    point = hit.point + normal * offset;
-                }
-
+                int index = lane + 1;
+                Vector3 plane = origin + climb * result.progress[i] + across * (half * lane);
+                Vector3 normal = normals[index][i];
+                Vector3 point = surface[index][i] + normal * offset;
+                if (!anyHit)
+                    point = plane;
                 maxDeviation = Mathf.Max(maxDeviation, (point - plane).magnitude);
                 Vector3 local = transform.InverseTransformPoint(point);
                 if (lane < 0) result.left[i] = local;
@@ -464,9 +547,8 @@ public sealed class HandLadder : InteractableBase
                     maxTilt = Mathf.Max(maxTilt, Vector3.Angle(normal, approach));
                 }
             }
-        }
 
-        if (!anyHit || (maxDeviation < .03f && maxTilt < 2f))
+        if (!anyHit || (maxDeviation < .004f && maxTilt < .4f))
             return null;
 
         // Suaviza ruido de malhas irregulares, mantendo as pontas.
@@ -483,9 +565,9 @@ public sealed class HandLadder : InteractableBase
         return result;
     }
 
-    public override int InteractionPriority => interactionPriority;
-    public override string InteractionMessage => interactionMessage;
-    public override Sprite InteractionIcon => interactionIcon;
+    public override int InteractionPriority => Feel.interactionPriority;
+    public override string InteractionMessage => Feel.interactionMessage;
+    public override Sprite InteractionIcon => Feel.interactionIcon;
 
     // Escada de teto com os eixos ainda no padrao vertical: barras para a frente
     // e normal para baixo (o resto segue a rotacao do objeto).
@@ -561,7 +643,7 @@ public sealed class HandLadder : InteractableBase
         TryGetEntry(player, out _);
 
     public override bool CanInteract(PlayerMovement player) =>
-        player != null && player.CanBeginLadderClimb;
+        isClimbable && player != null && player.CanBeginLadderClimb;
 
     public override bool Interact(PlayerMovement player) =>
         TryGetEntry(player, out HandLadderGrip grip) &&
@@ -615,6 +697,8 @@ public sealed class HandLadder : InteractableBase
     public bool TryGetEntryAt(Vector3 point, out HandLadderGrip grip)
     {
         grip = default;
+        if (!isClimbable)
+            return false;
         ToFrame(point, out float along, out float across, out float forward);
         float half = Width * .5f;
 
@@ -637,7 +721,7 @@ public sealed class HandLadder : InteractableBase
         {
             side = BothSides && forward < 0f ? -1 : 1,
             progress = Mathf.Clamp(along, 0f, height),
-            lateral = lateralClimbSpeed > 0f ? Mathf.Clamp(across, -limit, limit) : 0f
+            lateral = LateralClimbSpeed > 0f ? Mathf.Clamp(across, -limit, limit) : 0f
         };
         return true;
     }
@@ -706,14 +790,14 @@ public sealed class HandLadder : InteractableBase
             if (TopExitsBack)
             {
                 back = true;
-                return SnapToGround(end - approach * exitDistance +
-                    Vector3.up * topExitRise);
+                return SnapToGround(end - approach * ExitDistance +
+                    Vector3.up * TopExitRise);
             }
         }
 
-        Vector3 position = end + approach * (playerForwardOffset + exitDistance);
+        Vector3 position = end + approach * (PlayerForwardOffset + ExitDistance);
         if (top)
-            position += Vector3.up * topExitRise;
+            position += Vector3.up * TopExitRise;
         return SnapToGround(position);
     }
 
@@ -726,7 +810,7 @@ public sealed class HandLadder : InteractableBase
             return false;
         backward.Normalize();
         float topY = end.y;
-        for (float distance = exitDistance; distance <= exitDistance + ledgeSearchDepth + .001f;
+        for (float distance = ExitDistance; distance <= ExitDistance + ledgeSearchDepth + .001f;
              distance += .15f)
         {
             Vector3 probe = end + backward * distance;
@@ -792,7 +876,7 @@ public sealed class HandLadder : InteractableBase
         grip = default;
         point = default;
         angle = 180f;
-        if (!allowGrapple || rayDirection.sqrMagnitude < .0001f)
+        if (!isClimbable || !allowGrapple || rayDirection.sqrMagnitude < .0001f)
             return false;
         rayDirection.Normalize();
 
@@ -919,17 +1003,21 @@ public sealed class HandLadder : InteractableBase
         float half = Width * .5f;
         Vector3 top = origin + climb * height;
 
-        // Trilhos e eixo.
-        Gizmos.color = new Color(.1f, .65f, .95f, .8f);
-        Gizmos.DrawLine(origin - across * half, top - across * half);
-        Gizmos.DrawLine(origin + across * half, top + across * half);
-        Gizmos.DrawLine(origin - across * half, origin + across * half);
-        Gizmos.DrawLine(top - across * half, top + across * half);
-        Gizmos.color = new Color(.1f, .65f, .95f, .35f);
-        Gizmos.DrawLine(origin, top);
+        // Quadro reto da escada (trilhos e eixo). Em escada curva ele ficaria solto
+        // no ar; ali valem os trilhos que acompanham a superficie, desenhados abaixo.
+        if (!IsCurved)
+        {
+            Gizmos.color = new Color(.1f, .65f, .95f, .8f);
+            Gizmos.DrawLine(origin - across * half, top - across * half);
+            Gizmos.DrawLine(origin + across * half, top + across * half);
+            Gizmos.DrawLine(origin - across * half, origin + across * half);
+            Gizmos.DrawLine(top - across * half, top + across * half);
+            Gizmos.color = new Color(.1f, .65f, .95f, .35f);
+            Gizmos.DrawLine(origin, top);
+        }
 
         // Zona de entrada (area em que o prompt aparece).
-        if (useAutomaticEntryZone)
+        if (useAutomaticEntryZone && isClimbable)
         {
             Matrix4x4 previous = Gizmos.matrix;
             float depth = EntryFront + EntryBack;
@@ -1036,7 +1124,7 @@ public sealed class HandLadder : InteractableBase
         HandLadderGrip grip = new() { side = 1, progress = top ? height : 0f };
         Vector3 exit = GetExitPosition(grip, top);
         Vector3 from = PlanePointAt(grip.progress) +
-            GetNormal(grip.progress, grip.side) * playerForwardOffset;
+            GetNormal(grip.progress, grip.side) * PlayerForwardOffset;
         Gizmos.color = color;
         Gizmos.DrawLine(from, exit);
         Gizmos.DrawWireSphere(exit, .12f);
@@ -1067,6 +1155,11 @@ public static class HandLadderSurfaceProbe
     /// <summary>Raio contra a superficie (ignora a escada, o jogador e gatilhos).</summary>
     public static bool Cast(HandLadder ladder, Vector3 start, Vector3 direction,
         float distance, out RaycastHit best)
+        => Cast(ladder, start, direction, distance, out best, Vector3.zero);
+
+    /// <summary>Como acima; com <paramref name="facing"/> diferente de zero, ignora superficies cuja normal nao aponta para esse lado (faces de tras).</summary>
+    public static bool Cast(HandLadder ladder, Vector3 start, Vector3 direction,
+        float distance, out RaycastHit best, Vector3 facing)
     {
         best = default;
         int count = Physics.RaycastNonAlloc(start, direction, hits, distance,
@@ -1077,13 +1170,41 @@ public static class HandLadderSurfaceProbe
             RaycastHit hit = hits[i];
             if (hit.collider == null || hit.distance >= nearest ||
                 hit.collider.transform.IsChildOf(ladder.transform) ||
-                hit.collider.GetComponentInParent<PlayerMovement>() != null)
+                hit.collider.GetComponentInParent<PlayerMovement>() != null ||
+                (facing != Vector3.zero && Vector3.Dot(hit.normal, facing) <= .05f))
                 continue;
             nearest = hit.distance;
             best = hit;
         }
 
         return nearest < float.MaxValue;
+    }
+
+    /// <summary>
+    /// Primeira amostra de uma faixa. Escada de um lado so gruda no lado nao
+    /// escalavel (atras): so aceita superficie cuja normal aponta para a frente
+    /// da escada. Escada de face dupla aceita a superficie de qualquer lado.
+    /// </summary>
+    public static bool CastInitial(HandLadder ladder, Vector3 plane, out RaycastHit best)
+    {
+        Vector3 approach = ladder.ApproachDirection;
+        float search = ladder.SurfaceSearchDistance;
+        if (!ladder.ClimbableFromBothSides || ladder.IsOverhead)
+        {
+            float lead = Mathf.Min(.15f, search * .5f);
+            return Cast(ladder, plane + approach * lead, -approach, lead + search,
+                out best, approach);
+        }
+
+        float probe = Mathf.Min(.15f, search * .5f);
+        bool back = Cast(ladder, plane + approach * probe, -approach, probe + search,
+            out RaycastHit backHit, approach);
+        bool front = Cast(ladder, plane - approach * probe, approach, probe + search,
+            out RaycastHit frontHit, -approach);
+        best = back ? backHit : frontHit;
+        if (back && front && frontHit.distance < backHit.distance)
+            best = frontHit;
+        return back || front;
     }
 
     public static bool TryFind(HandLadder ladder, out RaycastHit best)
@@ -1093,27 +1214,11 @@ public static class HandLadderSurfaceProbe
             return false;
 
         Vector3 climb = ladder.ClimbDirection;
-        Vector3 back = -ladder.ApproachDirection;
         // Tenta o meio, depois perto do topo e da base, para nao falhar em vaos.
         for (int s = 0; s < samples.Length; s++)
         {
             Vector3 start = ladder.transform.position + climb * (ladder.Height * samples[s]);
-            int count = Physics.RaycastNonAlloc(start, back, hits,
-                ladder.SurfaceSearchDistance, ladder.SurfaceLayers,
-                QueryTriggerInteraction.Ignore);
-            float nearest = float.MaxValue;
-            for (int i = 0; i < count; i++)
-            {
-                RaycastHit hit = hits[i];
-                if (hit.collider == null || hit.distance >= nearest ||
-                    hit.collider.transform.IsChildOf(ladder.transform) ||
-                    hit.collider.GetComponentInParent<PlayerMovement>() != null)
-                    continue;
-                nearest = hit.distance;
-                best = hit;
-            }
-
-            if (nearest < float.MaxValue)
+            if (CastInitial(ladder, start, out best))
                 return true;
         }
 

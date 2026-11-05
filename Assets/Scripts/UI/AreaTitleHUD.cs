@@ -19,12 +19,10 @@ public class AreaTitleHUD : MonoBehaviour
     [SerializeField] private PanelRenderer panelRenderer;
     [Tooltip("Som de interface tocado sempre que um titulo de area e exibido. Vazio desativa o som.")]
     [SerializeField] private AudioClip displaySound;
-    [Tooltip("Volume base do som de exibicao, antes do multiplicador global de efeitos.")]
+    [Tooltip("Volume base do som de exibicao, antes do volume global de interface.")]
     [Range(0f, 1f)] [SerializeField] private float soundVolume = .8f;
     [Tooltip("Pitch aplicado ao som de exibicao.")]
     [Range(.1f, 3f)] [SerializeField] private float soundPitch = 1f;
-    [Tooltip("Grupo opcional do Audio Mixer para encaminhar o som do titulo.")]
-    [SerializeField] private UnityEngine.Audio.AudioMixerGroup soundMixerGroup;
 
     [Header("Aparencia")]
     [Tooltip("Tamanho em pixels de referencia do nome principal da area.")]
@@ -86,8 +84,7 @@ public class AreaTitleHUD : MonoBehaviour
         currentSubtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim();
         isVisible = true;
         if (displaySound != null)
-            GameAudioSystem.Play2D(displaySound, soundVolume, soundPitch,
-                soundMixerGroup);
+            InterfaceAudio.PlayClip(displaySound, soundVolume, soundPitch);
         RefreshVisuals();
 
         if (displayRoutine != null)

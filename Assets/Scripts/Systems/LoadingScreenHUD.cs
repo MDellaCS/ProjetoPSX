@@ -14,16 +14,15 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     private const string LayoutResource = "LoadingScreenHUD/LoadingScreenHUD";
     private const string PanelSettingsResource = "LoadingScreenHUD/PanelSettings";
     private const int PanelSortingOrder = 32767;
+    private const float SpinnerDegreesPerSecond = 300f;
 
     private static LoadingScreenHUD instance;
     private PanelRenderer panelRenderer;
     private VisualElement uiRoot;
     private VisualElement overlay;
-    private VisualElement progressFill;
-    private Label loadingLabel;
+    private VisualElement spinner;
     private Coroutine hideRoutine;
-    private float dotTimer;
-    private int dotCount;
+    private float spinnerAngle;
     private bool isVisible = true;
 
     public bool IsLoading { get; private set; }
@@ -104,19 +103,14 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         if (!isVisible)
             return;
         EnsureElements();
-        if (loadingLabel == null)
+        if (spinner == null)
             return;
 
-        dotTimer += Time.unscaledDeltaTime;
-        if (dotTimer < .38f)
-            return;
-
-        dotTimer = 0f;
-        dotCount = (dotCount + 1) % 4;
-        loadingLabel.text = "CARREGANDO" + new string('.', dotCount);
+        spinnerAngle = (spinnerAngle + Time.unscaledDeltaTime * SpinnerDegreesPerSecond) % 360f;
+        spinner.style.rotate = new Rotate(new Angle(spinnerAngle, AngleUnit.Degree));
     }
 
-    /// <summary>Mostra o overlay e reinicia a barra de progresso.</summary>
+    /// <summary>Mostra o overlay com o spinner girando.</summary>
     public void Show()
     {
         if (hideRoutine != null)
@@ -128,19 +122,9 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         isVisible = true;
         GamePauseController.RequestPause(this);
         EnsureElements();
-        SetProgress(0f);
         if (overlay != null)
             overlay.style.opacity = 1f;
         SetVisible(true);
-    }
-
-    /// <summary>Atualiza o preenchimento da barra entre zero e um.</summary>
-    public void SetProgress(float progress)
-    {
-        EnsureElements();
-        if (progressFill != null)
-            progressFill.style.width = Length.Percent(
-                Mathf.Clamp01(progress) * 100f);
     }
 
     /// <summary>Carrega uma cena quando nao existe GameSceneLoader na cena.</summary>
@@ -168,7 +152,6 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         if (IsInitialLoadManagedBySceneLoader())
             yield break;
 
-        SetProgress(1f);
         HideAfterSceneReady();
     }
 
@@ -184,7 +167,6 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         // tempo fixo e configuravel (LoadingScreenSettings), independente de
         // quanto o carregamento demorou.
         LoadingScreenSettings settings = LoadingScreenSettings.Current;
-        SetProgress(1f);
         if (settings.extraWaitAfterReady > 0f)
             yield return new WaitForSecondsRealtime(settings.extraWaitAfterReady);
 
@@ -220,21 +202,18 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         if (rootVisualElement.childCount == 0)
         {
             overlay = null;
-            progressFill = null;
-            loadingLabel = null;
+            spinner = null;
             return;
         }
 
         overlay = rootVisualElement.Q<VisualElement>("loading-screen-overlay");
-        progressFill = rootVisualElement.Q<VisualElement>("loading-progress-fill");
-        loadingLabel = rootVisualElement.Q<Label>("loading-label");
-        if (overlay == null || progressFill == null || loadingLabel == null)
+        spinner = rootVisualElement.Q<VisualElement>("loading-spinner");
+        if (overlay == null || spinner == null)
         {
             Debug.LogError("LoadingScreenHUD: elementos ausentes no UXML.", this);
             return;
         }
 
-        SetProgress(0f);
         SetVisible(isVisible);
     }
 
@@ -242,15 +221,14 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     // sem um novo callback com os elementos prontos. Resolve sob demanda.
     private void EnsureElements()
     {
-        if (overlay != null && progressFill != null && loadingLabel != null)
+        if (overlay != null && spinner != null)
             return;
         VisualElement root = uiRoot;
         if (root == null || root.childCount == 0)
             return;
 
         overlay = root.Q<VisualElement>("loading-screen-overlay");
-        progressFill = root.Q<VisualElement>("loading-progress-fill");
-        loadingLabel = root.Q<Label>("loading-label");
+        spinner = root.Q<VisualElement>("loading-spinner");
         if (overlay != null)
             overlay.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
     }
@@ -282,11 +260,9 @@ public sealed class LoadingScreenHUD : MonoBehaviour
 
         while (!operation.isDone)
         {
-            SetProgress(operation.progress / .9f);
             yield return null;
         }
 
-        SetProgress(1f);
         IsLoading = false;
         HideAfterSceneReady();
     }

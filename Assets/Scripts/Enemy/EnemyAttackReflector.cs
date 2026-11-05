@@ -71,7 +71,6 @@ public sealed class EnemyAttackReflector : MonoBehaviour
         if (audioSource != null)
             audioSource.PlayOneShot(reflectSound, reflectSoundVolume);
         else
-            AudioSource.PlayClipAtPoint(reflectSound, transform.position,
-                reflectSoundVolume);
+            WorldAudio.PlayAt(reflectSound, transform.position, reflectSoundVolume);
     }
 }

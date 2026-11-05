@@ -280,7 +280,9 @@ public class PlayerHeat : MonoBehaviour
         if (heatGainCoolingDelayRemaining > 0f)
             return;
         heatCoolingElapsed += Time.deltaTime;
+        float previousHeat = currentHeat;
         currentHeat = Mathf.Max(0f, currentHeat - GetPassiveHeatCoolingPerSecond() * Time.deltaTime);
+        PlayHeatNotchSounds(previousHeat, currentHeat);
     }
 
     private void ResetHeatCoolingRamp()
@@ -323,23 +325,28 @@ public class PlayerHeat : MonoBehaviour
     {
         if (!IsHeatModeActive) return;
         if (amount <= 0f || IsBurning) return;
+        float previousHeat = currentHeat;
         float availableHeat = MaxHeat - currentHeat;
         if (amount <= availableHeat)
         {
             currentHeat += amount;
             RegisterHeatGain();
+            PlayHeatNotchSounds(previousHeat, currentHeat);
             return;
         }
         currentHeat = MaxHeat;
         AddSuperheat((amount - availableHeat) * excessHeatToSuperheatMultiplier);
         RegisterHeatGain();
+        PlayHeatNotchSounds(previousHeat, currentHeat);
     }
 
     public void RemoveHeat(float amount)
     {
         if (!IsHeatModeActive) return;
         if (amount <= 0f || IsRaging) return;
+        float previousHeat = currentHeat;
         currentHeat = Mathf.Max(MinHeat, currentHeat - amount);
+        PlayHeatNotchSounds(previousHeat, currentHeat);
         CheckColdDeath();
     }
 
@@ -378,6 +385,19 @@ public class PlayerHeat : MonoBehaviour
     /// </summary>
     public HeavyAttackCharge ConsumeHeatForHeavyAttack()
     {
+        return CaptureHeavyAttackCharge(consumeHeat: true);
+    }
+
+    /// <summary>Captura a escala Heavy no limite de Heat sem gastar recurso durante a explosao de Burn.</summary>
+    public HeavyAttackCharge CaptureBurnExplosionCharge()
+    {
+        float notches = GetHeavyPowerNotches(MaxHeat);
+        return new HeavyAttackCharge(0f, GetHeavyDamageMultiplier(notches),
+            GetHeavyPoiseMultiplier(notches));
+    }
+
+    private HeavyAttackCharge CaptureHeavyAttackCharge(bool consumeHeat)
+    {
         if (!IsHeatModeActive)
             return new HeavyAttackCharge(0f, 1f, 1f);
         if (IsRaging)
@@ -397,10 +417,12 @@ public class PlayerHeat : MonoBehaviour
         // quando a barra estiver cheia. O restante fica para o proximo golpe.
         float heatConsumed = Mathf.Max(0, consumedNotch) * HeatPerNotch;
 
-        if (heatConsumed <= 0f)
+        if (!consumeHeat || heatConsumed <= 0f)
             return new HeavyAttackCharge(0f, damageMultiplier, poiseMultiplier);
 
+        float previousHeat = currentHeat;
         currentHeat = Mathf.Max(0f, currentHeat - heatConsumed);
+        PlayHeatNotchSounds(previousHeat, currentHeat);
         RefillHeatFromSuperheat(heatConsumed);
         return new HeavyAttackCharge(heatConsumed, damageMultiplier, poiseMultiplier);
     }
@@ -632,6 +654,28 @@ public class PlayerHeat : MonoBehaviour
         // tempo ja passado fora de combate continua valido: os dois atrasos
         // sao regras independentes.
         heatCoolingElapsed = 0f;
+    }
+
+    private void PlayHeatNotchSounds(float previousHeat, float nextHeat)
+    {
+        int previousNotch = Mathf.FloorToInt(Mathf.Abs(previousHeat) / HeatPerNotch + .0001f);
+        int nextNotch = Mathf.FloorToInt(Mathf.Abs(nextHeat) / HeatPerNotch + .0001f);
+        if (previousNotch == nextNotch)
+            return;
+
+        int direction = nextNotch > previousNotch ? 1 : -1;
+        for (int notch = previousNotch + direction; direction > 0
+            ? notch <= nextNotch : notch >= nextNotch; notch += direction)
+        {
+            // O notch zero e apenas a transicao entre Heat positivo e Cold.
+            if (notch == 0)
+                continue;
+            // Ao perder um notch, a nota representa o nivel que acabou de ser
+            // deixado. Assim a descida de 2x para 1x toca a nota de 2x.
+            int soundedNotch = direction < 0 ? Mathf.Abs(notch) + 1 : Mathf.Abs(notch);
+            SfxAudio.PlayHeatNotch(direction > 0,
+                soundedNotch, transform.position);
+        }
     }
 
     private void CheckColdDeath()

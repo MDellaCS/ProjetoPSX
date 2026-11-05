@@ -280,7 +280,7 @@ public class PlayerHealth : MonoBehaviour
                 if (enemy != null)
                     enemy.OnDamageDealtToPlayer();
             }
-            GameplayAudioSystem.Play(GameplayAudioCueId.PlayerHurt,
+            SfxAudio.Play(SfxCueId.PlayerHurt,
                 transform.position);
         }
 

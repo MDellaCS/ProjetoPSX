@@ -207,7 +207,7 @@ public sealed class DialogueController : MonoBehaviour
         }
 
         lineElapsed = 0f;
-        GameAudioSystem.Play2D(line.voiceOverClip, line.voiceOverVolume);
+        DialogueAudio.PlayVoice(line.voiceOverClip, line.voiceOverVolume);
         RefreshVisuals();
     }
 

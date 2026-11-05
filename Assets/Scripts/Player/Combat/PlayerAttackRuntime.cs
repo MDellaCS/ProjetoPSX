@@ -32,7 +32,10 @@ public sealed class PlayerAttackRuntime
         float consumed = 0f;
         if (definition.kind == PlayerAttackKind.Heavy && heat != null)
         {
-            PlayerHeat.HeavyAttackCharge charge = heat.ConsumeHeatForHeavyAttack();
+            bool isBurnExplosion = definition.attackId == "BurnExplosion";
+            PlayerHeat.HeavyAttackCharge charge = isBurnExplosion
+                ? heat.CaptureBurnExplosionCharge()
+                : heat.ConsumeHeatForHeavyAttack();
             damage = heat.CalculateHeavyDamage(damage, charge.DamageMultiplier);
             poise = heat.CalculateHeavyPoiseDamage(poise, charge.PoiseMultiplier);
             timing = 1f / Mathf.Max(.01f, Mathf.Lerp(1f, charge.DamageMultiplier, .5f));

@@ -8,7 +8,7 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
     private PlayerAttackController attacks;
     private PlayerAttackRuntime currentRuntime;
     private readonly Dictionary<PlayerHitboxTrackDefinition,
-        List<GameplayAudioPlaybackHandle>> trackStartPlaybacks = new();
+        List<AudioPlaybackHandle>> trackStartPlaybacks = new();
     private readonly HashSet<PlayerHitboxTrackDefinition> startedTracks = new();
     private readonly HashSet<PlayerHitboxTrackDefinition> hitSoundPlayedTracks = new();
     private readonly List<PlayerHitboxTrackDefinition> tracksToStop = new();
@@ -65,22 +65,22 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
         foreach (PlayerHitboxTrackDefinition track in tracksToStop)
             startedTracks.Remove(track);
 
-        GameplayAttackAudioSet audioSet = GameplayAudioSystem.Instance.Settings
+        GameplayAttackAudioSet audioSet = SfxAudio.CurrentSettings
             .GetPlayerAttackAudio(runtime.Definition.kind);
         foreach (PlayerHitboxTrackDefinition track in activeTracks)
         {
             if (!startedTracks.Add(track))
                 continue;
 
-            GameplayAudioPlaybackHandle playback = GameplayAudioSystem.PlayTracked(
+            AudioPlaybackHandle playback = SfxAudio.PlayTracked(
                 audioSet != null ? audioSet.attackStart : null,
                 transform.position);
             if (playback != null)
             {
                 if (!trackStartPlaybacks.TryGetValue(track,
-                    out List<GameplayAudioPlaybackHandle> playbacks))
+                    out List<AudioPlaybackHandle> playbacks))
                 {
-                    playbacks = new List<GameplayAudioPlaybackHandle>();
+                    playbacks = new List<AudioPlaybackHandle>();
                     trackStartPlaybacks.Add(track, playbacks);
                 }
                 playbacks.Add(playback);
@@ -107,11 +107,11 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
         if (!hitSoundPlayedTracks.Add(track))
             return;
 
-        GameplayAttackAudioSet audioSet = GameplayAudioSystem.Instance.Settings
+        GameplayAttackAudioSet audioSet = SfxAudio.CurrentSettings
             .GetPlayerAttackAudio(runtime.Definition.kind);
         GameplayAudioSurfaceType surface =
             GameplayAudioSurface.GetSurfaceType(target);
-        GameplayAudioSystem.Play(audioSet != null
+        SfxAudio.Play(audioSet != null
             ? audioSet.GetHitCue(surface) : null, position);
     }
 
@@ -128,9 +128,9 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
     private void StopTrackStartSound(PlayerHitboxTrackDefinition track)
     {
         if (trackStartPlaybacks.TryGetValue(track,
-            out List<GameplayAudioPlaybackHandle> playbacks))
+            out List<AudioPlaybackHandle> playbacks))
         {
-            foreach (GameplayAudioPlaybackHandle playback in playbacks)
+            foreach (AudioPlaybackHandle playback in playbacks)
                 playback?.Stop();
             trackStartPlaybacks.Remove(track);
         }
@@ -138,10 +138,10 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
 
     private void StopAllTrackStartSounds()
     {
-        foreach (List<GameplayAudioPlaybackHandle> playbacks in
+        foreach (List<AudioPlaybackHandle> playbacks in
             trackStartPlaybacks.Values)
         {
-            foreach (GameplayAudioPlaybackHandle playback in playbacks)
+            foreach (AudioPlaybackHandle playback in playbacks)
                 playback?.Stop();
         }
         ClearTrackStartSoundReferences();

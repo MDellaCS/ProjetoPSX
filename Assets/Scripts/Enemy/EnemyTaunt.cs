@@ -25,7 +25,7 @@ public sealed class EnemyTaunt : MonoBehaviour
 
     [Header("Audio")]
     [Tooltip("Som ou variacoes tocadas quando este inimigo inicia um taunt. Usa as configuracoes globais de audio de gameplay.")]
-    [SerializeField] private GameplayAudioCue tauntSound = new();
+    [SerializeField] private AudioCue tauntSound = new();
 
     [Header("Visual")]
     [Tooltip("Animator do modelo visual. Se vazio, procura um Animator nos filhos do inimigo.")]
@@ -102,7 +102,7 @@ public sealed class EnemyTaunt : MonoBehaviour
         brain.CancelReposition();
         movement.StopForTaunt();
         owner.CurrentState = EnemyBase.State.Taunting;
-        GameplayAudioSystem.Play(tauntSound, transform.position);
+        SfxAudio.Play(tauntSound, transform.position);
         if (hasTauntingBool && visualAnimator != null)
             visualAnimator.SetBool(tauntingBoolHash, true);
         return true;

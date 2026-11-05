@@ -207,8 +207,11 @@ public sealed class PlayerAttackController : MonoBehaviour
         targetAssist?.TryCaptureTarget(out assistedTarget,
             out assistedTargetPosition);
 
-        // Eventos externos nao podem gastar Heat por serem marcados Heavy.
-        CurrentAttack = new PlayerAttackRuntime(definition, null,
+        // Somente a explosao de Burn recebe escala Heavy; sua carga especial
+        // e capturada sem consumo. Outros eventos externos nao usam Heat.
+        PlayerHeat attackHeat = definition.attackId == "BurnExplosion"
+            ? heat : null;
+        CurrentAttack = new PlayerAttackRuntime(definition, attackHeat,
             rotationSpeed, extendedArmRadius, extendedArmHeightOffset,
             false, assistedTarget, assistedTargetPosition);
         RecordAttackStart(definition);

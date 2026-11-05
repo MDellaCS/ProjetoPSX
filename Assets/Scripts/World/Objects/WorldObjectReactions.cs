@@ -194,8 +194,7 @@ public sealed class PlaySoundReaction : WorldObjectReaction
 
         AudioClip clip = clips[UnityEngine.Random.Range(0, clips.Length)];
         if (clip != null)
-            AudioSource.PlayClipAtPoint(clip, context.Owner.CenterPosition,
-                volume);
+            WorldAudio.PlayAt(clip, context.Owner.CenterPosition, volume);
     }
 }
 

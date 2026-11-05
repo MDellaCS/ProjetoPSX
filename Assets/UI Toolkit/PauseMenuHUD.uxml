@@ -1,32 +1,42 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="PauseMenuHUD.uss" />
-    <ui:VisualElement name="pause-menu-overlay">
-        <ui:VisualElement name="pause-menu-content">
-            <ui:VisualElement name="pause-main-view">
-                <ui:Label name="pause-menu-title" text="PAUSADO" />
-                <ui:Label name="main-menu-status" text="" />
-                <ui:Button name="pause-resume-button" text="CONTINUAR" />
-                <ui:Button name="pause-settings-button" text="CONFIGURAÇÕES" />
-                <ui:Button name="pause-quit-button" text="SAIR" />
-            </ui:VisualElement>
-            <ui:VisualElement name="pause-settings-view">
-                <ui:Label name="pause-settings-title" text="CONFIGURAÇÕES" />
-                <ui:VisualElement name="pause-settings-tabs">
-                    <ui:Button name="settings-audio-tab" text="ÁUDIO" />
-                    <ui:Button name="settings-video-tab" text="VÍDEO" />
-                    <ui:Button name="settings-camera-tab" text="CÂMERA" />
-                    <ui:Button name="settings-controls-tab" text="CONTROLES" />
-                    <ui:Button name="settings-accessibility-tab" text="ACESSIBILIDADE" />
+    <ui:VisualElement name="pause-menu-overlay" class="menu-overlay">
+        <ui:VisualElement name="pause-menu-content" class="menu-panel">
+            <ui:VisualElement name="pause-main-view" class="menu-view">
+                <ui:Label name="main-menu-status" class="menu-message" text="" />
+                <ui:VisualElement class="menu-slot">
+                    <ui:Button name="menu-primary-button" class="menu-button menu-button--primary" text="Continuar" />
+                    <ui:VisualElement name="menu-primary-confirm" class="menu-confirm">
+                        <ui:Button name="menu-primary-yes" class="menu-button menu-button--primary" text="Sim" />
+                        <ui:Button name="menu-primary-no" class="menu-button menu-button--primary" text="Não" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:ScrollView name="settings-options" />
-                <ui:Label name="settings-status" text="" />
-                <ui:VisualElement name="pause-settings-footer">
-                    <ui:Button name="settings-defaults-button" text="PADRÕES DA SEÇÃO" />
-                    <ui:Button name="settings-apply-button" text="APLICAR" />
-                    <ui:Button name="settings-cancel-button" text="CANCELAR" />
+                <ui:Button name="menu-save-button" class="menu-button menu-button--primary" text="Carregar Save" />
+                <ui:Button name="menu-options-button" class="menu-button menu-button--primary" text="Opções" />
+                <ui:Button name="menu-exit-button" class="menu-button menu-button--primary" text="Sair" />
+            </ui:VisualElement>
+            <ui:VisualElement name="pause-settings-view" class="menu-view menu-view--settings">
+                <ui:Label name="pause-settings-title" class="menu-title" text="OPÇÕES" />
+                <ui:VisualElement name="pause-settings-tabs" class="menu-tabs">
+                    <ui:Button name="settings-audio-tab" class="menu-button menu-button--tab" text="ÁUDIO" />
+                    <ui:Button name="settings-video-tab" class="menu-button menu-button--tab" text="VÍDEO" />
+                    <ui:Button name="settings-camera-tab" class="menu-button menu-button--tab" text="CÂMERA" />
+                    <ui:Button name="settings-controls-tab" class="menu-button menu-button--tab" text="CONTROLES" />
+                    <ui:Button name="settings-accessibility-tab" class="menu-button menu-button--tab" text="ACESSIBILIDADE" />
+                </ui:VisualElement>
+                <ui:ScrollView name="settings-options" class="menu-options" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
+                <ui:Label name="settings-status" class="menu-status" text="" />
+                <ui:VisualElement name="pause-settings-footer" class="menu-footer">
+                    <ui:VisualElement class="menu-slot">
+                        <ui:Button name="settings-defaults-button" class="menu-button menu-button--small" text="Restaurar Padrões" />
+                        <ui:VisualElement name="settings-defaults-confirm" class="menu-confirm">
+                            <ui:Button name="settings-defaults-yes" class="menu-button menu-button--small" text="Sim" />
+                            <ui:Button name="settings-defaults-no" class="menu-button menu-button--small" text="Não" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:Button name="settings-back-button" class="menu-button menu-button--small" text="Voltar" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:Label name="pause-key-hint" text="Q: PAUSAR / VOLTAR" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

@@ -70,7 +70,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (strike.effects.juggle)
             ApplyJuggleToPlayer();
         CombatImpactSystem.ReportPlayerAttackImpact(transform, enemy.transform,
-            runtime.Definition.kind == PlayerAttackKind.Heavy, dealt, !cameraShakeReported);
+            runtime.Definition.kind == PlayerAttackKind.Heavy, dealt,
+            runtime.Definition.attackId == "BurnExplosion" || !cameraShakeReported);
         cameraShakeReported = true;
         PlayerAttackEffectsDefinition effects = strike.effects;
         CombatReactionType reaction = GetRequestedReaction(effects);

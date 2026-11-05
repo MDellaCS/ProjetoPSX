@@ -42,10 +42,12 @@ public partial class PlayerMovement
     public bool TryBeginLadderClimb(HandLadder ladder, HandLadderGrip grip,
         float pullSpeed = 0f)
     {
-        if (ladder == null || !ladder.isActiveAndEnabled || !CanBeginLadderClimb)
+        if (ladder == null || !ladder.isActiveAndEnabled || !ladder.IsClimbable ||
+            !CanBeginLadderClimb)
             return false;
 
         activeLadder = ladder;
+        ladder.SetPlayerClimbing(true);
         ladderGrip = grip;
         // O Interagir que agarrou nao pode soltar/saltar no mesmo frame.
         ladderMountFrame = Time.frameCount;
@@ -322,6 +324,8 @@ public partial class PlayerMovement
 
     private void ResetLadderState()
     {
+        if (activeLadder != null)
+            activeLadder.SetPlayerClimbing(false);
         activeLadder = null;
         ladderGrip = default;
         ladderMoveActive = false;

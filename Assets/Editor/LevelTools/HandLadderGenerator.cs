@@ -30,6 +30,7 @@ internal static class HandLadderGenerator
         root.localRotation = Quaternion.identity;
         root.localScale = Vector3.one;
 
+        solidPieces = ladder.HasCollision;
         float spacing = ladder.RungSpacing;
         int count = ladder.RungCount;
         float half = ladder.Width * .5f;
@@ -39,15 +40,25 @@ internal static class HandLadderGenerator
             float y = Mathf.Min(i * spacing, ladder.Height);
             if (curved)
             {
-                // Degrau entre as duas faixas da superficie: segue a curvatura nos dois sentidos.
+                // Degrau em duas metades (esquerda-centro e centro-direita): acompanha
+                // a curvatura tambem na largura, sem cortar a superficie.
                 Vector3 leftPoint = ladder.LocalLanePoint(-1, y);
+                Vector3 centerPoint = ladder.LocalLanePoint(0, y);
                 Vector3 rightPoint = ladder.LocalLanePoint(1, y);
-                Vector3 across = rightPoint - leftPoint;
-                float length = Mathf.Max(.05f, across.magnitude);
-                CreatePiece(profile.rungPrefab, root, $"Rung_{i + 1:000}",
-                    (leftPoint + rightPoint) * .5f,
-                    AlignAxis(AxisVector(profile.rungWidthAxis), across, profile.rungRollDegrees),
-                    profile.rungWidthAxis, length, profile.rungThickness);
+                for (int half2 = 0; half2 < 2; half2++)
+                {
+                    Vector3 a = half2 == 0 ? leftPoint : centerPoint;
+                    Vector3 b = half2 == 0 ? centerPoint : rightPoint;
+                    Vector3 across = b - a;
+                    if (across.sqrMagnitude < 1e-6f)
+                        continue;
+                    CreatePiece(profile.rungPrefab, root,
+                        $"Rung_{i + 1:000}_{(half2 == 0 ? "L" : "R")}", (a + b) * .5f,
+                        AlignAxis(AxisVector(profile.rungWidthAxis), across, profile.rungRollDegrees),
+                        profile.rungWidthAxis, across.magnitude + profile.rungThickness * .5f,
+                        profile.rungThickness);
+                }
+
                 continue;
             }
 
@@ -136,6 +147,8 @@ internal static class HandLadderGenerator
         return true;
     }
 
+    private static bool solidPieces;
+
     private static void CreatePiece(GameObject prefab, Transform root, string name,
         Vector3 localPosition, Quaternion localRotation,
         HandLadderPrefabAxis fitAxis, float fitSize, float crossSize = 0f)
@@ -159,6 +172,16 @@ internal static class HandLadderGenerator
         t.localScale = scale;
         foreach (Collider c in instance.GetComponentsInChildren<Collider>(true))
             c.enabled = false;
+        if (solidPieces)
+            AddBoxCollider(instance, GetLocalVisualBounds(instance));
+    }
+
+    // Colisao simples da peca: uma caixa ajustada a malha visual (ja escalada).
+    private static void AddBoxCollider(GameObject instance, Bounds localBounds)
+    {
+        BoxCollider box = instance.AddComponent<BoxCollider>();
+        box.center = localBounds.center;
+        box.size = localBounds.size;
     }
 
     private static void FitScale(ref Vector3 scale, Bounds bounds,
@@ -483,7 +506,7 @@ internal static class HandLadderGenerationRegression
             ledge = null;
 
             // Gancho: degrau mais proximo da mira (degraus a cada .5 m, vaos em .25/.75).
-            Set(ladder, "customRungSpacing", .5f);
+            Set(ladder, "profile", profile);
             Vector3 shooter = new(0f, 1f, 3f);
             Check(ladder.TryGetGrappleTarget(shooter, new Vector3(0f, .4f, -3f), shooter,
                     out HandLadderGrip hook, out Vector3 hookPoint, out float hookAngle) &&
@@ -497,8 +520,41 @@ internal static class HandLadderGenerationRegression
             Check(!ladder.TryGetGrappleTarget(shooter, new Vector3(0f, 3f, -1f), shooter,
                     out _, out _, out _),
                 "Mira fora do angulo nao pega a escada.");
-            Set(ladder, "customRungSpacing", 0f);
 
+            // Comportamento vem do perfil; sem perfil vale o padrao.
+            float profileClimb = ladder.ClimbSpeed;
+            Check(Mathf.Abs(profileClimb - profile.climbSpeed) < .0001f &&
+                ladder.InteractionMessage == profile.interactionMessage,
+                "Velocidade e prompt devem vir do perfil.");
+            Set(ladder, "profile", null);
+            Check(Mathf.Abs(ladder.ClimbSpeed - HandLadderProfile.Default.climbSpeed) < .0001f &&
+                ladder.RungSpacing == 0f,
+                "Sem perfil: comportamento padrao e subida continua.");
+
+            // Escada cosmetica: nada de entrada nem gancho.
+            Set(ladder, "isClimbable", false);
+            Check(!ladder.TryGetEntryAt(ladder.transform.position + ladder.ApproachDirection * .5f +
+                    Vector3.up * .5f, out _) &&
+                !ladder.TryGetGrappleTarget(new Vector3(0f, 1f, 3f), new Vector3(0f, .4f, -3f),
+                    new Vector3(0f, 1f, 3f), out _, out _, out _),
+                "Escada nao escalavel nao tem entrada nem gancho.");
+            Set(ladder, "isClimbable", true);
+
+            // Colisao: so com Has Collision as pecas geradas ganham colisor; ignorada ao escalar.
+            Set(ladder, "profile", profile);
+            Set(ladder, "hasCollision", true);
+            HandLadderGenerator.GenerateNow(ladder);
+            Collider rungCollider = ladder.GeneratedRoot.Find("Rung_001").GetComponent<Collider>();
+            Check(rungCollider != null && rungCollider.enabled, "Has Collision gera colisores nos degraus.");
+            ladder.SetPlayerClimbing(true);
+            Check(!rungCollider.enabled, "A colisao da escada e ignorada ao escalar.");
+            ladder.SetPlayerClimbing(false);
+            Set(ladder, "hasCollision", false);
+            HandLadderGenerator.GenerateNow(ladder);
+            Check(ladder.GeneratedRoot.Find("Rung_001").GetComponent<Collider>() == null,
+                "Sem Has Collision os degraus nao tem colisor proprio.");
+
+            Set(ladder, "profile", null);
             // Escada de teto (monkey bars): barras horizontais, normal para baixo.
             Set(ladder, "overhead", true);
             Check((ladder.ClimbDirection - Vector3.forward).sqrMagnitude < .001f &&
@@ -570,6 +626,31 @@ internal static class HandLadderGenerationRegression
             float fromCenter = Vector3.Distance(gripAtBase, wall.transform.position);
             Check(Mathf.Abs(fromCenter - (5f + ladder.SurfaceOffset + ladder.PlayerForwardOffset)) < .1f,
                 "O jogador deve ficar a offset da superficie curva: " + fromCenter);
+            // Tubo inclinado e largo (pouca curvatura): as duas pontas continuam na superficie.
+            Object.DestroyImmediate(wall);
+            wall = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            wall.transform.position = new Vector3(0f, 3f, -8.4f);
+            wall.transform.rotation = Quaternion.Euler(0f, 0f, 90f) * Quaternion.Euler(14f, 0f, 0f);
+            wall.transform.localScale = new Vector3(12f, 20f, 12f);
+            ladderObject.transform.SetPositionAndRotation(new Vector3(0f, 0f, -.5f), Quaternion.identity);
+            Set(ladder, "height", 6f);
+            Set(ladder, "surfaceSearchDistance", 2f);
+            Physics.SyncTransforms();
+            HandLadderGenerator.TrySnapToSurface(ladder);
+            Check(ladder.IsCurved, "Tubo inclinado deve gerar curvatura.");
+            Vector3 tubeAxis = wall.transform.up;
+            float worstGap = 0f;
+            for (int sample = 0; sample <= 12; sample++)
+            {
+                float along = ladder.Height * sample / 12f;
+                Vector3 center = ladder.GetGripPosition(new HandLadderGrip { side = 1, progress = along }) -
+                    ladder.GetNormal(along) * ladder.PlayerForwardOffset;
+                Vector3 fromAxis = Vector3.ProjectOnPlane(center - wall.transform.position, tubeAxis);
+                worstGap = Mathf.Max(worstGap,
+                    Mathf.Abs(fromAxis.magnitude - 6f - ladder.SurfaceOffset));
+            }
+
+            Check(worstGap < .06f, "Escada no tubo deve colar em toda a altura; pior folga: " + worstGap);
             // Uma parede reta nao gera espinha.
             Object.DestroyImmediate(wall);
             wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
