@@ -85,6 +85,8 @@ public sealed class HandLadder : InteractableBase
     [SerializeField] private bool isClimbable = true;
     [Tooltip("Colisao: degraus e trilhos gerados bloqueiam o jogador e os inimigos. A colisao e ignorada enquanto o jogador escala (e por um instante depois de soltar). Ao mudar, o visual e regerado.")]
     [SerializeField] private bool hasCollision;
+    [Tooltip("Inverte qual extremidade e o inicio da escalada sem mover a geometria. Tambem inverte a direcao de subida e troca as saidas manuais de topo/base.")]
+    [SerializeField] private bool invertStartAndEnd;
 
     [Header("Escada de teto (monkey bars)")]
     [Tooltip("Escada horizontal no teto: o jogador fica pendurado por baixo e anda ao longo dela. O eixo de subida vira a direcao das barras (projetada no plano horizontal; se vertical, usa a frente do objeto) e a normal e sempre para baixo. Agachar solta, Pular salta para a frente e as pontas soltam o jogador.")]
@@ -227,6 +229,7 @@ public sealed class HandLadder : InteractableBase
     public float Height => height;
     public bool IsClimbable => isClimbable;
     public bool HasCollision => hasCollision;
+    public bool InvertStartAndEnd => invertStartAndEnd;
     // Comportamento vem do perfil (ou do padrao, sem perfil).
     private HandLadderProfile Feel => profile != null ? profile : HandLadderProfile.Default;
     public float ClimbSpeed => Feel.climbSpeed;
@@ -362,19 +365,23 @@ public sealed class HandLadder : InteractableBase
     public Vector3 PlanePointAt(float progress, float lateral = 0f)
     {
         if (!IsCurved)
-            return transform.position + ClimbDirection * progress + WidthDirection * lateral;
+            return StartPosition + ClimbDirection * progress + WidthDirection * lateral;
 
-        Vector3 center = transform.TransformPoint(LocalLanePoint(0, progress));
+        float geometryProgress = ToGeometryProgress(progress);
+
+        Vector3 center = transform.TransformPoint(LocalLanePoint(0, geometryProgress));
         if (Mathf.Abs(lateral) < .0001f)
             return center;
         float k = Mathf.Clamp01(Mathf.Abs(lateral) / Mathf.Max(.01f, Width * .5f));
-        Vector3 lane = transform.TransformPoint(LocalLanePoint(lateral < 0f ? -1 : 1, progress));
+        Vector3 lane = transform.TransformPoint(LocalLanePoint(lateral < 0f ? -1 : 1,
+            geometryProgress));
         return Vector3.Lerp(center, lane, k);
     }
 
     /// <summary>Normal da superficie (para onde o jogador sobe) em uma altura, do lado do jogador.</summary>
     public Vector3 GetNormal(float progress, int side = 1)
     {
+        progress = ToGeometryProgress(progress);
         Vector3 normal = ApproachDirection;
         if (IsCurved)
         {
@@ -402,7 +409,7 @@ public sealed class HandLadder : InteractableBase
     {
         if (!IsCurved)
         {
-            Vector3 relative = point - transform.position;
+            Vector3 relative = point - StartPosition;
             along = Vector3.Dot(relative, ClimbDirection);
             across = Vector3.Dot(relative, WidthDirection);
             forward = Vector3.Dot(relative, ApproachDirection);
@@ -421,7 +428,7 @@ public sealed class HandLadder : InteractableBase
             }
         }
 
-        float progress = spine.progress[best];
+        float progress = ToClimbProgress(spine.progress[best]);
         Vector3 center = transform.TransformPoint(spine.center[best]);
         Vector3 offset = point - center;
         along = progress + Vector3.Dot(offset, GetTangent(progress));
@@ -448,7 +455,7 @@ public sealed class HandLadder : InteractableBase
             normal = new Vector3[count]
         };
         Vector3 origin = transform.position;
-        Vector3 climb = ClimbDirection;
+        Vector3 climb = GeometryClimbDirection;
         Vector3 approach = ApproachDirection;
         Vector3 across = WidthDirection;
         float half = Width * .5f;
@@ -470,34 +477,34 @@ public sealed class HandLadder : InteractableBase
         for (int i = 0; i < count; i++)
             result.progress[i] = step * i;
 
-        for (int lane = -1; lane <= 1; lane++)
+        // Primeiro percorre apenas o centro. Seguir cada lateral como uma
+        // trajetoria independente faz as faixas abrirem em curvas e aumenta
+        // artificialmente a largura da escada.
+        int centerIndex = 1;
+        int seed = -1;
+        RaycastHit seedHit = default;
+        for (int k = 0; k < count && seed < 0; k++)
         {
-            int index = lane + 1;
-            int seed = -1;
-            RaycastHit seedHit = default;
-            for (int k = 0; k < count && seed < 0; k++)
-            {
-                // 0, +1, -1, +2, -2...: do meio para as pontas.
-                int candidate = middle + ((k & 1) == 1 ? (k + 1) / 2 : -k / 2);
-                if (candidate < 0 || candidate >= count)
-                    continue;
-                Vector3 plane = origin + climb * (step * candidate) + across * (half * lane);
-                if (HandLadderSurfaceProbe.CastInitial(this, plane, out seedHit))
-                    seed = candidate;
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                surface[index][i] = origin + climb * (step * i) + across * (half * lane);
-                normals[index][i] = approach;
-            }
-
-            if (seed < 0)
+            // 0, +1, -1, +2, -2...: do meio para as pontas.
+            int candidate = middle + ((k & 1) == 1 ? (k + 1) / 2 : -k / 2);
+            if (candidate < 0 || candidate >= count)
                 continue;
+            Vector3 plane = origin + climb * result.progress[candidate];
+            if (HandLadderSurfaceProbe.CastInitial(this, plane, out seedHit))
+                seed = candidate;
+        }
 
+        for (int i = 0; i < count; i++)
+        {
+            surface[centerIndex][i] = origin + climb * result.progress[i];
+            normals[centerIndex][i] = approach;
+        }
+
+        if (seed >= 0)
+        {
             anyHit = true;
-            surface[index][seed] = seedHit.point;
-            normals[index][seed] = seedHit.normal;
+            surface[centerIndex][seed] = seedHit.point;
+            normals[centerIndex][seed] = seedHit.normal;
             for (int direction = -1; direction <= 1; direction += 2)
             {
                 Vector3 lastPoint = seedHit.point;
@@ -521,8 +528,53 @@ public sealed class HandLadder : InteractableBase
                         lastPoint = expected;
                     }
 
-                    surface[index][i] = lastPoint;
-                    normals[index][i] = lastNormal;
+                    surface[centerIndex][i] = lastPoint;
+                    normals[centerIndex][i] = lastNormal;
+                }
+            }
+        }
+
+        // As laterais mantem a largura definida em relacao ao centro. A
+        // sondagem so encosta cada ponto na parede; se nao achar superficie,
+        // usa o offset fixo e continua acompanhando a normal central.
+        float reachSide = frontProbe + Mathf.Max(surfaceSearchDistance, half * 2f);
+        for (int i = 0; i < count; i++)
+        {
+            int before = Mathf.Max(0, i - 1);
+            int after = Mathf.Min(count - 1, i + 1);
+            Vector3 tangent = surface[centerIndex][after] - surface[centerIndex][before];
+            if (tangent.sqrMagnitude < 1e-6f)
+                tangent = climb;
+            tangent.Normalize();
+
+            Vector3 normal = normals[centerIndex][i].sqrMagnitude > .0001f
+                ? normals[centerIndex][i].normalized : approach;
+            Vector3 localAcross = Vector3.Cross(tangent, normal);
+            localAcross = Vector3.ProjectOnPlane(localAcross, normal);
+            if (localAcross.sqrMagnitude < 1e-6f)
+                localAcross = Vector3.ProjectOnPlane(across, normal);
+            if (localAcross.sqrMagnitude < 1e-6f)
+                localAcross = across;
+            localAcross.Normalize();
+            if (Vector3.Dot(localAcross, across) < 0f)
+                localAcross = -localAcross;
+
+            for (int lane = -1; lane <= 1; lane += 2)
+            {
+                int laneIndex = lane + 1;
+                Vector3 expected = surface[centerIndex][i] + localAcross * (half * lane);
+                if (anyHit && HandLadderSurfaceProbe.Cast(this,
+                        expected + normal * frontProbe, -normal, reachSide,
+                        out RaycastHit sideHit) &&
+                    Vector3.Dot(sideHit.normal, normal) > .2f)
+                {
+                    surface[laneIndex][i] = sideHit.point;
+                    normals[laneIndex][i] = sideHit.normal;
+                }
+                else
+                {
+                    surface[laneIndex][i] = expected;
+                    normals[laneIndex][i] = normal;
                 }
             }
         }
@@ -601,9 +653,19 @@ public sealed class HandLadder : InteractableBase
     }
 
     public Vector3 LocalWidthAxis => Vector3.Cross(LocalClimbAxis, LocalApproachAxis).normalized;
-    public Vector3 ClimbDirection => transform.TransformDirection(LocalClimbAxis).normalized;
+    private Vector3 GeometryClimbDirection => transform.TransformDirection(LocalClimbAxis).normalized;
+    public Vector3 ClimbDirection => GeometryClimbDirection * (invertStartAndEnd ? -1f : 1f);
+    private Vector3 StartPosition => transform.position +
+        (invertStartAndEnd ? GeometryClimbDirection * height : Vector3.zero);
+    internal Vector3 ClimbStartPosition => StartPosition;
     public Vector3 ApproachDirection => transform.TransformDirection(LocalApproachAxis).normalized;
     public Vector3 WidthDirection => transform.TransformDirection(LocalWidthAxis).normalized;
+
+    private float ToGeometryProgress(float progress) =>
+        invertStartAndEnd ? height - progress : progress;
+
+    private float ToClimbProgress(float progress) =>
+        invertStartAndEnd ? height - progress : progress;
 
     /// <summary>Verdadeiro se o topo sai por tras do plano da escada.</summary>
     public bool TopExitsBack => topExitSide == HandLadderExitSide.Back ||
@@ -684,7 +746,7 @@ public sealed class HandLadder : InteractableBase
             return nearest;
         }
 
-        Vector3 origin = transform.position;
+        Vector3 origin = StartPosition;
         Vector3 climb = ClimbDirection;
         float along = Mathf.Clamp(Vector3.Dot(position - origin, climb), 0f, height);
         return (origin + climb * along - position).sqrMagnitude;
@@ -770,7 +832,9 @@ public sealed class HandLadder : InteractableBase
     private Vector3 ResolveExit(HandLadderGrip grip, bool top, out bool back)
     {
         back = false;
-        Transform marker = top ? topExit : bottomExit;
+        Transform marker = top
+            ? (invertStartAndEnd ? bottomExit : topExit)
+            : (invertStartAndEnd ? topExit : bottomExit);
         Vector3 approach = GetNormal(top ? height : 0f, grip.side);
         if (marker != null)
         {
@@ -880,7 +944,7 @@ public sealed class HandLadder : InteractableBase
             return false;
         rayDirection.Normalize();
 
-        Vector3 origin = transform.position;
+        Vector3 origin = StartPosition;
         Vector3 climb = ClimbDirection;
         Vector3 approach = ApproachDirection;
         // Ponto da escada mais proximo do raio da mira.
@@ -898,7 +962,7 @@ public sealed class HandLadder : InteractableBase
                 if (miss < bestMiss)
                 {
                     bestMiss = miss;
-                    along = spine.progress[i];
+                    along = ToClimbProgress(spine.progress[i]);
                 }
             }
         }
@@ -965,7 +1029,7 @@ public sealed class HandLadder : InteractableBase
         if (!HandLadderSurfaceProbe.TryFind(this, out RaycastHit hit))
             return false;
 
-        Vector3 climb = ClimbDirection;
+        Vector3 climb = GeometryClimbDirection;
         Vector3 normal = Vector3.ProjectOnPlane(hit.normal, climb);
         if (normal.sqrMagnitude < .0001f)
             return false;
@@ -996,7 +1060,7 @@ public sealed class HandLadder : InteractableBase
         if (!InteractionGizmos.Visible)
             return;
 
-        Vector3 origin = transform.position;
+        Vector3 origin = StartPosition;
         Vector3 climb = ClimbDirection;
         Vector3 approach = ApproachDirection;
         Vector3 across = WidthDirection;
@@ -1109,7 +1173,7 @@ public sealed class HandLadder : InteractableBase
             return;
 
         // Previa da superficie: mostra onde o botao Encaixar vai bater.
-        Vector3 start = transform.position + ClimbDirection * (height * .5f);
+        Vector3 start = StartPosition + ClimbDirection * (height * .5f);
         Vector3 direction = -ApproachDirection;
         bool hit = HandLadderSurfaceProbe.TryFind(this, out RaycastHit surface);
         Gizmos.color = hit ? new Color(.3f, 1f, .5f) : new Color(1f, .3f, .3f);
@@ -1217,7 +1281,7 @@ public static class HandLadderSurfaceProbe
         // Tenta o meio, depois perto do topo e da base, para nao falhar em vaos.
         for (int s = 0; s < samples.Length; s++)
         {
-            Vector3 start = ladder.transform.position + climb * (ladder.Height * samples[s]);
+            Vector3 start = ladder.ClimbStartPosition + climb * (ladder.Height * samples[s]);
             if (CastInitial(ladder, start, out best))
                 return true;
         }

@@ -632,6 +632,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
         {
             VisualElement bar = new();
             bar.AddToClassList("menu-bar");
+            if (i == 0)
+                bar.AddToClassList("menu-bar-first");
             bar.EnableInClassList("is-filled", i <= level);
             bar.pickingMode = PickingMode.Ignore;
             bars.Add(bar);

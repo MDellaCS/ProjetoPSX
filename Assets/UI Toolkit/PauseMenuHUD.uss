@@ -228,7 +228,7 @@ Button.menu-button:disabled Label.menu-button-label {
     background-color: rgba(255, 255, 255, 0.22);
 }
 
-.menu-bar:first-child { margin-left: 0; }
+.menu-bar-first { margin-left: 0; }
 .menu-bar.is-filled { background-color: var(--menu-text); }
 
 /* Aviso do menu inicial (ex.: cutscene ausente). */

@@ -464,6 +464,14 @@ internal static class HandLadderGenerationRegression
             Check(ladder.RungSpacing == 0f && ladder.SlotCount == 0,
                 "Sem perfil nem espacamento manual a subida e continua.");
 
+            Set(ladder, "invertStartAndEnd", true);
+            Check((ladder.ClimbDirection - Vector3.down).sqrMagnitude < .001f &&
+                (ladder.PlanePointAt(0f) - Vector3.up * 2f).sqrMagnitude < .001f &&
+                ladder.TryGetEntryAt(new Vector3(0f, 1.5f, .6f), out HandLadderGrip reversedGrip) &&
+                Mathf.Abs(reversedGrip.progress - .5f) < .001f,
+                "Inverter inicio/fim deve preservar a geometria e inverter direcao e progresso.");
+            Set(ladder, "invertStartAndEnd", false);
+
             // 2. Zona de entrada da escada solta (frente = +Z, 1 m de largura).
             Check(ladder.TryGetEntryAt(new Vector3(0f, 1f, .6f), out HandLadderGrip grip) &&
                 grip.side == 1 && Mathf.Abs(grip.progress - 1f) < .001f,
@@ -626,6 +634,15 @@ internal static class HandLadderGenerationRegression
             float fromCenter = Vector3.Distance(gripAtBase, wall.transform.position);
             Check(Mathf.Abs(fromCenter - (5f + ladder.SurfaceOffset + ladder.PlayerForwardOffset)) < .1f,
                 "O jogador deve ficar a offset da superficie curva: " + fromCenter);
+            for (int sample = 0; sample < ladder.Spine.Count; sample++)
+            {
+                float progress = ladder.Spine.progress[sample];
+                float actualWidth = Vector3.Distance(
+                    ladder.transform.TransformPoint(ladder.LocalLanePoint(-1, progress)),
+                    ladder.transform.TransformPoint(ladder.LocalLanePoint(1, progress)));
+                Check(Mathf.Abs(actualWidth - ladder.Width) < .12f,
+                    $"A largura deve permanecer constante na esfera: {actualWidth} em {progress} m.");
+            }
             // Tubo inclinado e largo (pouca curvatura): as duas pontas continuam na superficie.
             Object.DestroyImmediate(wall);
             wall = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -651,6 +668,15 @@ internal static class HandLadderGenerationRegression
             }
 
             Check(worstGap < .06f, "Escada no tubo deve colar em toda a altura; pior folga: " + worstGap);
+            for (int sample = 0; sample < ladder.Spine.Count; sample++)
+            {
+                float progress = ladder.Spine.progress[sample];
+                float actualWidth = Vector3.Distance(
+                    ladder.transform.TransformPoint(ladder.LocalLanePoint(-1, progress)),
+                    ladder.transform.TransformPoint(ladder.LocalLanePoint(1, progress)));
+                Check(Mathf.Abs(actualWidth - ladder.Width) < .12f,
+                    $"A largura deve permanecer constante no tubo: {actualWidth} em {progress} m.");
+            }
             // Uma parede reta nao gera espinha.
             Object.DestroyImmediate(wall);
             wall = GameObject.CreatePrimitive(PrimitiveType.Cube);

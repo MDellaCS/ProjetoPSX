@@ -131,6 +131,8 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     {
         player = playerTarget;
         effects = stack;
+        // Origem da nevoa retro no modo Player (RetroEnvironmentProfile).
+        RetroLightSystem.FogFocus = playerTarget;
         // Uma troca de cena destroi o Volume global antigo; sem isso a busca em
         // cache nunca seria refeita e o grading termico pararia silenciosamente.
         if (cachedGlobalVolume == null)
