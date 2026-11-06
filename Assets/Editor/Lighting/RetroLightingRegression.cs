@@ -23,6 +23,7 @@ public static class RetroLightingRegression
             CheckEmitterRegistration();
             CheckLightBudget();
             CheckMaterialConversion();
+            CheckRenderedLight();
             Debug.Log("PASS: Retro lighting regression.");
         }
         catch (Exception exception)
@@ -182,6 +183,87 @@ public static class RetroLightingRegression
         }
     }
 
+    private static float RenderBrightness(Camera camera)
+    {
+        RenderTexture target = RenderTexture.GetTemporary(320, 180, 24, RenderTextureFormat.ARGB32);
+        RenderTexture previous = RenderTexture.active;
+        Texture2D texture = new(320, 180, TextureFormat.RGB24, false);
+        try
+        {
+            camera.targetTexture = target;
+            camera.Render();
+            RenderTexture.active = target;
+            texture.ReadPixels(new Rect(0, 0, 320, 180), 0, 0);
+            long sum = 0;
+            foreach (Color32 pixel in texture.GetPixels32())
+                sum += pixel.r + pixel.g + pixel.b;
+            return sum / (320f * 180f * 3f);
+        }
+        finally
+        {
+            camera.targetTexture = null;
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(target);
+            UnityEngine.Object.DestroyImmediate(texture);
+        }
+    }
+
+    // Renderiza um chao grande de 4 vertices com uma luz local. Protege contra a luz "sumir"
+    // em malhas pouco subdivididas: o modo padrao (Pixel) precisa iluminar o meio do chao.
+    private static void CheckRenderedLight()
+    {
+        RetroLightingSettings settings = RetroLightingSettings.Instance;
+        RetroEnvironmentProfile environment = settings.defaultEnvironment;
+        Color sky = environment.ambientSkyColor;
+        Color ground = environment.ambientGroundColor;
+        RetroLightingModeOverride previousOverride = settings.lightingModeOverride;
+        GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        GameObject cameraObject = new("Retro Render Test Camera");
+        Material material = new(AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Retro/RetroDefault.mat"));
+        RetroLight light = new() { localPosition = new Vector3(500f, 2f, 500f), range = 15f, intensity = 2f, color = Color.white };
+        try
+        {
+            Check(Mathf.RoundToInt(material.GetFloat("_LightingMode")) == 2, "O padrao do Retro Lit deve ser Pixel.");
+            environment.ambientSkyColor = Color.black;
+            environment.ambientGroundColor = Color.black;
+            UnityEngine.Object.DestroyImmediate(floor.GetComponent<Collider>());
+            floor.transform.position = new Vector3(500f, 0f, 500f);
+            floor.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            floor.transform.localScale = new Vector3(60f, 60f, 1f);
+            floor.GetComponent<Renderer>().sharedMaterial = material;
+            Camera camera = cameraObject.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.black;
+            camera.enabled = false;
+            cameraObject.transform.position = new Vector3(500f, 12f, 490f);
+            cameraObject.transform.LookAt(new Vector3(500f, 0f, 500f));
+
+            RetroLightSystem.Register(light);
+            settings.lightingModeOverride = RetroLightingModeOverride.PerMaterial;
+            float lit = RenderBrightness(camera);
+            RetroLightSystem.Unregister(light);
+            float dark = RenderBrightness(camera);
+            Check(lit > dark + 5f, "A luz local deve iluminar um chao grande (com luz " + lit.ToString("0.0") +
+                ", sem luz " + dark.ToString("0.0") + ").");
+
+            RetroLightSystem.Register(light);
+            settings.lightingModeOverride = RetroLightingModeOverride.Grid;
+            float grid = RenderBrightness(camera);
+            Check(grid > dark + 5f, "Modo Grid deve iluminar um chao grande (" + grid.ToString("0.0") + ").");
+        }
+        finally
+        {
+            RetroLightSystem.Unregister(light);
+            environment.ambientSkyColor = sky;
+            environment.ambientGroundColor = ground;
+            settings.lightingModeOverride = previousOverride;
+            UnityEngine.Object.DestroyImmediate(floor);
+            UnityEngine.Object.DestroyImmediate(cameraObject);
+            UnityEngine.Object.DestroyImmediate(material);
+            Shader.SetGlobalFloat("_RetroLightCount", 0f);
+        }
+    }
+
     private static void CheckMaterialConversion()
     {
         Shader lit = Shader.Find("Universal Render Pipeline/Lit");
@@ -199,6 +281,7 @@ public static class RetroLightingRegression
             Check(material.IsKeywordEnabled("_ALPHATEST_ON") && Mathf.Approximately(material.GetFloat("_Cutoff"), .3f),
                 "Recorte por alpha perdido.");
             Check(material.GetColor("_EmissionColor") == Color.black, "Emissao desligada deve ficar preta.");
+            Check(Mathf.RoundToInt(material.GetFloat("_LightingMode")) == 2, "Material convertido deve usar Pixel.");
         }
         finally
         {

@@ -77,16 +77,24 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private void Update()
     {
+        if (Debug.isDebugBuild && Keyboard.current != null)
+        {
+            if (Keyboard.current.leftBracketKey.wasPressedThisFrame)
+                RetroLightSystem.CycleEnvironmentProfile(-1);
+            else if (Keyboard.current.rightBracketKey.wasPressedThisFrame)
+                RetroLightSystem.CycleEnvironmentProfile(1);
+        }
+
         if (GameInput.DebugHUDPressed)
         {
             SetVisible(!isVisible);
         }
 
-        if (GameInput.DebugSlowMotionPressed)
-            GameDebugTimeScale.Toggle();
-
         if (!isVisible || debugText == null)
             return;
+
+        if (GameInput.DebugSlowMotionPressed)
+            GameDebugTimeScale.Toggle();
 
         // PlayerLockOn pode ser adicionado pelo sistema de ataques durante Awake.
         // A ordem de Awake entre objetos nao e garantida, entao tentamos
@@ -255,6 +263,12 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         testShortcutsTextBuilder.Append("F7  GOD MODE: ")
             .AppendLine(playerHealth != null && playerHealth.IsGodMode ? "ON" : "OFF");
         testShortcutsTextBuilder.AppendLine("F9  NEXT SCENE");
+        if (Debug.isDebugBuild)
+        {
+            testShortcutsTextBuilder.Append("[ / ] ENVIRONMENT: ");
+            RetroEnvironmentProfile active = RetroLightSystem.ActiveEnvironment;
+            testShortcutsTextBuilder.AppendLine(active != null ? active.name : "NONE");
+        }
         testShortcutsTextBuilder.AppendLine("U   NEXT PLAYER MOVESET");
         testShortcutsTextBuilder.Append("F11 TIME: ")
             .AppendLine(GameDebugTimeScale.IsSlowMotion ? "0.25x" : "1x");

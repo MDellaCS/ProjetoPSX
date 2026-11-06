@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eace8890128f4219a5b0eebd1db7f844, type: 3}
+  m_Name: Night
+  m_EditorClassIdentifier: Assembly-CSharp::RetroEnvironmentProfile
+  ambientSkyColor: {r: 0.0754717, g: 0.06087576, b: 0.06087576, a: 1}
+  ambientGroundColor: {r: 0.066037714, g: 0.05825025, b: 0.05825025, a: 1}
+  ambientIntensity: 1.79
+  unityReflectionIntensity: 0
+  fogEnabled: 0
+  fogColor: {r: 0.3, g: 0.31, b: 0.3, a: 1}
+  fogCenter: 1
+  fogStart: 5.3
+  fogEnd: 48.2
+  fogMaxOpacity: 0.884
+  fogLightPierce: 0.436
+  heightFog: 1
+  heightFogBaseOffset: 3.15
+  heightFogThickness: 15.6

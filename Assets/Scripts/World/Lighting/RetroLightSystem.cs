@@ -6,7 +6,20 @@ using UnityEngine.SceneManagement;
 /// <summary>Uma luz local registrada no RetroLightSystem. Pertence ao emissor que a criou.</summary>
 public sealed class RetroLight
 {
-    public Transform owner;
+    private Transform ownerTransform;
+    internal bool hadOwner;
+
+    /// <summary>Transform que move a luz. Sem dono, localPosition e uma posicao de mundo.</summary>
+    public Transform owner
+    {
+        get => ownerTransform;
+        set
+        {
+            ownerTransform = value;
+            hadOwner |= value != null;
+        }
+    }
+
     public Vector3 localPosition;
     public Quaternion localRotation = Quaternion.identity;
     public bool enabled = true;
@@ -64,6 +77,7 @@ public static class RetroLightSystem
 
     private static bool hooked;
     private static bool environmentDirty = true;
+    private static int selectedEnvironmentIndex = -1;
 
     /// <summary>Alvo usado como origem da nevoa no modo Player (definido pela camera de gameplay).</summary>
     public static Transform FogFocus { get; set; }
@@ -81,6 +95,7 @@ public static class RetroLightSystem
         System.Array.Clear(Selected, 0, Selected.Length);
         FogFocus = null;
         VisibleLightCount = 0;
+        selectedEnvironmentIndex = -1;
         environmentDirty = true;
         hooked = false;
     }
@@ -153,6 +168,12 @@ public static class RetroLightSystem
     {
         get
         {
+            RetroLightingSettings settings = RetroLightingSettings.Instance;
+            if (selectedEnvironmentIndex >= 0 && settings != null && settings.environmentProfiles != null &&
+                selectedEnvironmentIndex < settings.environmentProfiles.Length &&
+                settings.environmentProfiles[selectedEnvironmentIndex] != null)
+                return settings.environmentProfiles[selectedEnvironmentIndex];
+
             for (int i = Environments.Count - 1; i >= 0; i--)
             {
                 RetroLightingEnvironment environment = Environments[i];
@@ -164,9 +185,47 @@ public static class RetroLightSystem
                 if (environment.Profile != null)
                     return environment.Profile;
             }
-            RetroLightingSettings settings = RetroLightingSettings.Instance;
+            if (settings != null && settings.environmentProfiles != null && settings.environmentProfiles.Length > 0)
+            {
+                int count = settings.environmentProfiles.Length;
+                int start = selectedEnvironmentIndex < 0 ? 0 : selectedEnvironmentIndex % count;
+                for (int offset = 0; offset < count; offset++)
+                {
+                    RetroEnvironmentProfile profile = settings.environmentProfiles[(start + offset) % count];
+                    if (profile != null)
+                        return profile;
+                }
+            }
             return settings != null ? settings.defaultEnvironment : null;
         }
+    }
+
+    public static int EnvironmentProfileIndex => selectedEnvironmentIndex;
+    public static bool CycleEnvironmentProfile(int direction)
+    {
+        RetroLightingSettings settings = RetroLightingSettings.Instance;
+        if (settings == null || settings.environmentProfiles == null || settings.environmentProfiles.Length == 0)
+            return false;
+
+        int count = settings.environmentProfiles.Length;
+        int index = selectedEnvironmentIndex;
+        if (index < 0)
+        {
+            RetroEnvironmentProfile current = ActiveEnvironment;
+            index = System.Array.IndexOf(settings.environmentProfiles, current);
+            if (index < 0)
+                index = direction < 0 ? 0 : count - 1;
+        }
+        for (int step = 0; step < count; step++)
+        {
+            index = (index + (direction < 0 ? count - 1 : 1)) % count;
+            if (settings.environmentProfiles[index] == null)
+                continue;
+            selectedEnvironmentIndex = index;
+            environmentDirty = true;
+            return true;
+        }
+        return false;
     }
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -237,7 +296,7 @@ public static class RetroLightSystem
         for (int i = Lights.Count - 1; i >= 0; i--)
         {
             RetroLight light = Lights[i];
-            if (light.owner == null && light.registered)
+            if (light.hadOwner && light.owner == null && light.registered)
             {
                 // Dono destruido sem OnDisable (ex.: recompilacao).
                 light.registered = false;

@@ -28,7 +28,7 @@ public sealed class RetroLightingSettings : ScriptableObject
     [Min(0f)] public float localLightIntensityMultiplier = 1f;
 
     [Header("Estilo")]
-    [Tooltip("Sobrescreve o Lighting Mode de todos os materiais Retro Lit. Per Material respeita cada material.")]
+    [Tooltip("Sobrescreve o Lighting Mode de todos os materiais Retro Lit. Per Material respeita cada material. Vertex so ilumina bem malhas subdivididas; em chao e paredes grandes use Grid ou Pixel.")]
     public RetroLightingModeOverride lightingModeOverride = RetroLightingModeOverride.PerMaterial;
     [Tooltip("Tamanho da celula da grade, em metros, usado quando o modo Grid e forcado. Zero usa o valor de cada material.")]
     [Min(0f)] public float gridCellSizeOverride;
@@ -40,8 +40,16 @@ public sealed class RetroLightingSettings : ScriptableObject
     [Header("Ambiente")]
     [Tooltip("Ambiente usado quando a cena nao tem um Retro Lighting Environment ativo.")]
     public RetroEnvironmentProfile defaultEnvironment;
+    [Tooltip("Perfis disponiveis para alternar durante o Play Mode com [ e ]. O primeiro perfil valido e usado ao iniciar, salvo quando a cena tem um Retro Lighting Environment ativo.")]
+    public RetroEnvironmentProfile[] environmentProfiles = System.Array.Empty<RetroEnvironmentProfile>();
     [Tooltip("Em Play, aplica a cor ambiente e a nevoa tambem nos materiais que nao usam Retro Lit (URP Lit), substituindo a sonda ambiente salva na cena. Evita o mundo azulado do skybox padrao.")]
     public bool applyToUnityRenderSettings = true;
+
+    [Header("Materiais")]
+    [Tooltip("Shader 'Projeto PSX/Retro Lit'. Referenciado aqui para entrar no build.")]
+    public Shader retroLitShader;
+    [Tooltip("Em Play, troca em memoria os materiais URP Lit e ProBuilder dos renderers de cada cena carregada por copias Retro Lit, para que recebam as luzes retro sem editar as cenas. Desligue depois de converter os materiais no projeto.")]
+    public bool autoConvertSceneMaterials = true;
 
     [Header("Importacao")]
     [Tooltip("Modelos importados (FBX/OBJ) recebem materiais Retro Lit em vez de URP Lit ao serem (re)importados.")]

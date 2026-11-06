@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: EnemyMaterial
-  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
+  m_Shader: {fileID: 4800000, guid: 093961d99cd14c8fbb5efc6e343b1b6d, type: 3}
   m_Parent: {fileID: 2100000, guid: 46eb48a4269e2454aaa31c25f64e2c7e, type: 2}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -47,9 +47,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
-    m_Floats: []
+    m_Floats:
+    - _FlatShading: 0
+    - _LightingMode: 2
     m_Colors:
-    - _BaseColor: {r: 1, g: 0.24056602, b: 0.24056602, a: 1}
+    - _BaseColor: {r: 1, g: 0.24056599, b: 0.24056599, a: 1}
     - _Color: {r: 1, g: 0.24056599, b: 0.24056599, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

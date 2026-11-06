@@ -11,7 +11,7 @@ Shader "Projeto PSX/Retro Lit"
         [HDR] _EmissionColor("Emission Color", Color) = (0, 0, 0, 1)
         [NoScaleOffset] _EmissionMap("Emission Map", 2D) = "white" {}
 
-        [Enum(Vertex, 0, Grid, 1, Pixel, 2)] _LightingMode("Lighting Mode", Float) = 0
+        [Enum(Vertex, 0, Grid, 1, Pixel, 2)] _LightingMode("Lighting Mode", Float) = 2
         _GridSize("Grid Size", Range(0.05, 4)) = 0.5
         [Toggle] _FlatShading("Flat Shading", Float) = 0
 

@@ -38,7 +38,7 @@ Material:
     - _Cutoff: 0.5
     - _FlatShading: 0
     - _GridSize: 0.5
-    - _LightingMode: 0
+    - _LightingMode: 2
     - _UseVertexColor: 0
     m_Colors:
     - _BaseColor: {r: 0.7, g: 0.7, b: 0.7, a: 1}

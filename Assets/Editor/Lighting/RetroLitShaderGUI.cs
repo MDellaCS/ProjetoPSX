@@ -10,7 +10,7 @@ public sealed class RetroLitShaderGUI : ShaderGUI
     private static readonly GUIContent Emission = new("Emission",
         "Cor (e mapa) que brilha sem depender de luz, como telas, olhos ou lampadas. Preto desliga.");
     private static readonly GUIContent LightingMode = new("Lighting Mode",
-        "Vertex: luz calculada nos vertices e interpolada (Gouraud, PS1/PS2); malhas com poucos vertices mostram a luz 'pulando' entre eles.\n" +
+        "Vertex: luz calculada so nos vertices e interpolada (Gouraud, PS1/PS2). ATENCAO: um chao ou parede grande com poucos vertices nao recebe luz no meio, pois os cantos ficam fora do alcance. Use apenas em malhas subdivididas.\n" +
         "Grid: luz amostrada em celulas de mundo, com aspecto de texel grande, independente da malha.\n" +
         "Pixel: luz suave por pixel (early PS3). O RetroLightingSettings pode forcar um modo para todos os materiais.");
     private static readonly GUIContent GridSize = new("Grid Size",

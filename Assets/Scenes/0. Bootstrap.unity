@@ -35,7 +35,7 @@ RenderSettings:
   m_DefaultReflectionMode: 0
   m_DefaultReflectionResolution: 16
   m_ReflectionBounces: 1
-  m_ReflectionIntensity: 0.15
+  m_ReflectionIntensity: 0
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
   m_UseRadianceAmbientProbe: 0
@@ -1756,13 +1756,8 @@ MonoBehaviour:
   profile: {fileID: 11400000, guid: 01a5165dd57cd6141800b72900b59d77, type: 2}
   positionOffset: {x: 0, y: 0, z: 0}
   rotationOffset: {x: 0, y: 0, z: 0}
-  illuminatedRenderingLayers:
-    serializedVersion: 0
-    m_Bits: 4294967295
-  excludeEmitterShadowLayers: 0
-  excludedShadowLayers:
-    serializedVersion: 0
-    m_Bits: 2
+  intensityMultiplier: 1
+  previewFlickerInEditor: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
