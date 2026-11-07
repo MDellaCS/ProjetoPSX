@@ -426,21 +426,33 @@ public partial class PlayerMovement : MonoBehaviour
         Vector3 worldDirection = Vector3.zero;
         if (cameraTransform != null)
         {
-            Vector3 screenUpOnGround = Vector3.ProjectOnPlane(
-                cameraTransform.up, Vector3.up);
-            if (screenUpOnGround.sqrMagnitude <= .0001f)
+            // O eixo up projetado troca de sinal quando a camera passa do
+            // horizonte. Use o forward da camera para manter W apontando para
+            // o que esta a frente na tela, independente da inclinacao.
+            Vector3 cameraForwardOnGround = Vector3.ProjectOnPlane(
+                cameraTransform.forward, Vector3.up);
+            if (cameraForwardOnGround.sqrMagnitude > .0001f)
             {
-                screenUpOnGround = Vector3.ProjectOnPlane(
-                    cameraTransform.forward, Vector3.up);
+                cameraForwardOnGround.Normalize();
+                Vector3 cameraRightOnGround = Vector3.Cross(Vector3.up,
+                    cameraForwardOnGround).normalized;
+                worldDirection = (cameraRightOnGround * normalizedInput.x +
+                    cameraForwardOnGround * normalizedInput.y).normalized;
             }
-
-            if (screenUpOnGround.sqrMagnitude > .0001f)
+            else
             {
-                screenUpOnGround.Normalize();
-                Vector3 screenRightOnGround = Vector3.Cross(Vector3.up,
-                    screenUpOnGround).normalized;
-                worldDirection = (screenRightOnGround * normalizedInput.x +
-                    screenUpOnGround * normalizedInput.y).normalized;
+                // Se a camera olha quase exatamente para cima/baixo, derive
+                // a frente do eixo right para evitar uma direcao degenerada.
+                Vector3 cameraRightOnGround = Vector3.ProjectOnPlane(
+                    cameraTransform.right, Vector3.up);
+                if (cameraRightOnGround.sqrMagnitude > .0001f)
+                {
+                    cameraRightOnGround.Normalize();
+                    Vector3 cameraForwardFallback = Vector3.Cross(
+                        cameraRightOnGround, Vector3.up).normalized;
+                    worldDirection = (cameraRightOnGround * normalizedInput.x +
+                        cameraForwardFallback * normalizedInput.y).normalized;
+                }
             }
         }
 

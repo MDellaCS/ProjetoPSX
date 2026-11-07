@@ -11,9 +11,12 @@ public sealed class ScenePlayerSpawnPoint : MonoBehaviour
     [SerializeField] private string spawnId;
     [Tooltip("Usado quando nenhum ID especifico foi solicitado e esta cena nao possui outro Spawn Point compativel.")]
     [SerializeField] private bool isDefault = true;
+    [Tooltip("Trigger de camera ativado assim que o jogador aparece neste spawn. Deixe vazio para iniciar com a CameraFollow livre.")]
+    [SerializeField] private FixedCameraZone initialCameraTrigger;
 
     internal string SpawnId => spawnId;
     internal bool IsDefault => isDefault;
+    internal FixedCameraZone InitialCameraTrigger => initialCameraTrigger;
 
     internal static ScenePlayerSpawnPoint FindForScene(Scene scene,
         string requestedSpawnId)

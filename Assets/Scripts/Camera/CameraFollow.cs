@@ -98,9 +98,24 @@ public sealed class CameraFollow : MonoBehaviour
     private PlayerMovement targetMovement;
     private float yaw;
     private float pitch;
-    private readonly List<FixedCameraZone> fixedCameraZones = new();
     private FixedCameraZone activeFixedCameraZone;
     private int movementCameraVersion;
+    private FollowCameraSettings followTransitionFrom;
+    private FollowCameraSettings followTransitionTo;
+    private AnimationCurve followTransitionCurve;
+    private float followTransitionDuration;
+    private float followTransitionElapsed;
+    private bool followTransitionActive;
+
+    private struct FollowCameraSettings
+    {
+        public float yaw;
+        public float pitch;
+        public float smoothTime;
+        public Vector3 positionOffset;
+        public float distance;
+        public float fieldOfView;
+    }
 
     public Transform Target => target;
     public Vector3 TargetCenter => GetTargetCenter();
@@ -212,8 +227,6 @@ public sealed class CameraFollow : MonoBehaviour
 
     private void LateUpdate()
     {
-        UpdateFixedCameraSelection();
-
         if (!initialized || target == null || trackingPivot == null ||
             thirdPersonFollow == null || gameplayCamera == null)
             return;
@@ -224,8 +237,8 @@ public sealed class CameraFollow : MonoBehaviour
 
     internal void RegisterFixedCameraZone(FixedCameraZone zone)
     {
-        if (zone != null && !fixedCameraZones.Contains(zone))
-            fixedCameraZones.Add(zone);
+        // Mantido para componentes ja habilitados; a selecao agora acontece
+        // somente no evento de entrada do trigger.
     }
 
     internal void UnregisterFixedCameraZone(FixedCameraZone zone)
@@ -233,7 +246,6 @@ public sealed class CameraFollow : MonoBehaviour
         if (zone == null)
             return;
 
-        fixedCameraZones.Remove(zone);
         if (activeFixedCameraZone == zone)
         {
             movementCameraVersion++;
@@ -245,66 +257,41 @@ public sealed class CameraFollow : MonoBehaviour
         }
     }
 
-    private void UpdateFixedCameraSelection()
+    internal void ActivateCameraTrigger(FixedCameraZone trigger)
     {
-        Collider playerCollider = GetCameraZonePlayerCollider();
-        FixedCameraZone bestZone = null;
-
-        for (int i = fixedCameraZones.Count - 1; i >= 0; i--)
-        {
-            FixedCameraZone zone = fixedCameraZones[i];
-            if (zone == null)
-            {
-                fixedCameraZones.RemoveAt(i);
-                continue;
-            }
-
-            if (!zone.IsPlayerInside(playerCollider))
-                continue;
-
-            bool hasHigherPriority = bestZone == null ||
-                zone.CameraPriority > bestZone.CameraPriority;
-            bool enteredMoreRecently = bestZone != null &&
-                zone.CameraPriority == bestZone.CameraPriority &&
-                zone.LastEnteredFrame > bestZone.LastEnteredFrame;
-            bool isMoreSpecific = bestZone != null &&
-                zone.CameraPriority == bestZone.CameraPriority &&
-                zone.LastEnteredFrame == bestZone.LastEnteredFrame &&
-                zone.WorldVolume < bestZone.WorldVolume;
-            if (hasHigherPriority || enteredMoreRecently || isMoreSpecific)
-                bestZone = zone;
-        }
-
-        if (bestZone == activeFixedCameraZone)
+        if (trigger == null || !trigger.isActiveAndEnabled)
             return;
+        FixedCameraZone nextCamera = trigger.ReturnsToFreeCamera ? null : trigger;
+        if (nextCamera == activeFixedCameraZone)
+            return;
+
+        bool blendSameFollowCamera = trigger.UseCameraTransition &&
+            trigger.CameraTransition.BlendTime > 0f &&
+            (activeFixedCameraZone == null ||
+             activeFixedCameraZone.CameraMode == CameraZoneMode.FollowWithOverrides) &&
+            (nextCamera == null ||
+             nextCamera.CameraMode == CameraZoneMode.FollowWithOverrides);
+        if (blendSameFollowCamera)
+            BeginFollowCameraTransition(nextCamera, trigger.CameraTransition);
+        else
+            followTransitionActive = false;
 
         movementCameraVersion++;
 
-        PrepareInstantCameraSwitch();
+        if (trigger.UseCameraTransition)
+            PrepareCameraSwitch(trigger.CameraTransition);
+        else
+            PrepareInstantCameraSwitch();
 
         if (activeFixedCameraZone != null)
             activeFixedCameraZone.SetCameraSelected(false);
 
-        activeFixedCameraZone = bestZone;
+        activeFixedCameraZone = nextCamera;
         fixedCameraActive = activeFixedCameraZone != null;
         if (activeFixedCameraZone != null)
             activeFixedCameraZone.SetCameraSelected(true);
         else
             ScheduleGameplayBlendRestore();
-    }
-
-    private Collider GetCameraZonePlayerCollider()
-    {
-        if (target == null)
-            return null;
-
-        if (targetController == null)
-            targetController = target.GetComponent<PlayerCharacterController>();
-
-        if (targetController != null && targetController.Collider != null)
-            return targetController.Collider;
-
-        return target.GetComponent<Collider>();
     }
 
     private void EnsureCinemachineRig()
@@ -384,6 +371,12 @@ public sealed class CameraFollow : MonoBehaviour
 
     private void PrepareInstantCameraSwitch()
     {
+        PrepareCameraSwitch(new CinemachineBlendDefinition(
+            CinemachineBlendDefinition.Styles.Cut, 0f));
+    }
+
+    private void PrepareCameraSwitch(CinemachineBlendDefinition blend)
+    {
         if (fixedCameraBlendRestoreRoutine != null)
         {
             StopCoroutine(fixedCameraBlendRestoreRoutine);
@@ -399,9 +392,7 @@ public sealed class CameraFollow : MonoBehaviour
             hasSavedDefaultBlend = true;
         }
 
-        CinemachineBlendDefinition instantBlend = brain.DefaultBlend;
-        instantBlend.Time = 0f;
-        brain.DefaultBlend = instantBlend;
+        brain.DefaultBlend = blend;
     }
 
     private void ScheduleGameplayBlendRestore()
@@ -409,14 +400,14 @@ public sealed class CameraFollow : MonoBehaviour
         if (fixedCameraBlendRestoreRoutine != null)
             StopCoroutine(fixedCameraBlendRestoreRoutine);
         fixedCameraBlendRestoreRoutine =
-            StartCoroutine(RestoreGameplayBlendAfterCut());
+            StartCoroutine(RestoreGameplayBlendAfterTransition());
     }
 
-    private IEnumerator RestoreGameplayBlendAfterCut()
+    private IEnumerator RestoreGameplayBlendAfterTransition()
     {
         // Aguarda o Brain confirmar que a camera de follow ja foi escolhida.
         // A coroutine retoma em Update, antes de o Brain avaliar LateUpdate;
-        // restaurar no primeiro yield faria a saida usar o blend normal.
+        // restaurar imediatamente faria a saida ignorar o blend configurado.
         int waitedFrames = 0;
         while (!fixedCameraActive && brain != null && gameplayCamera != null &&
             !System.Object.ReferenceEquals(brain.ActiveVirtualCamera,
@@ -426,8 +417,8 @@ public sealed class CameraFollow : MonoBehaviour
             yield return null;
         }
 
-        // Garante que pelo menos um frame renderizado recebeu o corte antes
-        // de devolver ao gameplay a configuracao normal de blend.
+        // Garante que pelo menos um frame recebeu a configuracao deste trigger
+        // antes de devolver ao gameplay o blend padrao.
         yield return new WaitForEndOfFrame();
         if (!fixedCameraActive && hasSavedDefaultBlend)
         {
@@ -549,24 +540,101 @@ public sealed class CameraFollow : MonoBehaviour
     {
         CameraEffectFrame effects = effectStack != null
             ? effectStack.Evaluate() : CameraEffectFrame.Identity;
+        FollowCameraSettings settings = EvaluateFollowCameraSettings();
 
         trackingPivot.rotation = Quaternion.Euler(
-            pitch + effects.pitchOffset,
-            yaw + effects.yawOffset,
+            settings.pitch + effects.pitchOffset,
+            settings.yaw + effects.yawOffset,
             effects.rollOffset
         );
-        thirdPersonFollow.Damping = Vector3.one * followSmoothTime;
-        thirdPersonFollow.ShoulderOffset = effects.cameraLocalOffset;
+        thirdPersonFollow.Damping = Vector3.one * settings.smoothTime;
+        thirdPersonFollow.ShoulderOffset = effects.cameraLocalOffset + settings.positionOffset;
         thirdPersonFollow.CameraDistance = Mathf.Max(
             .1f,
-            distance + effects.distanceOffset
+            settings.distance + effects.distanceOffset
         );
         gameplayCamera.Lens.FieldOfView = Mathf.Clamp(
-            baseFieldOfView + effects.fieldOfViewOffset,
+            settings.fieldOfView + effects.fieldOfViewOffset,
             1f,
             179f
         );
         gameplayCamera.Priority = gameplayCameraPriority;
+    }
+
+    private FollowCameraSettings EvaluateFollowCameraSettings()
+    {
+        FollowCameraSettings settings = activeFixedCameraZone != null &&
+            activeFixedCameraZone.CameraMode == CameraZoneMode.FollowWithOverrides
+            ? new FollowCameraSettings
+            {
+                yaw = activeFixedCameraZone.FollowYaw,
+                pitch = activeFixedCameraZone.FollowPitch,
+                smoothTime = activeFixedCameraZone.FollowSmoothTime,
+                positionOffset = activeFixedCameraZone.FollowPositionOffset,
+                distance = activeFixedCameraZone.FollowDistance,
+                fieldOfView = activeFixedCameraZone.FollowFieldOfView
+            }
+            : new FollowCameraSettings
+            {
+                yaw = yaw,
+                pitch = pitch,
+                smoothTime = followSmoothTime,
+                positionOffset = Vector3.zero,
+                distance = distance,
+                fieldOfView = baseFieldOfView
+            };
+
+        if (!followTransitionActive)
+            return settings;
+
+        followTransitionElapsed += Time.deltaTime;
+        float linearT = Mathf.Clamp01(followTransitionElapsed / followTransitionDuration);
+        float t = followTransitionCurve != null
+            ? Mathf.Clamp01(followTransitionCurve.Evaluate(linearT))
+            : Mathf.SmoothStep(0f, 1f, linearT);
+        FollowCameraSettings blended = new()
+        {
+            yaw = Mathf.LerpAngle(followTransitionFrom.yaw, followTransitionTo.yaw, t),
+            pitch = Mathf.Lerp(followTransitionFrom.pitch, followTransitionTo.pitch, t),
+            smoothTime = Mathf.Lerp(followTransitionFrom.smoothTime, followTransitionTo.smoothTime, t),
+            positionOffset = Vector3.Lerp(followTransitionFrom.positionOffset,
+                followTransitionTo.positionOffset, t),
+            distance = Mathf.Lerp(followTransitionFrom.distance, followTransitionTo.distance, t),
+            fieldOfView = Mathf.Lerp(followTransitionFrom.fieldOfView,
+                followTransitionTo.fieldOfView, t)
+        };
+        if (linearT >= 1f)
+            followTransitionActive = false;
+        return blended;
+    }
+
+    private void BeginFollowCameraTransition(FixedCameraZone nextCamera,
+        CinemachineBlendDefinition blend)
+    {
+        followTransitionFrom = EvaluateFollowCameraSettings();
+        followTransitionTo = nextCamera != null
+            ? new FollowCameraSettings
+            {
+                yaw = nextCamera.FollowYaw,
+                pitch = nextCamera.FollowPitch,
+                smoothTime = nextCamera.FollowSmoothTime,
+                positionOffset = nextCamera.FollowPositionOffset,
+                distance = nextCamera.FollowDistance,
+                fieldOfView = nextCamera.FollowFieldOfView
+            }
+            : new FollowCameraSettings
+            {
+                yaw = yaw,
+                pitch = pitch,
+                smoothTime = followSmoothTime,
+                positionOffset = Vector3.zero,
+                distance = distance,
+                fieldOfView = baseFieldOfView
+            };
+        followTransitionDuration = blend.BlendTime;
+        followTransitionCurve = blend.BlendCurve;
+        followTransitionElapsed = 0f;
+        followTransitionActive = followTransitionDuration > 0f;
     }
 
     private Vector3 GetTargetCenter()

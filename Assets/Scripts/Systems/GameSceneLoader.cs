@@ -233,6 +233,9 @@ public sealed class GameSceneLoader : MonoBehaviour
     private IEnumerator LoadSceneRoutine(string scenePath)
     {
         isLoading = true;
+        if (loadingScreen != null)
+            yield return loadingScreen.WaitForFadeInComplete();
+
         AsyncOperation operation;
 #if UNITY_EDITOR
         operation = EditorSceneManager.LoadSceneAsyncInPlayMode(scenePath,
@@ -383,7 +386,11 @@ public sealed class GameSceneLoader : MonoBehaviour
             if (pauseMenu != null)
                 pauseMenu.CloseMainMenu();
             if (cameraFollow != null)
+            {
                 cameraFollow.ExitStaticMenuCamera(player);
+                if (spawn != null && spawn.InitialCameraTrigger != null)
+                    cameraFollow.ActivateCameraTrigger(spawn.InitialCameraTrigger);
+            }
         }
     }
 

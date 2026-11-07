@@ -363,6 +363,16 @@ public sealed class PlayerCharacterController : MonoBehaviour
         if (surfaceAngle <= slopeLimit)
             return Vector3.ProjectOnPlane(remaining, surfaceNormal);
 
+        // Rampa ingreme (nao parede): desliza pela superficie real, como na
+        // fisica, para que gravidade e movimento morro abaixo nao sejam
+        // anulados. Se a projecao virasse subida, ela e descartada abaixo.
+        if (surfaceNormal.y > .02f)
+        {
+            Vector3 along = Vector3.ProjectOnPlane(remaining, surfaceNormal);
+            if (along.y <= Mathf.Max(remaining.y, 0f) + .0001f)
+                return along;
+        }
+
         // Normais de paredes obtidas por casts de capsula podem ter uma
         // pequena componente vertical. Ela nao deve converter movimento
         // horizontal em subida: superfícies acima do limite de caminhada

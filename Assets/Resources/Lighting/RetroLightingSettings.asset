@@ -18,10 +18,10 @@ MonoBehaviour:
   gridCellSizeOverride: 0
   colorLevels: 0
   ditherStrength: 0
-  defaultEnvironment: {fileID: 11400000, guid: d2d03ba2f14347eaa2bd1d63140c34c9, type: 2}
+  defaultEnvironment: {fileID: 11400000, guid: 6d8ed9348ee7c514493012b653bf73e7, type: 2}
   environmentProfiles:
-  - {fileID: 11400000, guid: d2d03ba2f14347eaa2bd1d63140c34c9, type: 2}
   - {fileID: 11400000, guid: 6d8ed9348ee7c514493012b653bf73e7, type: 2}
+  - {fileID: 11400000, guid: d2d03ba2f14347eaa2bd1d63140c34c9, type: 2}
   applyToUnityRenderSettings: 1
   retroLitShader: {fileID: 4800000, guid: 093961d99cd14c8fbb5efc6e343b1b6d, type: 3}
   autoConvertSceneMaterials: 1

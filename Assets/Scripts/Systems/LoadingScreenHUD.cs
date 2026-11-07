@@ -22,7 +22,12 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     private VisualElement overlay;
     private VisualElement spinner;
     private Coroutine hideRoutine;
+    private Coroutine fadeInRoutine;
     private float spinnerAngle;
+    private float visibleSinceRealtime;
+    private float readySinceRealtime;
+    private float visualOpacity;
+    private bool hasVisualOpacity;
     private bool isVisible = true;
 
     public bool IsLoading { get; private set; }
@@ -66,6 +71,7 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         instance = hud;
         DontDestroyOnLoad(root);
         root.SetActive(true);
+        hud.Show();
     }
 
     private void Awake()
@@ -119,12 +125,37 @@ public sealed class LoadingScreenHUD : MonoBehaviour
             hideRoutine = null;
         }
 
+        if (fadeInRoutine != null)
+        {
+            StopCoroutine(fadeInRoutine);
+            fadeInRoutine = null;
+        }
+
         isVisible = true;
+        visibleSinceRealtime = Time.realtimeSinceStartup;
         GamePauseController.RequestPause(this);
         EnsureElements();
-        if (overlay != null)
-            overlay.style.opacity = 1f;
+        float startOpacity = hasVisualOpacity ? visualOpacity : 0f;
+        SetOpacity(startOpacity);
         SetVisible(true);
+
+        LoadingScreenSettings settings = LoadingScreenSettings.Current;
+        float duration = Mathf.Max(0f, settings.fadeInDuration);
+        if (duration <= 0f)
+        {
+            SetOpacity(1f);
+            return;
+        }
+
+        fadeInRoutine = StartCoroutine(FadeInRoutine(startOpacity,
+            duration, settings.fadeInCurve));
+    }
+
+    /// <summary>Espera o fade-in terminar antes de comecar a carregar a cena.</summary>
+    public IEnumerator WaitForFadeInComplete()
+    {
+        while (fadeInRoutine != null)
+            yield return null;
     }
 
     /// <summary>Carrega uma cena quando nao existe GameSceneLoader na cena.</summary>
@@ -143,6 +174,7 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     {
         if (hideRoutine != null)
             StopCoroutine(hideRoutine);
+        readySinceRealtime = Time.realtimeSinceStartup;
         hideRoutine = StartCoroutine(HideRoutine());
     }
 
@@ -163,30 +195,74 @@ public sealed class LoadingScreenHUD : MonoBehaviour
 
     private IEnumerator HideRoutine()
     {
-        // O fade so comeca com o carregamento 100% pronto e depois de um
-        // tempo fixo e configuravel (LoadingScreenSettings), independente de
-        // quanto o carregamento demorou.
-        LoadingScreenSettings settings = LoadingScreenSettings.Current;
-        if (settings.extraWaitAfterReady > 0f)
-            yield return new WaitForSecondsRealtime(settings.extraWaitAfterReady);
+        // Nao inicia o fade de saida enquanto o fade de entrada ainda estiver
+        // rodando, inclusive no carregamento inicial da aplicacao.
+        yield return WaitForFadeInComplete();
 
-        float fadeDuration = Mathf.Max(0f, settings.fadeDuration);
+        LoadingScreenSettings settings = LoadingScreenSettings.Current;
+        float minimumVisibleDuration = Mathf.Max(0f,
+            settings.minimumVisibleDuration);
+        float visibleDuration = Mathf.Max(0f,
+            Time.realtimeSinceStartup - visibleSinceRealtime);
+        float waitAfterReady = Mathf.Max(
+            Mathf.Max(0f, settings.extraWaitAfterReady -
+                (Time.realtimeSinceStartup - readySinceRealtime)),
+            minimumVisibleDuration - visibleDuration);
+        if (waitAfterReady > 0f)
+            yield return new WaitForSecondsRealtime(waitAfterReady);
+
+        float fadeDuration = Mathf.Max(0f, settings.fadeOutDuration);
         float elapsed = 0f;
-        float startOpacity = overlay != null ? overlay.resolvedStyle.opacity : 1f;
+        float startOpacity = hasVisualOpacity
+            ? visualOpacity
+            : overlay != null ? overlay.resolvedStyle.opacity : 1f;
         while (elapsed < fadeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            if (overlay != null)
-                overlay.style.opacity = Mathf.Lerp(startOpacity, 0f,
-                    Mathf.Clamp01(elapsed / fadeDuration));
+            float progress = EvaluateFadeCurve(settings.fadeOutCurve,
+                Mathf.Clamp01(elapsed / fadeDuration));
+            SetOpacity(Mathf.Lerp(startOpacity, 0f, progress));
             yield return null;
         }
 
+        SetOpacity(0f);
         SetVisible(false);
         isVisible = false;
         IsLoading = false;
         GamePauseController.ReleasePause(this);
         hideRoutine = null;
+    }
+
+    private IEnumerator FadeInRoutine(float startOpacity, float duration,
+        AnimationCurve curve)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float progress = EvaluateFadeCurve(curve,
+                Mathf.Clamp01(elapsed / duration));
+            SetOpacity(Mathf.Lerp(startOpacity, 1f, progress));
+            yield return null;
+        }
+
+        SetOpacity(1f);
+        fadeInRoutine = null;
+    }
+
+    private static float EvaluateFadeCurve(AnimationCurve curve, float time)
+    {
+        if (curve == null || curve.length == 0)
+            return time;
+        return Mathf.Clamp01(curve.Evaluate(time));
+    }
+
+    private void SetOpacity(float value)
+    {
+        visualOpacity = Mathf.Clamp01(value);
+        hasVisualOpacity = true;
+        if (overlay != null)
+            overlay.style.opacity = visualOpacity;
     }
 
     private void HandleUIReload(PanelRenderer _,
@@ -230,18 +306,28 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         overlay = root.Q<VisualElement>("loading-screen-overlay");
         spinner = root.Q<VisualElement>("loading-spinner");
         if (overlay != null)
+        {
             overlay.style.display = isVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (hasVisualOpacity)
+                overlay.style.opacity = visualOpacity;
+        }
     }
 
     private void SetVisible(bool value)
     {
         EnsureElements();
         if (overlay != null)
+        {
             overlay.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
+            if (hasVisualOpacity)
+                overlay.style.opacity = visualOpacity;
+        }
     }
 
     private IEnumerator LoadSceneRoutine(string scenePath)
     {
+        yield return WaitForFadeInComplete();
+
         AsyncOperation operation;
 #if UNITY_EDITOR
         operation = UnityEditor.SceneManagement.EditorSceneManager

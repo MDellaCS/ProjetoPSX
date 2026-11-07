@@ -3,7 +3,7 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Splines;
 
-/// <summary>Comportamento da camera enquanto uma zona de camera esta ativa.</summary>
+/// <summary>Comportamento da camera selecionada por um trigger.</summary>
 public enum CameraZoneMode
 {
     /// <summary>Posicao e rotacao fixas, exatamente como autoradas na CinemachineCamera.</summary>
@@ -11,16 +11,29 @@ public enum CameraZoneMode
     /// <summary>Posicao fixa; a camera gira para manter o player no centro da tela, com o atraso da camera de follow.</summary>
     StaticLookAtTarget,
     /// <summary>A camera desliza sobre um spline acompanhando o player, sem girar, e para ao chegar nas pontas do spline.</summary>
-    OnRails
+    OnRails,
+    /// <summary>A camera de gameplay continua seguindo o jogador com ajustes proprios de posicao e lente.</summary>
+    FollowWithOverrides
+}
+
+/// <summary>Define se a rotacao da camera On Rails vem do spline ou do Transform autorado.</summary>
+public enum CameraRailRotationMode
+{
+    [Tooltip("Mantem a rotacao definida no Transform da CinemachineCamera.")]
+    Fixed,
+    [Tooltip("Acompanha a orientacao do spline em cada ponto do trilho.")]
+    FollowSpline,
+    [Tooltip("Gira a camera para mirar o jogador, usando o Look At Offset configurado abaixo.")]
+    LookAtPlayer
 }
 
 /// <summary>
-/// Define uma area que troca temporariamente a camera de gameplay por um
-/// enquadramento Cinemachine fixo. A sobreposicao e testada diretamente contra
-/// a capsula do jogador para nao depender de eventos de trigger/Rigidbody.
+/// Ao receber o jogador, seleciona uma camera Cinemachine ate outro trigger
+/// selecionar uma camera diferente ou devolver o controle ao CameraFollow.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(BoxCollider))]
+[AddComponentMenu("Projeto PSX/Camera/Camera Trigger")]
 public sealed class FixedCameraZone : MonoBehaviour
 {
     private enum ZoneShape
@@ -32,12 +45,43 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Header("Enquadramento")]
     [Tooltip("CinemachineCamera posicionada e rotacionada para este enquadramento. Deixe-a ativa na cena; Follow/LookAt sao configurados por esta zona conforme o modo.")]
     [SerializeField] private CinemachineCamera fixedCamera;
-    [Tooltip("Fixed: camera parada. Static Look At Target: camera parada que gira para enquadrar o player no centro. On Rails: camera que desliza por um spline seguindo o player, sem girar.")]
+    [Tooltip("Ative neste trigger para devolver a camera ao CameraFollow (camera livre). Nao precisa de uma CinemachineCamera.")]
+    [SerializeField] private bool returnToFreeCamera;
+    [Tooltip("Ative para fazer blend da camera atual para a selecionada ao entrar neste trigger.")]
+    [SerializeField] private bool useCameraTransition;
+    [Tooltip("Curva e duracao do blend entre a camera anterior e esta. Usado quando Use Camera Transition esta ativo.")]
+    [SerializeField] private CinemachineBlendDefinition cameraTransition =
+        new(CinemachineBlendDefinition.Styles.EaseInOut, .5f);
+    [Tooltip("Fixed: camera parada. Static Look At Target: camera parada que mira o jogador. On Rails: camera percorre um spline com ajustes proprios. Follow With Overrides: camera de gameplay segue o jogador com os ajustes abaixo.")]
     [SerializeField] private CameraZoneMode cameraMode = CameraZoneMode.Fixed;
-    [Tooltip("Usado no modo On Rails. Spline percorrido pela camera. Deve ser ABERTO: em um spline fechado a camera nao trava no fim.")]
+    [Header("Follow With Overrides")]
+    [Tooltip("Deslocamento local em Follow With Overrides. Em On Rails soma-se ao Rail Position Offset: X lateral, Y altura e Z ao longo do trilho.")]
+    [SerializeField] private Vector3 followPositionOffset;
+    [Tooltip("Distancia da camera ao jogador em Follow With Overrides. Em On Rails, define quanto a camera recua pelo spline a partir do ponto mais proximo do jogador.")]
+    [Min(.1f)] [SerializeField] private float followDistance = 5.7f;
+    [Tooltip("Direcao horizontal fixa da camera em graus no mundo. Ajuste este angulo para girar a camera ao redor do jogador; 180 graus coloca a camera no lado oposto ao valor zero.")]
+    [SerializeField] private float followYaw = 180f;
+    [Tooltip("Inclinacao vertical fixa da camera em graus. Valores positivos olham de cima para baixo.")]
+    [Range(-89f, 89f)] [SerializeField] private float followPitch = 18f;
+    [Tooltip("Tempo de suavizacao do acompanhamento neste modo. Zero acompanha instantaneamente.")]
+    [Min(0f)] [SerializeField] private float followSmoothTime = .08f;
+    [Tooltip("Campo de visao usado pela camera de gameplay neste modo.")]
+    [Range(1f, 179f)] [SerializeField] private float followFieldOfView = 60f;
+    [Header("On Rails")]
+    [Tooltip("Spline percorrido pela camera. Deve ser ABERTO: em um spline fechado a camera nao trava no fim.")]
     [SerializeField] private SplineContainer railSpline;
-    [Tooltip("Usado no modo On Rails. Deslocamento da camera em relacao ao ponto do spline (X lateral, Y altura, Z ao longo do trilho).")]
+    [Tooltip("Posicao da camera em relacao ao spline: X lateral, Y altura e Z ao longo do trilho. Follow Position Offset soma-se a este valor.")]
     [SerializeField] private Vector3 railOffset;
+    [Tooltip("No modo On Rails, mantenha a rotacao autorada, acompanhe o spline ou mire o jogador.")]
+    [SerializeField] private CameraRailRotationMode railRotationMode = CameraRailRotationMode.Fixed;
+    [Tooltip("Ajuste assinado em metros ao longo do spline. Soma-se a Follow Distance: negativo recua mais; positivo avanca pelo trilho.")]
+    [SerializeField] private float railDistanceOffset;
+    [Tooltip("Substitui o campo de visao da CinemachineCamera enquanto este trigger On Rails estiver ativo.")]
+    [SerializeField] private bool overrideRailFieldOfView = true;
+    [Tooltip("Campo de visao aplicado enquanto este trigger On Rails estiver ativo.")]
+    [Range(1f, 179f)] [SerializeField] private float railFieldOfView = 60f;
+    [Tooltip("Deslocamento do ponto para o qual a camera mira no modo Look At Player.")]
+    [SerializeField] private Vector3 railLookAtOffset;
     [Tooltip("Atraso de acompanhamento desta camera. Desmarcado usa o mesmo atraso (Follow Smooth Time) da camera de gameplay.")]
     [SerializeField] private bool overrideFollowDelay;
     [Tooltip("Atraso, em segundos, usado quando 'Override Follow Delay' esta marcado. Zero acompanha instantaneamente.")]
@@ -45,8 +89,8 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Tooltip("Prioridade desta zona. Deve ser maior que a camera de gameplay. Em sobreposicao vence a prioridade maior; em empate, a zona que o jogador entrou mais recentemente vence.")]
     [SerializeField] private int cameraPriority = 20;
 
-    [Header("Volume")]
-    [Tooltip("Collider principal da zona. No formato Box define o centro e o tamanho legado; no formato Sphere seu centro e usado para posicionar a esfera.")]
+    [Header("Trigger")]
+    [Tooltip("Collider trigger que ativa a troca ao ser atravessado pelo jogador. O componente configura este collider automaticamente.")]
     [SerializeField] private BoxCollider activationVolume;
     [Tooltip("Formato da area. Box usa dimensoes X/Y/Z; Sphere usa o raio configurado abaixo.")]
     [SerializeField] private ZoneShape zoneShape = ZoneShape.Box;
@@ -65,12 +109,29 @@ public sealed class FixedCameraZone : MonoBehaviour
     private bool warnedInvalidRail;
     private SphereCollider sphereActivationVolume;
     private readonly List<ExitVolumePair> expandedExitVolumes = new();
+    private readonly List<Collider> registeredAdditionalVolumes = new();
+    private float previousRailFieldOfView;
+    private bool hasSavedRailFieldOfView;
+    private readonly List<RailBodyComponentState> railBodyComponents = new();
     private bool playerWasInside;
+    private bool cameraSelected;
+    private bool activationVolumesDirty = true;
+    private bool cameraSettingsDirty;
+    private bool runtimeInitialized;
     private int lastEnteredFrame = int.MinValue;
 
     internal int CameraPriority => cameraPriority;
     internal int LastEnteredFrame => lastEnteredFrame;
     internal float WorldVolume => GetCombinedWorldVolume();
+    internal CameraZoneMode CameraMode => cameraMode;
+    internal Vector3 FollowPositionOffset => followPositionOffset;
+    internal float FollowDistance => Mathf.Max(.1f, followDistance);
+    internal float FollowYaw => followYaw;
+    internal float FollowPitch => followPitch;
+    internal float FollowSmoothTime => Mathf.Max(0f, followSmoothTime);
+    internal float FollowFieldOfView => Mathf.Clamp(followFieldOfView, 1f, 179f);
+    internal bool UseCameraTransition => useCameraTransition;
+    internal CinemachineBlendDefinition CameraTransition => cameraTransition;
 
     private sealed class ExitVolumePair
     {
@@ -78,23 +139,56 @@ public sealed class FixedCameraZone : MonoBehaviour
         public Collider expanded;
     }
 
+    private sealed class RailBodyComponentState
+    {
+        public CinemachineComponentBase component;
+        public bool wasEnabled;
+    }
+
     private void Awake()
     {
         ResolveReferences();
-        ConfigureActivationVolumes();
-        CreateExpandedExitVolumes();
         SetCameraSelected(false);
+    }
+
+    private void Start()
+    {
+        if (!Application.isPlaying)
+            return;
+        runtimeInitialized = true;
+        ProcessActivationVolumes();
     }
 
     private void OnEnable()
     {
         ResolveReferences();
         SetCameraSelected(false);
+        activationVolumesDirty = true;
+        if (Application.isPlaying && runtimeInitialized)
+            ProcessActivationVolumes();
         RegisterWithCameraFollow();
     }
 
     private void Update()
     {
+        if (activationVolumesDirty && Application.isPlaying)
+            ProcessActivationVolumes();
+
+        if (cameraSettingsDirty && Application.isPlaying)
+        {
+            cameraSettingsDirty = false;
+            if (cameraSelected)
+            {
+                if (!returnToFreeCamera &&
+                    cameraMode == CameraZoneMode.OnRails &&
+                    splineDolly != null && fixedCamera != null &&
+                    splineDolly.gameObject == fixedCamera.gameObject)
+                    ApplyRailSettingsInPlace();
+                else
+                    SetCameraSelected(true);
+            }
+        }
+
         if (registeredCameraFollow == null ||
             registeredCameraFollow != CameraFollow.Instance)
         {
@@ -107,8 +201,41 @@ public sealed class FixedCameraZone : MonoBehaviour
         }
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        HandleTriggerEnter(other);
+    }
+
+    internal void HandleTriggerEnter(Collider other)
+    {
+        if (!isActiveAndEnabled || registeredCameraFollow == null || !IsPlayerCollider(other))
+            return;
+        registeredCameraFollow.ActivateCameraTrigger(this);
+    }
+
+    private bool IsPlayerCollider(Collider other)
+    {
+        if (other == null || registeredCameraFollow == null || registeredCameraFollow.Target == null)
+            return false;
+        Transform player = registeredCameraFollow.Target;
+        if (other.transform == player || other.transform.IsChildOf(player))
+            return true;
+
+        PlayerCharacterController controller = other.GetComponent<PlayerCharacterController>();
+        if (controller == null)
+            controller = other.GetComponentInParent<PlayerCharacterController>();
+        if (controller == null)
+            return false;
+
+        return controller.Collider == other || controller.transform == player ||
+            controller.transform.IsChildOf(player) || player.IsChildOf(controller.transform);
+    }
+
+    internal bool ReturnsToFreeCamera => returnToFreeCamera;
+
     private void OnDisable()
     {
+        UnregisterAdditionalVolumes();
         if (registeredCameraFollow != null)
             registeredCameraFollow.UnregisterFixedCameraZone(this);
 
@@ -129,6 +256,12 @@ public sealed class FixedCameraZone : MonoBehaviour
     private void OnValidate()
     {
         cameraPriority = Mathf.Max(1, cameraPriority);
+        followDistance = Mathf.Max(.1f, followDistance);
+        followSmoothTime = Mathf.Max(0f, followSmoothTime);
+        followFieldOfView = Mathf.Clamp(followFieldOfView, 1f, 179f);
+        followPitch = Mathf.Clamp(followPitch, -89f, 89f);
+        railFieldOfView = Mathf.Clamp(railFieldOfView, 1f, 179f);
+        cameraTransition.Time = Mathf.Max(0f, cameraTransition.Time);
         ResolveReferences();
         exitPaddingDistance = Mathf.Max(0f, exitPaddingDistance);
         sphereRadius = Mathf.Max(.01f, sphereRadius);
@@ -137,6 +270,11 @@ public sealed class FixedCameraZone : MonoBehaviour
                 Mathf.Max(.01f, areaSize.y), Mathf.Max(.01f, areaSize.z));
         if (additionalActivationVolumes == null)
             additionalActivationVolumes = new List<Collider>();
+        if (Application.isPlaying)
+        {
+            activationVolumesDirty = true;
+            cameraSettingsDirty = true;
+        }
     }
 
     private void OnDrawGizmos()
@@ -210,26 +348,26 @@ public sealed class FixedCameraZone : MonoBehaviour
     private static void DrawFilledBox(Vector3 center, Vector3 size,
         Vector3 exitSize)
     {
-        Gizmos.color = new Color(1f, .42f, .05f, .08f);
+        Gizmos.color = new Color(.025f, .09f, .035f, .06f);
         Gizmos.DrawCube(center, exitSize);
-        Gizmos.color = new Color(1f, .48f, .08f, .95f);
+        Gizmos.color = new Color(.04f, .16f, .06f, .8f);
         Gizmos.DrawWireCube(center, exitSize);
-        Gizmos.color = new Color(.2f, .65f, 1f, .24f);
+        Gizmos.color = new Color(.04f, .2f, .07f, .2f);
         Gizmos.DrawCube(center, size);
-        Gizmos.color = new Color(.25f, .75f, 1f, .95f);
+        Gizmos.color = new Color(.06f, .25f, .09f, .95f);
         Gizmos.DrawWireCube(center, size);
     }
 
     private static void DrawFilledSphere(Vector3 center, float radius,
         float exitRadius)
     {
-        Gizmos.color = new Color(1f, .42f, .05f, .08f);
+        Gizmos.color = new Color(.025f, .09f, .035f, .06f);
         Gizmos.DrawSphere(center, exitRadius);
-        Gizmos.color = new Color(1f, .48f, .08f, .95f);
+        Gizmos.color = new Color(.04f, .16f, .06f, .8f);
         Gizmos.DrawWireSphere(center, exitRadius);
-        Gizmos.color = new Color(.2f, .65f, 1f, .24f);
+        Gizmos.color = new Color(.04f, .2f, .07f, .2f);
         Gizmos.DrawSphere(center, radius);
-        Gizmos.color = new Color(.25f, .75f, 1f, .95f);
+        Gizmos.color = new Color(.06f, .25f, .09f, .95f);
         Gizmos.DrawWireSphere(center, radius);
     }
 
@@ -251,6 +389,11 @@ public sealed class FixedCameraZone : MonoBehaviour
 
     private void CreateExpandedExitVolumes()
     {
+        foreach (ExitVolumePair pair in expandedExitVolumes)
+        {
+            if (pair.expanded != null)
+                Destroy(pair.expanded.gameObject);
+        }
         expandedExitVolumes.Clear();
         AddExpandedExitVolume(GetSelectedVolume());
         if (additionalActivationVolumes == null)
@@ -365,6 +508,12 @@ public sealed class FixedCameraZone : MonoBehaviour
 
     private void ConfigureActivationVolumes()
     {
+        if (!TryGetComponent(out Rigidbody triggerBody))
+            triggerBody = gameObject.AddComponent<Rigidbody>();
+        triggerBody.isKinematic = true;
+        triggerBody.useGravity = false;
+        triggerBody.constraints = RigidbodyConstraints.FreezeAll;
+
         if (activationVolume == null)
             activationVolume = GetComponent<BoxCollider>();
         if (activationVolume == null)
@@ -392,8 +541,60 @@ public sealed class FixedCameraZone : MonoBehaviour
         foreach (Collider additionalVolume in additionalActivationVolumes)
         {
             if (additionalVolume != null)
+            {
                 additionalVolume.isTrigger = true;
+                EnsureTriggerBody(additionalVolume);
+            }
         }
+    }
+
+    private void ProcessActivationVolumes()
+    {
+        activationVolumesDirty = false;
+        ConfigureActivationVolumes();
+        RegisterAdditionalVolumes();
+        CreateExpandedExitVolumes();
+    }
+
+    private void RegisterAdditionalVolumes()
+    {
+        UnregisterAdditionalVolumes();
+        if (additionalActivationVolumes == null)
+            return;
+
+        foreach (Collider volume in additionalActivationVolumes)
+        {
+            if (volume == null || volume.gameObject == gameObject)
+                continue;
+            CameraTriggerVolumeRelay relay = volume.GetComponent<CameraTriggerVolumeRelay>();
+            if (relay == null)
+                relay = volume.gameObject.AddComponent<CameraTriggerVolumeRelay>();
+            relay.Register(this);
+            registeredAdditionalVolumes.Add(volume);
+        }
+    }
+
+    private void UnregisterAdditionalVolumes()
+    {
+        foreach (Collider volume in registeredAdditionalVolumes)
+        {
+            if (volume == null)
+                continue;
+            CameraTriggerVolumeRelay relay = volume.GetComponent<CameraTriggerVolumeRelay>();
+            if (relay != null)
+                relay.Unregister(this);
+        }
+        registeredAdditionalVolumes.Clear();
+    }
+
+    private static void EnsureTriggerBody(Collider volume)
+    {
+        if (volume == null || volume.attachedRigidbody != null)
+            return;
+        Rigidbody body = volume.gameObject.AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        body.useGravity = false;
+        body.constraints = RigidbodyConstraints.FreezeAll;
     }
 
     private Collider GetSelectedVolume()
@@ -437,6 +638,26 @@ public sealed class FixedCameraZone : MonoBehaviour
 
     internal void SetCameraSelected(bool selected)
     {
+        cameraSelected = selected;
+        cameraSettingsDirty = false;
+        if (!selected)
+        {
+            RestoreRailFieldOfView();
+            RestoreRailBodyComponents();
+        }
+
+        if (returnToFreeCamera || cameraMode == CameraZoneMode.FollowWithOverrides)
+        {
+            if (fixedCamera != null)
+            {
+                fixedCamera.Follow = null;
+                fixedCamera.LookAt = null;
+                fixedCamera.PreviousStateIsValid = false;
+                SetModeComponentsEnabled(false, false);
+                fixedCamera.Priority = 0;
+            }
+            return;
+        }
         if (fixedCamera == null)
             return;
 
@@ -451,11 +672,122 @@ public sealed class FixedCameraZone : MonoBehaviour
         }
 
         ApplyCameraMode();
+        ApplyRailFieldOfView();
 
         int minimumPriority = registeredCameraFollow != null
             ? registeredCameraFollow.GameplayCameraPriority + 2
             : 12;
         fixedCamera.Priority = Mathf.Max(cameraPriority, minimumPriority);
+    }
+
+    private void ApplyRailFieldOfView()
+    {
+        if (cameraMode != CameraZoneMode.OnRails || !overrideRailFieldOfView)
+        {
+            RestoreRailFieldOfView();
+            return;
+        }
+
+        if (fixedCamera == null || registeredCameraFollow == null ||
+            registeredCameraFollow.TrackingTarget == null || !IsRailSplineUsable())
+        {
+            RestoreRailFieldOfView();
+            return;
+        }
+
+        if (!hasSavedRailFieldOfView)
+        {
+            previousRailFieldOfView = fixedCamera.Lens.FieldOfView;
+            hasSavedRailFieldOfView = true;
+        }
+        fixedCamera.Lens.FieldOfView = railFieldOfView;
+    }
+
+    private void ApplyRailSettingsInPlace()
+    {
+        Transform tracking = registeredCameraFollow != null
+            ? registeredCameraFollow.TrackingTarget : null;
+        if (fixedCamera == null || tracking == null ||
+            !IsRailSplineUsable())
+        {
+            SetCameraSelected(true);
+            return;
+        }
+
+        // While the camera is live, update its existing pipeline components
+        // without toggling them or invalidating Cinemachine's pipeline cache.
+        if (splineDolly.Spline != railSpline)
+            splineDolly.Spline = railSpline;
+        if (!splineDolly.enabled)
+            splineDolly.enabled = true;
+        splineDolly.PositionUnits = PathIndexUnit.Distance;
+        splineDolly.SplineOffset = railOffset + followPositionOffset;
+        MakeSplineDollyTheOnlyBodyComponent();
+        splineDolly.CameraRotation = railRotationMode ==
+            CameraRailRotationMode.FollowSpline
+                ? CinemachineSplineDolly.RotationMode.Spline
+                : CinemachineSplineDolly.RotationMode.Default;
+
+        SplineAutoDolly autoDolly = splineDolly.AutomaticDolly;
+        autoDolly.Enabled = true;
+        if (autoDolly.Method is SplineAutoDolly.NearestPointToTarget nearest)
+            nearest.PositionOffset = railDistanceOffset - followDistance;
+        else
+            autoDolly.Method = new SplineAutoDolly.NearestPointToTarget
+            {
+                PositionOffset = railDistanceOffset - followDistance
+            };
+        splineDolly.AutomaticDolly = autoDolly;
+
+        float delay = ResolveFollowDelay();
+        CinemachineSplineDolly.DampingSettings damping = splineDolly.Damping;
+        damping.Enabled = delay > 0f;
+        damping.Position = new Vector3(0f, 0f, delay);
+        damping.Angular = 0f;
+        splineDolly.Damping = damping;
+
+        bool looksAtPlayer = railRotationMode ==
+            CameraRailRotationMode.LookAtPlayer;
+        if (looksAtPlayer && rotationComposer == null &&
+            !fixedCamera.TryGetComponent(out rotationComposer))
+            rotationComposer = fixedCamera.gameObject
+                .AddComponent<CinemachineRotationComposer>();
+
+        if (rotationComposer != null)
+        {
+            if (rotationComposer.enabled != looksAtPlayer)
+                rotationComposer.enabled = looksAtPlayer;
+            if (looksAtPlayer)
+            {
+                rotationComposer.Composition.ScreenPosition = Vector2.zero;
+                rotationComposer.Composition.DeadZone.Enabled = false;
+                rotationComposer.Composition.HardLimits.Enabled = false;
+                rotationComposer.TargetOffset = railLookAtOffset;
+                rotationComposer.CenterOnActivate = true;
+                rotationComposer.Damping = new Vector2(delay, delay);
+            }
+        }
+
+        if (fixedCamera.Follow != tracking)
+            fixedCamera.Follow = tracking;
+        Transform lookAt = looksAtPlayer ? tracking : null;
+        if (fixedCamera.LookAt != lookAt)
+            fixedCamera.LookAt = lookAt;
+
+        ApplyRailFieldOfView();
+        int minimumPriority = registeredCameraFollow != null
+            ? registeredCameraFollow.GameplayCameraPriority + 2
+            : 12;
+        fixedCamera.Priority = Mathf.Max(cameraPriority, minimumPriority);
+    }
+
+    private void RestoreRailFieldOfView()
+    {
+        if (!hasSavedRailFieldOfView)
+            return;
+        if (fixedCamera != null)
+            fixedCamera.Lens.FieldOfView = previousRailFieldOfView;
+        hasSavedRailFieldOfView = false;
     }
 
     /// <summary>Atraso aplicado aos modos que acompanham o player.</summary>
@@ -477,8 +809,13 @@ public sealed class FixedCameraZone : MonoBehaviour
         if (mode == CameraZoneMode.OnRails && !IsRailSplineUsable())
             mode = CameraZoneMode.Fixed;
 
-        SetModeComponentsEnabled(mode == CameraZoneMode.StaticLookAtTarget,
-            mode == CameraZoneMode.OnRails);
+        if (mode != CameraZoneMode.OnRails)
+            RestoreRailBodyComponents();
+
+        bool railLooksAtPlayer = mode == CameraZoneMode.OnRails &&
+            railRotationMode == CameraRailRotationMode.LookAtPlayer;
+        SetModeComponentsEnabled(mode == CameraZoneMode.StaticLookAtTarget ||
+            railLooksAtPlayer, mode == CameraZoneMode.OnRails);
         float delay = ResolveFollowDelay();
 
         if (mode == CameraZoneMode.StaticLookAtTarget)
@@ -506,32 +843,101 @@ public sealed class FixedCameraZone : MonoBehaviour
 
             splineDolly.enabled = true;
             splineDolly.Spline = railSpline;
-            splineDolly.PositionUnits = PathIndexUnit.Normalized;
-            splineDolly.SplineOffset = railOffset;
-            // Default mantem a rotacao autorada da camera: ela nunca gira.
-            splineDolly.CameraRotation = CinemachineSplineDolly.RotationMode.Default;
+            splineDolly.PositionUnits = PathIndexUnit.Distance;
+            splineDolly.SplineOffset = railOffset + followPositionOffset;
+            MakeSplineDollyTheOnlyBodyComponent();
+            splineDolly.CameraRotation = railRotationMode == CameraRailRotationMode.FollowSpline
+                ? CinemachineSplineDolly.RotationMode.Spline
+                : CinemachineSplineDolly.RotationMode.Default;
             // O ponto mais proximo do player, limitado as pontas de um spline
             // aberto, faz a camera travar no inicio/fim do trilho.
             splineDolly.AutomaticDolly.Enabled = true;
-            splineDolly.AutomaticDolly.Method =
-                new SplineAutoDolly.NearestPointToTarget();
+            splineDolly.AutomaticDolly.Method = new SplineAutoDolly.NearestPointToTarget
+            {
+                PositionOffset = railDistanceOffset - followDistance
+            };
             splineDolly.Damping.Enabled = delay > 0f;
-            splineDolly.Damping.Position = Vector3.one * delay;
+            // So o damping ao longo do trilho e permitido. Damping lateral ou
+            // vertical faz a camera sair da curva em cantos e mudancas de altura.
+            splineDolly.Damping.Position = new Vector3(0f, 0f, delay);
             splineDolly.Damping.Angular = 0f;
             fixedCamera.Follow = tracking;
+
+            if (railLooksAtPlayer)
+            {
+                if (rotationComposer == null &&
+                    !fixedCamera.TryGetComponent(out rotationComposer))
+                    rotationComposer = fixedCamera.gameObject
+                        .AddComponent<CinemachineRotationComposer>();
+
+                rotationComposer.enabled = true;
+                rotationComposer.Composition.ScreenPosition = Vector2.zero;
+                rotationComposer.Composition.DeadZone.Enabled = false;
+                rotationComposer.Composition.HardLimits.Enabled = false;
+                rotationComposer.TargetOffset = railLookAtOffset;
+                rotationComposer.CenterOnActivate = true;
+                rotationComposer.Damping = new Vector2(delay, delay);
+                fixedCamera.LookAt = tracking;
+            }
         }
     }
 
     private void SetModeComponentsEnabled(bool composer, bool dolly)
     {
-        if (rotationComposer == null)
+        if (rotationComposer == null ||
+            rotationComposer.gameObject != fixedCamera.gameObject)
             fixedCamera.TryGetComponent(out rotationComposer);
-        if (splineDolly == null)
+        if (splineDolly == null ||
+            splineDolly.gameObject != fixedCamera.gameObject)
             fixedCamera.TryGetComponent(out splineDolly);
         if (rotationComposer != null)
             rotationComposer.enabled = composer;
         if (splineDolly != null)
             splineDolly.enabled = dolly;
+    }
+
+    private void MakeSplineDollyTheOnlyBodyComponent()
+    {
+        // CinemachineCamera keeps the first component found for each pipeline
+        // stage, so a Body that was already present would otherwise win over
+        // the Dolly added later.
+        CinemachineComponentBase[] components =
+            fixedCamera.GetComponents<CinemachineComponentBase>();
+        foreach (CinemachineComponentBase component in components)
+        {
+            if (component == null || component == splineDolly ||
+                component.Stage != CinemachineCore.Stage.Body)
+                continue;
+
+            bool alreadyTracked = false;
+            foreach (RailBodyComponentState state in railBodyComponents)
+            {
+                if (state.component == component)
+                {
+                    alreadyTracked = true;
+                    break;
+                }
+            }
+            if (alreadyTracked)
+                continue;
+
+            railBodyComponents.Add(new RailBodyComponentState
+            {
+                component = component,
+                wasEnabled = component.enabled
+            });
+            component.enabled = false;
+        }
+    }
+
+    private void RestoreRailBodyComponents()
+    {
+        foreach (RailBodyComponentState state in railBodyComponents)
+        {
+            if (state.component != null)
+                state.component.enabled = state.wasEnabled;
+        }
+        railBodyComponents.Clear();
     }
 
     private bool IsRailSplineUsable()
