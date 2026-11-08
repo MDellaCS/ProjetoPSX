@@ -4,7 +4,9 @@ using UnityEngine;
 /// Escalada de escadas de mao. O estado e o motor ficam no PlayerMovement; a
 /// geometria (zona de entrada, saidas, normal) vem da <see cref="HandLadder"/>.
 /// Controles: Cima/Baixo sobem e descem; Pular salta na direcao da normal da
-/// escada; Agachar solta; sair pelas pontas leva as saidas calculadas.
+/// escada; Agachar solta; sair pelas pontas leva as saidas calculadas. Da agua,
+/// pode agarrar e subir para fora; ao descer e entrar em agua funda, solta e
+/// retorna ao movimento de natacao.
 /// </summary>
 public partial class PlayerMovement
 {
@@ -35,9 +37,14 @@ public partial class PlayerMovement
 
     /// <summary>O jogador esta em condicoes de agarrar uma escada agora.</summary>
     public bool CanBeginLadderClimb => controller != null && playerState != null &&
-        playerState.IsNormal() && !isCrouching && !IsSwimming &&
+        playerState.IsNormal() && !isCrouching &&
         !playerState.IsClimbingLadder() && !playerState.IsAttacking() &&
         !playerState.IsDashing() && !playerState.IsSliding();
+
+    public static bool ShouldReleaseLadderInDeepWater(bool isOverhead,
+        bool isInDeepWater, float verticalInput, bool descendingStepInProgress) =>
+        !isOverhead && isInDeepWater &&
+        (verticalInput < -.05f || descendingStepInProgress);
 
     public bool TryBeginLadderClimb(HandLadder ladder, HandLadderGrip grip,
         float pullSpeed = 0f)
@@ -108,6 +115,18 @@ public partial class PlayerMovement
         Vector2 move = GameInput.Move;
         if (ladder.IsOverhead)
             move = ReadOverheadInput(ladder);
+
+        bool descendingStepInProgress = ladder.RungSpacing > 0f &&
+            ladderStepElapsed < ladderStepDuration &&
+            ladderStepTo < ladderStepFrom;
+        if (ShouldReleaseLadderInDeepWater(ladder.IsOverhead,
+                waterSensor != null && waterSensor.IsSwimming, move.y,
+                descendingStepInProgress))
+        {
+            DropFromLadder(ladder);
+            return true;
+        }
+
         float deltaTime = Time.deltaTime;
         if (ladder.RungSpacing > 0f)
         {

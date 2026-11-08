@@ -15,22 +15,22 @@ MonoBehaviour:
   rungPrefab: {fileID: 8178648107482002820, guid: bbaa572af4970d04f9db80e4c0ba3891, type: 3}
   rungWidthAxis: 1
   rungRollDegrees: 0
-  rungThickness: 0.06
+  rungThickness: 0.11
   railPrefab: {fileID: 8178648107482002820, guid: c8f08ad22b15e7f478a0434330b03933, type: 3}
   railLengthAxis: 1
   railRollDegrees: 0
-  railThickness: 0.08
-  rungSpacing: 0.75
+  railThickness: 0.11
+  rungSpacing: 0.6
   defaultWidth: 0.7
   interactionMessage: Escalar
   interactionIcon: {fileID: 0}
   interactionPriority: 0
-  climbSpeed: 2.2
+  climbSpeed: 2.6
   stepPhase: 0.5
   lateralClimbSpeed: 0
   playerForwardOffset: 0.38
   topGripClearance: 0.9
-  mountSpeed: 12
+  mountSpeed: 6
   mountMinDuration: 0.15
   jumpOffSpeed: 7
   jumpOffHeightMultiplier: 1

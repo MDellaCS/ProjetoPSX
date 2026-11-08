@@ -35,8 +35,18 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private VisualElement overlay;
     private VisualElement content;
     private VisualElement mainView;
+    private VisualElement inventoryView;
     private VisualElement settingsView;
     private ScrollView options;
+    private Image inventoryImage;
+    private Image inventoryPreviousImage;
+    private Image inventoryNextImage;
+    private Label inventoryPreviousName;
+    private Label inventoryNextName;
+    private Label inventoryItemName;
+    private Label inventoryDescription;
+    private readonly List<KeyItemDefinition> collectedItems = new();
+    private int inventorySelection;
     private Label settingsTitle;
     private bool nativeWheelWorks;
     private Label mainMenuStatus;
@@ -53,6 +63,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private CursorLockMode cursorLockBeforePause;
     private bool cursorVisibleBeforePause;
     private bool settingsOpen;
+    private bool inventoryOpen;
     private bool mainMenuMode;
     private Action startGameAction;
     private string mainMenuMessage;
@@ -70,16 +81,20 @@ public sealed class PauseMenuHUD : MonoBehaviour
         SetVisible(false);
         if (GetComponent<CurrencyShopHUD>() == null)
             gameObject.AddComponent<CurrencyShopHUD>();
+        if (GetComponent<ItemAcquisitionModalHUD>() == null)
+            gameObject.AddComponent<ItemAcquisitionModalHUD>();
     }
 
     private void OnEnable()
     {
         GameSettingsService.Changed += RefreshScale;
+        KeyItemInventory.Changed += RefreshInventory;
     }
 
     private void OnDisable()
     {
         GameSettingsService.Changed -= RefreshScale;
+        KeyItemInventory.Changed -= RefreshInventory;
         Resume();
     }
 
@@ -92,6 +107,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private void Update()
     {
+        if (ItemAcquisitionModalHUD.BlocksMenuInput)
+            return;
         if (CurrencyShopHUD.BlocksPauseInput) return;
         if (GameInputBindings.IsRebinding ||
             Time.frameCount <= GameInputBindings.LastRebindFrame + 1)
@@ -99,6 +116,11 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
         if (GameInput.PausePressed && !mainMenuMode)
         {
+            if (inventoryOpen)
+            {
+                CloseInventory();
+                return;
+            }
             if (pending != PendingConfirm.None)
                 ClearConfirm();
             else if (settingsOpen)
@@ -107,6 +129,26 @@ public sealed class PauseMenuHUD : MonoBehaviour
                 Resume();
             else
                 Pause();
+            return;
+        }
+
+        if (GameInput.InventoryPressed && !mainMenuMode && !settingsOpen &&
+            !ItemAcquisitionModalHUD.BlocksMenuInput)
+        {
+            if (inventoryOpen)
+                CloseInventory();
+            else
+                OpenInventory();
+            return;
+        }
+
+        if (inventoryOpen && collectedItems.Count > 1 &&
+            Mathf.Abs(GameInput.UINavigate.x) > .5f &&
+            Time.unscaledTime >= nextHorizontalAt)
+        {
+            SelectInventoryItem(inventorySelection +
+                (GameInput.UINavigate.x > 0f ? 1 : -1));
+            nextHorizontalAt = Time.unscaledTime + .2f;
             return;
         }
 
@@ -120,6 +162,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
         {
             if (pending != PendingConfirm.None) ClearConfirm();
             else if (settingsOpen) CloseSettings();
+            else if (inventoryOpen) CloseInventory();
             else if (!mainMenuMode) Resume();
             return;
         }
@@ -183,6 +226,14 @@ public sealed class PauseMenuHUD : MonoBehaviour
         content = root.Q<VisualElement>("pause-menu-content");
         appliedScale = 0f;
         mainView = root.Q<VisualElement>("pause-main-view");
+        inventoryView = root.Q<VisualElement>("pause-inventory-view");
+        inventoryImage = root.Q<Image>("inventory-image");
+        inventoryPreviousImage = root.Q<Image>("inventory-previous-image");
+        inventoryNextImage = root.Q<Image>("inventory-next-image");
+        inventoryPreviousName = root.Q<Label>("inventory-previous-name");
+        inventoryNextName = root.Q<Label>("inventory-next-name");
+        inventoryItemName = root.Q<Label>("inventory-item-name");
+        inventoryDescription = root.Q<Label>("inventory-description");
         settingsView = root.Q<VisualElement>("pause-settings-view");
         options = root.Q<ScrollView>("settings-options");
         settingsTitle = root.Q<Label>("pause-settings-title");
@@ -213,6 +264,16 @@ public sealed class PauseMenuHUD : MonoBehaviour
             return;
         if (!settingsOpen)
         {
+            if (inventoryOpen)
+            {
+                BuildInventoryButtons();
+                AddButton(root.Q<Button>("inventory-previous-button"),
+                    () => SelectInventoryItem(inventorySelection - 1), MenuAudioCue.TabChange);
+                AddButton(root.Q<Button>("inventory-next-button"),
+                    () => SelectInventoryItem(inventorySelection + 1), MenuAudioCue.TabChange);
+            }
+            else
+            {
             Button primaryButton = root.Q<Button>("menu-primary-button");
             Button saveButton = root.Q<Button>("menu-save-button");
             Button optionsButton = root.Q<Button>("menu-options-button");
@@ -238,6 +299,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
             AddButton(exitButton, mainMenuMode
                 ? new Action(QuitPlaySession) : new Action(ReturnToMainMenu),
                 MenuAudioCue.Warning);
+            }
         }
         else
         {
@@ -471,9 +533,101 @@ public sealed class PauseMenuHUD : MonoBehaviour
         RebuildButtons();
     }
 
+    private void OpenInventory()
+    {
+        if (mainMenuMode || settingsOpen || ItemAcquisitionModalHUD.IsOpen)
+            return;
+        if (!inventoryOpen)
+            selectedIndex = 0;
+        inventoryOpen = true;
+        appliedScale = 0f;
+        RefreshScale();
+        if (!IsOpen)
+            Pause();
+        else
+        {
+            SetVisible(true);
+            RebuildButtons();
+        }
+        RefreshInventory();
+    }
+
+    private void CloseInventory()
+    {
+        if (!inventoryOpen)
+            return;
+        inventoryOpen = false;
+        appliedScale = 0f;
+        RefreshScale();
+        Resume();
+    }
+
+    private void BuildInventoryButtons()
+    {
+        collectedItems.Clear();
+        collectedItems.AddRange(KeyItemInventory.GetCollectedItems());
+        if (collectedItems.Count > 0)
+            inventorySelection = Mathf.Clamp(inventorySelection, 0, collectedItems.Count - 1);
+        RenderInventoryCarousel();
+    }
+
+    private void RefreshInventory()
+    {
+        if (inventoryOpen && root != null)
+            RebuildButtons(true);
+    }
+
+    private void SelectInventoryItem(int index, bool playSound = true)
+    {
+        if (collectedItems.Count == 0)
+            return;
+        inventorySelection = (index % collectedItems.Count + collectedItems.Count) % collectedItems.Count;
+        RenderInventoryCarousel();
+        if (playSound)
+            MenuUIAudio.Play(MenuAudioCue.Focus);
+    }
+
+    private void RenderInventoryCarousel()
+    {
+        if (collectedItems.Count == 0)
+        {
+            ShowInventoryItem(null);
+            if (inventoryPreviousImage != null) inventoryPreviousImage.sprite = null;
+            if (inventoryNextImage != null) inventoryNextImage.sprite = null;
+            if (inventoryPreviousName != null) inventoryPreviousName.text = string.Empty;
+            if (inventoryNextName != null) inventoryNextName.text = string.Empty;
+            if (inventoryDescription != null) inventoryDescription.text = "Nenhum item-chave coletado.";
+            return;
+        }
+
+        KeyItemDefinition current = collectedItems[inventorySelection];
+        ShowInventoryItem(current);
+        bool hasNeighbors = collectedItems.Count > 1;
+        int previous = (inventorySelection - 1 + collectedItems.Count) % collectedItems.Count;
+        int next = (inventorySelection + 1) % collectedItems.Count;
+        if (inventoryPreviousImage != null)
+            inventoryPreviousImage.sprite = hasNeighbors ? collectedItems[previous]?.Image : null;
+        if (inventoryNextImage != null)
+            inventoryNextImage.sprite = hasNeighbors ? collectedItems[next]?.Image : null;
+        if (inventoryPreviousName != null)
+            inventoryPreviousName.text = hasNeighbors ? collectedItems[previous]?.ItemName : string.Empty;
+        if (inventoryNextName != null)
+            inventoryNextName.text = hasNeighbors ? collectedItems[next]?.ItemName : string.Empty;
+    }
+
+    private void ShowInventoryItem(KeyItemDefinition item)
+    {
+        if (inventoryImage == null || inventoryItemName == null || inventoryDescription == null)
+            return;
+        inventoryImage.sprite = item != null ? item.Image : null;
+        inventoryItemName.text = item != null ? item.ItemName : string.Empty;
+        inventoryDescription.text = item != null ? item.Description : "Selecione um item-chave.";
+    }
+
     public void ShowMainMenu(Action onStartGame)
     {
         mainMenuMode = true;
+        inventoryOpen = false;
         startGameAction = onStartGame;
         mainMenuMessage = string.Empty;
         settingsOpen = false;
@@ -519,6 +673,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
         hoveredIndex = -1;
         pending = PendingConfirm.None;
         mainMenuMode = false;
+        inventoryOpen = false;
         startGameAction = null;
         GamePauseController.ReleasePause(this);
         SetVisible(false);
@@ -749,10 +904,14 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private void SetVisible(bool visible)
     {
+        if (overlay != null)
+            overlay.EnableInClassList("inventory-open", inventoryOpen);
         if (overlay != null) overlay.style.display = visible
             ? DisplayStyle.Flex : DisplayStyle.None;
-        if (mainView != null) mainView.style.display = settingsOpen
+        if (mainView != null) mainView.style.display = settingsOpen || inventoryOpen
             ? DisplayStyle.None : DisplayStyle.Flex;
+        if (inventoryView != null) inventoryView.style.display = inventoryOpen
+            ? DisplayStyle.Flex : DisplayStyle.None;
         if (settingsView != null) settingsView.style.display = settingsOpen
             ? DisplayStyle.Flex : DisplayStyle.None;
     }
@@ -773,6 +932,15 @@ public sealed class PauseMenuHUD : MonoBehaviour
     {
         if (content != null)
         {
+            if (inventoryOpen)
+            {
+                content.style.width = Length.Percent(100f);
+                content.style.height = Length.Percent(100f);
+                content.style.maxHeight = Length.Percent(100f);
+                content.style.scale = new Scale(Vector3.one);
+                return;
+            }
+
             float scale = Mathf.Clamp(GameSettingsService.Applied.menuScale, .5f, 2f);
             if (Mathf.Approximately(scale, appliedScale))
                 return;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
@@ -39,6 +40,15 @@ public sealed class DialogueController : MonoBehaviour
     private int currentLineIndex;
     private float lineElapsed;
     private float nextInteractionAvailableAt;
+
+    public static event Action<DialogueSequence> SequenceCompleted;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSession()
+    {
+        instance = null;
+        SequenceCompleted = null;
+    }
 
     public static DialogueController Instance => instance != null
         ? instance : FindAnyObjectByType<DialogueController>();
@@ -223,11 +233,13 @@ public sealed class DialogueController : MonoBehaviour
             return;
         }
 
+        DialogueSequence completedSequence = currentSequence;
         currentSequence = null;
         currentLines = null;
         currentLineIndex = 0;
         lineElapsed = 0f;
         SetVisible(false);
+        SequenceCompleted?.Invoke(completedSequence);
         if (queue.Count == 0)
             BeginInteractionCooldown();
         BeginNextSequence();

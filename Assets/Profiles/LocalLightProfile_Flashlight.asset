@@ -18,8 +18,8 @@ MonoBehaviour:
     localPosition: {x: 0, y: 1.4, z: 0.35}
     localEulerAngles: {x: 0, y: 0, z: 0}
     color: {r: 1, g: 0.9, b: 0.74, a: 1}
-    intensity: 2
-    range: 25
+    intensity: 4.61
+    range: 37.6
     coreRadius: 0.15
     falloffExponent: 1.2
     bands: 0

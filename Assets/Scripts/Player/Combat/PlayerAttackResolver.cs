@@ -63,6 +63,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
+        PlayerComboSystem.RegisterConfirmedHit(transform);
         Component audioSurfaceTarget = impactCollider != null
             ? impactCollider : enemy;
         GetComponent<PlayerAttackAudioController>()?.NotifyHit(runtime,

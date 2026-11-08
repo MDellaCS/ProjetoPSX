@@ -206,6 +206,7 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
             return false;
 
         runtime.HitConfirmed = true;
+        PlayerComboSystem.RegisterConfirmedHit(transform);
         GetComponent<PlayerAttackAudioController>()?.NotifyHit(runtime,
             hitboxTrack, impactCollider != null ? impactCollider : enemy,
             impactPosition);

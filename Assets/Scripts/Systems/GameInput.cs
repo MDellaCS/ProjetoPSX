@@ -66,6 +66,10 @@ public static class GameInput
     public static bool CrouchPressed => Pressed("Crouch");
     public static bool LockOnPressed => Pressed("LockOn");
     public static bool InteractPressed => Pressed("Interact");
+    public static bool InteractHeld => Held("Interact");
+    /// <summary>Abre o inventario pelo atalho I tanto no gameplay como no menu pausado.</summary>
+    public static bool InventoryPressed => PressedOnCurrentMap("Inventory");
+    public static bool UICloseModalPressed => PressedUI("CloseModal");
     public static bool SwingPressed => Pressed("Swing");
     public static bool CutsceneSkipPressed
     {
@@ -158,6 +162,15 @@ public static class GameInput
             return false;
         EnsureInitialized();
         return gameplay?.FindAction(actionName)?.WasPressedThisFrame() == true;
+    }
+
+    private static bool PressedOnCurrentMap(string actionName)
+    {
+        if (CutsceneController.IsPlayerControlLocked ||
+            LoadingScreenHUD.BlocksGameplayInput)
+            return false;
+        EnsureInitialized();
+        return CurrentMap()?.FindAction(actionName)?.WasPressedThisFrame() == true;
     }
 
     private static bool MouseClickWillLockCursor() =>

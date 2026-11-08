@@ -705,7 +705,8 @@ public sealed class HandLadder : InteractableBase
         TryGetEntry(player, out _);
 
     public override bool CanInteract(PlayerMovement player) =>
-        isClimbable && player != null && player.CanBeginLadderClimb;
+        isClimbable && player != null && player.CanBeginLadderClimb &&
+        base.CanInteract(player);
 
     public override bool Interact(PlayerMovement player) =>
         TryGetEntry(player, out HandLadderGrip grip) &&

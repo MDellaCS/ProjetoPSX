@@ -80,6 +80,15 @@ public class PlayerHUDToolkit : MonoBehaviour
     private VisualElement thermometerMainRow;
     private VisualElement superheatNotchParent;
     private VisualElement thermometerHeading;
+    private VisualElement comboMeter;
+    private VisualElement comboTimerFill;
+    private Label comboTitle;
+    private Label comboCount;
+    private Label comboReward;
+    private PlayerComboSystem playerComboSystem;
+    private int lastDisplayedComboCount = int.MinValue;
+    private float comboBreakVisibleUntil;
+    private float comboRewardVisibleUntil;
     private float displayedMultiplier;
     private float pendingMultiplier;
     private float pendingMultiplierElapsed;
@@ -116,15 +125,22 @@ public class PlayerHUDToolkit : MonoBehaviour
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+        UnsubscribeComboSystem();
     }
+
+    private void OnDisable() => UnsubscribeComboSystem();
+
+    private void OnEnable() => ResolvePlayerComponents();
 
     private void Update()
     {
-        if (playerHeat == null || playerHealth == null || movesetController == null)
+        if (playerHeat == null || playerHealth == null || movesetController == null ||
+            playerComboSystem == null)
             ResolvePlayerComponents();
         if (playerLockOn == null && playerTransform != null)
             playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
         UpdateLockOnMarker();
+        UpdateComboMeter();
         if (playerHeat == null || playerHealth == null)
             return;
 
@@ -157,6 +173,11 @@ public class PlayerHUDToolkit : MonoBehaviour
         playerHudRoot.style.height = Length.Percent(100f);
         playerHudRoot.style.overflow = Overflow.Visible;
         lockOnMarker = root.Q<VisualElement>("lock-on-marker");
+        comboMeter = root.Q<VisualElement>("player-combo-meter");
+        comboTitle = root.Q<Label>("player-combo-title");
+        comboCount = root.Q<Label>("player-combo-count");
+        comboTimerFill = root.Q<VisualElement>("player-combo-timer-fill");
+        comboReward = root.Q<Label>("player-combo-reward");
 
         heatPowerText = root.Q<Label>("heat-power-value");
         heatThermometer = root.Q<VisualElement>("heat-thermometer");
@@ -198,6 +219,9 @@ public class PlayerHUDToolkit : MonoBehaviour
 
         multiplierInitialized = false;
         ResolvePlayerComponents();
+        if (playerComboSystem != null)
+            HandleComboChanged(playerComboSystem.CurrentHits,
+                playerComboSystem.SecondsRemaining, false);
         if (playerHeat != null)
         {
             UpdateThermometer();
@@ -285,7 +309,128 @@ public class PlayerHUDToolkit : MonoBehaviour
             playerHealth = playerTransform.GetComponent<PlayerHealth>();
             movesetController = playerTransform.GetComponent<PlayerMovesetController>();
             playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
+            PlayerComboSystem combo = playerTransform.GetComponent<PlayerComboSystem>();
+            if (combo != playerComboSystem)
+            {
+                UnsubscribeComboSystem();
+                playerComboSystem = combo;
+                if (playerComboSystem != null)
+                {
+                    playerComboSystem.ComboChanged += HandleComboChanged;
+                    playerComboSystem.RewardGiven += HandleComboReward;
+                }
+            }
         }
+    }
+
+    private void UnsubscribeComboSystem()
+    {
+        if (playerComboSystem == null)
+            return;
+        playerComboSystem.ComboChanged -= HandleComboChanged;
+        playerComboSystem.RewardGiven -= HandleComboReward;
+        playerComboSystem = null;
+    }
+
+    private void HandleComboChanged(int hits, float remaining, bool brokenByDamage)
+    {
+        if (comboMeter == null)
+            return;
+        if (hits > 0)
+        {
+            comboMeter.style.display = DisplayStyle.Flex;
+            if (comboTitle != null)
+                comboTitle.text = "COMBO";
+            if (comboCount != null && lastDisplayedComboCount != hits)
+            {
+                comboCount.text = hits.ToString();
+                lastDisplayedComboCount = hits;
+            }
+            if (comboTimerFill != null)
+            {
+                float duration = playerComboSystem != null
+                    ? playerComboSystem.TimeoutSeconds : 4f;
+                comboTimerFill.style.width = Length.Percent(
+                    Mathf.Clamp01(remaining / Mathf.Max(.01f, duration)) * 100f);
+            }
+            comboBreakVisibleUntil = 0f;
+            return;
+        }
+
+        lastDisplayedComboCount = int.MinValue;
+        if (brokenByDamage)
+        {
+            comboMeter.style.display = DisplayStyle.Flex;
+            if (comboTitle != null)
+                comboTitle.text = "COMBO BROKEN";
+            if (comboCount != null)
+                comboCount.text = string.Empty;
+            if (comboTimerFill != null)
+                comboTimerFill.style.width = Length.Percent(0f);
+            comboBreakVisibleUntil = Time.unscaledTime + 1.2f;
+        }
+        else
+        {
+            bool rewardStillVisible = comboRewardVisibleUntil > Time.unscaledTime;
+            comboBreakVisibleUntil = 0f;
+            comboMeter.style.display = rewardStillVisible
+                ? DisplayStyle.Flex : DisplayStyle.None;
+            if (rewardStillVisible && comboTitle != null)
+                comboTitle.text = "REWARD";
+            if (rewardStillVisible && comboCount != null)
+                comboCount.text = string.Empty;
+        }
+    }
+
+    private void HandleComboReward(string rewardText)
+    {
+        if (comboReward == null || string.IsNullOrWhiteSpace(rewardText))
+            return;
+        comboReward.text = rewardText;
+        comboReward.style.display = DisplayStyle.Flex;
+        comboRewardVisibleUntil = Time.unscaledTime + 2.2f;
+        if (playerComboSystem == null || playerComboSystem.CurrentHits <= 0)
+        {
+            if (comboMeter != null)
+                comboMeter.style.display = DisplayStyle.Flex;
+            if (comboTitle != null)
+                comboTitle.text = "REWARD";
+            if (comboCount != null)
+                comboCount.text = string.Empty;
+        }
+    }
+
+    private void UpdateComboMeter()
+    {
+        if (playerComboSystem != null && playerComboSystem.CurrentHits > 0)
+        {
+            float remaining = playerComboSystem.SecondsRemaining;
+            float duration = playerComboSystem.TimeoutSeconds;
+            if (comboTimerFill != null)
+                comboTimerFill.style.width = Length.Percent(
+                    Mathf.Clamp01(remaining / Mathf.Max(.01f, duration)) * 100f);
+        }
+        else if (comboBreakVisibleUntil > 0f &&
+                 Time.unscaledTime >= comboBreakVisibleUntil)
+        {
+            comboBreakVisibleUntil = 0f;
+            if (comboMeter != null && comboRewardVisibleUntil <= 0f)
+                comboMeter.style.display = DisplayStyle.None;
+        }
+
+        if (comboRewardVisibleUntil > 0f &&
+            Time.unscaledTime >= comboRewardVisibleUntil)
+        {
+            comboRewardVisibleUntil = 0f;
+            if (comboReward != null)
+                comboReward.style.display = DisplayStyle.None;
+        }
+
+        bool comboActive = playerComboSystem != null &&
+            playerComboSystem.CurrentHits > 0;
+        if (!comboActive && comboBreakVisibleUntil <= 0f &&
+            comboRewardVisibleUntil <= 0f && comboMeter != null)
+            comboMeter.style.display = DisplayStyle.None;
     }
 
     private void UpdateHealthBar()

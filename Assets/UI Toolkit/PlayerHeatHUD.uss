@@ -5,25 +5,18 @@
 #heat-thermometer {
     position: absolute;
     left: 50%;
+    margin-left: -220px;
     top: 57%;
-    width: 520px;
-    padding-left: 14px;
-    padding-right: 14px;
-    padding-top: 8px;
-    padding-bottom: 9px;
-    background-color: rgba(8, 10, 14, 0.62);
-    border-left-width: 1px;
-    border-top-width: 1px;
-    border-right-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: rgba(205, 212, 225, 0.55);
-    border-top-color: rgba(205, 212, 225, 0.55);
-    border-right-color: rgba(205, 212, 225, 0.55);
-    border-bottom-color: rgba(205, 212, 225, 0.55);
+    width: 440px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: rgba(8, 10, 14, 0.18);
 }
 
 #thermometer-heading {
-    height: 27px;
+    height: 20px;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -37,17 +30,17 @@
 }
 
 #heat-power-value {
-    min-width: 78px;
-    margin-left: 14px;
+    min-width: 52px;
+    margin-left: 8px;
     color: rgb(255, 225, 140);
-    font-size: 26px;
+    font-size: 20px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     transform-origin: 50% 50%;
 }
 
 #thermometer-main-row {
-    height: 9px;
+    height: 6px;
     flex-direction: row;
     align-items: stretch;
     justify-content: center;
@@ -63,8 +56,8 @@
 .thermometer-notch {
     position: relative;
     flex-shrink: 0;
-    width: 12px;
-    height: 9px;
+    width: 10px;
+    height: 6px;
     background-color: rgb(28, 32, 39);
     border-right-width: 1px;
     border-right-color: rgba(4, 7, 12, 0.9);
@@ -84,7 +77,7 @@
 #thermometer-zero-notch {
     flex-shrink: 0;
     width: 3px;
-    height: 11px;
+    height: 8px;
     margin-left: 3px;
     margin-right: 3px;
     margin-top: -1px;
@@ -92,16 +85,16 @@
 }
 
 .thermometer-superheat-row {
-    height: 3px;
-    margin-top: 6px;
+    height: 2px;
+    margin-top: 3px;
     justify-content: flex-end;
 }
 
 .thermometer-superheat-notch {
     position: relative;
     flex-shrink: 0;
-    width: 12px;
-    height: 3px;
+    width: 10px;
+    height: 2px;
     margin-left: 1px;
     background-color: rgb(38, 24, 26);
     overflow: hidden;

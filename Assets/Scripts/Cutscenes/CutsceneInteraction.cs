@@ -51,7 +51,7 @@ public sealed class CutsceneInteraction : InteractableBase
     public override bool CanInteract(PlayerMovement player) =>
         cutscene != null && !CutsceneController.IsPlaying &&
         !DialogueController.IsInteractionCooldownActive &&
-        !(interactOnce && hasInteracted);
+        !(interactOnce && hasInteracted) && base.CanInteract(player);
 
     public override bool Interact(PlayerMovement player)
     {

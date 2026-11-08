@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: LoadingScreenSettings
   m_EditorClassIdentifier: Assembly-CSharp::LoadingScreenSettings
   extraWaitAfterReady: 0
-  minimumVisibleDuration: 0.2
-  fadeInDuration: 1
+  minimumVisibleDuration: 0
+  fadeInDuration: 0.3
   fadeInCurve:
     serializedVersion: 2
     m_Curve:
@@ -39,7 +39,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  fadeOutDuration: 2
+  fadeOutDuration: 2.2
   fadeOutCurve:
     serializedVersion: 2
     m_Curve:

@@ -254,7 +254,6 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Min(0f)] public float cooldownDuration;
     [Tooltip("Mantem o ataque na fase Active depois do tempo normal ate o player tocar o chao. Use em Dive para a hitbox e a queda terminarem juntas.")]
     public bool holdActiveUntilGrounded;
-
     [Header("Power")]
     [Tooltip("Dano base antes das regras de Heat e dos multiplicadores de Strike.")]
     [Min(0)] public int baseDamage = 10;

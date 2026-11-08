@@ -74,6 +74,33 @@
 }
 
 .menu-view--settings { display: none; }
+.menu-inventory-view { display: none; }
+.inventory-content { flex-direction: row; align-items: center; justify-content: center; flex-grow: 1; min-height: 0; width: 100%; }
+.inventory-detail { width: 42%; max-width: 560px; height: 100%; min-width: 0; align-items: center; justify-content: center; padding: 12px 28px; }
+.inventory-image { width: 100%; height: 250px; margin-bottom: 14px; }
+.inventory-item-name { width: 100%; color: var(--menu-text); font-size: 29px; -unity-text-align: middle-center; margin-bottom: 10px; }
+.inventory-description { width: 100%; color: var(--menu-text); font-size: 20px; white-space: normal; -unity-text-align: middle-center; }
+.inventory-side-item { width: 22%; max-width: 250px; height: 52%; align-items: center; justify-content: center; opacity: 0.48; }
+.inventory-side-image { width: 100%; height: 170px; }
+.inventory-side-name { width: 100%; margin-top: 8px; color: var(--menu-text); font-size: 18px; -unity-text-align: middle-center; }
+.inventory-arrow { width: 48px; height: 64px; margin: 0 14px; padding: 0; color: var(--menu-text); font-size: 48px; background-color: rgba(0,0,0,0); border-width: 0; }
+.inventory-close-hint { align-self: center; margin-top: 16px; color: var(--menu-text-disabled); font-size: 16px; }
+.inventory-open { justify-content: center; }
+.inventory-open .menu-panel { width: 100%; max-width: 100%; height: 100%; padding: 5vh 5vw; background-color: rgba(0, 0, 0, 0); }
+.inventory-open .menu-inventory-view { width: 100%; }
+
+.item-modal {
+    display: none;
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.88);
+}
+.item-modal-panel { width: 62%; max-width: 760px; height: 88%; align-items: center; justify-content: center; }
+.item-modal-image { width: 100%; height: 72%; margin-bottom: 22px; }
+.item-modal-name { color: white; font-size: 38px; -unity-text-align: middle-center; margin-bottom: 18px; }
+.item-modal-close-hint { color: rgba(255,255,255,.8); font-size: 22px; -unity-text-align: middle-center; }
 
 /* ---------- Botao: caixa invisivel (area de interacao) + texto com linha ---------- */
 

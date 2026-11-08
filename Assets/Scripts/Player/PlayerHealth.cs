@@ -90,6 +90,7 @@ public class PlayerHealth : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
         movesetController = GetComponent<PlayerMovesetController>();
         playerHeat = GetComponent<PlayerHeat>();
+        PlayerComboSystem.EnsureOn(gameObject);
         damageNumbers = GetComponent<DamageNumberSpawner>();
         if (damageNumbers == null)
             damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
@@ -143,6 +144,12 @@ public class PlayerHealth : MonoBehaviour
 
         if (!Debug.isDebugBuild)
             return;
+        if (!playerState.IsDead() && GameInput.RestartPressed)
+        {
+            ItemAcquisitionModalHUD.Show(null,
+                "MODAL DE TESTE\n\nA tecla R abriu esta janela.\nO jogo fica pausado enquanto ela estiver aberta.",
+                "[E] ou [Esc] para fechar");
+        }
         if (GameInput.DebugGodModePressed)
             godMode = !godMode;
 
@@ -154,6 +161,8 @@ public class PlayerHealth : MonoBehaviour
     /// <summary>Retorna estados temporarios de dano ao estado inicial de uma nova campanha.</summary>
     public void ResetForNewGame()
     {
+        if (TryGetComponent(out PlayerComboSystem comboSystem))
+            comboSystem.ResetForNewGame();
         godMode = false;
         staggerTimer = 0f;
         activeStaggerDuration = 0f;
@@ -271,6 +280,7 @@ public class PlayerHealth : MonoBehaviour
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {
+            PlayerComboSystem.RegisterPlayerDamaged(transform);
             if (combatStatus != null)
                 combatStatus.RegisterDamageTakenFromEnemy();
             EnemyBase.NotifyPlayerDamagedByEnemy();

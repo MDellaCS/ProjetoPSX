@@ -79,6 +79,8 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     public bool allowDash = true;
     [Tooltip("Permite um segundo pulo no ar. Desativado, o jogador só pode pular uma vez antes de tocar o chão.")]
     public bool allowAirJump = true;
+    [Tooltip("Permite que o jogador execute a acao de pulo enquanto este moveset estiver ativo, inclusive durante ataques.")]
+    public bool allowJump = true;
     [Tooltip("Permite iniciar um dash enquanto o jogador está no ar.")]
     public bool allowAirDash = true;
     [Tooltip("Multiplica a altura global do pulo configurada no PlayerMovement. 1 mantem a altura global; valores maiores ou menores ajustam este moveset.")]

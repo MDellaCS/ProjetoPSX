@@ -268,7 +268,7 @@ internal sealed class HandLadderEditor : Editor
     public override void OnInspectorGUI()
     {
         EditorGUI.BeginChangeCheck();
-        DrawDefaultInspector();
+        InteractionInspectorUtility.DrawProperties(this);
         bool changed = EditorGUI.EndChangeCheck();
         HandLadder ladder = (HandLadder)target;
         bool canGenerate = ladder.Profile != null && ladder.Profile.rungPrefab != null;

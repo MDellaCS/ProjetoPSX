@@ -5,5 +5,11 @@
             <ui:VisualElement name="temporary-world-prompt-keys" class="temporary-world-prompt__keys" />
             <ui:Label name="temporary-world-prompt-body" class="temporary-world-prompt__body" text="PRESS" />
         </ui:VisualElement>
+        <ui:VisualElement name="temporary-world-prompt-progress" class="temporary-world-prompt__progress" style="display: none;">
+            <ui:VisualElement name="temporary-world-prompt-progress-fill" class="temporary-world-prompt__progress-fill" />
+        </ui:VisualElement>
+        <ui:VisualElement name="temporary-world-prompt-progress" class="temporary-world-prompt__progress" style="display: none;">
+            <ui:VisualElement name="temporary-world-prompt-progress-fill" class="temporary-world-prompt__progress-fill" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

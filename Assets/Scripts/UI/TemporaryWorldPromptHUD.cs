@@ -28,6 +28,8 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     private VisualElement promptPanel;
     private VisualElement promptKeys;
     private Label promptBody;
+    private VisualElement contextualProgressTrack;
+    private VisualElement contextualProgressFill;
     private TemporaryWorldPromptTrigger currentPrompt;
     private float visibleTimer;
     private float completionTimer = -1f;
@@ -36,12 +38,17 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
     private string contextualKey;
     private string contextualMessage;
     private Sprite contextualIcon;
+    private bool contextualHold;
+    private float contextualProgress;
 
-    public void ShowContextualPrompt(Object owner, string key, string message, Sprite icon)
+    public void ShowContextualPrompt(Object owner, string key, string message,
+        Sprite icon, bool hold = false, float progress = 0f)
     {
         if (contextualOwner == owner && contextualKey == key &&
-            contextualMessage == message && contextualIcon == icon)
+            contextualMessage == message && contextualIcon == icon &&
+            contextualHold == hold)
         {
+            UpdateContextualProgress(owner, progress);
             SetVisible(!GamePauseController.IsPaused);
             return;
         }
@@ -50,13 +57,28 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         contextualKey = key;
         contextualMessage = message;
         contextualIcon = icon;
+        contextualHold = hold;
+        contextualProgress = Mathf.Clamp01(progress);
         DrawContextualPrompt();
+    }
+
+    public void UpdateContextualProgress(Object owner, float progress)
+    {
+        if (contextualOwner != owner)
+            return;
+        contextualProgress = Mathf.Clamp01(progress);
+        if (contextualProgressFill != null)
+            contextualProgressFill.style.width = Length.Percent(contextualProgress * 100f);
     }
 
     public void HideContextualPrompt(Object owner)
     {
         if (contextualOwner != owner) return;
         contextualOwner = null;
+        contextualHold = false;
+        contextualProgress = 0f;
+        if (contextualProgressTrack != null)
+            contextualProgressTrack.style.display = DisplayStyle.None;
         if (currentPrompt != null) SetPromptContent(currentPrompt);
         SetVisible(currentPrompt != null);
     }
@@ -70,14 +92,27 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
             Image icon = new() { sprite = contextualIcon };
             icon.AddToClassList("temporary-world-prompt__key-icon");
             promptKeys.Add(icon);
+            if (contextualHold)
+            {
+                Label hold = new() { text = "SEGURE" };
+                hold.AddToClassList("temporary-world-prompt__key-fallback");
+                promptKeys.Add(hold);
+            }
         }
         else
         {
-            Label key = new() { text = contextualKey };
+            Label key = new()
+            {
+                text = contextualHold ? "SEGURE " + contextualKey : contextualKey
+            };
             key.AddToClassList("temporary-world-prompt__key-fallback");
             promptKeys.Add(key);
         }
         promptBody.text = contextualMessage;
+        if (contextualProgressTrack != null)
+            contextualProgressTrack.style.display = contextualHold
+                ? DisplayStyle.Flex : DisplayStyle.None;
+        UpdateContextualProgress(contextualOwner, contextualProgress);
         SetVisible(true);
     }
 
@@ -204,6 +239,10 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
         promptPanel = rootVisualElement.Q<VisualElement>("temporary-world-prompt");
         promptKeys = rootVisualElement.Q<VisualElement>("temporary-world-prompt-keys");
         promptBody = rootVisualElement.Q<Label>("temporary-world-prompt-body");
+        contextualProgressTrack = rootVisualElement.Q<VisualElement>(
+            "temporary-world-prompt-progress");
+        contextualProgressFill = rootVisualElement.Q<VisualElement>(
+            "temporary-world-prompt-progress-fill");
 
         if (promptPanel == null || promptKeys == null || promptBody == null)
             return;
@@ -213,6 +252,8 @@ public class TemporaryWorldPromptHUD : MonoBehaviour
 
         SetVisible(currentPrompt != null);
         if (contextualOwner != null) DrawContextualPrompt();
+        else if (contextualProgressTrack != null)
+            contextualProgressTrack.style.display = DisplayStyle.None;
     }
 
     private void SetPromptContent(TemporaryWorldPromptTrigger prompt)

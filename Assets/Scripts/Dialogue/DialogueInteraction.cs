@@ -1,12 +1,9 @@
-using UnityEngine;
+﻿using UnityEngine;
 
-/// <summary>
-/// Mostra um prompt contextual perto do jogador e abre uma sequencia de
-/// dialogo quando a acao reconfiguravel Interact e pressionada.
-/// </summary>
+/// <summary>Inicia dialogos pelo arbitrador global de interacoes.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Collider))]
-public sealed class DialogueInteraction : MonoBehaviour
+public sealed class DialogueInteraction : InteractableBase
 {
     [Header("Dialogue")]
     [Tooltip("Sequencia de falas iniciada ao interagir com este NPC.")]
@@ -15,7 +12,7 @@ public sealed class DialogueInteraction : MonoBehaviour
     [SerializeField] private bool interactOnce = true;
     [Tooltip("Ativa a Leave Area mesmo quando Leave Early Lines estiver vazia; nesse caso, sair da area encerra o dialogo atual.")]
     [SerializeField] private bool useLeaveArea;
-    [Tooltip("Tamanho da Leave Area como porcentagem das dimensoes da Interaction Area. 100% corresponde ao mesmo tamanho; valores menores sao tratados como 100%.")]
+    [Tooltip("Tamanho da Leave Area como porcentagem da Interaction Area. 100% corresponde ao mesmo tamanho; valores menores sao tratados como 100%.")]
     [Min(100f)] [SerializeField] private float leaveAreaPercent = 150f;
 
     [Header("Prompt")]
@@ -27,10 +24,11 @@ public sealed class DialogueInteraction : MonoBehaviour
     private Collider interactionCollider;
     private Collider leaveAreaCollider;
     private PlayerMovement playerMovement;
-    private TemporaryWorldPromptHUD promptHUD;
-    private bool playerInside;
     private bool hasInteracted;
     private bool dialogueStartedByInteraction;
+
+    public override string InteractionMessage => promptMessage;
+    public override Sprite InteractionIcon => promptIcon;
 
     private void Reset()
     {
@@ -50,67 +48,70 @@ public sealed class DialogueInteraction : MonoBehaviour
             CreateLeaveAreaTrigger();
     }
 
-    private void OnDisable()
+    protected override void OnDisable()
     {
-        playerInside = false;
         dialogueStartedByInteraction = false;
-        if (promptHUD != null)
-            promptHUD.HideContextualPrompt(this);
+        base.OnDisable();
     }
 
     private void Update()
     {
-        RefreshPlayerColliders();
-        UpdatePlayerPresence();
+        if (!dialogueStartedByInteraction)
+            return;
 
-        if (dialogueStartedByInteraction &&
-            (DialogueController.Instance == null ||
-             !DialogueController.Instance.IsShowing(sequence)))
+        if (DialogueController.Instance == null ||
+            !DialogueController.Instance.IsShowing(sequence))
             dialogueStartedByInteraction = false;
 
-        if (dialogueStartedByInteraction && leaveAreaCollider != null &&
-            !IsPlayerOverlapping(leaveAreaCollider))
+        if (!dialogueStartedByInteraction || leaveAreaCollider == null)
+            return;
+
+        if (playerMovement == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            playerMovement = player != null ? player.GetComponent<PlayerMovement>() : null;
+        }
+        if (playerMovement != null &&
+            !PlayerAreaOverlap.ContainsPlayer(leaveAreaCollider, playerMovement))
             OnLeaveAreaExited();
+    }
 
-        if (interactOnce && hasInteracted)
-        {
-            if (promptHUD != null)
-            promptHUD.HideContextualPrompt(this);
-            return;
-        }
+    public override bool ContainsPlayer(PlayerMovement player)
+    {
+        if (interactionCollider == null)
+            interactionCollider = GetComponent<Collider>();
+        return PlayerAreaOverlap.ContainsPlayer(interactionCollider, player);
+    }
 
-        if (!playerInside || GamePauseController.IsPaused ||
-            CutsceneController.IsPlayerControlLocked ||
-            DialogueController.IsDisplaying)
-        {
-            if (promptHUD != null)
-            promptHUD.HideContextualPrompt(this);
-            return;
-        }
+    public override float DistanceSqrTo(Vector3 position)
+    {
+        if (interactionCollider == null)
+            interactionCollider = GetComponent<Collider>();
+        Vector3 center = interactionCollider != null
+            ? interactionCollider.bounds.center : transform.position;
+        return (center - position).sqrMagnitude;
+    }
 
-        if (promptHUD == null)
-            promptHUD = FindAnyObjectByType<TemporaryWorldPromptHUD>();
+    public override bool CanInteract(PlayerMovement player) =>
+        sequence != null && !(interactOnce && hasInteracted) &&
+        !DialogueController.IsInteractionCooldownActive &&
+        DialogueController.Instance != null && base.CanInteract(player);
 
-        if (promptHUD != null)
-            promptHUD.ShowContextualPrompt(this,
-            GameInputBindings.GetDisplayString("Interact"),
-            promptMessage, promptIcon);
-
-        if (!GameInput.InteractPressed ||
-            DialogueController.IsInteractionCooldownActive || sequence == null ||
-            DialogueController.Instance == null ||
+    public override bool Interact(PlayerMovement player)
+    {
+        if (!CanInteract(player) ||
             !DialogueController.Instance.TryShow(sequence))
-            return;
+            return false;
 
         hasInteracted = true;
         dialogueStartedByInteraction = true;
-        if (promptHUD != null)
-            promptHUD.HideContextualPrompt(this);
+        playerMovement = player;
+        return true;
     }
 
     private void CreateLeaveAreaTrigger()
     {
-        GameObject areaObject = new GameObject("Leave Area (Runtime)");
+        GameObject areaObject = new("Leave Area (Runtime)");
         areaObject.layer = gameObject.layer;
         areaObject.transform.SetParent(transform, false);
         areaObject.transform.localScale = Vector3.one *
@@ -129,29 +130,15 @@ public sealed class DialogueInteraction : MonoBehaviour
         areaObject.AddComponent<DialogueLeaveAreaTrigger>().Initialize(this);
     }
 
-    private void RefreshPlayerColliders()
+    internal void OnLeaveAreaExited()
     {
-        if (playerMovement == null)
-        {
-            playerMovement = FindAnyObjectByType<PlayerMovement>();
-        }
-    }
-
-    private void UpdatePlayerPresence()
-    {
-        bool isInsideNow = IsPlayerOverlapping(interactionCollider);
-        if (isInsideNow == playerInside)
+        if (!dialogueStartedByInteraction)
             return;
 
-        playerInside = isInsideNow;
-        if (!playerInside)
-            if (promptHUD != null)
-            promptHUD.HideContextualPrompt(this);
-    }
-
-    private bool IsPlayerOverlapping(Collider area)
-    {
-        return PlayerAreaOverlap.ContainsPlayer(area, playerMovement);
+        dialogueStartedByInteraction = false;
+        DialogueController controller = DialogueController.Instance;
+        if (controller != null && controller.IsShowing(sequence))
+            controller.HandleLeaveArea(sequence);
     }
 
     private static Collider CopyCollider(Collider source, GameObject target)
@@ -186,35 +173,14 @@ public sealed class DialogueInteraction : MonoBehaviour
             copy.convex = mesh.convex;
             return copy;
         }
-
         return null;
     }
 
-    internal void OnLeaveAreaExited()
+    private void OnDrawGizmos()
     {
-        if (!dialogueStartedByInteraction)
-            return;
-
-        dialogueStartedByInteraction = false;
-        DialogueController controller = DialogueController.Instance;
-        if (controller != null && controller.IsShowing(sequence))
-            controller.HandleLeaveArea(sequence);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (IsPlayer(other))
-            playerInside = true;
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (!IsPlayer(other))
-            return;
-
-        playerInside = false;
-        if (promptHUD != null)
-            promptHUD.HideContextualPrompt(this);
+        if (InteractionGizmos.Visible)
+            InteractionGizmos.DrawCollider(GetComponent<Collider>(),
+                InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
     }
 
     private void OnDrawGizmosSelected()
@@ -234,17 +200,12 @@ public sealed class DialogueInteraction : MonoBehaviour
         Gizmos.color = new Color(1f, .55f, .12f, .9f);
 
         if (trigger is BoxCollider box)
-        {
             Gizmos.DrawWireCube(box.center, box.size * scale);
-        }
         else if (trigger is SphereCollider sphere)
-        {
             Gizmos.DrawWireSphere(sphere.center, sphere.radius * scale);
-        }
         else if (trigger is CapsuleCollider capsule)
-        {
-            DrawCapsuleGizmo(capsule, scale);
-        }
+            InteractionGizmos.DrawCollider(capsule, Color.clear,
+                new Color(1f, .55f, .12f, .9f));
         else if (trigger is MeshCollider mesh && mesh.sharedMesh != null)
         {
             Bounds bounds = mesh.sharedMesh.bounds;
@@ -254,32 +215,4 @@ public sealed class DialogueInteraction : MonoBehaviour
         Gizmos.matrix = previousMatrix;
         Gizmos.color = previousColor;
     }
-
-    private static void DrawCapsuleGizmo(CapsuleCollider capsule, float scale)
-    {
-        Vector3 axis = capsule.direction == 0 ? Vector3.right :
-            capsule.direction == 2 ? Vector3.forward : Vector3.up;
-        float radius = capsule.radius * scale;
-        float halfSegment = Mathf.Max(0f,
-            capsule.height * .5f - capsule.radius) * scale;
-        Vector3 first = capsule.center - axis * halfSegment;
-        Vector3 second = capsule.center + axis * halfSegment;
-
-        Gizmos.DrawWireSphere(first, radius);
-        Gizmos.DrawWireSphere(second, radius);
-
-        Vector3 sideA = capsule.direction == 0 ? Vector3.up : Vector3.right;
-        Vector3 sideB = Vector3.Cross(axis, sideA).normalized;
-        for (int sign = -1; sign <= 1; sign += 2)
-        {
-            Vector3 offsetA = sideA * radius * sign;
-            Vector3 offsetB = sideB * radius * sign;
-            Gizmos.DrawLine(first + offsetA, second + offsetA);
-            Gizmos.DrawLine(first + offsetB, second + offsetB);
-        }
-    }
-
-    private static bool IsPlayer(Collider other) => other != null &&
-        (other.GetComponentInParent<PlayerMovement>() != null ||
-         other.CompareTag("Player"));
 }

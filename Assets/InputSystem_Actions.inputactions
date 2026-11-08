@@ -116,7 +116,8 @@
                 {"name":"DebugGodMode","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1a","expectedControlType":"Button"},
                 {"name":"DebugMaxHeat","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1b","expectedControlType":"Button"},
                 {"name":"DebugSlowMotion","type":"Button","id":"2cad79a5-2828-4f4d-b498-9a08a7662045","expectedControlType":"Button"},
-                {"name":"Restart","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1c","expectedControlType":"Button"}
+                {"name":"Restart","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1c","expectedControlType":"Button"},
+                {"name":"Inventory","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022001","expectedControlType":"Button"}
             ],
             "bindings": [
                 {
@@ -514,7 +515,8 @@
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2b","path":"<Keyboard>/f7","action":"DebugGodMode"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2c","path":"<Keyboard>/f8","action":"DebugMaxHeat"},
                 {"name":"","id":"466d7155-4b5a-4dca-bf31-9cf801e6d9f4","path":"<Keyboard>/f11","action":"DebugSlowMotion"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2d","path":"<Keyboard>/r","action":"Restart"}
+                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2d","path":"<Keyboard>/r","action":"Restart"},
+                {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022002","path":"<Keyboard>/i","action":"Inventory","groups":"Keyboard&Mouse"}
             ]
         },
         {
@@ -522,6 +524,8 @@
             "id": "272f6d14-89ba-496f-b7ff-215263d3219f",
             "actions": [
                 {"name":"Pause","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e31","expectedControlType":"Button"},
+                {"name":"Inventory","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022003","expectedControlType":"Button"},
+                {"name":"CloseModal","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022004","expectedControlType":"Button"},
                 {"name":"DebugHUD","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e32","expectedControlType":"Button"},
                 {
                     "name": "Navigate",
@@ -618,6 +622,8 @@
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e33","path":"<Keyboard>/q","action":"Pause","groups":"Keyboard&Mouse"},
                 {"name":"","id":"e096f45b-03f3-4c04-aeef-53a16ccb8103","path":"<Gamepad>/start","action":"Pause","groups":"Gamepad"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e34","path":"<Keyboard>/f3","action":"DebugHUD"},
+                {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022005","path":"<Keyboard>/i","action":"Inventory","groups":"Keyboard&Mouse"},
+                {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022006","path":"<Keyboard>/e","action":"CloseModal","groups":"Keyboard&Mouse"},
                 {
                     "name": "Gamepad",
                     "id": "809f371f-c5e2-4e7a-83a1-d867598f40dd",

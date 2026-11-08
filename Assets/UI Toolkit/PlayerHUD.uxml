@@ -3,6 +3,14 @@
     <Style src="PlayerHeatHUD.uss" />
     <ui:VisualElement name="player-hud" picking-mode="Ignore">
         <ui:VisualElement name="lock-on-marker" class="lock-on-marker" picking-mode="Ignore" />
+        <ui:VisualElement name="player-combo-meter" class="player-combo-meter" picking-mode="Ignore">
+            <ui:Label name="player-combo-title" class="player-combo-title" text="COMBO" />
+            <ui:Label name="player-combo-count" class="player-combo-count" text="0" />
+            <ui:VisualElement class="player-combo-timer-track">
+                <ui:VisualElement name="player-combo-timer-fill" class="player-combo-timer-fill" />
+            </ui:VisualElement>
+            <ui:Label name="player-combo-reward" class="player-combo-reward" text="" />
+        </ui:VisualElement>
         <ui:VisualElement name="human-health-bar" class="human-health-bar">
             <ui:Label name="human-health-title" text="VIDA" class="human-health-title" />
             <ui:VisualElement name="human-health-track" class="human-health-track">

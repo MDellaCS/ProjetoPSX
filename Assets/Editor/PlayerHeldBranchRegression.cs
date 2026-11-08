@@ -158,13 +158,27 @@ public static class WaterDepthRegression
                 profile.ClassifyDepth(2f, false) == WaterZone.Deep,
                 "Alterar a profundidade amostrada deve alterar a zona no mesmo volume.");
 
-            Debug.Log("PASS: Water depth classification regression.");
+            Assert(PlayerMovement.ShouldReleaseLadderInDeepWater(false, true,
+                    -1f, false),
+                "Descer uma escada em agua funda deve soltar o jogador para nadar.");
+            Assert(PlayerMovement.ShouldReleaseLadderInDeepWater(false, true,
+                    0f, true),
+                "Um degrau descendente ja iniciado deve ser cancelado quando a agua fica funda.");
+            Assert(!PlayerMovement.ShouldReleaseLadderInDeepWater(false, true,
+                    1f, false) &&
+                !PlayerMovement.ShouldReleaseLadderInDeepWater(false, false,
+                    -1f, false) &&
+                !PlayerMovement.ShouldReleaseLadderInDeepWater(true, true,
+                    -1f, false),
+                "Subir para fora da agua, agua rasa e escadas de teto nao devem forcar a soltura.");
+
+            Debug.Log("PASS: Water depth and ladder transition regression.");
             if (Application.isBatchMode)
                 EditorApplication.Exit(0);
         }
         catch (System.Exception exception)
         {
-            Debug.LogError("FAIL: Water depth classification regression: " +
+            Debug.LogError("FAIL: Water depth and ladder transition regression: " +
                 exception);
             if (Application.isBatchMode)
                 EditorApplication.Exit(1);

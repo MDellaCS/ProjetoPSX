@@ -421,6 +421,8 @@ public sealed class GameSceneLoader : MonoBehaviour
         PlayableDirector director = intro.GetComponent<PlayableDirector>();
         if (director != null)
             director.stopped += OnNewGameCutsceneStopped;
+        // Um novo jogo inicia um save de historia limpo, sem itens-chave anteriores.
+        KeyItemInventory.ResetForNewGame();
         if (!intro.PlayCutscene())
         {
             if (director != null)

@@ -16,8 +16,9 @@ MonoBehaviour:
   resourceMode: 1
   globalPauseDelay: 0.5
   movementSpeedMultiplier: 0.65
-  allowDash: 1
+  allowDash: 0
   allowAirJump: 0
+  allowJump: 0
   allowAirDash: 0
   jumpHeightMultiplier: 0.6
   jumpDurationMultiplier: 1

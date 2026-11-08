@@ -294,6 +294,30 @@ public sealed class CameraFollow : MonoBehaviour
             ScheduleGameplayBlendRestore();
     }
 
+    internal void DeactivateCameraTrigger(FixedCameraZone trigger)
+    {
+        if (trigger == null || activeFixedCameraZone != trigger)
+            return;
+
+        if (trigger.UseCameraTransition &&
+            trigger.CameraMode == CameraZoneMode.FollowWithOverrides &&
+            trigger.CameraTransition.BlendTime > 0f)
+            BeginFollowCameraTransition(null, trigger.CameraTransition);
+        else
+            followTransitionActive = false;
+
+        movementCameraVersion++;
+        if (trigger.UseCameraTransition)
+            PrepareCameraSwitch(trigger.CameraTransition);
+        else
+            PrepareInstantCameraSwitch();
+
+        trigger.SetCameraSelected(false);
+        activeFixedCameraZone = null;
+        fixedCameraActive = false;
+        ScheduleGameplayBlendRestore();
+    }
+
     private void EnsureCinemachineRig()
     {
         if (brain == null && !TryGetComponent(out brain))
@@ -459,7 +483,10 @@ public sealed class CameraFollow : MonoBehaviour
         thirdPersonFollow.Damping = Vector3.one * followSmoothTime;
         thirdPersonFollow.ShoulderOffset = Vector3.zero;
         thirdPersonFollow.VerticalArmLength = 0f;
-        thirdPersonFollow.CameraSide = .5f;
+        // CinemachineThirdPersonFollow interpola ShoulderOffset.x de -x a +x
+        // usando CameraSide. Em .5, o resultado e sempre zero, anulando o eixo
+        // X de Follow With Overrides (e qualquer offset lateral de camera).
+        thirdPersonFollow.CameraSide = 1f;
         thirdPersonFollow.CameraDistance = distance;
         thirdPersonFollow.AvoidObstacles.Enabled =
             cinemachineCollisionLayers.value != 0;

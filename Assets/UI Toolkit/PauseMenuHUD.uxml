@@ -15,6 +15,27 @@
                 <ui:Button name="menu-options-button" class="menu-button menu-button--primary" text="Opções" />
                 <ui:Button name="menu-exit-button" class="menu-button menu-button--primary" text="Sair" />
             </ui:VisualElement>
+            <ui:VisualElement name="pause-inventory-view" class="menu-view menu-inventory-view">
+                <ui:Label name="inventory-title" class="menu-title" text="INVENTÁRIO" />
+                <ui:VisualElement class="inventory-content">
+                    <ui:Button name="inventory-previous-button" class="inventory-arrow" text="‹" />
+                    <ui:VisualElement name="inventory-previous-item" class="inventory-side-item">
+                        <ui:Image name="inventory-previous-image" class="inventory-side-image" scale-mode="ScaleToFit" />
+                        <ui:Label name="inventory-previous-name" class="inventory-side-name" text="" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="inventory-detail">
+                        <ui:Image name="inventory-image" class="inventory-image" scale-mode="ScaleToFit" />
+                        <ui:Label name="inventory-item-name" class="inventory-item-name" text="" />
+                        <ui:Label name="inventory-description" class="inventory-description" text="Selecione um item-chave." />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="inventory-next-item" class="inventory-side-item">
+                        <ui:Image name="inventory-next-image" class="inventory-side-image" scale-mode="ScaleToFit" />
+                        <ui:Label name="inventory-next-name" class="inventory-side-name" text="" />
+                    </ui:VisualElement>
+                    <ui:Button name="inventory-next-button" class="inventory-arrow" text="›" />
+                </ui:VisualElement>
+                <ui:Label class="inventory-close-hint" text="I / Esc  Fechar" />
+            </ui:VisualElement>
             <ui:VisualElement name="pause-settings-view" class="menu-view menu-view--settings">
                 <ui:Label name="pause-settings-title" class="menu-title" text="OPÇÕES" />
                 <ui:VisualElement name="pause-settings-tabs" class="menu-tabs">
@@ -36,6 +57,13 @@
                     </ui:VisualElement>
                     <ui:Button name="settings-back-button" class="menu-button menu-button--small" text="Voltar" />
                 </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="item-acquisition-modal" class="item-modal">
+            <ui:VisualElement class="item-modal-panel">
+                <ui:Image name="item-modal-image" class="item-modal-image" scale-mode="ScaleToFit" />
+                <ui:Label name="item-modal-name" class="item-modal-name" text="" />
+                <ui:Label name="item-modal-close-hint" class="item-modal-close-hint" text="[E] Fechar" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

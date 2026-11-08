@@ -86,6 +86,36 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float playerCenteredFogNoiseStrength = .08f;
     [Tooltip("Velocidade do movimento do ruido da nevoa.")]
     [Min(0f)] [SerializeField] private float playerCenteredFogNoiseSpeed = .15f;
+    [Tooltip("Ativa uma camada volumetrica 3D que acumula nevoa ao longo do raio entre a camera e a geometria. Pode ser combinada com a camada radial 2D acima.")]
+    [SerializeField] private bool playerCenteredVolumetricFogEnabled;
+    [Tooltip("Densidade base da nevoa volumetrica. Valores maiores reduzem rapidamente a visibilidade; use ajustes pequenos.")]
+    [Min(0f)] [SerializeField] private float playerCenteredVolumetricDensity = .035f;
+    [Tooltip("Opacidade maxima acumulada pela camada volumetrica, independente da opacidade da camada radial 2D.")]
+    [Range(0f, 1f)] [SerializeField] private float playerCenteredVolumetricOpacity = 1f;
+    [Tooltip("Distancia maxima, em metros, integrada pelo raymarch. Limita custo e evita acumular nevoa alem do alcance visual desejado.")]
+    [Min(1f)] [SerializeField] private float playerCenteredVolumetricMaxDistance = 60f;
+    [Tooltip("Quantidade de amostras ao longo do raio da camera. Mais passos reduzem artefatos, com maior custo de GPU.")]
+    [Range(4, 64)] [SerializeField] private int playerCenteredVolumetricSteps = 16;
+    [Tooltip("Tamanho das massas de nevoa no espaco 3D. Valores menores criam turbulencia mais fina.")]
+    [Min(.001f)] [SerializeField] private float playerCenteredVolumetricNoiseScale = .12f;
+    [Tooltip("Forca com que o ruido 3D varia a densidade local. Zero deixa a nevoa homogenea.")]
+    [Range(0f, 1f)] [SerializeField] private float playerCenteredVolumetricNoiseStrength = .35f;
+    [Tooltip("Direcao e velocidade mundial do deslocamento das massas de nevoa. A magnitude define a velocidade em metros por segundo.")]
+    [SerializeField] private Vector3 playerCenteredVolumetricWind = new(.12f, 0f, .06f);
+    [Tooltip("Altura acima da base em que a densidade volumetrica cai pela metade. Valores maiores elevam a camada de nevoa.")]
+    [Min(.01f)] [SerializeField] private float playerCenteredVolumetricHeightFalloff = 7f;
+    [Tooltip("Intensidade do espalhamento da luz principal dentro da nevoa. Zero remove o brilho direcional; valores altos criam fachos mais visiveis.")]
+    [Range(0f, 4f)] [SerializeField] private float playerCenteredVolumetricScattering = .35f;
+    [Tooltip("Quanto as luzes locais retro, como lanternas, iluminam a nevoa volumetrica. Valores altos tornam os fachos mais visiveis, com custo proporcional ao numero de luzes ativas.")]
+    [Range(0f, 4f)] [SerializeField] private float playerCenteredVolumetricLocalLightScattering = 1f;
+    [Tooltip("Limita quantas luzes retro mais proximas contribuem para a nevoa. Reduza para melhorar o desempenho; zero desliga apenas o espalhamento das luzes locais.")]
+    [Range(0, 16)] [SerializeField] private int playerCenteredVolumetricLocalLightLimit = 4;
+    [Tooltip("Direcionalidade do espalhamento: valores positivos projetam mais luz na direcao de propagacao; negativos favorecem a luz vista de frente.")]
+    [Range(-.8f, .8f)] [SerializeField] private float playerCenteredVolumetricAnisotropy = .2f;
+    [Tooltip("Cor da nevoa volumetrica na altura da base. Use uma cor proxima do ambiente para integrar a nevoa ao cenario.")]
+    [SerializeField] private Color playerCenteredVolumetricColor = new(.34f, .41f, .4f, 1f);
+    [Tooltip("Cor da nevoa volumetrica nas alturas. Permite criar variacao de cor vertical sem alterar a cor da camada 2D.")]
+    [SerializeField] private Color playerCenteredVolumetricUpperColor = new(.42f, .46f, .45f, 1f);
 
     private static readonly int HeatPeripheralBlurId =
         Shader.PropertyToID("_HeatPeripheralBlur");
@@ -100,6 +130,14 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     private static readonly int PlayerCenteredFogNoiseScaleId = Shader.PropertyToID("_PlayerCenteredFogNoiseScale");
     private static readonly int PlayerCenteredFogNoiseStrengthId = Shader.PropertyToID("_PlayerCenteredFogNoiseStrength");
     private static readonly int PlayerCenteredFogNoiseSpeedId = Shader.PropertyToID("_PlayerCenteredFogNoiseSpeed");
+    private static readonly int PlayerCenteredVolumetricEnabledId = Shader.PropertyToID("_PlayerCenteredVolumetricEnabled");
+    private static readonly int PlayerCenteredVolumetricParamsId = Shader.PropertyToID("_PlayerCenteredVolumetricParams");
+    private static readonly int PlayerCenteredVolumetricNoiseId = Shader.PropertyToID("_PlayerCenteredVolumetricNoise");
+    private static readonly int PlayerCenteredVolumetricWindId = Shader.PropertyToID("_PlayerCenteredVolumetricWind");
+    private static readonly int PlayerCenteredVolumetricHeightId = Shader.PropertyToID("_PlayerCenteredVolumetricHeight");
+    private static readonly int PlayerCenteredVolumetricLightingId = Shader.PropertyToID("_PlayerCenteredVolumetricLighting");
+    private static readonly int PlayerCenteredVolumetricColorId = Shader.PropertyToID("_PlayerCenteredVolumetricColor");
+    private static readonly int PlayerCenteredVolumetricUpperColorId = Shader.PropertyToID("_PlayerCenteredVolumetricUpperColor");
 
     private Transform player;
     private CameraEffectStack effects;
@@ -162,6 +200,7 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         }
         Shader.SetGlobalFloat(HeatPeripheralBlurId, 0f);
         Shader.SetGlobalFloat(PlayerCenteredFogEnabledId, 0f);
+        Shader.SetGlobalFloat(PlayerCenteredVolumetricEnabledId, 0f);
     }
 
     private void OnValidate()
@@ -178,6 +217,10 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         }
         playerCenteredFogEndRadius = Mathf.Max(playerCenteredFogStartRadius + .01f,
             playerCenteredFogEndRadius);
+        playerCenteredVolumetricSteps = Mathf.Clamp(
+            playerCenteredVolumetricSteps, 4, 64);
+        playerCenteredVolumetricMaxDistance = Mathf.Max(1f,
+            playerCenteredVolumetricMaxDistance);
     }
 
     private void ResolvePlayerComponents()
@@ -260,6 +303,31 @@ public sealed class CameraGameplayEffects : MonoBehaviour
             Mathf.Clamp01(playerCenteredFogNoiseStrength));
         Shader.SetGlobalFloat(PlayerCenteredFogNoiseSpeedId,
             Mathf.Max(0f, playerCenteredFogNoiseSpeed));
+        Shader.SetGlobalFloat(PlayerCenteredVolumetricEnabledId,
+            playerCenteredVolumetricFogEnabled ? 1f : 0f);
+        Shader.SetGlobalVector(PlayerCenteredVolumetricParamsId, new Vector4(
+            Mathf.Max(0f, playerCenteredVolumetricDensity),
+            Mathf.Max(1f, playerCenteredVolumetricMaxDistance),
+            Mathf.Clamp(playerCenteredVolumetricSteps, 4, 64),
+            Mathf.Clamp01(playerCenteredVolumetricOpacity)));
+        Shader.SetGlobalVector(PlayerCenteredVolumetricNoiseId, new Vector4(
+            Mathf.Max(.001f, playerCenteredVolumetricNoiseScale),
+            Mathf.Clamp01(playerCenteredVolumetricNoiseStrength),
+            Mathf.Max(.001f, playerCenteredVolumetricHeightFalloff),
+            Mathf.Clamp(playerCenteredVolumetricAnisotropy, -.8f, .8f)));
+        Shader.SetGlobalVector(PlayerCenteredVolumetricWindId,
+            playerCenteredVolumetricWind);
+        Shader.SetGlobalVector(PlayerCenteredVolumetricHeightId, new Vector4(
+            player.position.y + playerCenteredFogBaseHeightOffset,
+            Mathf.Max(.01f, playerCenteredFogHeight), 0f, 0f));
+        Shader.SetGlobalVector(PlayerCenteredVolumetricLightingId, new Vector4(
+            Mathf.Max(0f, playerCenteredVolumetricScattering),
+            Mathf.Max(0f, playerCenteredVolumetricLocalLightScattering),
+            Mathf.Clamp(playerCenteredVolumetricLocalLightLimit, 0, 16), 0f));
+        Shader.SetGlobalColor(PlayerCenteredVolumetricColorId,
+            playerCenteredVolumetricColor);
+        Shader.SetGlobalColor(PlayerCenteredVolumetricUpperColorId,
+            playerCenteredVolumetricUpperColor);
     }
 
     private void ApplyThermalColorGrading()

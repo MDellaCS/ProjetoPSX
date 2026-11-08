@@ -56,7 +56,7 @@ public static class GameSaveResetService
         string[] keys =
         {
             "ProjetoPSX.InputBindings.V1", "ProjetoPSX.Settings.V1",
-            "ProjetoPSX.PlayerCurrency.v1"
+            "ProjetoPSX.PlayerCurrency.v1", "ProjetoPSX.KeyItems.V1"
         };
         foreach (string key in keys)
             PlayerPrefs.DeleteKey(key);

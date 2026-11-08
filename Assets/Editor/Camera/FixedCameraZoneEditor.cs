@@ -7,12 +7,14 @@ public sealed class FixedCameraZoneEditor : Editor
 {
     private SerializedProperty cameraMode;
     private SerializedProperty railRotationMode;
+    private SerializedProperty railDollyMode;
     private SerializedProperty zoneShape;
 
     private void OnEnable()
     {
         cameraMode = serializedObject.FindProperty("cameraMode");
         railRotationMode = serializedObject.FindProperty("railRotationMode");
+        railDollyMode = serializedObject.FindProperty("railDollyMode");
         zoneShape = serializedObject.FindProperty("zoneShape");
     }
 
@@ -31,6 +33,7 @@ public sealed class FixedCameraZoneEditor : Editor
             Draw("fixedCamera");
             Draw("cameraMode");
             Draw("cameraPriority");
+            Draw("activeOnlyInsideZone");
 
             switch ((CameraZoneMode)cameraMode.enumValueIndex)
             {
@@ -54,7 +57,8 @@ public sealed class FixedCameraZoneEditor : Editor
         else
             Draw("sphereRadius");
         Draw("additionalActivationVolumes");
-        Draw("exitPaddingDistance");
+        if (serializedObject.FindProperty("activeOnlyInsideZone").boolValue)
+            Draw("exitPaddingDistance", "Margem de saída após entrar (m)");
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -72,22 +76,64 @@ public sealed class FixedCameraZoneEditor : Editor
 
     private void DrawRailSettings()
     {
-        Section("Spline e posicao");
+        Section("Trilho e movimento da camera");
         Draw("railSpline");
-        Draw("railOffset");
-        Draw("followPositionOffset");
-        Draw("followDistance");
-        Draw("railDistanceOffset");
+        Draw("railDollyMode");
+        if ((CameraRailDollyMode)railDollyMode.enumValueIndex ==
+            CameraRailDollyMode.FollowTarget)
+        {
+            Draw("railDollyTarget");
+            Draw("followDistance");
+            Draw("railDistanceOffset");
+            Draw("railSearchResolution");
+            Draw("railSearchIterations");
+            DrawFollowDelay();
+        }
+        else
+        {
+            Draw("railManualPosition");
+        }
+
+        Section("Offsets de posicao (mundo ou spline)");
+        Draw("railOffset", "Deslocamento Mundial XYZ (m)");
+        Draw("followPositionOffset", "Follow Position Offset XYZ (m)");
 
         Section("Orientacao e lente");
         Draw("railRotationMode");
-        if ((CameraRailRotationMode)railRotationMode.enumValueIndex ==
-            CameraRailRotationMode.LookAtPlayer)
-            Draw("railLookAtOffset");
+        switch ((CameraRailRotationMode)railRotationMode.enumValueIndex)
+        {
+            case CameraRailRotationMode.LookAtPlayer:
+                Draw("railLookAtTarget");
+                Draw("railLookAtOffset");
+                Draw("railScreenPosition");
+                Draw("railDeadZoneEnabled");
+                if (serializedObject.FindProperty("railDeadZoneEnabled").boolValue)
+                    Draw("railDeadZoneSize");
+                Draw("railHardLimitsEnabled");
+                if (serializedObject.FindProperty("railHardLimitsEnabled").boolValue)
+                {
+                    Draw("railHardLimitsSize");
+                    Draw("railHardLimitsOffset");
+                }
+                Draw("railAimDamping");
+                Draw("railLookaheadEnabled");
+                if (serializedObject.FindProperty("railLookaheadEnabled").boolValue)
+                {
+                    Draw("railLookaheadTime");
+                    Draw("railLookaheadSmoothing");
+                    Draw("railLookaheadIgnoreY");
+                }
+                break;
+            case CameraRailRotationMode.FollowSpline:
+                Draw("railWorldRotationOffset");
+                Draw("railPitchFollowSpline", "Pitch acompanha a orientação do spline");
+                Draw("railYawFollowSpline", "Yaw acompanha a orientação do spline");
+                Draw("railRollFollowSpline", "Roll acompanha a orientação do spline");
+                break;
+        }
         Draw("overrideRailFieldOfView");
         if (serializedObject.FindProperty("overrideRailFieldOfView").boolValue)
             Draw("railFieldOfView");
-        DrawFollowDelay();
     }
 
     private void DrawFollowDelay()
@@ -108,5 +154,13 @@ public sealed class FixedCameraZoneEditor : Editor
         SerializedProperty property = serializedObject.FindProperty(propertyName);
         if (property != null)
             EditorGUILayout.PropertyField(property, true);
+    }
+
+    private void Draw(string propertyName, string label)
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property != null)
+            EditorGUILayout.PropertyField(property, new GUIContent(label,
+                property.tooltip), true);
     }
 }

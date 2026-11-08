@@ -27,6 +27,15 @@ public enum CameraRailRotationMode
     LookAtPlayer
 }
 
+/// <summary>Como a camera escolhe sua posicao longitudinal no trilho.</summary>
+public enum CameraRailDollyMode
+{
+    [Tooltip("A camera acompanha a posicao mais proxima do alvo no spline.")]
+    FollowTarget,
+    [Tooltip("A camera fica em uma distancia autorada no spline, ideal para enquadramentos cinematograficos controlados.")]
+    ManualPosition
+}
+
 /// <summary>
 /// Ao receber o jogador, seleciona uma camera Cinemachine ate outro trigger
 /// selecionar uma camera diferente ou devolver o controle ao CameraFollow.
@@ -55,7 +64,7 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Tooltip("Fixed: camera parada. Static Look At Target: camera parada que mira o jogador. On Rails: camera percorre um spline com ajustes proprios. Follow With Overrides: camera de gameplay segue o jogador com os ajustes abaixo.")]
     [SerializeField] private CameraZoneMode cameraMode = CameraZoneMode.Fixed;
     [Header("Follow With Overrides")]
-    [Tooltip("Deslocamento local em Follow With Overrides. Em On Rails soma-se ao Rail Position Offset: X lateral, Y altura e Z ao longo do trilho.")]
+    [Tooltip("Deslocamento local em Follow With Overrides. Em On Rails soma-se ao offset da camera; cada eixo pode usar o mundo ou acompanhar a orientacao do spline pelos controles abaixo.")]
     [SerializeField] private Vector3 followPositionOffset;
     [Tooltip("Distancia da camera ao jogador em Follow With Overrides. Em On Rails, define quanto a camera recua pelo spline a partir do ponto mais proximo do jogador.")]
     [Min(.1f)] [SerializeField] private float followDistance = 5.7f;
@@ -70,10 +79,28 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Header("On Rails")]
     [Tooltip("Spline percorrido pela camera. Deve ser ABERTO: em um spline fechado a camera nao trava no fim.")]
     [SerializeField] private SplineContainer railSpline;
-    [Tooltip("Posicao da camera em relacao ao spline: X lateral, Y altura e Z ao longo do trilho. Follow Position Offset soma-se a este valor.")]
+    [Tooltip("Deslocamento mundial XYZ da camera em metros, independente da rotacao do spline. Follow Position Offset soma-se a este valor.")]
     [SerializeField] private Vector3 railOffset;
     [Tooltip("No modo On Rails, mantenha a rotacao autorada, acompanhe o spline ou mire o jogador.")]
     [SerializeField] private CameraRailRotationMode railRotationMode = CameraRailRotationMode.Fixed;
+    [Tooltip("Rotacao da camera em graus: X = pitch, Y = yaw, Z = roll. Zero deixa a camera alinhada ao mundo; os controles abaixo podem fazer cada eixo acompanhar a orientacao do spline.")]
+    [SerializeField] private Vector3 railWorldRotationOffset;
+    [Tooltip("Faz o pitch do Rail World Rotation Offset acompanhar o eixo local de pitch do spline. Tambem orienta a camera pela curva.")]
+    [SerializeField] private bool railPitchFollowSpline;
+    [Tooltip("Faz o yaw do Rail World Rotation Offset acompanhar o eixo local de yaw do spline. Tambem orienta a camera pela curva.")]
+    [SerializeField] private bool railYawFollowSpline;
+    [Tooltip("Faz o roll do Rail World Rotation Offset acompanhar o eixo local de roll do spline. Tambem orienta a camera pela curva.")]
+    [SerializeField] private bool railRollFollowSpline;
+    [Tooltip("Follow Target busca a posicao mais proxima do alvo no trilho. Manual Position usa uma distancia fixa no caminho, util para tomadas autoradas.")]
+    [SerializeField] private CameraRailDollyMode railDollyMode = CameraRailDollyMode.FollowTarget;
+    [Tooltip("Alvo que move a camera ao longo do trilho. Vazio usa o jogador.")]
+    [SerializeField] private Transform railDollyTarget;
+    [Tooltip("Distancia ao longo do spline usada em Manual Position. O valor e limitado ao comprimento do trilho aberto.")]
+    [Min(0f)] [SerializeField] private float railManualPosition;
+    [Tooltip("Resolucao da busca do ponto mais proximo do alvo no spline. Valores maiores aumentam a precisao e o custo; use o minimo necessario.")]
+    [Range(1, 32)] [SerializeField] private int railSearchResolution = 4;
+    [Tooltip("Iteracoes de refinamento da busca do ponto mais proximo. Valores maiores aumentam a precisao e o custo.")]
+    [Range(1, 12)] [SerializeField] private int railSearchIterations = 2;
     [Tooltip("Ajuste assinado em metros ao longo do spline. Soma-se a Follow Distance: negativo recua mais; positivo avanca pelo trilho.")]
     [SerializeField] private float railDistanceOffset;
     [Tooltip("Substitui o campo de visao da CinemachineCamera enquanto este trigger On Rails estiver ativo.")]
@@ -82,12 +109,38 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Range(1f, 179f)] [SerializeField] private float railFieldOfView = 60f;
     [Tooltip("Deslocamento do ponto para o qual a camera mira no modo Look At Player.")]
     [SerializeField] private Vector3 railLookAtOffset;
+    [Tooltip("Alvo que a camera enquadra em Look At Player. Vazio usa o jogador. O offset e aplicado em eixos do mundo.")]
+    [SerializeField] private Transform railLookAtTarget;
+    [Tooltip("Posicao horizontal e vertical do alvo na tela. (0, 0) centraliza; valores negativos ou positivos deslocam o enquadramento.")]
+    [SerializeField] private Vector2 railScreenPosition;
+    [Tooltip("A camera so corrige o enquadramento quando o alvo sai desta zona morta normalizada da tela.")]
+    [SerializeField] private Vector2 railDeadZoneSize;
+    [Tooltip("Ativa a zona morta para reduzir pequenos movimentos de enquadramento.")]
+    [SerializeField] private bool railDeadZoneEnabled;
+    [Tooltip("Impede que o alvo saia desta area normalizada da tela, mantendo o personagem enquadrado em tomadas de movimento intenso.")]
+    [SerializeField] private Vector2 railHardLimitsSize = new(.9f, .9f);
+    [Tooltip("Ativa os limites que mantem o alvo dentro da area definida na tela.")]
+    [SerializeField] private bool railHardLimitsEnabled;
+    [Tooltip("Desloca os limites de enquadramento horizontal e verticalmente em relacao a posicao do alvo na tela.")]
+    [SerializeField] private Vector2 railHardLimitsOffset;
+    [Tooltip("Tempo de suavizacao horizontal e vertical da mira. Valores maiores deixam a camera mais pesada.")]
+    [Min(0f)] [SerializeField] private Vector2 railAimDamping = new(.2f, .2f);
+    [Tooltip("Prevê a posicao futura do alvo para antecipar o enquadramento. Valores altos podem amplificar tremores da animacao.")]
+    [SerializeField] private bool railLookaheadEnabled;
+    [Tooltip("Segundos de previsao do movimento do alvo para antecipar a camera.")]
+    [Range(0f, 1f)] [SerializeField] private float railLookaheadTime = .15f;
+    [Tooltip("Suavizacao da previsao do alvo; valores altos reduzem tremores, mas aumentam o atraso.")]
+    [Range(0f, 30f)] [SerializeField] private float railLookaheadSmoothing = 10f;
+    [Tooltip("Ignora o movimento vertical do alvo ao prever a posicao de enquadramento.")]
+    [SerializeField] private bool railLookaheadIgnoreY;
     [Tooltip("Atraso de acompanhamento desta camera. Desmarcado usa o mesmo atraso (Follow Smooth Time) da camera de gameplay.")]
     [SerializeField] private bool overrideFollowDelay;
     [Tooltip("Atraso, em segundos, usado quando 'Override Follow Delay' esta marcado. Zero acompanha instantaneamente.")]
     [Min(0f)] [SerializeField] private float followDelaySeconds = .08f;
     [Tooltip("Prioridade desta zona. Deve ser maior que a camera de gameplay. Em sobreposicao vence a prioridade maior; em empate, a zona que o jogador entrou mais recentemente vence.")]
     [SerializeField] private int cameraPriority = 20;
+    [Tooltip("Enquanto marcado, esta camera so permanece selecionada enquanto o jogador estiver na zona. Ao sair, volta para a camera livre. Desmarcado, a selecao fica ativa ate outro trigger trocar de camera.")]
+    [SerializeField] private bool activeOnlyInsideZone;
 
     [Header("Trigger")]
     [Tooltip("Collider trigger que ativa a troca ao ser atravessado pelo jogador. O componente configura este collider automaticamente.")]
@@ -100,12 +153,13 @@ public sealed class FixedCameraZone : MonoBehaviour
     [Min(.01f)] [SerializeField] private float sphereRadius = 5f;
     [Tooltip("Colliders Box ou Sphere adicionais que pertencem a esta mesma camera. As areas devem se tocar ou sobrepor para atravessar entre elas sem sair da camera.")]
     [SerializeField] private List<Collider> additionalActivationVolumes = new();
-    [Tooltip("Distancia fixa em unidades do mundo adicionada para sair da zona depois de entrar. Aplica-se em cada face da Box ou ao raio da Sphere; a entrada usa a area original.")]
+    [Tooltip("Depois de entrar, expande a area usada para detectar a saida. Aplica-se em cada face da Box ou ao raio da Sphere; a entrada continua usando a area original.")]
     [Min(0f)] [SerializeField] private float exitPaddingDistance = .5f;
 
     private CameraFollow registeredCameraFollow;
     private CinemachineRotationComposer rotationComposer;
     private CinemachineSplineDolly splineDolly;
+    private CameraRailWorldRotation railWorldRotation;
     private bool warnedInvalidRail;
     private SphereCollider sphereActivationVolume;
     private readonly List<ExitVolumePair> expandedExitVolumes = new();
@@ -174,6 +228,21 @@ public sealed class FixedCameraZone : MonoBehaviour
         if (activationVolumesDirty && Application.isPlaying)
             ProcessActivationVolumes();
 
+        if (Application.isPlaying && activeOnlyInsideZone && cameraSelected &&
+            registeredCameraFollow != null)
+        {
+            Transform player = registeredCameraFollow.Target;
+            PlayerCharacterController controller = player != null
+                ? player.GetComponent<PlayerCharacterController>() : null;
+            if (controller == null && player != null)
+                controller = player.GetComponentInParent<PlayerCharacterController>();
+            Collider playerCollider = controller != null
+                ? controller.Collider
+                : player != null ? player.GetComponent<Collider>() : null;
+            if (!IsPlayerInside(playerCollider))
+                registeredCameraFollow.DeactivateCameraTrigger(this);
+        }
+
         if (cameraSettingsDirty && Application.isPlaying)
         {
             cameraSettingsDirty = false;
@@ -188,6 +257,10 @@ public sealed class FixedCameraZone : MonoBehaviour
                     SetCameraSelected(true);
             }
         }
+
+        if (cameraSelected && cameraMode == CameraZoneMode.OnRails &&
+            railRotationMode == CameraRailRotationMode.LookAtPlayer)
+            RefreshRailAimWorldOffset();
 
         if (registeredCameraFollow == null ||
             registeredCameraFollow != CameraFollow.Instance)
@@ -261,6 +334,13 @@ public sealed class FixedCameraZone : MonoBehaviour
         followFieldOfView = Mathf.Clamp(followFieldOfView, 1f, 179f);
         followPitch = Mathf.Clamp(followPitch, -89f, 89f);
         railFieldOfView = Mathf.Clamp(railFieldOfView, 1f, 179f);
+        railManualPosition = Mathf.Max(0f, railManualPosition);
+        railSearchResolution = Mathf.Clamp(railSearchResolution, 1, 32);
+        railSearchIterations = Mathf.Clamp(railSearchIterations, 1, 12);
+        railAimDamping.x = Mathf.Max(0f, railAimDamping.x);
+        railAimDamping.y = Mathf.Max(0f, railAimDamping.y);
+        railLookaheadTime = Mathf.Clamp01(railLookaheadTime);
+        railLookaheadSmoothing = Mathf.Max(0f, railLookaheadSmoothing);
         cameraTransition.Time = Mathf.Max(0f, cameraTransition.Time);
         ResolveReferences();
         exitPaddingDistance = Mathf.Max(0f, exitPaddingDistance);
@@ -292,9 +372,11 @@ public sealed class FixedCameraZone : MonoBehaviour
                 return;
             Gizmos.matrix = box.transform.localToWorldMatrix;
             Vector3 size = GetBoxAreaSize(box);
-            Vector3 exitSize = ExpandBoxSize(size,
-                box.transform.lossyScale, exitPaddingDistance);
-            DrawFilledBox(box.center, size, exitSize);
+            if (activeOnlyInsideZone)
+                DrawFilledBox(box.center, size, ExpandBoxSize(size,
+                    box.transform.lossyScale, exitPaddingDistance));
+            else
+                DrawSingleBox(box.center, size);
         }
         else
         {
@@ -306,8 +388,10 @@ public sealed class FixedCameraZone : MonoBehaviour
             float radius = GetSphereAreaRadius() *
                 MaxAbsComponent(volumeTransform.lossyScale);
             Gizmos.matrix = Matrix4x4.identity;
-            DrawFilledSphere(center, radius,
-                radius + exitPaddingDistance);
+            if (activeOnlyInsideZone)
+                DrawFilledSphere(center, radius, radius + exitPaddingDistance);
+            else
+                DrawSingleSphere(center, radius);
         }
 
         if (additionalActivationVolumes != null)
@@ -330,9 +414,11 @@ public sealed class FixedCameraZone : MonoBehaviour
         if (volume is BoxCollider box)
         {
             Gizmos.matrix = box.transform.localToWorldMatrix;
-            Vector3 expandedSize = ExpandBoxSize(box.size,
-                box.transform.lossyScale, exitPaddingDistance);
-            DrawFilledBox(box.center, box.size, expandedSize);
+            if (activeOnlyInsideZone)
+                DrawFilledBox(box.center, box.size, ExpandBoxSize(box.size,
+                    box.transform.lossyScale, exitPaddingDistance));
+            else
+                DrawSingleBox(box.center, box.size);
         }
         else if (volume is SphereCollider sphere)
         {
@@ -340,9 +426,27 @@ public sealed class FixedCameraZone : MonoBehaviour
             float radius = sphere.radius *
                 MaxAbsComponent(sphere.transform.lossyScale);
             Gizmos.matrix = Matrix4x4.identity;
-            DrawFilledSphere(center, radius,
-                radius + exitPaddingDistance);
+            if (activeOnlyInsideZone)
+                DrawFilledSphere(center, radius, radius + exitPaddingDistance);
+            else
+                DrawSingleSphere(center, radius);
         }
+    }
+
+    private static void DrawSingleBox(Vector3 center, Vector3 size)
+    {
+        Gizmos.color = new Color(.04f, .2f, .07f, .2f);
+        Gizmos.DrawCube(center, size);
+        Gizmos.color = new Color(.06f, .25f, .09f, .95f);
+        Gizmos.DrawWireCube(center, size);
+    }
+
+    private static void DrawSingleSphere(Vector3 center, float radius)
+    {
+        Gizmos.color = new Color(.04f, .2f, .07f, .2f);
+        Gizmos.DrawSphere(center, radius);
+        Gizmos.color = new Color(.06f, .25f, .09f, .95f);
+        Gizmos.DrawWireSphere(center, radius);
     }
 
     private static void DrawFilledBox(Vector3 center, Vector3 size,
@@ -379,7 +483,7 @@ public sealed class FixedCameraZone : MonoBehaviour
             playerCollider != null && playerCollider.enabled &&
             playerCollider.gameObject.activeInHierarchy;
         bool isInside = canCheck && HasPlayerOverlap(playerCollider,
-            playerWasInside);
+            activeOnlyInsideZone && playerWasInside);
 
         if (isInside && !playerWasInside)
             lastEnteredFrame = Time.frameCount;
@@ -450,8 +554,8 @@ public sealed class FixedCameraZone : MonoBehaviour
                     ? GetSphereAreaRadius() : sourceSphere.radius;
                 float worldScale = Mathf.Max(.0001f,
                     MaxAbsComponent(sourceSphere.transform.lossyScale));
-                exitSphere.radius = baseRadius +
-                    exitPaddingDistance / worldScale;
+                float padding = activeOnlyInsideZone ? exitPaddingDistance : 0f;
+                exitSphere.radius = baseRadius + padding / worldScale;
             }
             else if (pair.source is BoxCollider sourceBox &&
                 pair.expanded is BoxCollider exitBox)
@@ -459,8 +563,9 @@ public sealed class FixedCameraZone : MonoBehaviour
                 exitBox.center = sourceBox.center;
                 Vector3 baseSize = pair.source == activationVolume
                     ? GetBoxAreaSize(sourceBox) : sourceBox.size;
+                float padding = activeOnlyInsideZone ? exitPaddingDistance : 0f;
                 exitBox.size = ExpandBoxSize(baseSize,
-                    sourceBox.transform.lossyScale, exitPaddingDistance);
+                    sourceBox.transform.lossyScale, padding);
             }
         }
     }
@@ -721,58 +826,13 @@ public sealed class FixedCameraZone : MonoBehaviour
         if (!splineDolly.enabled)
             splineDolly.enabled = true;
         splineDolly.PositionUnits = PathIndexUnit.Distance;
-        splineDolly.SplineOffset = railOffset + followPositionOffset;
+        splineDolly.SplineOffset = Vector3.zero;
         MakeSplineDollyTheOnlyBodyComponent();
-        splineDolly.CameraRotation = railRotationMode ==
-            CameraRailRotationMode.FollowSpline
-                ? CinemachineSplineDolly.RotationMode.Spline
-                : CinemachineSplineDolly.RotationMode.Default;
-
-        SplineAutoDolly autoDolly = splineDolly.AutomaticDolly;
-        autoDolly.Enabled = true;
-        if (autoDolly.Method is SplineAutoDolly.NearestPointToTarget nearest)
-            nearest.PositionOffset = railDistanceOffset - followDistance;
-        else
-            autoDolly.Method = new SplineAutoDolly.NearestPointToTarget
-            {
-                PositionOffset = railDistanceOffset - followDistance
-            };
-        splineDolly.AutomaticDolly = autoDolly;
-
+        splineDolly.CameraRotation = CinemachineSplineDolly.RotationMode.Default;
+        ApplyRailWorldRotation();
         float delay = ResolveFollowDelay();
-        CinemachineSplineDolly.DampingSettings damping = splineDolly.Damping;
-        damping.Enabled = delay > 0f;
-        damping.Position = new Vector3(0f, 0f, delay);
-        damping.Angular = 0f;
-        splineDolly.Damping = damping;
-
-        bool looksAtPlayer = railRotationMode ==
-            CameraRailRotationMode.LookAtPlayer;
-        if (looksAtPlayer && rotationComposer == null &&
-            !fixedCamera.TryGetComponent(out rotationComposer))
-            rotationComposer = fixedCamera.gameObject
-                .AddComponent<CinemachineRotationComposer>();
-
-        if (rotationComposer != null)
-        {
-            if (rotationComposer.enabled != looksAtPlayer)
-                rotationComposer.enabled = looksAtPlayer;
-            if (looksAtPlayer)
-            {
-                rotationComposer.Composition.ScreenPosition = Vector2.zero;
-                rotationComposer.Composition.DeadZone.Enabled = false;
-                rotationComposer.Composition.HardLimits.Enabled = false;
-                rotationComposer.TargetOffset = railLookAtOffset;
-                rotationComposer.CenterOnActivate = true;
-                rotationComposer.Damping = new Vector2(delay, delay);
-            }
-        }
-
-        if (fixedCamera.Follow != tracking)
-            fixedCamera.Follow = tracking;
-        Transform lookAt = looksAtPlayer ? tracking : null;
-        if (fixedCamera.LookAt != lookAt)
-            fixedCamera.LookAt = lookAt;
+        ConfigureRailDolly(tracking, delay);
+        ConfigureRailAim(tracking, delay);
 
         ApplyRailFieldOfView();
         int minimumPriority = registeredCameraFollow != null
@@ -815,7 +875,8 @@ public sealed class FixedCameraZone : MonoBehaviour
         bool railLooksAtPlayer = mode == CameraZoneMode.OnRails &&
             railRotationMode == CameraRailRotationMode.LookAtPlayer;
         SetModeComponentsEnabled(mode == CameraZoneMode.StaticLookAtTarget ||
-            railLooksAtPlayer, mode == CameraZoneMode.OnRails);
+            railLooksAtPlayer, mode == CameraZoneMode.OnRails,
+            mode == CameraZoneMode.OnRails);
         float delay = ResolveFollowDelay();
 
         if (mode == CameraZoneMode.StaticLookAtTarget)
@@ -844,45 +905,117 @@ public sealed class FixedCameraZone : MonoBehaviour
             splineDolly.enabled = true;
             splineDolly.Spline = railSpline;
             splineDolly.PositionUnits = PathIndexUnit.Distance;
-            splineDolly.SplineOffset = railOffset + followPositionOffset;
+            splineDolly.SplineOffset = Vector3.zero;
             MakeSplineDollyTheOnlyBodyComponent();
-            splineDolly.CameraRotation = railRotationMode == CameraRailRotationMode.FollowSpline
-                ? CinemachineSplineDolly.RotationMode.Spline
-                : CinemachineSplineDolly.RotationMode.Default;
-            // O ponto mais proximo do player, limitado as pontas de um spline
-            // aberto, faz a camera travar no inicio/fim do trilho.
-            splineDolly.AutomaticDolly.Enabled = true;
-            splineDolly.AutomaticDolly.Method = new SplineAutoDolly.NearestPointToTarget
-            {
-                PositionOffset = railDistanceOffset - followDistance
-            };
-            splineDolly.Damping.Enabled = delay > 0f;
-            // So o damping ao longo do trilho e permitido. Damping lateral ou
-            // vertical faz a camera sair da curva em cantos e mudancas de altura.
-            splineDolly.Damping.Position = new Vector3(0f, 0f, delay);
-            splineDolly.Damping.Angular = 0f;
-            fixedCamera.Follow = tracking;
-
-            if (railLooksAtPlayer)
-            {
-                if (rotationComposer == null &&
-                    !fixedCamera.TryGetComponent(out rotationComposer))
-                    rotationComposer = fixedCamera.gameObject
-                        .AddComponent<CinemachineRotationComposer>();
-
-                rotationComposer.enabled = true;
-                rotationComposer.Composition.ScreenPosition = Vector2.zero;
-                rotationComposer.Composition.DeadZone.Enabled = false;
-                rotationComposer.Composition.HardLimits.Enabled = false;
-                rotationComposer.TargetOffset = railLookAtOffset;
-                rotationComposer.CenterOnActivate = true;
-                rotationComposer.Damping = new Vector2(delay, delay);
-                fixedCamera.LookAt = tracking;
-            }
+            splineDolly.CameraRotation = CinemachineSplineDolly.RotationMode.Default;
+            ApplyRailWorldRotation();
+            ConfigureRailDolly(tracking, delay);
+            ConfigureRailAim(tracking, delay);
         }
     }
 
-    private void SetModeComponentsEnabled(bool composer, bool dolly)
+    private void ConfigureRailDolly(Transform player, float delay)
+    {
+        bool followsTarget = railDollyMode == CameraRailDollyMode.FollowTarget;
+        Transform dollyTarget = railDollyTarget != null
+            ? railDollyTarget : player;
+
+        SplineAutoDolly autoDolly = splineDolly.AutomaticDolly;
+        autoDolly.Enabled = followsTarget;
+        if (followsTarget)
+        {
+            SplineAutoDolly.NearestPointToTarget nearest =
+                autoDolly.Method as SplineAutoDolly.NearestPointToTarget;
+            if (nearest == null)
+                nearest = new SplineAutoDolly.NearestPointToTarget();
+            nearest.PositionOffset = railDistanceOffset - followDistance;
+            nearest.SearchResolution = Mathf.Max(1, railSearchResolution);
+            nearest.SearchIteration = Mathf.Max(1, railSearchIterations);
+            autoDolly.Method = nearest;
+            if (fixedCamera.Follow != dollyTarget)
+                fixedCamera.Follow = dollyTarget;
+        }
+        else
+        {
+            autoDolly.Method = null;
+            float maxPosition = railSpline != null && railSpline.Spline != null
+                ? railSpline.Spline.GetLength() : 0f;
+            splineDolly.CameraPosition = Mathf.Clamp(railManualPosition,
+                0f, maxPosition);
+            if (fixedCamera.Follow != null)
+                fixedCamera.Follow = null;
+        }
+        splineDolly.AutomaticDolly = autoDolly;
+
+        // So o eixo longitudinal e suavizado: amortecer os eixos locais X/Y
+        // faria a camera sair da curva e contrariaria o offset mundial autorado.
+        CinemachineSplineDolly.DampingSettings damping = splineDolly.Damping;
+        damping.Enabled = followsTarget && delay > 0f;
+        damping.Position = new Vector3(0f, 0f, followsTarget ? delay : 0f);
+        damping.Angular = 0f;
+        splineDolly.Damping = damping;
+    }
+
+    private void ConfigureRailAim(Transform player, float delay)
+    {
+        bool looksAtTarget = railRotationMode ==
+            CameraRailRotationMode.LookAtPlayer;
+        if (looksAtTarget && rotationComposer == null &&
+            !fixedCamera.TryGetComponent(out rotationComposer))
+            rotationComposer = fixedCamera.gameObject
+                .AddComponent<CinemachineRotationComposer>();
+
+        if (rotationComposer != null)
+            rotationComposer.enabled = looksAtTarget;
+
+        Transform lookAt = looksAtTarget
+            ? (railLookAtTarget != null ? railLookAtTarget : player)
+            : null;
+        if (fixedCamera.LookAt != lookAt)
+            fixedCamera.LookAt = lookAt;
+        if (!looksAtTarget)
+            return;
+
+        ScreenComposerSettings composition = rotationComposer.Composition;
+        composition.ScreenPosition = railScreenPosition;
+        composition.DeadZone.Enabled = railDeadZoneEnabled;
+        composition.DeadZone.Size = railDeadZoneSize;
+        composition.HardLimits.Enabled = railHardLimitsEnabled;
+        composition.HardLimits.Size = railHardLimitsSize;
+        composition.HardLimits.Offset = railHardLimitsOffset;
+        composition.Validate();
+        rotationComposer.Composition = composition;
+        SetRailAimWorldOffset(lookAt);
+        rotationComposer.CenterOnActivate = true;
+        rotationComposer.Damping = railAimDamping;
+        rotationComposer.Lookahead.Enabled = railLookaheadEnabled;
+        rotationComposer.Lookahead.Time = railLookaheadTime;
+        rotationComposer.Lookahead.Smoothing = railLookaheadSmoothing;
+        rotationComposer.Lookahead.IgnoreY = railLookaheadIgnoreY;
+    }
+
+    private void RefreshRailAimWorldOffset()
+    {
+        if (rotationComposer == null || fixedCamera == null)
+            return;
+        Transform lookAt = railLookAtTarget != null
+            ? railLookAtTarget
+            : registeredCameraFollow != null
+                ? registeredCameraFollow.TrackingTarget : null;
+        SetRailAimWorldOffset(lookAt);
+    }
+
+    private void SetRailAimWorldOffset(Transform lookAt)
+    {
+        if (rotationComposer == null)
+            return;
+        rotationComposer.TargetOffset = lookAt != null
+            ? Quaternion.Inverse(lookAt.rotation) * railLookAtOffset
+            : railLookAtOffset;
+    }
+
+    private void SetModeComponentsEnabled(bool composer, bool dolly,
+        bool applyRailWorldOffsets = false)
     {
         if (rotationComposer == null ||
             rotationComposer.gameObject != fixedCamera.gameObject)
@@ -894,6 +1027,52 @@ public sealed class FixedCameraZone : MonoBehaviour
             rotationComposer.enabled = composer;
         if (splineDolly != null)
             splineDolly.enabled = dolly;
+        if (railWorldRotation == null ||
+            railWorldRotation.gameObject != fixedCamera.gameObject)
+            fixedCamera.TryGetComponent(out railWorldRotation);
+        if (applyRailWorldOffsets && railWorldRotation == null)
+            railWorldRotation = fixedCamera.gameObject
+                .AddComponent<CameraRailWorldRotation>();
+        if (railWorldRotation != null)
+        {
+            ConfigureRailWorldRotation(applyRailWorldOffsets);
+        }
+    }
+
+    private void ApplyRailWorldRotation()
+    {
+        bool shouldApply = cameraMode == CameraZoneMode.OnRails;
+        if (railWorldRotation == null && fixedCamera != null)
+            fixedCamera.TryGetComponent(out railWorldRotation);
+        if (shouldApply && railWorldRotation == null && fixedCamera != null)
+            railWorldRotation = fixedCamera.gameObject
+                .AddComponent<CameraRailWorldRotation>();
+        if (railWorldRotation != null)
+        {
+            ConfigureRailWorldRotation(shouldApply);
+        }
+    }
+
+    private void ConfigureRailWorldRotation(bool enabled)
+    {
+        if (railWorldRotation == null)
+            return;
+
+        railWorldRotation.WorldPositionOffset = railOffset + followPositionOffset;
+        railWorldRotation.PitchFollowSpline = railPitchFollowSpline;
+        railWorldRotation.YawFollowSpline = railYawFollowSpline;
+        railWorldRotation.RollFollowSpline = railRollFollowSpline;
+        railWorldRotation.Spline = railSpline;
+        railWorldRotation.SplineDolly = splineDolly;
+        CinemachineSplineRoll splineRoll = null;
+        if (fixedCamera != null &&
+            !fixedCamera.TryGetComponent(out splineRoll) && railSpline != null)
+            railSpline.TryGetComponent(out splineRoll);
+        railWorldRotation.SplineRoll = splineRoll;
+        railWorldRotation.WorldEulerOffset = railWorldRotationOffset;
+        railWorldRotation.OverrideWorldOrientation = railRotationMode ==
+            CameraRailRotationMode.FollowSpline;
+        railWorldRotation.enabled = enabled;
     }
 
     private void MakeSplineDollyTheOnlyBodyComponent()

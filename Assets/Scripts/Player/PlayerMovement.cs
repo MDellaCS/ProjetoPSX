@@ -549,6 +549,13 @@ public partial class PlayerMovement : MonoBehaviour
 
     private void TryStartJump()
     {
+        if (movesetController != null && movesetController.Moveset != null &&
+            !movesetController.Moveset.allowJump)
+        {
+            inputBuffer.TryConsume(PlayerBufferedInput.Jump);
+            return;
+        }
+
         // Contato com uma rampa acima do limite nao conta como chão nem como
         // oportunidade para consumir o pulo aéreo enquanto o jogador ainda
         // está apoiado nela.
