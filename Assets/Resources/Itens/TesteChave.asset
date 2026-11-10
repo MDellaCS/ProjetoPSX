@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b8138176598962b45a6ec871a17b5925, type: 3}
-  m_Name: KeyItem
+  m_Name: TesteChave
   m_EditorClassIdentifier: Assembly-CSharp::KeyItemDefinition
   id: aab4df86279544cc89470b67a1a76289
-  image: {fileID: 0}
-  itemName: teste
-  description: teste teste teste
+  image: {fileID: 3539887744925092484, guid: e5eeeb91751a4ad41b806259e4d7fdb5, type: 3}
+  itemName: Chave Enferrujada
+  description: Antiga chave com desenhos nela.

@@ -118,6 +118,7 @@ public static class GameSaveService
         }
 
         ResetPlayerCampaign(player);
+        CollectableItem.ResetAllForNewGame();
         PlayerPrefs.DeleteKey(CheckpointKey);
         activeManualSlot = AutomaticSlotIndex;
         PlayerPrefs.DeleteKey(ActiveSlotKey);

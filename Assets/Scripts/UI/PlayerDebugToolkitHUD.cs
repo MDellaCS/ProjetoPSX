@@ -300,6 +300,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         BindButton(root, "environment-next-button", () => CycleEnvironment(1));
         BindButton(root, "reload-scene-button", ReloadScene);
         BindButton(root, "reset-save-button", RequestSaveReset);
+        BindButton(root, "clear-key-items-button", ClearKeyItems);
     }
 
     private static void BindButton(VisualElement root, string name,
@@ -415,6 +416,13 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
         GameSaveResetService.ResetAllSavesAndReload(
             playerTransform != null ? playerTransform.gameObject : null);
+    }
+
+    private void ClearKeyItems()
+    {
+        if (!Debug.isDebugBuild) return;
+        KeyItemInventory.ResetForNewGame();
+        SetActionStatus("Key item inventory cleared.");
     }
 
     private void SetActionStatus(string message)

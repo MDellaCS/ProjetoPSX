@@ -52,6 +52,7 @@ public sealed class GameSceneLoader : MonoBehaviour
     [SerializeField, HideInInspector] private string gameplayScenePath;
 
     private bool isLoading;
+    private bool suppressMainMenuForNextSceneLoad;
     private string pendingSpawnId;
     private List<string> sceneCyclePaths;
     private LoadingScreenHUD loadingScreen;
@@ -60,7 +61,11 @@ public sealed class GameSceneLoader : MonoBehaviour
     public string GameplayScenePath => gameplayScenePath;
     public string DefaultSpawnId => defaultSpawnId;
     public bool CanLoadSavedScene(string scenePath) => CanLoadScene(ResolveScenePath(scenePath));
-    public void LoadSavedScene(string scenePath, string spawnId) => LoadScene(scenePath, spawnId);
+    public void LoadSavedScene(string scenePath, string spawnId)
+    {
+        suppressMainMenuForNextSceneLoad = true;
+        LoadScene(scenePath, spawnId);
+    }
     public bool HasStartupSceneConfigured
     {
         get
@@ -154,7 +159,7 @@ public sealed class GameSceneLoader : MonoBehaviour
         // ela nao dispara sceneLoaded para este componente. Esperar um frame
         // garante que todos os Spawn Points dela ja executaram Awake/OnEnable.
         yield return null;
-        PlacePlayerAtSceneSpawn(SceneManager.GetActiveScene(), defaultSpawnId);
+        PlacePlayerAtSceneSpawn(SceneManager.GetActiveScene(), defaultSpawnId, false);
         if (loadingScreen != null)
             loadingScreen.HideAfterSceneReady();
     }
@@ -325,7 +330,9 @@ public sealed class GameSceneLoader : MonoBehaviour
         if (mode != LoadSceneMode.Single)
             return;
 
-        PlacePlayerAtSceneSpawn(scene, pendingSpawnId);
+        bool loadedFromSave = suppressMainMenuForNextSceneLoad;
+        suppressMainMenuForNextSceneLoad = false;
+        PlacePlayerAtSceneSpawn(scene, pendingSpawnId, loadedFromSave);
         BindSceneCutscenesToPersistentCamera(scene);
         pendingSpawnId = null;
         ResolveLoadingScreen();
@@ -341,7 +348,8 @@ public sealed class GameSceneLoader : MonoBehaviour
         loadingScreen = LoadingScreenHUD.Instance;
     }
 
-    private void PlacePlayerAtSceneSpawn(Scene scene, string spawnId)
+    private void PlacePlayerAtSceneSpawn(Scene scene, string spawnId,
+        bool loadedFromSave)
     {
         ResolvePlayer();
         ScenePlayerSpawnPoint spawn = ScenePlayerSpawnPoint.FindForScene(scene,
@@ -376,7 +384,7 @@ public sealed class GameSceneLoader : MonoBehaviour
             ResolveScenePath(mainMenuScenePath);
         bool isMainMenu = !string.IsNullOrEmpty(configuredMainMenuPath) &&
             string.Equals(scene.path, configuredMainMenuPath,
-                System.StringComparison.OrdinalIgnoreCase);
+                System.StringComparison.OrdinalIgnoreCase) && !loadedFromSave;
         SetGameplayPanelsEnabled(!isMainMenu);
 
         PauseMenuHUD pauseMenu = FindAnyObjectByType<PauseMenuHUD>();

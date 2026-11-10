@@ -76,6 +76,36 @@ public static class KeyItemInventory
         return true;
     }
 
+    /// <summary>Remove todos os itens informados, ou nenhum se algum estiver ausente.</summary>
+    public static bool TryConsume(IReadOnlyList<KeyItemDefinition> items)
+    {
+        EnsureInitialized();
+        if (items == null || items.Count == 0)
+            return false;
+
+        List<string> ids = new(items.Count);
+        for (int i = 0; i < items.Count; i++)
+        {
+            KeyItemDefinition item = items[i];
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+                return false;
+
+            string id = item.Id.Trim();
+            if (ids.Contains(id))
+                continue;
+            if (!collectedIds.Contains(id))
+                return false;
+            ids.Add(id);
+        }
+
+        for (int i = 0; i < ids.Count; i++)
+            collectedIds.Remove(ids[i]);
+
+        Persist();
+        Changed?.Invoke();
+        return true;
+    }
+
     public static void ResetForNewGame()
     {
         EnsureInitialized();
@@ -93,7 +123,8 @@ public static class KeyItemInventory
             return;
 
         initialized = true;
-        KeyItemDefinition[] loaded = Resources.LoadAll<KeyItemDefinition>("KeyItems");
+        // Catalogo dedicado a itens-chave: Assets/Resources/Itens.
+        KeyItemDefinition[] loaded = Resources.LoadAll<KeyItemDefinition>("Itens");
         Array.Sort(loaded, (a, b) => string.Compare(a != null ? a.ItemName : null,
             b != null ? b.ItemName : null, StringComparison.CurrentCulture));
         foreach (KeyItemDefinition definition in loaded)

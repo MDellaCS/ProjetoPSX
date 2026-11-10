@@ -36,6 +36,7 @@
         </ui:VisualElement>
         <ui:VisualElement class="debug-menu-row">
             <ui:Button name="reset-save-button" text="RESET GAME SAVE" class="debug-danger" />
+            <ui:Button name="clear-key-items-button" text="CLEAR KEY ITEMS" class="debug-danger" />
             <ui:Button name="debug-close-button" text="CLOSE (F4)" />
         </ui:VisualElement>
         <ui:Label name="debug-action-status" text="Ready." class="debug-menu-status" />

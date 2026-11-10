@@ -1,10 +1,12 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>Coleta item-chave por interacao contextual e mostra a modal reutilizavel.</summary>
 [AddComponentMenu("Projeto PSX/Items/Collectable Item")]
 [RequireComponent(typeof(InteractionArea))]
 public class CollectableItem : InteractableBase
 {
+    private static readonly HashSet<CollectableItem> knownCollectables = new();
     private static Material sharedGlintMaterial;
     private static Mesh sharedGlintMesh;
     [Header("Item")]
@@ -39,6 +41,7 @@ public class CollectableItem : InteractableBase
 
     protected override void OnEnable()
     {
+        knownCollectables.Add(this);
         interactionArea = GetComponent<InteractionArea>();
         if (interactionArea == null)
             return;
@@ -48,6 +51,7 @@ public class CollectableItem : InteractableBase
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeVisuals()
     {
+        knownCollectables.Clear();
         if (sharedGlintMaterial != null)
             Destroy(sharedGlintMaterial);
         if (sharedGlintMesh != null)
@@ -60,15 +64,20 @@ public class CollectableItem : InteractableBase
 
     private void Awake()
     {
+        knownCollectables.Add(this);
+        collected = KeyItemInventory.Contains(item);
+        if (collected)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
         if (glintVisual == null)
             CreateGenericGlint();
         else
             glintVisual.transform.localPosition = glintOffset;
-        collected = KeyItemInventory.Contains(item);
         if (glintVisual != null)
-            glintVisual.SetActive(!collected);
-        if (collected)
-            enabled = false;
+            glintVisual.SetActive(true);
     }
 
     private void Update()
@@ -147,6 +156,30 @@ public class CollectableItem : InteractableBase
         return true;
     }
 
+    /// <summary>Restaura coletaveis desativados ao iniciar uma campanha nova.</summary>
+    public static void ResetAllForNewGame()
+    {
+        List<CollectableItem> snapshot = new(knownCollectables);
+        for (int i = 0; i < snapshot.Count; i++)
+        {
+            CollectableItem collectable = snapshot[i];
+            if (collectable != null)
+                collectable.ResetForNewGame();
+        }
+    }
+
+    private void ResetForNewGame()
+    {
+        collected = false;
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        if (glintVisual == null)
+            CreateGenericGlint();
+        else
+            glintVisual.SetActive(true);
+    }
+
     public override bool ContainsPlayer(PlayerMovement player) =>
         interactionArea != null && interactionArea.ContainsPlayer(player);
 
@@ -158,6 +191,8 @@ public class CollectableItem : InteractableBase
     {
         InteractionSystem.Unregister(this);
     }
+
+    private void OnDestroy() => knownCollectables.Remove(this);
 
     protected override void OnDrawGizmos()
     {

@@ -1,40 +1,393 @@
-# Instruções do projeto
+# AGENTS.md — Unity Game Development
 
-- Versão do Unity: `6000.6.4f1`.
-- Pode modificar arquivos `.unity` somente quando o usuario pedir explicitamente; sem pedido explicito, apenas leitura.
-- Fazer commits e pushes apenas quando solicitado.
-- O jogo é um hack-and-slash inspirado em God of War, Devil May Cry e Dark Souls.
-- O estilo visual é retrô de PS1-PS2, com modelos low/mid-poly.
-- As mecânicas devem priorizar agressividade extrema e recompensar decisões de risco.
-- "F3" ou "o F3" referencia a tela de debug com valores do jogo/jogador. Quando criar um gizmo, exiba-o quando em F3.
-- Ao adicionar novos atributos expostos no Inspector, sempre incluir tooltips explicativos em portugues, descrevendo seu efeito no jogo.
-- Sempre executar os testes automatizados e validacoes apropriados depois de alterar codigo.
-- Executar testes em cena apenas quando o usuario pedir explicitamente. Sem esse pedido, nao iniciar o jogo nem abrir cenas para testar; usar testes automatizados ou verificacoes fora de cena e informar limitacoes relevantes.
-- HUDs novos devem seguir o padrao UI Toolkit do projeto: estrutura visual em arquivo `.uxml`, estilos em arquivo `.uss` e script C# separado para comportamento e atualizacao dos elementos. Usar `PanelRenderer` e consultar os elementos definidos no UXML, sem construir toda a interface programaticamente no script.
-- A fonte padrao de todos os textos do jogo deve ser Crimson Text, exceto quando uma solicitacao explicitar outra fonte.
-- Crie e/ou modifique arquivos Markdown apenas quando pedido.
+## 1. Contexto do projeto
 
-## Padroes de manutencao confirmados
+Este repositório contém um jogo desenvolvido na **Unity 6000.6.4f1**, utilizando C#.
 
-- Atalhos que alteram estado de jogo, moveset, Heat, combate, tempo ou cena devem funcionar somente no Editor ou em builds de desenvolvimento. Em builds de release, verificacoes de debug devem retornar falso sem ler os bindings.
-- Reset de progresso deve apagar somente chaves pertencentes ao ProjetoPSX; nunca usar `PlayerPrefs.DeleteAll`, pois isso tambem apaga preferencias da Unity. Ao adicionar uma nova chave persistente, incluir sua limpeza no fluxo explicito de novo jogo.
-- Como Domain Reload e Scene Reload estao desligados, estado `static` mutavel precisa de reset em `RuntimeInitializeOnLoadMethod(SubsystemRegistration)`. Eventos estaticos devem ser limpos e registros devem ser reconstruiveis por `OnEnable`/`OnDisable`.
-- Componentes Unity devem ser comparados com `== null`/`!= null` ou verificados com `TryGetComponent`; nao confiar em `?.`, `??` ou `??=` para detectar componentes destruidos ou ausentes.
-- Evitar consultas de cena inteira em callbacks de objetos pooled e em caminhos por frame. Para colisao de particulas, manter a layer `CombatParticle` e a filtragem por colisao sem enumerar todos os colliders da cena.
-- Ao ajustar uma hitbox ou collider em resposta a input, fazer o early-out antes de consultas fisicas. Preferir consultas `NonAlloc` quando a operacao puder ocorrer repetidamente.
-- Agua: `WaterVolume` (area = Collider, superficie = topo; regras em `WaterProfile`) e `WaterSensor` por entidade (jogador e inimigos). Cada sensor mede a coluna local da superficie ao leito, por isso um volume pode conter trechos rasos e fundos e a classificacao acompanha o movimento do leito. A amostragem usa um `RaycastNonAlloc` por entidade dentro d'agua por frame e nenhum raycast quando nao ha volumes ativos; mantenha buffers reutilizados e nao adicione scans de cena. Agua rasa (coluna < `deepWaterMinDepth`): anda, com pulo/dash/avanco de ataque reduzidos. Agua funda: flutua na superficie, sem dash nem ataques, pulo reduzido. Heat: na agua conta como fora de combate para o resfriamento. Chefes: `ignoreWater` no `EnemyBase`. Voadores usam a superficie como chao do voo. Novos sistemas leem so o `WaterSensor`, nunca os volumes.
-- Level design: `MeshTunnelCut` (Add Component > Projeto PSX > Level Design) recorta de uma malha tudo que esta dentro de malhas FECHADAS (tuneladoras), com resultado permanente em visual e colisao. Nao altera o original: cria um objeto irmao '(Cut)' e salva a malha em Assets/Generated/TunnelCuts. O nucleo (`TunnelSolid`, `TunnelCutCore`) fica em Assets/Editor/LevelTools e nao depende de cena.
-- Cameras de area: `FixedCameraZone` tem `Camera Mode` (Fixed, Static Look At Target, On Rails) e prioridade. Em sobreposicao vence a maior `cameraPriority`; em empate, a zona em que o player entrou por ultimo e depois a de menor volume. Os modos que acompanham o player usam o atraso (`FollowSmoothTime`) do `CameraFollow`, salvo override na zona. On Rails exige spline aberto e nunca rotaciona a camera.
-- Objetos de mundo atacaveis (destrutiveis, alavancas, cristais) usam o componente `WorldObject` (estados, modelos de dano, reacoes, lock-on, barra de vida), configurado no Inspector. Novos modelos de dano herdam de `WorldDamageModel` e novas reacoes de `WorldObjectReaction`; aparecem sozinhos no seletor de tipo. `StrenghLever` fica apenas para as alavancas ja existentes nas cenas.
-- Empilhamento entre entidades: o `GroundEntitySeparationSystem` trata o topo de cada capsula como um domo. Quem cai sobre a cabeca de outra entidade (player ou inimigo, inclusive FlyingPuppet) desliza pela normal da esfera, com velocidade de queda limitada e empurrao minimo para nunca ficar em equilibrio. Contatos com subida (pulo, launch) sao ignorados. O motor do player nunca usa o topo de um inimigo como piso.
-- Interacao: todo objeto que o jogador aciona com Interagir herda de `InteractableBase` (`ContainsPlayer`, `Interact`, opcionais `CanInteract`/`InteractionPriority`) e se registra sozinho no `InteractionSystem`; o `InteractionDriver` escolhe um candidato por frame (prioridade, depois proximidade), mostra o prompt global e consome `GameInput.InteractPressed`. Nao crie `Update` proprio de prompt/input nem busque o HUD em areas novas; use `InteractionArea` (UnityEvent) ou herde dela. Gizmos de areas usam `InteractionGizmos` (Editor sempre; em Play so com F3).
-- Escadas de mão: `HandLadder` e um unico componente (sem colliders, filhos ou marcadores obrigatorios): zona de entrada, saidas, normal do salto e trilho sao calculados e desenhados como gizmos. `Attachment` Free (solta, opcional dois lados) ou Surface (encostada; botao Encaixar na superficie; topo sai por tras). Perfil e opcional (sem perfil = malha propria). O jogador escala em `PlayerMovement.Ladder.cs`: Interagir agarra, Pular salta na normal da escada, Agachar solta (`GameInput.CrouchPressed`). Consultar [HAND_LADDER_SETUP.md](HAND_LADDER_SETUP.md). Manter a geracao fora de Play Mode e evitar reconstrucoes por frame.
-- Audio modular (Assets/Scripts/Audio): quatro modulos, cada um com seu pool de AudioSources e sua configuracao em `Resources/Audio/<Nome>Settings`: `InterfaceAudio` (menus/HUD, volume de interface), `DialogueAudio` (vozes, sempre 2D), `WorldAudio` (sons posicionais de cenario e objetos) e `SfxAudio` (golpes, passos, dano, notches de Heat). Todos herdam `AudioModule<TSettings>`, usam o `AudioCue` unico e nascem sob demanda em "Game Audio (Persistent)": nenhuma cena guarda componente de audio. Chame `MenuUIAudio.Play`, `DialogueAudio.PlayVoice`, `WorldAudio.PlayAt`, `SfxAudio.Play/PlayTracked/PlayHeatNotch`; nao use `AudioSource.PlayClipAtPoint` nem crie AudioSources soltos. Novo tipo de som = nova classe de modulo + settings. O som de cada notch de Heat (ganho e perda) e configurado a mao em `SfxAudioSettings.heatNotches`. Nao ha Audio Mixer no projeto (pitch usa `AudioCue.pitch`, que muda a duracao). Teste: Tools/Tests/Run Audio Modules Regression.
-- `EnemyBase.OnDisable` e um ponto comum de liberacao dos registros do Director e da fila de ataques. Classes derivadas que implementem `OnDisable` devem sobrescrever o metodo base.
-- A UI Toolkit deve corrigir propriedades USS com os nomes suportados (`-unity-font-style`, `-unity-text-align`) e ignorar picking no UXML com `picking-mode="Ignore"`, nao com propriedades USS inexistentes.
-- Testes de cena devem abrir a cena correta sem salvar alteracoes; quando o projeto for configurado para iniciar Play pelo Bootstrap, um teste que precise de outra cena deve definir explicitamente sua cena inicial e restaurar a configuracao anterior ao terminar.
-- Gancho: `GrappleSettings` (Assets/Resources) guarda a configuracao GLOBAL separada em `Combat` (ataque de grapple: alcance, mira, velocidades do puxao) e `Movement` (swing, escadas, barras: alcance, mira, velocidade). Nao crie alcance/velocidade de gancho em componentes; leia `GrappleSettings.Combat/Movement`. O indicador do alvo e global: novas features implementam `IGrappleTargetProvider` e chamam `GrappleTargetSystem.Register/Unregister`; o `GrappleTargetHUD` (UI Toolkit) nao conhece as features. HUDs com `PanelRenderer` criado por codigo devem resolver os elementos sob demanda e clonar o UXML se o root vier vazio (o callback de reload pode chegar com a arvore vazia).
-- Iluminacao retro (Assets/Scripts/World/Lighting, Assets/Shaders/Lighting): nao usa componentes `Light` nem modifica a URP (o pacote deve ser o oficial 17.6.0, nunca um fork embutido). `LocalLightEmitter` + `LocalLightProfile` (Point/Spot) registram `RetroLight` no `RetroLightSystem`, que a cada camera (`beginCameraRendering`) escolhe ate `maxVisibleLights` (padrao 16, maximo 32) luzes visiveis e proximas e as envia como arrays globais (`_RetroLight*`) ao shader `Projeto PSX/Retro Lit`. Sem perfil nao ha luzes. A queda e linear ate `range` (sem inverso-quadrado), com `coreRadius`, `falloffExponent`, `bands` (faixas quantizadas, estilo Silent Hill 2) e `wrap`; `intensity` 1 = cor cheia. O espelho C# da queda e `RetroLightMath`: manter igual ao `RetroLighting.hlsl`. Flicker (`LocalLightFlicker`: Smooth, Jitter, Pulse, Failing) varia entre `minimumIntensity` e `maximumIntensity` absolutos, com `updatesPerSecond` e `rangeVariation`. O `Lighting Mode` e por material (Pixel = padrao, funciona em qualquer malha; Grid = celulas de mundo; Vertex = Gouraud, que so ilumina bem malhas subdivididas: em chao/parede grande com poucos vertices a luz some no meio), com flat shading opcional; em Play, `RetroMaterialSwapper` troca em memoria (uma vez por cena carregada, nunca por frame) os materiais URP Lit/Simple Lit/ProBuilder dos renderers por copias Retro Lit (`autoConvertSceneMaterials`), sem editar cenas ou assets; objetos instanciados depois precisam de materiais ja convertidos pelo menu; `RetroLightingSettings` (Resources/Lighting) pode forcar o modo e define reducao de cor (`colorLevels`) com dither 4x4, orcamento de luzes e multiplicador global. Ambiente (luz hemisferica) e nevoa vem de `RetroEnvironmentProfile`, aplicado por `RetroLightingEnvironment` na cena (o ultimo ativo vence; sem ele vale `defaultEnvironment`); em Play o ambiente tambem substitui `RenderSettings` (evita o azul da sonda padrao) e a nevoa pode ser centrada no player (`RetroLightSystem.FogFocus`). Luzes locais nao projetam sombra; so a luz direcional da URP. O Retro Lit e opaco ou com recorte por alpha. Gizmos das luzes: Editor sempre quando selecionado; em Play so com F3. Estado estatico do sistema e resetado em `SubsystemRegistration` e os registros sao reconstruidos em `AfterSceneLoad`. Converter materiais: Tools/Projeto PSX/Iluminacao (`RetroMaterialConverter`; modelos importados convertem no import). Teste: Tools/Tests/Run Retro Lighting Regression.
-- Inspector: sempre oculte condicionalmente os atributos que nao estao em uso no modo/opcao selecionado; ao adicionar modos, atualize o Inspector para mostrar somente os campos relevantes e preservar valores ao alternar.
-- Tela de Debug (F3): concentrar ferramentas de teste em botoes no painel UI Toolkit `PlayerDebugHUD.uxml`, com estilos em `PlayerDebugHUD.uss` e comportamento em `PlayerDebugToolkitHUD`. F3 e o unico atalho para abrir/fechar a tela; nao reintroduzir teclas individuais de debug. Acoes existentes incluem maximizar/zerar status, ajustar Heat, definir dinheiro, god mode, override de combate, matar o jogador, slow motion, trocar moveset/cena/ambiente, recarregar cena e resetar o save do jogo. Ao criar novas features, sempre adicionar acoes de debug uteis a essa tela e documenta-las aqui. Todas as acoes que alteram o jogo devem verificar `Debug.isDebugBuild`; mutacoes persistentes devem passar pelos servicos existentes e o reset nunca pode apagar preferencias da Unity nem usar `PlayerPrefs.DeleteAll`.
-- CorpseRun: existe um unico registro persistente global (`ProjetoPSX.CorpseRun.v1`) com fase, pose e dinheiro; a morte o substitui, a fase correspondente recria o inimigo no carregamento e derrotar o inimigo limpa o registro e devolve o dinheiro. Limpar esse registro tanto no reset total do save quanto no fluxo de Novo Jogo.
+### Identidade do jogo
+
+- **Gênero:** hack-and-slash de terror.
+- **Inspirações:** God of War, Devil May Cry, Dark Souls e Silent Hill.
+- **Estética:** retrô PS1–PS2, com modelos low/mid-poly.
+- **Combate:** agressivo, intenso e orientado a decisões de risco.
+- **Filosofia de gameplay:** recompensar agressividade, domínio mecânico e decisões arriscadas, mantendo consequências significativas para erros.
+
+As inspirações devem orientar decisões de design, não resultar na reprodução direta de mecânicas ou sistemas sem considerar a identidade do projeto.
+
+Toda implementação deve respeitar os sistemas, convenções e decisões já existentes no repositório.
+
+---
+
+## 2. Perfis de agentes
+
+O projeto utiliza três perfis de agentes, com responsabilidades distintas.
+
+### GENERAL — GPT-6.1 Terra
+
+**Agente padrão para desenvolvimento cotidiano.**
+
+Responsável por:
+
+- Corrigir bugs simples e intermediários.
+- Implementar funcionalidades pequenas e médias.
+- Criar, modificar e integrar scripts C#.
+- Desenvolver mecânicas comuns de gameplay.
+- Realizar refatorações localizadas.
+- Ajustar UI, animações, interações e componentes.
+- Executar tarefas gerais de manutenção.
+
+**Comportamento:**
+
+1. Investigar o código relevante antes de modificar.
+2. Reutilizar os sistemas e padrões existentes.
+3. Priorizar implementações simples, robustas e sustentáveis.
+4. Evitar abstrações e dependências desnecessárias.
+5. Manter as alterações restritas ao escopo solicitado.
+6. Executar as validações apropriadas.
+7. Resumir as alterações e eventuais limitações.
+
+### CONSULTANT — GPT-6 Luna
+
+**Agente leve para consultas, explicações e investigação.**
+
+Responsável por:
+
+- Responder dúvidas sobre o projeto.
+- Localizar arquivos, classes, métodos e componentes.
+- Explicar implementações existentes.
+- Consultar configurações, atributos e dependências.
+- Esclarecer dúvidas sobre Unity, C# e sistemas do jogo.
+- Investigar possíveis causas de problemas sem modificar código.
+- Analisar alternativas conceituais de implementação.
+
+**Comportamento:**
+
+1. Priorizar respostas diretas, precisas e rápidas.
+2. Consultar os arquivos relevantes antes de afirmar algo sobre o projeto.
+3. Distinguir fatos verificados de hipóteses.
+4. Referenciar arquivos, classes e métodos quando útil.
+5. Operar em modo somente leitura por padrão.
+6. Não modificar arquivos sem autorização explícita.
+7. Evitar análises extensas quando desnecessárias.
+
+### ADVANCED — GPT-6 Astra
+
+**Agente especializado em problemas complexos e decisões estruturais.**
+
+Responsável por:
+
+- Projetar arquiteturas e sistemas complexos.
+- Desenvolver save/load, persistência, serialização e migração de dados.
+- Implementar física avançada e simulações.
+- Desenvolver mecânicas complexas de combate.
+- Analisar game design especializado.
+- Projetar sistemas de IA, pathfinding e máquinas de estados complexas.
+- Investigar bugs sistêmicos ou difíceis de reproduzir.
+- Realizar otimizações profundas.
+- Planejar refatorações arquiteturais de alto impacto.
+
+**Comportamento:**
+
+1. Investigar profundamente os sistemas envolvidos.
+2. Identificar dependências, restrições e riscos.
+3. Avaliar alternativas e seus trade-offs.
+4. Planejar mudanças estruturais antes de implementá-las.
+5. Priorizar correção, extensibilidade e manutenção.
+6. Considerar desempenho e compatibilidade com sistemas existentes.
+7. Validar casos extremos e possíveis regressões.
+8. Explicar decisões arquiteturais relevantes.
+
+---
+
+## 3. Seleção dos agentes
+
+### Roteamento recomendado
+
+| Tipo de tarefa | Agente |
+|---|---|
+| Dúvidas e consultas | CONSULTANT |
+| Explicação de código | CONSULTANT |
+| Localização de arquivos e funcionalidades | CONSULTANT |
+| Investigação sem alterações | CONSULTANT |
+| Correção de bugs comuns | GENERAL |
+| Features simples e médias | GENERAL |
+| Refatorações localizadas | GENERAL |
+| Mecânicas comuns de gameplay | GENERAL |
+| Ajustes de UI e componentes | GENERAL |
+| Arquitetura complexa | ADVANCED |
+| Save/load e persistência | ADVANCED |
+| Física realista e simulações | ADVANCED |
+| Game design avançado | ADVANCED |
+| Bugs sistêmicos complexos | ADVANCED |
+| Refatorações estruturais | ADVANCED |
+
+### Critérios de seleção
+
+1. GENERAL é o perfil padrão para tarefas de desenvolvimento.
+2. CONSULTANT deve ser preferido para consultas que não exigem alterações.
+3. ADVANCED deve ser utilizado quando a complexidade ou o risco justificar uma análise aprofundada.
+4. A quantidade de arquivos envolvidos, isoladamente, não determina a complexidade da tarefa.
+5. A preferência explícita do usuário por um agente prevalece sobre o roteamento recomendado.
+6. Nunca aumentar artificialmente a complexidade de uma solução para justificar um agente mais avançado.
+
+### Seleção manual
+
+O usuário pode identificar o agente desejado no início da solicitação:
+
+- `[GENERAL] Corrija o comportamento de esquiva.`
+- `[CONSULTANT] Explique como funciona o sistema de dano.`
+- `[ADVANCED] Desenvolva a arquitetura de save/load.`
+
+Esses identificadores são convenções de instrução, não comandos nativos do Codex.
+
+**Limitação:** o AGENTS.md não altera automaticamente o modelo selecionado. Quando não houver suporte a roteamento automático, o agente atual poderá recomendar o perfil adequado, mas não deverá afirmar que trocou de modelo.
+
+---
+
+## 4. Regras obrigatórias do projeto
+
+As regras desta seção têm prioridade sobre as preferências operacionais dos perfis de agentes.
+
+### 4.1. Arquivos e permissões
+
+- Arquivos `.unity` são **somente leitura por padrão**.
+- Modificar arquivos `.unity` exclusivamente quando o usuário solicitar explicitamente.
+- A autorização para modificar código ou implementar uma funcionalidade não implica autorização para modificar cenas.
+- Não contornar a restrição de arquivos `.unity` utilizando ferramentas, scripts ou outros métodos de edição indireta.
+- Criar ou modificar arquivos Markdown (`.md`) somente quando solicitado explicitamente.
+- Não criar documentação Markdown automaticamente como parte de uma implementação.
+- Realizar commits e pushes exclusivamente quando solicitados.
+- Não executar operações destrutivas ou descartar alterações existentes sem autorização.
+
+### 4.2. Testes e validação
+
+Após qualquer alteração de código:
+
+1. Executar os testes automatizados aplicáveis.
+2. Executar validações estáticas ou verificações apropriadas.
+3. Verificar erros de compilação quando houver meios disponíveis.
+4. Identificar possíveis regressões nos sistemas afetados.
+5. Informar quais testes foram executados e seus resultados.
+6. Declarar explicitamente testes que não puderam ser executados.
+
+**Testes em cena exigem autorização explícita.**
+
+Sem essa autorização:
+
+- Não iniciar o jogo para testar.
+- Não entrar em Play Mode.
+- Não abrir cenas para executar testes.
+- Utilizar testes automatizados e verificações fora de cena.
+- Informar limitações de validação quando relevantes.
+
+A obrigação de validar código não autoriza ignorar essas restrições.
+
+### 4.3. Inspector
+
+Ao adicionar novos atributos expostos no Inspector:
+
+- Incluir sempre `[Tooltip]` explicativo em português.
+- Descrever o efeito prático do atributo no jogo.
+- Utilizar nomes claros e coerentes com o sistema.
+- Ocultar atributos que não precisam ser configurados atualmente.
+- Evitar expor informações internas desnecessariamente.
+- Preservar valores serializados existentes sempre que possível.
+
+Preferir `[SerializeField] private` para campos configuráveis que não precisam de acesso público.
+
+Não utilizar atributos de ocultação que prejudiquem configurações necessárias ou causem perda de dados serializados.
+
+### 4.4. Debug e gizmos
+
+A expressão **"F3"** ou **"o F3"** refere-se à tela de debug que apresenta valores do jogo e do jogador.
+
+Ao implementar novos gizmos:
+
+- Exibi-los exclusivamente quando o F3 estiver ativo.
+- Integrar-se ao mecanismo de controle do F3 já existente.
+- Não criar um sistema paralelo de ativação sem necessidade.
+- Evitar processamento de debug desnecessário quando o F3 estiver desativado.
+- Não presumir que o F3 corresponde apenas ao estado físico da tecla pressionada; verificar o funcionamento real do sistema.
+
+### 4.5. HUD e interfaces
+
+Toda nova HUD deve seguir o padrão **UI Toolkit** existente no projeto.
+
+Separação obrigatória:
+
+- `.uxml`: estrutura visual.
+- `.uss`: aparência e estilos.
+- `.cs`: comportamento, referências e atualização dos elementos.
+
+Regras:
+
+1. Utilizar `PanelRenderer` conforme a implementação existente.
+2. Consultar e referenciar os elementos definidos no UXML.
+3. Não construir toda a interface programaticamente em C#.
+4. Reutilizar componentes e convenções visuais existentes.
+5. Manter apresentação e lógica desacopladas.
+6. Evitar consultas repetitivas desnecessárias à árvore visual.
+7. Preservar a compatibilidade com os sistemas de HUD existentes.
+
+### 4.6. Tipografia
+
+A fonte padrão de todos os textos do jogo é **Crimson Text**.
+
+- Utilizá-la em novas interfaces e elementos textuais.
+- Preservar a consistência tipográfica do projeto.
+- Utilizar outra fonte apenas quando o usuário solicitar explicitamente.
+- Reutilizar os assets e configurações de fonte existentes.
+
+---
+
+## 5. Diretrizes de game design
+
+### 5.1. Combate
+
+As mecânicas devem favorecer:
+
+- Agressividade extrema.
+- Decisões de risco com recompensas proporcionais.
+- Combate responsivo e impactante.
+- Domínio técnico das mecânicas.
+- Escolhas ofensivas significativas.
+- Consequências claras para decisões ruins.
+
+Não transformar o combate em uma experiência excessivamente defensiva ou passiva sem solicitação explícita.
+
+Agressividade não significa ausência de estratégia: o jogador deve ser incentivado a assumir riscos de maneira deliberada.
+
+### 5.2. Terror e atmosfera
+
+O terror deve influenciar a experiência sem comprometer desnecessariamente a clareza das mecânicas.
+
+Considerar:
+
+- Atmosfera opressiva.
+- Tensão e desconforto.
+- Identidade visual consistente.
+- Design sonoro e feedback audiovisual.
+- Contraste entre momentos de violência e vulnerabilidade.
+
+Não introduzir alterações de narrativa, atmosfera ou direção artística fora do escopo solicitado.
+
+### 5.3. Identidade visual
+
+Preservar a estética retrô PS1–PS2:
+
+- Modelos low/mid-poly.
+- Direção artística coerente com as limitações estéticas escolhidas.
+- Efeitos visuais compatíveis com o estilo.
+- Materiais, iluminação e pós-processamento consistentes.
+- Legibilidade adequada durante combates intensos.
+
+Não adicionar efeitos modernos excessivos apenas por serem tecnicamente possíveis.
+
+---
+
+## 6. Diretrizes técnicas
+
+### 6.1. Arquitetura
+
+- Investigar os padrões existentes antes de introduzir novos.
+- Priorizar reutilização de componentes e sistemas.
+- Manter responsabilidades bem definidas.
+- Evitar acoplamento desnecessário.
+- Não criar abstrações para problemas que não existem.
+- Não substituir sistemas funcionais sem justificativa.
+- Considerar compatibilidade com cenas, prefabs e assets.
+- Evitar mudanças públicas de API sem avaliar seus consumidores.
+
+### 6.2. Desempenho
+
+- Evitar alocações desnecessárias em operações frequentes.
+- Minimizar trabalho dispensável em `Update()` e `FixedUpdate()`.
+- Evitar buscas repetidas de componentes quando referências puderem ser reutilizadas.
+- Utilizar mecanismos de física adequados ao ciclo de execução da Unity.
+- Evitar otimizações prematuras que prejudiquem a clareza do código.
+- Priorizar problemas de desempenho identificados ou justificáveis.
+
+### 6.3. Persistência e dados
+
+Em sistemas de save/load:
+
+- Considerar versionamento de dados.
+- Preservar compatibilidade quando necessário.
+- Tratar dados ausentes, inválidos ou incompletos.
+- Evitar corrupção ou perda de progresso.
+- Definir claramente quais estados devem ser persistidos.
+- Separar dados persistentes de estados transitórios.
+- Considerar operações de gravação seguras e recuperação de falhas.
+
+### 6.4. Dependências
+
+- Preferir recursos nativos da Unity e dependências já utilizadas.
+- Não adicionar pacotes externos sem necessidade demonstrável.
+- Avaliar compatibilidade com Unity 6000.6.4f1.
+- Informar impactos relevantes antes de introduzir novas dependências.
+
+---
+
+## 7. Fluxo de trabalho
+
+### Antes de implementar
+
+1. Compreender a solicitação.
+2. Identificar arquivos e sistemas relevantes.
+3. Investigar as implementações existentes.
+4. Verificar restrições e dependências.
+5. Escolher a abordagem mais simples que atenda aos requisitos.
+
+Em tarefas complexas, apresentar um plano quando decisões estruturais precisarem ser alinhadas com o usuário.
+
+### Durante a implementação
+
+1. Respeitar o escopo.
+2. Preservar comportamentos não relacionados.
+3. Manter consistência com os padrões existentes.
+4. Evitar alterações desnecessárias.
+5. Não modificar arquivos protegidos sem autorização.
+6. Não adicionar funcionalidades especulativas.
+
+### Após implementar
+
+1. Executar testes e validações permitidos.
+2. Verificar os sistemas afetados.
+3. Revisar as alterações realizadas.
+4. Informar resultados e limitações.
+5. Resumir objetivamente o trabalho concluído.
+
+Não afirmar que uma funcionalidade foi testada ou validada quando isso não ocorreu.
+
+---
+
+## 8. Prioridade das instruções
+
+Em caso de conflito, seguir esta ordem:
+
+1. Instruções superiores e restrições obrigatórias do ambiente.
+2. Solicitação explícita do usuário, respeitando as restrições aplicáveis.
+3. Regras obrigatórias deste projeto.
+4. Diretrizes técnicas e de game design.
+5. Preferências operacionais do agente selecionado.
+
+Permissões específicas não devem ser inferidas a partir de solicitações genéricas.
+
+Por exemplo, solicitar uma feature não autoriza automaticamente modificar cenas, iniciar o jogo, criar documentação Markdown ou realizar commits.
+
+---
+
+## 9. Princípio fundamental
+
+**Implementar apenas o necessário, da maneira mais simples e robusta possível, preservando a identidade, a arquitetura e a estabilidade do jogo.**
+
+Priorizar:
+
+- Correção sobre complexidade.
+- Consistência sobre soluções isoladas.
+- Manutenção sobre abstrações desnecessárias.
+- Desempenho quando relevante.
+- Fidelidade à identidade do jogo.
+- Transparência sobre alterações e validações.
+
+O agente deve ajudar a desenvolver o jogo existente, não reinventá-lo a cada solicitação.
