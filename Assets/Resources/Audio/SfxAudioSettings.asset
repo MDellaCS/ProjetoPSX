@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: SfxAudioSettings
   m_EditorClassIdentifier: Assembly-CSharp::SfxAudioSettings
   moduleEnabled: 1
-  globalVolume: 0.376
+  globalVolume: 1
   globalPitch: 1
-  initialVoiceCount: 50
-  maximumVoiceCount: 500
   volumeChannel: 0
+  initialVoiceCount: 32
+  maximumVoiceCount: 128
   minimumFootstepSpeed: 0.2
   playerFootstepDistance: 2.4
   enemyFootstepDistance: 1.5
@@ -30,10 +30,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.1225
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -42,10 +38,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.1225
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -54,10 +46,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.3348
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -66,10 +54,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.3348
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -78,10 +62,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.4983
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -90,10 +70,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.4983
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -102,10 +78,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.6818
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -114,34 +86,22 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1.6818
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
       - {fileID: 8300000, guid: 2750985d67757c44b82dea5033572e56, type: 3}
       volume: 2.13
       volumeVariation: 0
-      pitch: 2.0
+      pitch: 2
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
       - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
       volume: 2.13
       volumeVariation: 0
-      pitch: 2.0
+      pitch: 2
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -150,10 +110,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 2.2449
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -162,10 +118,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 2.2449
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -174,10 +126,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 2.6697
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -186,10 +134,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 2.6697
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -198,10 +142,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 2.9966
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -210,10 +150,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 2.9966
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
@@ -222,10 +158,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 3.3636
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
@@ -234,61 +166,45 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 3.3636
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   - gain:
       clips:
       - {fileID: 8300000, guid: 2750985d67757c44b82dea5033572e56, type: 3}
       volume: 2.13
       volumeVariation: 0
-      pitch: 4.0
+      pitch: 4
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     loss:
       clips:
       - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
       volume: 2.13
       volumeVariation: 0
-      pitch: 4.0
+      pitch: 4
       pitchVariation: 0
-      spatialBlend: 0
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   playerLightAttack:
     attackStart:
       clips:
-      - {fileID: 8300000, guid: dbdb3ae34c52a8c4582192e804a54f6e, type: 3}
-      volume: 3
-      volumeVariation: 0
-      pitch: 1
-      pitchVariation: 0.028
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
-      priority: 128
-    genericHit:
-      clips:
-      - {fileID: 8300000, guid: 7a1788b10a259394b9019d21bef463ae, type: 3}
-      - {fileID: 8300000, guid: 4ae73664f9fa52f41b51a2e050901696, type: 3}
-      - {fileID: 8300000, guid: ada2ae050ed4f114eba3fab31db4313e, type: 3}
+      - {fileID: 8300000, guid: 483e173230cd2bd49b9e73b6bb7c0273, type: 3}
+      - {fileID: 8300000, guid: 5bec105052237da438360c7083c01604, type: 3}
+      - {fileID: 8300000, guid: 54c60c49ee8b0c34fae329ad105d0fc6, type: 3}
+      - {fileID: 8300000, guid: 6fb7523659f5929489a938317b66d2b0, type: 3}
+      - {fileID: 8300000, guid: c5f57fe98a8906f4cbe080b03765452b, type: 3}
       volume: 1
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
+      priority: 128
+    genericHit:
+      clips:
+      - {fileID: 8300000, guid: 729bf64523bd709419856a0b2e46ba55, type: 3}
+      - {fileID: 8300000, guid: c72a3e5a371f48d429e08c62d81e1422, type: 3}
+      - {fileID: 8300000, guid: ad65af8eeba9ccf4280c8e28c204afb0, type: 3}
+      volume: 1
+      volumeVariation: 0
+      pitch: 1
+      pitchVariation: 0
       priority: 96
     fabricHit:
       clips: []
@@ -296,10 +212,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     metalHit:
       clips: []
@@ -307,10 +219,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     glassHit:
       clips: []
@@ -318,10 +226,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     stoneHit:
       clips: []
@@ -329,36 +233,27 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   playerHeavyAttack:
     attackStart:
-      clips: []
+      clips:
+      - {fileID: 8300000, guid: 62aab6ffa26559048af41c0c983389df, type: 3}
+      - {fileID: 8300000, guid: 2955457ce041a5b4fa9f8679f5ef5ffe, type: 3}
+      - {fileID: 8300000, guid: 978f051231161704686c25b1c98632a6, type: 3}
+      - {fileID: 8300000, guid: 3b8a2dcff5bfa944da36120dcc5eaad8, type: 3}
+      - {fileID: 8300000, guid: f1e6f71ed35bfd24ab54f57d814f8859, type: 3}
       volume: 1
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     genericHit:
       clips:
-      - {fileID: 8300000, guid: a42a25bfe713e63498febabb408fceea, type: 3}
-      - {fileID: 8300000, guid: b322a4e6a9f59b04a82a3336dde02871, type: 3}
-      - {fileID: 8300000, guid: ae2d2db46850b7c47ab85240cdc448f9, type: 3}
+      - {fileID: 8300000, guid: 08a671e30506fdd48acd44725941ead8, type: 3}
       volume: 1
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 28
-      rolloffMode: 0
       priority: 88
     fabricHit:
       clips: []
@@ -366,10 +261,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     metalHit:
       clips: []
@@ -377,10 +268,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     glassHit:
       clips: []
@@ -388,10 +275,6 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
     stoneHit:
       clips: []
@@ -399,24 +282,14 @@ MonoBehaviour:
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
-      spatialBlend: 1
-      minDistance: 1
-      maxDistance: 24
-      rolloffMode: 0
       priority: 128
   playerHurt:
     clips:
-    - {fileID: 8300000, guid: 99348524f0ef5b3469b6d1976f17370c, type: 3}
-    - {fileID: 8300000, guid: 0910b552636052c42a5d5fb6d168dc27, type: 3}
-    - {fileID: 8300000, guid: 8115c336b0fa59f41b1cb0af599a2271, type: 3}
+    - {fileID: 8300000, guid: 65200ad6ce1174a4e8851195879567b6, type: 3}
     volume: 1
     volumeVariation: 0
     pitch: 1
     pitchVariation: 0
-    spatialBlend: 1
-    minDistance: 1
-    maxDistance: 24
-    rolloffMode: 0
     priority: 80
   playerFootstep:
     clips:
@@ -425,10 +298,6 @@ MonoBehaviour:
     volumeVariation: 0.05
     pitch: 1
     pitchVariation: 0.05
-    spatialBlend: 1
-    minDistance: 1
-    maxDistance: 16
-    rolloffMode: 0
     priority: 160
   enemyFootstep:
     clips:
@@ -437,8 +306,4 @@ MonoBehaviour:
     volumeVariation: 0.05
     pitch: 1
     pitchVariation: 0.05
-    spatialBlend: 1
-    minDistance: 1
-    maxDistance: 20
-    rolloffMode: 0
     priority: 160

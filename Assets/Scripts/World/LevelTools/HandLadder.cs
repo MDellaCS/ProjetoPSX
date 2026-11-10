@@ -124,16 +124,6 @@ public sealed class HandLadder : InteractableBase
     [Tooltip("Gera os dois trilhos laterais quando o perfil tem um prefab de trilho.")]
     [SerializeField] private bool generateSideRails = true;
 
-    [Header("Zona de entrada")]
-    [Tooltip("Usa a zona de entrada calculada (desenhada em ciano). Desmarque para entrar somente pelas zonas extras (HandLadderInteractionArea).")]
-    [SerializeField] private bool useAutomaticEntryZone = true;
-    [Tooltip("Quanto a zona de entrada avanca para a frente da escada, em metros.")]
-    [Min(.1f)] [SerializeField] private float entryDepth = 1.1f;
-    [Tooltip("Escada em superficie: quanto a zona recua para tras do plano, em metros. Permite agarrar a escada vindo de cima, da borda da parede. Deve cobrir a distancia de saida do topo.")]
-    [Min(0f)] [SerializeField] private float entryBackDepth = .8f;
-    [Tooltip("Folga extra, em metros, nas laterais, na base e no topo da zona de entrada.")]
-    [Min(0f)] [SerializeField] private float entryMargin = .35f;
-
     [Header("Saidas")]
     [Tooltip("Lado por onde o topo sai. Auto: escada solta sai pela frente; escada em superficie sai por tras (sobre a borda).")]
     [SerializeField] private HandLadderExitSide topExitSide = HandLadderExitSide.Auto;
@@ -151,7 +141,6 @@ public sealed class HandLadder : InteractableBase
     [SerializeField, HideInInspector] private int generatedRungCount;
 
     private static readonly List<HandLadder> activeLadders = new();
-    private readonly List<Collider> extraZones = new();
 
     /// <summary>Escadas ativas (alvos possiveis do gancho).</summary>
     public static IReadOnlyList<HandLadder> ActiveLadders => activeLadders;
@@ -198,7 +187,7 @@ public sealed class HandLadder : InteractableBase
         for (int i = 0; i < solidColliders.Count; i++)
         {
             Collider collider = solidColliders[i];
-            if (collider != null && !collider.isTrigger && !extraZones.Contains(collider))
+            if (collider != null && !collider.isTrigger)
                 collider.enabled = value;
         }
 
@@ -345,8 +334,17 @@ public sealed class HandLadder : InteractableBase
             return;
         }
 
-        while (index < last - 1 && spine.progress[index + 1] < progress)
-            index++;
+        int low = 0;
+        int high = last;
+        while (high - low > 1)
+        {
+            int middle = (low + high) >> 1;
+            if (spine.progress[middle] <= progress)
+                low = middle;
+            else
+                high = middle;
+        }
+        index = low;
         float span = spine.progress[index + 1] - spine.progress[index];
         t = span > .0001f ? (progress - spine.progress[index]) / span : 0f;
     }
@@ -617,9 +615,7 @@ public sealed class HandLadder : InteractableBase
         return result;
     }
 
-    public override int InteractionPriority => Feel.interactionPriority;
-    public override string InteractionMessage => Feel.interactionMessage;
-    public override Sprite InteractionIcon => Feel.interactionIcon;
+    public override string InteractionMessage => "Escalar";
 
     // Escada de teto com os eixos ainda no padrao vertical: barras para a frente
     // e normal para baixo (o resto segue a rotacao do objeto).
@@ -672,11 +668,19 @@ public sealed class HandLadder : InteractableBase
         (topExitSide == HandLadderExitSide.Auto && attachment == HandLadderAttachment.Surface);
 
     private bool BothSides => climbableFromBothSides && !overhead;
-    private float EntryFront => overhead ? entryDepth + hangDepth : entryDepth;
+    private float EntryFront => overhead
+        ? InteractionSettings.LadderEntryFrontDepth + hangDepth
+        : InteractionSettings.LadderEntryFrontDepth;
     // Zona atras do plano: escada em superficie (para descer pela borda do topo)
     // ou escada de dois lados. Escada solta de um lado so tem uma folga minima.
-    private float EntryBack => BothSides ? entryDepth
-        : attachment == HandLadderAttachment.Surface && !overhead ? entryBackDepth : .1f;
+    private float EntryBack => BothSides ? InteractionSettings.LadderEntryFrontDepth
+        : attachment == HandLadderAttachment.Surface && !overhead
+            ? InteractionSettings.LadderEntryBackDepth : .1f;
+
+    public override bool ContainsPlayer(PlayerMovement player) =>
+        isClimbable && TryGetEntry(player, out _);
+
+    public override float DistanceSqrTo(Vector3 position) => GetEntryDistanceSqr(position);
 
     private void OnValidate()
     {
@@ -692,17 +696,6 @@ public sealed class HandLadder : InteractableBase
     }
 
     // ---------------------------------------------------------------- zona
-
-    internal void RegisterEntryZone(Collider zone)
-    {
-        if (zone != null && !extraZones.Contains(zone))
-            extraZones.Add(zone);
-    }
-
-    internal void UnregisterEntryZone(Collider zone) => extraZones.Remove(zone);
-
-    public override bool ContainsPlayer(PlayerMovement player) =>
-        TryGetEntry(player, out _);
 
     public override bool CanInteract(PlayerMovement player) =>
         isClimbable && player != null && player.CanBeginLadderClimb &&
@@ -736,7 +729,7 @@ public sealed class HandLadder : InteractableBase
         return true;
     }
 
-    public override float DistanceSqrTo(Vector3 position)
+    public float GetEntryDistanceSqr(Vector3 position)
     {
         if (IsCurved)
         {
@@ -765,17 +758,10 @@ public sealed class HandLadder : InteractableBase
         ToFrame(point, out float along, out float across, out float forward);
         float half = Width * .5f;
 
-        bool inside = useAutomaticEntryZone &&
-            Mathf.Abs(across) <= half + entryMargin &&
-            along >= -entryMargin && along <= height + entryMargin &&
+        float margin = InteractionSettings.LadderEntryMargin;
+        bool inside = Mathf.Abs(across) <= half + margin &&
+            along >= -margin && along <= height + margin &&
             forward <= EntryFront && forward >= -EntryBack;
-        if (!inside)
-            for (int i = 0; i < extraZones.Count && !inside; i++)
-            {
-                Collider zone = extraZones[i];
-                if (zone != null && zone.enabled && zone.gameObject.activeInHierarchy)
-                    inside = (zone.ClosestPoint(point) - point).sqrMagnitude <= .0001f;
-            }
         if (!inside)
             return false;
 
@@ -1056,10 +1042,12 @@ public sealed class HandLadder : InteractableBase
 
     // ------------------------------------------------------------- gizmos
 
-    private void OnDrawGizmos()
+    protected override void OnDrawGizmos()
     {
         if (!InteractionGizmos.Visible)
             return;
+
+        base.OnDrawGizmos();
 
         Vector3 origin = StartPosition;
         Vector3 climb = ClimbDirection;
@@ -1080,45 +1068,6 @@ public sealed class HandLadder : InteractableBase
             Gizmos.color = new Color(.1f, .65f, .95f, .35f);
             Gizmos.DrawLine(origin, top);
         }
-
-        // Zona de entrada (area em que o prompt aparece).
-        if (useAutomaticEntryZone && isClimbable)
-        {
-            Matrix4x4 previous = Gizmos.matrix;
-            float depth = EntryFront + EntryBack;
-            float zoneCenter = (EntryFront - EntryBack) * .5f;
-            if (IsCurved)
-            {
-                for (int i = 0; i < spine.Count - 1; i++)
-                {
-                    float a = spine.progress[i];
-                    float b = spine.progress[i + 1];
-                    float middle = (a + b) * .5f;
-                    Vector3 from = PlanePointAt(a);
-                    Vector3 to = PlanePointAt(b);
-                    Gizmos.matrix = Matrix4x4.TRS((from + to) * .5f,
-                        Quaternion.LookRotation(GetNormal(middle), GetTangent(middle)), Vector3.one);
-                    InteractionGizmos.DrawBox(new Vector3(0f, 0f, zoneCenter),
-                        new Vector3(Width + entryMargin * 2f, (to - from).magnitude + .02f, depth),
-                        InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
-                }
-            }
-            else
-            {
-                Gizmos.matrix = Matrix4x4.TRS(origin,
-                    Quaternion.LookRotation(approach, climb), Vector3.one);
-                Vector3 size = new(Width + entryMargin * 2f,
-                    height + entryMargin * 2f, depth);
-                InteractionGizmos.DrawBox(new Vector3(0f, height * .5f, zoneCenter), size,
-                    InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
-            }
-
-            Gizmos.matrix = previous;
-        }
-
-        for (int i = 0; i < extraZones.Count; i++)
-            InteractionGizmos.DrawCollider(extraZones[i],
-                InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
 
         // Normal: para onde o jogador salta.
         Gizmos.color = new Color(1f, .35f, .85f, .95f);
@@ -1166,6 +1115,43 @@ public sealed class HandLadder : InteractableBase
             DrawExitGizmo(true, new Color(.2f, 1f, .4f, .95f));
             DrawExitGizmo(false, new Color(1f, .7f, .15f, .95f));
         }
+    }
+
+    public void DrawEntryAreaGizmo()
+    {
+        if (!isClimbable)
+            return;
+        Matrix4x4 previous = Gizmos.matrix;
+        float margin = InteractionSettings.LadderEntryMargin;
+        float depth = EntryFront + EntryBack;
+        float zoneCenter = (EntryFront - EntryBack) * .5f;
+        if (IsCurved)
+        {
+            for (int i = 0; i < spine.Count - 1; i++)
+            {
+                float a = spine.progress[i];
+                float b = spine.progress[i + 1];
+                float middle = (a + b) * .5f;
+                Vector3 from = PlanePointAt(a);
+                Vector3 to = PlanePointAt(b);
+                Gizmos.matrix = Matrix4x4.TRS((from + to) * .5f,
+                    Quaternion.LookRotation(GetNormal(middle), GetTangent(middle)), Vector3.one);
+                InteractionGizmos.DrawBox(new Vector3(0f, 0f, zoneCenter),
+                    new Vector3(Width + margin * 2f, (to - from).magnitude + .02f, depth),
+                    InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
+            }
+        }
+        else
+        {
+            Vector3 origin = StartPosition;
+            Gizmos.matrix = Matrix4x4.TRS(origin,
+                Quaternion.LookRotation(ApproachDirection, ClimbDirection), Vector3.one);
+            Vector3 size = new(Width + margin * 2f,
+                height + margin * 2f, depth);
+            InteractionGizmos.DrawBox(new Vector3(0f, height * .5f, zoneCenter), size,
+                InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
+        }
+        Gizmos.matrix = previous;
     }
 
     private void OnDrawGizmosSelected()

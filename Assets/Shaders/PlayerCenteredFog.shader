@@ -98,18 +98,36 @@ Shader "Hidden/ProjetoPSX/Player Centered Fog"
                     float3 toLight = lightPosition.xyz - samplePosition;
                     float distanceSquared = dot(toLight, toLight);
                     float distanceToLight = sqrt(distanceSquared);
-                    float normalizedDistance = distanceToLight * lightPosition.w;
+                    float4 lightShape = _RetroLightShape[lightIndex];
+                    float normalizedDistance;
+                    if (lightShape.z >= 1.0)
+                    {
+                        float2 flatOffset = toLight.xz;
+                        float flatDistance = length(flatOffset);
+                        float sides = max(3.0, _RetroLightFacet[lightIndex].x);
+                        float sector = 6.28318530718 / sides;
+                        float angle = atan2(flatOffset.y, flatOffset.x);
+                        float centeredAngle = angle - round(angle / sector) * sector;
+                        float polygonDistance = flatDistance * cos(centeredAngle);
+                        normalizedDistance = length(float2(polygonDistance, toLight.y)) * lightPosition.w;
+                    }
+                    else
+                    {
+                        normalizedDistance = distanceToLight * lightPosition.w;
+                    }
                     if (normalizedDistance >= 1.0)
                         continue;
 
                     float3 lightDirection = toLight / max(distanceToLight, .001);
                     float3 fromLight = -lightDirection;
                     float4 lightColor = _RetroLightColor[lightIndex];
-                    float4 lightShape = _RetroLightShape[lightIndex];
                     float attenuationT = saturate((normalizedDistance - lightColor.w) /
                         max(1.0 - lightColor.w, 1e-4));
                     float attenuation = pow(1.0 - attenuationT,
                         max(.01, lightShape.y));
+                    if (lightShape.z >= 1.0)
+                        attenuation = max(0.0, ceil(attenuation * lightShape.z - 1e-3)) /
+                            lightShape.z;
 
                     float4 spotDirection = _RetroLightDirection[lightIndex];
                     if (spotDirection.w > -1.5)

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Base dos modulos de audio do jogo (Interface, Dialogo, Mundo e SFX). Cada
+/// Base dos modulos de audio do jogo (Interface, Dialogo e SFX). Cada
 /// modulo tem seu proprio pool de AudioSources e sua configuracao em
 /// Resources/Audio; todos sao criados sob demanda sob um unico objeto
 /// persistente, entao nenhuma cena precisa conter componentes de audio.
@@ -103,9 +103,8 @@ public abstract class AudioModule : MonoBehaviour
         };
     }
 
-    /// <summary>Toca o cue. <paramref name="spatialOverride"/> negativo usa a espacializacao do proprio cue.</summary>
-    protected AudioPlaybackHandle PlayCue(AudioCue cue, Vector3 position,
-        float spatialOverride = -1f)
+    /// <summary>Toca o cue em 2D, sem atenuacao por distancia.</summary>
+    protected AudioPlaybackHandle PlayCue(AudioCue cue, Vector3 position)
     {
         if (cue == null || !BaseSettings.moduleEnabled)
             return null;
@@ -117,13 +116,11 @@ public abstract class AudioModule : MonoBehaviour
         return PlayClip(clip,
             cue.volume + UnityEngine.Random.Range(-cue.volumeVariation, cue.volumeVariation),
             cue.pitch + UnityEngine.Random.Range(-cue.pitchVariation, cue.pitchVariation),
-            position, spatialOverride >= 0f ? spatialOverride : cue.spatialBlend,
-            cue.minDistance, cue.maxDistance, cue.rolloffMode, cue.priority);
+            position, cue.priority);
     }
 
     protected AudioPlaybackHandle PlayClip(AudioClip clip, float volume, float pitch,
-        Vector3 position, float spatialBlend, float minDistance, float maxDistance,
-        AudioRolloffMode rolloff, int priority)
+        Vector3 position, int priority)
     {
         AudioModuleSettings settings = BaseSettings;
         if (clip == null || !settings.moduleEnabled)
@@ -133,10 +130,7 @@ public abstract class AudioModule : MonoBehaviour
         AudioSource source = voice.source;
         source.Stop();
         source.transform.position = position;
-        source.spatialBlend = Mathf.Clamp01(spatialBlend);
-        source.minDistance = Mathf.Max(0f, minDistance);
-        source.maxDistance = Mathf.Max(source.minDistance + .01f, maxDistance);
-        source.rolloffMode = rolloff;
+        source.spatialBlend = 0f;
         source.priority = Mathf.Clamp(priority, 0, 255);
         source.dopplerLevel = 0f;
         voice.baseVolume = Mathf.Max(0f, volume) * settings.globalVolume;

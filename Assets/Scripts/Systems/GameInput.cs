@@ -11,6 +11,8 @@ public static class GameInput
     private static InputActionMap ui;
     private static InputActionAsset sourceAsset;
     private static bool initialized;
+    private static bool DebugMenuBlocksGameplay =>
+        Debug.isDebugBuild && PlayerDebugToolkitHUD.IsDebugMenuVisible;
     public static InputActionAsset Asset
     {
         get
@@ -75,7 +77,7 @@ public static class GameInput
     {
         get
         {
-            if (LoadingScreenHUD.BlocksGameplayInput)
+            if (LoadingScreenHUD.BlocksGameplayInput || DebugMenuBlocksGameplay)
                 return false;
             EnsureInitialized();
             return gameplay?.FindAction("CutsceneSkip")?.WasPressedThisFrame() == true;
@@ -83,18 +85,12 @@ public static class GameInput
     }
     public static bool UnlockCursorPressed => Pressed("UnlockCursor");
     public static bool RestartPressed => Pressed("Restart");
-    public static bool DebugHeatDownHeld => Debug.isDebugBuild && Held("DebugHeatDown");
-    public static bool DebugHeatUpHeld => Debug.isDebugBuild && Held("DebugHeatUp");
-    public static bool DebugCombatPressed => Debug.isDebugBuild && Pressed("DebugCombat");
-    public static bool DebugGodModePressed => Debug.isDebugBuild && Pressed("DebugGodMode");
-    public static bool DebugMaxHeatPressed => Debug.isDebugBuild && Pressed("DebugMaxHeat");
-    public static bool DebugSlowMotionPressed => Debug.isDebugBuild && Pressed("DebugSlowMotion");
 
     public static bool PausePressed
     {
         get
         {
-            if (CutsceneController.IsPlaying ||
+            if (DebugMenuBlocksGameplay || CutsceneController.IsPlaying ||
                 LoadingScreenHUD.BlocksGameplayInput)
                 return false;
             EnsureInitialized();
@@ -113,11 +109,22 @@ public static class GameInput
         }
     }
 
+    /// <summary>Atalho dedicado ao menu interativo de depuracao, sem pausar o jogo.</summary>
+    public static bool DebugMenuPressed
+    {
+        get
+        {
+            if (!Debug.isDebugBuild || LoadingScreenHUD.BlocksGameplayInput)
+                return false;
+            return Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame;
+        }
+    }
+
     public static bool UIClickPressed
     {
         get
         {
-            if (LoadingScreenHUD.BlocksGameplayInput)
+            if (LoadingScreenHUD.BlocksGameplayInput || DebugMenuBlocksGameplay)
                 return false;
             EnsureInitialized();
             return ui?.FindAction("Click")?.WasPressedThisFrame() == true;
@@ -128,7 +135,7 @@ public static class GameInput
     {
         get
         {
-            if (LoadingScreenHUD.BlocksGameplayInput)
+            if (LoadingScreenHUD.BlocksGameplayInput || DebugMenuBlocksGameplay)
                 return Vector2.zero;
             EnsureInitialized();
             return ui?.FindAction("Point")?.ReadValue<Vector2>() ?? Vector2.zero;
@@ -141,7 +148,7 @@ public static class GameInput
 
     private static bool PressedUI(string actionName)
     {
-        if (LoadingScreenHUD.BlocksGameplayInput)
+        if (LoadingScreenHUD.BlocksGameplayInput || DebugMenuBlocksGameplay)
             return false;
         EnsureInitialized();
         return ui?.FindAction(actionName)?.WasPressedThisFrame() == true;
@@ -149,7 +156,7 @@ public static class GameInput
 
     private static Vector2 ReadUIVector2(string actionName)
     {
-        if (LoadingScreenHUD.BlocksGameplayInput)
+        if (LoadingScreenHUD.BlocksGameplayInput || DebugMenuBlocksGameplay)
             return Vector2.zero;
         EnsureInitialized();
         return ui?.FindAction(actionName)?.ReadValue<Vector2>() ?? Vector2.zero;
@@ -157,7 +164,7 @@ public static class GameInput
 
     private static bool Pressed(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked ||
+        if (DebugMenuBlocksGameplay || CutsceneController.IsPlayerControlLocked ||
             LoadingScreenHUD.BlocksGameplayInput)
             return false;
         EnsureInitialized();
@@ -166,7 +173,7 @@ public static class GameInput
 
     private static bool PressedOnCurrentMap(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked ||
+        if (DebugMenuBlocksGameplay || CutsceneController.IsPlayerControlLocked ||
             LoadingScreenHUD.BlocksGameplayInput)
             return false;
         EnsureInitialized();
@@ -181,7 +188,7 @@ public static class GameInput
 
     private static bool Held(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked ||
+        if (DebugMenuBlocksGameplay || CutsceneController.IsPlayerControlLocked ||
             LoadingScreenHUD.BlocksGameplayInput)
             return false;
         EnsureInitialized();
@@ -190,7 +197,7 @@ public static class GameInput
 
     private static Vector2 ReadVector2(string actionName)
     {
-        if (CutsceneController.IsPlayerControlLocked ||
+        if (DebugMenuBlocksGameplay || CutsceneController.IsPlayerControlLocked ||
             LoadingScreenHUD.BlocksGameplayInput)
             return Vector2.zero;
         EnsureInitialized();

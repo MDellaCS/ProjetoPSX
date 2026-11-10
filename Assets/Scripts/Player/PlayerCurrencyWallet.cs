@@ -93,6 +93,29 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
         Changed?.Invoke(Current);
     }
 
+    /// <summary>Retira todo o saldo em maos e o persiste imediatamente.</summary>
+    public int TakeAll()
+    {
+        int amount = Current;
+        if (amount <= 0) return 0;
+        Current = 0;
+        PlayerPrefs.SetInt(SaveKey, 0);
+        hasUnsavedChanges = false;
+        PlayerPrefs.Save();
+        Changed?.Invoke(Current);
+        return amount;
+    }
+
+    public void DebugSetCurrency(int amount)
+    {
+        if (!Debug.isDebugBuild) return;
+        Current = Mathf.Max(0, amount);
+        PlayerPrefs.SetInt(SaveKey, Current);
+        hasUnsavedChanges = false;
+        PlayerPrefs.Save();
+        Changed?.Invoke(Current);
+    }
+
     /// <summary>Tenta gastar currency. Retorna falso se o saldo nao for suficiente.</summary>
     public bool TrySpend(int amount)
     {
@@ -113,6 +136,16 @@ public sealed class PlayerCurrencyWallet : MonoBehaviour
         Current = 0;
         PlayerPrefs.DeleteKey(SaveKey);
         hasUnsavedChanges = false;
+        Changed?.Invoke(Current);
+    }
+
+    /// <summary>Restaura o saldo da campanha carregada e atualiza o espelho local.</summary>
+    public void RestoreSaveValue(int amount)
+    {
+        Current = Mathf.Max(0, amount);
+        PlayerPrefs.SetInt(SaveKey, Current);
+        hasUnsavedChanges = false;
+        PlayerPrefs.Save();
         Changed?.Invoke(Current);
     }
 

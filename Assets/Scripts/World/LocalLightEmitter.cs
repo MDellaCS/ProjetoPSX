@@ -28,6 +28,8 @@ public sealed class LocalLightEmitter : MonoBehaviour
     private bool settingsDirty = true;
     private bool hasFlicker;
     private float phase;
+    private float externalRangeMultiplier = 1f;
+    private float dynamicIntensityMultiplier = 1f;
 
     public LocalLightProfile Profile
     {
@@ -41,11 +43,38 @@ public sealed class LocalLightEmitter : MonoBehaviour
 
     public float IntensityMultiplier
     {
-        get => intensityMultiplier;
+        get => dynamicIntensityMultiplier;
         set
         {
-            intensityMultiplier = Mathf.Max(0f, value);
+            dynamicIntensityMultiplier = Mathf.Max(0f, value);
             settingsDirty = true;
+        }
+    }
+
+    /// <summary>Intensidade base das luzes do perfil, antes do multiplicador do emissor.</summary>
+    public float BaseIntensityMultiplier => intensityMultiplier;
+
+    /// <summary>Multiplicador dinamico aplicado ao perfil sem substituir o valor configurado.</summary>
+    public float DynamicIntensityMultiplier
+    {
+        get => dynamicIntensityMultiplier;
+        set
+        {
+            dynamicIntensityMultiplier = Mathf.Max(0f, value);
+            settingsDirty = true;
+        }
+    }
+
+    /// <summary>Aplica o alcance relativo sem alterar o perfil compartilhado.</summary>
+    public void SetRangeMultiplier(float multiplier)
+    {
+        externalRangeMultiplier = Mathf.Max(0f, multiplier);
+        for (int i = 0; i < lights.Count; i++)
+        {
+            if (profile == null || profile.lights == null || i >= profile.lights.Count || profile.lights[i] == null)
+                continue;
+            LocalLightDefinition definition = profile.lights[i];
+            lights[i].range = definition.range * externalRangeMultiplier;
         }
     }
 
@@ -101,8 +130,8 @@ public sealed class LocalLightEmitter : MonoBehaviour
     {
         LocalLightFlicker flicker = definition.flicker;
         float t = flicker.Evaluate(time, lightPhase);
-        light.intensity = Mathf.Lerp(flicker.minimumIntensity, flicker.maximumIntensity, t) * intensityMultiplier;
-        light.range = definition.range * (1f - flicker.rangeVariation * (1f - t));
+        light.intensity = Mathf.Lerp(flicker.minimumIntensity, flicker.maximumIntensity, t) * intensityMultiplier * dynamicIntensityMultiplier;
+        light.range = definition.range * externalRangeMultiplier * (1f - flicker.rangeVariation * (1f - t));
     }
 
     private void Rebuild()
@@ -139,11 +168,12 @@ public sealed class LocalLightEmitter : MonoBehaviour
             light.localPosition = positionOffset + offsetRotation * definition.localPosition;
             light.localRotation = offsetRotation * Quaternion.Euler(definition.localEulerAngles);
             light.color = definition.color;
-            light.intensity = definition.intensity * intensityMultiplier;
-            light.range = definition.range;
+            light.intensity = definition.intensity * intensityMultiplier * dynamicIntensityMultiplier;
+            light.range = definition.range * externalRangeMultiplier;
             light.coreRadius = definition.coreRadius;
             light.falloffExponent = definition.falloffExponent;
             light.bands = definition.bands;
+            light.bandSegments = definition.bandSegments;
             light.wrap = definition.wrap;
             light.spotAngle = definition.spotAngle;
             light.innerSpotAngle = definition.innerSpotAngle;
@@ -206,18 +236,38 @@ public sealed class LocalLightEmitter : MonoBehaviour
             }
             else
             {
-                Gizmos.DrawWireSphere(position, range);
+                if (definition.bands > 0)
+                    DrawPolygonRing(position, range, definition.bandSegments);
+                else
+                    Gizmos.DrawWireSphere(position, range);
                 // Aneis das faixas (ou do nucleo, sem faixas) para ver onde a luz muda.
                 Gizmos.color = new Color(lightColor.r, lightColor.g, lightColor.b, .35f);
                 if (definition.bands > 0)
                     for (int band = 1; band < definition.bands; band++)
-                        Gizmos.DrawWireSphere(position, range * RetroLightMath.NormalizedDistanceFor(
-                            band / (float)definition.bands, definition.coreRadius, definition.falloffExponent));
+                        DrawPolygonRing(position, range * RetroLightMath.NormalizedDistanceFor(
+                            band / (float)definition.bands, definition.coreRadius, definition.falloffExponent),
+                            definition.bandSegments);
                 else if (definition.coreRadius > 0f)
                     Gizmos.DrawWireSphere(position, range * definition.coreRadius);
             }
         }
         Gizmos.color = previousColor;
+    }
+
+    private static void DrawPolygonRing(Vector3 center, float radius, int sides)
+    {
+        sides = Mathf.Clamp(sides, 3, 32);
+        float step = Mathf.PI * 2f / sides;
+        float vertexRadius = radius / Mathf.Cos(step * .5f);
+        Vector3 previous = center + new Vector3(vertexRadius, 0f, 0f);
+        for (int i = 1; i <= sides; i++)
+        {
+            float angle = i * step;
+            Vector3 next = center + new Vector3(Mathf.Cos(angle) * vertexRadius, 0f,
+                Mathf.Sin(angle) * vertexRadius);
+            Gizmos.DrawLine(previous, next);
+            previous = next;
+        }
     }
 
     private static void DrawSpot(Vector3 origin, Quaternion rotation, float range, float angle)

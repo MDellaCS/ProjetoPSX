@@ -11,6 +11,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
 {
     private enum SettingsPage { Audio, Video, Camera, Controls, Accessibility }
     private enum PendingConfirm { None, NewGame, RestoreDefaults }
+    private enum SaveSlotsMode { None, Load, Sanctuary }
 
     private const int SliderLevels = 10;
 
@@ -22,6 +23,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
     }
 
     public static bool IsOpen { get; private set; }
+    private static PauseMenuHUD instance;
     internal VisualElement UIRoot => root;
 
     [Header("References")]
@@ -37,6 +39,18 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private VisualElement mainView;
     private VisualElement inventoryView;
     private VisualElement settingsView;
+    private VisualElement saveSlotsView;
+    private VisualElement saveSlotConfirm;
+    private VisualElement sanctuarySaveRow;
+    private ScrollView saveSlotsList;
+    private Label saveSlotsTitle;
+    private Label saveSlotsStatus;
+    private Label saveSlotConfirmMessage;
+    private Button sanctuarySaveButton;
+    private Button saveSlotConfirmYes;
+    private Button saveSlotConfirmNo;
+    private readonly Button[] manualSlotButtons = new Button[GameSaveService.ManualSlotCount];
+    private Button automaticSlotButton;
     private ScrollView options;
     private Image inventoryImage;
     private Image inventoryPreviousImage;
@@ -64,12 +78,24 @@ public sealed class PauseMenuHUD : MonoBehaviour
     private bool cursorVisibleBeforePause;
     private bool settingsOpen;
     private bool inventoryOpen;
+    private SaveSlotsMode saveSlotsMode;
+    private bool saveSlotConfirming;
+    private int selectedSaveSlot = GameSaveService.AutomaticSlotIndex;
+    private string sanctuaryLocation;
+    private string sanctuarySpawnId;
     private bool mainMenuMode;
     private Action startGameAction;
     private string mainMenuMessage;
     private int selectedIndex;
     private float nextNavigationAt;
     private int hoveredIndex = -1;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        instance = null;
+        IsOpen = false;
+    }
 
     private void Awake()
     {
@@ -87,12 +113,14 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
     private void OnEnable()
     {
+        instance = this;
         GameSettingsService.Changed += RefreshScale;
         KeyItemInventory.Changed += RefreshInventory;
     }
 
     private void OnDisable()
     {
+        if (instance == this) instance = null;
         GameSettingsService.Changed -= RefreshScale;
         KeyItemInventory.Changed -= RefreshInventory;
         Resume();
@@ -116,7 +144,12 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
         if (GameInput.PausePressed && !mainMenuMode)
         {
-            if (inventoryOpen)
+            if (saveSlotsMode != SaveSlotsMode.None)
+            {
+                CloseSaveSlots();
+                return;
+            }
+            else if (inventoryOpen)
             {
                 CloseInventory();
                 return;
@@ -160,7 +193,9 @@ public sealed class PauseMenuHUD : MonoBehaviour
 
         if (GameInput.UICancelPressed)
         {
-            if (pending != PendingConfirm.None) ClearConfirm();
+            if (saveSlotConfirming) CancelSaveSlotConfirmation();
+            else if (saveSlotsMode != SaveSlotsMode.None) CloseSaveSlots();
+            else if (pending != PendingConfirm.None) ClearConfirm();
             else if (settingsOpen) CloseSettings();
             else if (inventoryOpen) CloseInventory();
             else if (!mainMenuMode) Resume();
@@ -235,6 +270,19 @@ public sealed class PauseMenuHUD : MonoBehaviour
         inventoryItemName = root.Q<Label>("inventory-item-name");
         inventoryDescription = root.Q<Label>("inventory-description");
         settingsView = root.Q<VisualElement>("pause-settings-view");
+        saveSlotsView = root.Q<VisualElement>("save-slots-view");
+        saveSlotConfirm = root.Q<VisualElement>("save-slot-confirm");
+        sanctuarySaveRow = root.Q<VisualElement>("sanctuary-save-row");
+        saveSlotsList = root.Q<ScrollView>("save-slots-list");
+        saveSlotsTitle = root.Q<Label>("save-slots-title");
+        saveSlotsStatus = root.Q<Label>("save-slots-status");
+        saveSlotConfirmMessage = root.Q<Label>("save-slot-confirm-message");
+        sanctuarySaveButton = root.Q<Button>("sanctuary-save-button");
+        saveSlotConfirmYes = root.Q<Button>("save-slot-confirm-yes");
+        saveSlotConfirmNo = root.Q<Button>("save-slot-confirm-no");
+        for (int slot = 0; slot < manualSlotButtons.Length; slot++)
+            manualSlotButtons[slot] = root.Q<Button>($"save-slot-{slot}");
+        automaticSlotButton = root.Q<Button>("save-slot-auto");
         options = root.Q<ScrollView>("settings-options");
         settingsTitle = root.Q<Label>("pause-settings-title");
         if (options != null)
@@ -264,7 +312,11 @@ public sealed class PauseMenuHUD : MonoBehaviour
             return;
         if (!settingsOpen)
         {
-            if (inventoryOpen)
+            if (saveSlotsMode != SaveSlotsMode.None)
+            {
+                BuildSaveSlotButtons();
+            }
+            else if (inventoryOpen)
             {
                 BuildInventoryButtons();
                 AddButton(root.Q<Button>("inventory-previous-button"),
@@ -278,27 +330,32 @@ public sealed class PauseMenuHUD : MonoBehaviour
             Button saveButton = root.Q<Button>("menu-save-button");
             Button optionsButton = root.Q<Button>("menu-options-button");
             Button exitButton = root.Q<Button>("menu-exit-button");
+            bool confirmingNewGame = mainMenuMode &&
+                pending == PendingConfirm.NewGame;
             // Mesmo menu nos dois modos; so mudam os textos e comandos.
             SetButtonText(primaryButton, mainMenuMode ? "Novo Jogo" : "Continuar");
             SetButtonText(saveButton, mainMenuMode ? "Continuar" : "Carregar Save");
             SetButtonText(optionsButton, "Opções");
             SetButtonText(exitButton, mainMenuMode ? "Sair" : "Voltar ao Menu Inicial");
 
-            bool confirming = mainMenuMode && pending == PendingConfirm.NewGame;
             BuildConfirmSlot(primaryButton, "menu-primary-confirm", "menu-primary-yes",
-                "menu-primary-no", confirming, StartNewGame, MenuAudioCue.Confirm);
-            if (!confirming)
+                "menu-primary-no", confirmingNewGame, startGameAction,
+                MenuAudioCue.Confirm);
+            if (!confirmingNewGame)
                 AddButton(primaryButton, mainMenuMode
-                    ? new Action(AskNewGame) : new Action(Resume),
-                    mainMenuMode ? MenuAudioCue.Confirm : MenuAudioCue.None);
-            // Ainda nao existe sistema de save: fica cinza e inativo.
-            AddButton(saveButton, LoadSave);
+                    ? AskNewGameConfirmation : new Action(Resume),
+                    MenuAudioCue.None);
+            if (!confirmingNewGame)
+                AddButton(saveButton, LoadSave);
             if (saveButton != null)
                 saveButton.SetEnabled(HasSaveGame);
-            AddButton(optionsButton, OpenSettings);
-            AddButton(exitButton, mainMenuMode
-                ? new Action(QuitPlaySession) : new Action(ReturnToMainMenu),
-                MenuAudioCue.Warning);
+            if (!confirmingNewGame)
+            {
+                AddButton(optionsButton, OpenSettings);
+                AddButton(exitButton, mainMenuMode
+                    ? new Action(QuitPlaySession) : new Action(ReturnToMainMenu),
+                    MenuAudioCue.Warning);
+            }
             }
         }
         else
@@ -360,7 +417,173 @@ public sealed class PauseMenuHUD : MonoBehaviour
         confirmButtons.Add(no);
     }
 
-    private void AskNewGame() => AskConfirm(PendingConfirm.NewGame);
+    private void BuildSaveSlotButtons()
+    {
+        if (saveSlotsTitle != null)
+            saveSlotsTitle.text = saveSlotsMode switch
+            {
+            SaveSlotsMode.Sanctuary when GameSaveService.ActiveManualSlot < 0 => "SANTUARIO — ESCOLHA UM SLOT",
+            SaveSlotsMode.Sanctuary => "SANTUARIO",
+                _ => "CARREGAR JOGO"
+            };
+        int activeSlot = GameSaveService.ActiveManualSlot;
+        bool chooseFirstSlot = saveSlotsMode == SaveSlotsMode.Sanctuary && activeSlot < 0;
+        if (saveSlotsList != null)
+            saveSlotsList.style.display = saveSlotsMode != SaveSlotsMode.Sanctuary || chooseFirstSlot
+                ? DisplayStyle.Flex : DisplayStyle.None;
+        if (sanctuarySaveRow != null)
+            sanctuarySaveRow.style.display = saveSlotsMode == SaveSlotsMode.Sanctuary && !chooseFirstSlot
+                ? DisplayStyle.Flex : DisplayStyle.None;
+        if (saveSlotsStatus != null)
+            saveSlotsStatus.style.display = string.IsNullOrEmpty(saveSlotsStatus.text)
+                ? DisplayStyle.None : DisplayStyle.Flex;
+
+        for (int slot = 0; slot < manualSlotButtons.Length; slot++)
+        {
+            Button button = manualSlotButtons[slot];
+            GameSaveService.SlotInfo info = GameSaveService.GetManualSlot(slot);
+            if (button == null) continue;
+            SetButtonText(button, $"{info.DisplayName} — {info.Summary}");
+            bool enabled = saveSlotsMode == SaveSlotsMode.Load
+                ? info.IsOccupied
+                : saveSlotsMode == SaveSlotsMode.Sanctuary && chooseFirstSlot;
+            button.SetEnabled(enabled);
+            if (enabled)
+            {
+                int selected = slot;
+                AddButton(button, () => SelectManualSaveSlot(selected));
+            }
+        }
+
+        if (automaticSlotButton != null)
+        {
+            GameSaveService.SlotInfo info = GameSaveService.GetCheckpointSlot();
+            SetButtonText(automaticSlotButton, $"{info.DisplayName} — {info.Summary}");
+            bool enabled = saveSlotsMode == SaveSlotsMode.Load && info.IsOccupied;
+            automaticSlotButton.SetEnabled(enabled);
+            if (enabled)
+                AddButton(automaticSlotButton, () => LoadSelectedSave(
+                    GameSaveService.AutomaticSlotIndex));
+        }
+
+        bool isSanctuary = saveSlotsMode == SaveSlotsMode.Sanctuary;
+        if (sanctuarySaveButton != null)
+        {
+            SetButtonText(sanctuarySaveButton, activeSlot >= 0
+                ? $"Salvar no Slot {activeSlot + 1}" : "Nenhuma campanha manual ativa");
+            sanctuarySaveButton.SetEnabled(activeSlot >= 0);
+            if (activeSlot >= 0)
+                AddButton(sanctuarySaveButton, AskSanctuarySaveConfirmation);
+        }
+
+        bool confirm = saveSlotConfirming && isSanctuary;
+        if (saveSlotConfirm != null)
+            saveSlotConfirm.style.display = confirm ? DisplayStyle.Flex : DisplayStyle.None;
+        if (saveSlotConfirmMessage != null)
+            saveSlotConfirmMessage.text = activeSlot >= 0
+                ? $"Salvar e substituir o progresso atual do Slot {activeSlot + 1}?"
+                : $"O Slot {selectedSaveSlot + 1} ja possui uma campanha. Substitui-la?";
+        if (confirm)
+        {
+            SetButtonText(saveSlotConfirmYes, "Sim");
+            SetButtonText(saveSlotConfirmNo, "Nao");
+            AddButton(saveSlotConfirmYes, ConfirmSanctuarySave);
+            AddButton(saveSlotConfirmNo, CancelSaveSlotConfirmation, MenuAudioCue.Back);
+        }
+        AddButton(root.Q<Button>("save-slots-back"), CloseSaveSlots, MenuAudioCue.Back);
+    }
+
+    private void SelectManualSaveSlot(int slot)
+    {
+        if (saveSlotsMode == SaveSlotsMode.Load)
+            LoadSelectedSave(slot);
+        else if (saveSlotsMode == SaveSlotsMode.Sanctuary &&
+                 GameSaveService.ActiveManualSlot < 0)
+        {
+            selectedSaveSlot = slot;
+            if (GameSaveService.GetManualSlot(slot).IsOccupied)
+            {
+                saveSlotConfirming = true;
+                RebuildButtons();
+            }
+            else
+                ConfirmSanctuarySave();
+        }
+    }
+
+    private void LoadSelectedSave(int slot)
+    {
+        bool loaded = slot == GameSaveService.AutomaticSlotIndex
+            ? GameSaveService.LoadCheckpoint(out _, out string error)
+            : GameSaveService.LoadManual(slot, out _, out error);
+        if (!loaded)
+        {
+            if (saveSlotsStatus != null) saveSlotsStatus.text = error;
+            RebuildButtons(true);
+            return;
+        }
+        Resume();
+    }
+
+    private void AskSanctuarySaveConfirmation()
+    {
+        saveSlotConfirming = true;
+        RebuildButtons();
+    }
+
+    private void ConfirmSanctuarySave()
+    {
+        int slot = GameSaveService.ActiveManualSlot >= 0
+            ? GameSaveService.ActiveManualSlot : selectedSaveSlot;
+        bool saved = GameSaveService.SaveManual(slot,
+            sanctuaryLocation, sanctuarySpawnId, out string error);
+        saveSlotConfirming = false;
+        if (saveSlotsStatus != null)
+            saveSlotsStatus.text = saved ? "Jogo salvo." : error;
+        RebuildButtons();
+    }
+
+    private void CancelSaveSlotConfirmation()
+    {
+        saveSlotConfirming = false;
+        RebuildButtons(true);
+    }
+
+    private void OpenLoadSlots()
+    {
+        saveSlotsMode = SaveSlotsMode.Load;
+        saveSlotConfirming = false;
+        if (saveSlotsStatus != null) saveSlotsStatus.text = string.Empty;
+        RebuildButtons();
+    }
+
+    private void CloseSaveSlots()
+    {
+        if (saveSlotsMode == SaveSlotsMode.None) return;
+        saveSlotsMode = SaveSlotsMode.None;
+        saveSlotConfirming = false;
+        if (saveSlotsStatus != null) saveSlotsStatus.text = string.Empty;
+        RebuildButtons();
+    }
+
+    public static bool OpenSanctuarySave(string location, string spawnId)
+    {
+        if (instance == null)
+            instance = UnityEngine.Object.FindAnyObjectByType<PauseMenuHUD>();
+        if (instance == null)
+            return false;
+        instance.sanctuaryLocation = location;
+        instance.sanctuarySpawnId = spawnId;
+        instance.saveSlotsMode = SaveSlotsMode.Sanctuary;
+        instance.saveSlotConfirming = false;
+        if (instance.saveSlotsStatus != null) instance.saveSlotsStatus.text = string.Empty;
+        if (!IsOpen) instance.Pause();
+        else instance.RebuildButtons();
+        return true;
+    }
+
+    private void AskNewGameConfirmation() => AskConfirm(PendingConfirm.NewGame);
+
     private void AskRestoreDefaults() => AskConfirm(PendingConfirm.RestoreDefaults);
 
     private void AskConfirm(PendingConfirm kind)
@@ -414,9 +637,9 @@ public sealed class PauseMenuHUD : MonoBehaviour
     }
 
     // Nao ha sistema de save ainda; quando existir, Continuar passa a ativo.
-    private static bool HasSaveGame => false;
+    private static bool HasSaveGame => GameSaveService.HasAnySave;
 
-    private void LoadSave() { }
+    private void LoadSave() => OpenLoadSlots();
 
     private void UpdateOptionsWheel()
     {
@@ -648,8 +871,6 @@ public sealed class PauseMenuHUD : MonoBehaviour
             Resume();
     }
 
-    private void StartNewGame() => startGameAction?.Invoke();
-
     public void SetMainMenuMessage(string message)
     {
         mainMenuMessage = message ?? string.Empty;
@@ -672,6 +893,8 @@ public sealed class PauseMenuHUD : MonoBehaviour
         IsOpen = false;
         hoveredIndex = -1;
         pending = PendingConfirm.None;
+        saveSlotsMode = SaveSlotsMode.None;
+        saveSlotConfirming = false;
         mainMenuMode = false;
         inventoryOpen = false;
         startGameAction = null;
@@ -908,12 +1131,15 @@ public sealed class PauseMenuHUD : MonoBehaviour
             overlay.EnableInClassList("inventory-open", inventoryOpen);
         if (overlay != null) overlay.style.display = visible
             ? DisplayStyle.Flex : DisplayStyle.None;
-        if (mainView != null) mainView.style.display = settingsOpen || inventoryOpen
+        if (mainView != null) mainView.style.display = settingsOpen || inventoryOpen ||
+            saveSlotsMode != SaveSlotsMode.None
             ? DisplayStyle.None : DisplayStyle.Flex;
         if (inventoryView != null) inventoryView.style.display = inventoryOpen
             ? DisplayStyle.Flex : DisplayStyle.None;
         if (settingsView != null) settingsView.style.display = settingsOpen
             ? DisplayStyle.Flex : DisplayStyle.None;
+        if (saveSlotsView != null) saveSlotsView.style.display =
+            saveSlotsMode != SaveSlotsMode.None ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
     private void ApplyMenuModePresentation()
@@ -926,6 +1152,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
             options.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
         }
         SetMainMenuMessage(mainMenuMessage);
+        SetVisible(IsOpen);
     }
 
     private void RefreshScale()

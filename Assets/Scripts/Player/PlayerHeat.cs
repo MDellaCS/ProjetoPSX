@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine.InputSystem;
 
 public class PlayerHeat : MonoBehaviour
 {
@@ -86,17 +85,11 @@ public class PlayerHeat : MonoBehaviour
     [Header("Burn Blast")]
     [Tooltip("Asset de ataque executado automaticamente quando o Burn explode. Controla dano, Poise, Strikes, hitboxes, falloff e efeitos como qualquer outro ataque do player.")]
     [SerializeField] private PlayerAttackDefinition burnExplosionAttack;
-    [Header("Debug")]
-    [Tooltip("Permite usar F4 para remover Heat e F5 para adicionar Heat durante testes. Esses atalhos alteram apenas o Heat e nao geram Superheat.")]
-    [SerializeField] private bool debugHeatInputEnabled = true;
-    [Tooltip("Quantidade de Heat adicionada ou removida por segundo pelos atalhos de debug.")]
-    [Min(0f)] [SerializeField] private float debugHeatPerSecond = 35f;
 
     private float currentHeat;
     private float currentSuperheat;
     private float heatCoolingElapsed;
     private float heatGainCoolingDelayRemaining;
-    private float debugHeatAccumulator;
     private BurnPhase burnPhase;
     private float burnPhaseTimer;
     private float burnElapsed;
@@ -186,7 +179,6 @@ public class PlayerHeat : MonoBehaviour
         currentSuperheat = 0f;
         heatCoolingElapsed = 0f;
         heatGainCoolingDelayRemaining = 0f;
-        debugHeatAccumulator = 0f;
         burnPhase = BurnPhase.None;
         burnPhaseTimer = 0f;
         burnElapsed = 0f;
@@ -208,7 +200,6 @@ public class PlayerHeat : MonoBehaviour
         currentSuperheat = 0f;
         heatCoolingElapsed = 0f;
         heatGainCoolingDelayRemaining = 0f;
-        debugHeatAccumulator = 0f;
         burnPhase = BurnPhase.None;
         burnPhaseTimer = 0f;
         burnElapsed = 0f;
@@ -217,6 +208,24 @@ public class PlayerHeat : MonoBehaviour
         if (TryGetComponent(out PlayerMovesetController moveset))
             moveset.ResetSequence();
         if (wasThermalStateActive && playerState != null)
+            playerState.ChangeState(PlayerState.State.Normal);
+    }
+
+    /// <summary>Restaura apenas os recursos termicos persistentes; estados de Burn sao sempre transitarios.</summary>
+    public void RestoreSaveState(float heat, float superheat)
+    {
+        InterruptActions();
+        burnPhase = BurnPhase.None;
+        burnPhaseTimer = 0f;
+        burnElapsed = 0f;
+        burnStartHeat = 0f;
+        rageGrants.Clear();
+        rageDuration = 0f;
+        currentHeat = Mathf.Clamp(heat, MinHeat, MaxHeat);
+        currentSuperheat = Mathf.Clamp(superheat, 0f, maxSuperheat);
+        heatCoolingElapsed = 0f;
+        heatGainCoolingDelayRemaining = 0f;
+        if (playerState != null && !playerState.IsDead())
             playerState.ChangeState(PlayerState.State.Normal);
     }
 
@@ -230,7 +239,6 @@ public class PlayerHeat : MonoBehaviour
             return;
 
         if (playerState == null || playerState.IsDead()) return;
-        UpdateDebugHeatInput();
         if (!IsOutOfCombatForCooling)
         {
             // Sair de combate sempre inicia uma janela completa de retencao.
@@ -362,21 +370,6 @@ public class PlayerHeat : MonoBehaviour
     {
         if (!IsHeatModeActive) return;
         if (amount > 0f) currentSuperheat = Mathf.Max(0f, currentSuperheat - amount);
-    }
-
-    /// <summary>
-    /// Atalho de teste usado por F8. Encher Superheat dispara Burn da mesma
-    /// forma que ocorreria no gameplay normal.
-    /// </summary>
-    public void FillHeatAndSuperheatForDebug()
-    {
-        if (!IsHeatModeActive) return;
-        if (IsBurning)
-            return;
-
-        currentHeat = MaxHeat;
-        currentSuperheat = maxSuperheat;
-        BeginBurn();
     }
 
     /// <summary>
@@ -619,30 +612,27 @@ public class PlayerHeat : MonoBehaviour
                 attackController.TryStartExternalAttack(burnExplosionAttack);
     }
 
-    private void UpdateDebugHeatInput()
+    public void DebugSetStatus(bool maximize)
     {
-        if (!debugHeatInputEnabled || IsBurning) return;
-        float direction = 0f;
-        if (GameInput.DebugHeatDownHeld) direction -= 1f;
-        if (GameInput.DebugHeatUpHeld) direction += 1f;
-        if (Mathf.Approximately(direction, 0f))
-        {
-            debugHeatAccumulator = 0f;
-            return;
-        }
-        debugHeatAccumulator += debugHeatPerSecond * Time.deltaTime;
-        float amount = debugHeatAccumulator;
-        debugHeatAccumulator = 0f;
-        // O controle de Heat isolado nao usa AddHeat: ultrapassar Max Heat
-        // por F5 nao deve gerar Superheat nem iniciar Burn. F8 testa esse
-        // fluxo completo separadamente.
-        currentHeat = Mathf.Clamp(
-            currentHeat + amount * direction,
-            MinHeat,
-            MaxHeat
-        );
-        if (direction > 0f)
-            RegisterHeatGain();
+        if (!Debug.isDebugBuild || !IsHeatModeActive) return;
+        InterruptActions();
+        burnPhase = BurnPhase.None;
+        burnPhaseTimer = 0f;
+        burnElapsed = 0f;
+        burnStartHeat = 0f;
+        rageGrants.Clear();
+        rageDuration = 0f;
+        currentHeat = maximize ? MaxHeat : 0f;
+        currentSuperheat = maximize ? MaxSuperheat : 0f;
+        heatCoolingElapsed = 0f;
+        heatGainCoolingDelayRemaining = 0f;
+    }
+
+    public void DebugAdjustHeat(float amount)
+    {
+        if (!Debug.isDebugBuild || !IsHeatModeActive || IsBurning) return;
+        currentHeat = Mathf.Clamp(currentHeat + amount, MinHeat, MaxHeat);
+        if (amount > 0f) RegisterHeatGain();
         ResetHeatCoolingRamp();
     }
 

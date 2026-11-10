@@ -10,6 +10,7 @@ float4 _RetroLightPosition[RETRO_MAX_LIGHTS];  // xyz posicao, w 1/alcance
 float4 _RetroLightColor[RETRO_MAX_LIGHTS];     // rgb cor * intensidade (linear), w nucleo (0..0.95)
 float4 _RetroLightDirection[RETRO_MAX_LIGHTS]; // xyz direcao do Spot, w cos(externo) ou -2 em Point
 float4 _RetroLightShape[RETRO_MAX_LIGHTS];     // x 1/(cosInt - cosExt), y expoente, z faixas, w wrap
+float4 _RetroLightFacet[RETRO_MAX_LIGHTS];     // x lados do contorno facetado das faixas
 float _RetroLightCount;
 
 float4 _RetroAmbientSky;     // rgb linear
@@ -61,7 +62,22 @@ half3 RetroLocalLights(float3 positionWS, half3 normalWS)
         float4 position = _RetroLightPosition[i];
         float3 toLight = position.xyz - positionWS;
         float distanceSq = dot(toLight, toLight);
-        float normalizedDistance = sqrt(distanceSq) * position.w;
+        float normalizedDistance;
+        if (_RetroLightShape[i].z >= 1.0)
+        {
+            float2 flatOffset = toLight.xz;
+            float flatDistance = length(flatOffset);
+            float sides = max(3.0, _RetroLightFacet[i].x);
+            float sector = 6.28318530718 / sides;
+            float angle = atan2(flatOffset.y, flatOffset.x);
+            float centeredAngle = angle - round(angle / sector) * sector;
+            float polygonDistance = flatDistance * cos(centeredAngle);
+            normalizedDistance = length(float2(polygonDistance, toLight.y)) * position.w;
+        }
+        else
+        {
+            normalizedDistance = sqrt(distanceSq) * position.w;
+        }
         if (normalizedDistance >= 1.0)
             continue;
 

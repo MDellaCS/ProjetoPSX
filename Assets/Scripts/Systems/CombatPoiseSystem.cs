@@ -99,6 +99,12 @@ public sealed class CombatPoiseState
         timeSinceLastHit = 0f;
     }
 
+    public void SetCurrent(float value, float maxPoise)
+    {
+        current = Mathf.Clamp(value, 0f, Mathf.Max(1f, maxPoise));
+        timeSinceLastHit = 0f;
+    }
+
     public CombatPoiseHitResult ReceiveHit(int poiseDamage, float maxPoise)
     {
         float safeMax = Mathf.Max(1f, maxPoise);

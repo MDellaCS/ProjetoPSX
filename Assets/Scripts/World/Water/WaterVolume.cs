@@ -49,6 +49,10 @@ public sealed class WaterVolume : MonoBehaviour
     [Min(1f)] [SerializeField] private float floorProbeDistance = 30f;
 
     [Header("Visual (preparado)")]
+    [Tooltip("Material aplicado ao plano gerado. Use um material transparente de água ou atribua uma textura no material.")]
+    [SerializeField] private Material surfaceMaterial;
+    [Tooltip("Repetições da textura por metro no plano gerado. A textura deve usar Wrap Mode = Repeat.")]
+    [Min(0.01f)] [SerializeField] private float textureRepeatsPerMeter = .2f;
     [Tooltip("Renderers da agua. Recebem _WaterSurfaceY (altura da superficie) para o shader futuro, sem precisar de codigo.")]
     [SerializeField] private Renderer[] visualRenderers;
 
@@ -67,6 +71,15 @@ public sealed class WaterVolume : MonoBehaviour
 
     public WaterProfile Profile => profile != null ? profile : WaterProfile.Fallback;
     public int Priority => priority;
+    public Material SurfaceMaterial => surfaceMaterial;
+    public float TextureRepeatsPerMeter => textureRepeatsPerMeter;
+    public Collider VolumeCollider => volumeCollider != null ? volumeCollider : GetComponent<Collider>();
+
+    public void SetSurfaceVisual(Material material, Renderer renderer)
+    {
+        surfaceMaterial = material;
+        visualRenderers = renderer != null ? new[] { renderer } : System.Array.Empty<Renderer>();
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => activeVolumes.Clear();
@@ -134,8 +147,9 @@ public sealed class WaterVolume : MonoBehaviour
     /// </summary>
     public float SurfaceHeightAt(float x, float z)
     {
-        Bounds bounds = volumeCollider != null
-            ? volumeCollider.bounds : new Bounds(transform.position, Vector3.zero);
+        Collider collider = VolumeCollider;
+        Bounds bounds = collider != null
+            ? collider.bounds : new Bounds(transform.position, Vector3.zero);
         return bounds.max.y + surfaceOffset;
     }
 

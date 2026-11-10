@@ -717,6 +717,15 @@ public sealed class CameraFollow : MonoBehaviour
 
     private bool HandleCursorLock()
     {
+        // The debug menu owns the mouse while open. In particular, never let
+        // this handler interpret a UI click as a request to recapture the cursor.
+        if (PlayerDebugToolkitHUD.IsDebugMenuVisible)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            return false;
+        }
+
         if (GameInput.UnlockCursorPressed)
         {
             Cursor.lockState = CursorLockMode.None;

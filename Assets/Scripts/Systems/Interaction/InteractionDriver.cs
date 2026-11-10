@@ -56,7 +56,7 @@ internal sealed class InteractionDriver : MonoBehaviour
         if (promptHUD != null)
             promptHUD.ShowContextualPrompt(best,
                 GameInputBindings.GetDisplayString("Interact"),
-                best.InteractionMessage, best.InteractionIcon,
+                best.ResolvedInteractionMessage, best.ResolvedInteractionIcon,
                 best.ActivationMode == InteractionActivationMode.Hold,
                 best.ActivationMode == InteractionActivationMode.Hold && holdTarget == best
                     ? heldSeconds / best.HoldDuration : 0f);
@@ -68,7 +68,7 @@ internal sealed class InteractionDriver : MonoBehaviour
         }
 
         ResetHold();
-        if (GameInput.InteractPressed && best.Interact(player))
+        if (GameInput.InteractPressed && best.TryActivate(player))
             HidePrompt(best);
     }
 
@@ -102,7 +102,7 @@ internal sealed class InteractionDriver : MonoBehaviour
             return;
 
         holdAttempted = true;
-        if (target.Interact(player))
+        if (target.TryActivate(player))
             HidePrompt(target);
     }
 
@@ -133,13 +133,13 @@ internal sealed class InteractionDriver : MonoBehaviour
         {
             InteractableBase item = items[i];
             if (item == null || !item.isActiveAndEnabled ||
-                !item.ContainsPlayer(player) || !item.CanInteract(player))
+                !item.IsInsideInteractionArea(player) || !item.CanInteract(player))
                 continue;
 
-            float distance = item.DistanceSqrTo(position);
+            float distance = item.InteractionDistanceSqrTo(position);
             bool better = best == null ||
-                item.InteractionPriority > best.InteractionPriority ||
-                (item.InteractionPriority == best.InteractionPriority &&
+                item.ResolvedInteractionPriority > best.ResolvedInteractionPriority ||
+                (item.ResolvedInteractionPriority == best.ResolvedInteractionPriority &&
                  distance < bestDistance);
             if (!better)
                 continue;

@@ -15,6 +15,27 @@
                 <ui:Button name="menu-options-button" class="menu-button menu-button--primary" text="Opções" />
                 <ui:Button name="menu-exit-button" class="menu-button menu-button--primary" text="Sair" />
             </ui:VisualElement>
+            <ui:VisualElement name="save-slots-view" class="menu-view menu-view--save-slots">
+                <ui:Label name="save-slots-title" class="menu-title" text="CARREGAR JOGO" />
+                <ui:Label name="save-slots-status" class="menu-message" text="" />
+                <ui:ScrollView name="save-slots-list" class="save-slots-list" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+                    <ui:Button name="save-slot-0" class="menu-button save-slot-button" text="Slot 1 — Vazio" />
+                    <ui:Button name="save-slot-1" class="menu-button save-slot-button" text="Slot 2 — Vazio" />
+                    <ui:Button name="save-slot-2" class="menu-button save-slot-button" text="Slot 3 — Vazio" />
+                    <ui:Button name="save-slot-3" class="menu-button save-slot-button" text="Slot 4 — Vazio" />
+                    <ui:Button name="save-slot-4" class="menu-button save-slot-button" text="Slot 5 — Vazio" />
+                    <ui:Button name="save-slot-auto" class="menu-button save-slot-button" text="Checkpoint automatico — Vazio" />
+                </ui:ScrollView>
+                <ui:VisualElement name="sanctuary-save-row" class="menu-slot sanctuary-save-row">
+                    <ui:Button name="sanctuary-save-button" class="menu-button menu-button--primary" text="Salvar" />
+                </ui:VisualElement>
+                <ui:VisualElement name="save-slot-confirm" class="save-slot-confirm">
+                    <ui:Label name="save-slot-confirm-message" class="menu-message" text="Confirmar?" />
+                    <ui:Button name="save-slot-confirm-yes" class="menu-button menu-button--small" text="Sim" />
+                    <ui:Button name="save-slot-confirm-no" class="menu-button menu-button--small" text="Não" />
+                </ui:VisualElement>
+                <ui:Button name="save-slots-back" class="menu-button menu-button--small" text="Voltar" />
+            </ui:VisualElement>
             <ui:VisualElement name="pause-inventory-view" class="menu-view menu-inventory-view">
                 <ui:Label name="inventory-title" class="menu-title" text="INVENTÁRIO" />
                 <ui:VisualElement class="inventory-content">
@@ -59,12 +80,12 @@
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="item-acquisition-modal" class="item-modal">
-            <ui:VisualElement class="item-modal-panel">
-                <ui:Image name="item-modal-image" class="item-modal-image" scale-mode="ScaleToFit" />
-                <ui:Label name="item-modal-name" class="item-modal-name" text="" />
-                <ui:Label name="item-modal-close-hint" class="item-modal-close-hint" text="[E] Fechar" />
-            </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="item-acquisition-modal" class="item-modal">
+        <ui:VisualElement class="item-modal-panel">
+            <ui:Image name="item-modal-image" class="item-modal-image" scale-mode="ScaleToFit" />
+            <ui:Label name="item-modal-name" class="item-modal-name" text="" />
+            <ui:Label name="item-modal-close-hint" class="item-modal-close-hint" text="[E / Clique] Fechar" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

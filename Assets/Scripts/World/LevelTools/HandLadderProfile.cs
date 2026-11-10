@@ -9,7 +9,7 @@ public enum HandLadderPrefabAxis
 
 /// <summary>
 /// Tipo de escada: visual (prefabs e medidas dos degraus) e comportamento
-/// (prompt, velocidades, encaixe, salto e saidas). A <see cref="HandLadder"/>
+/// (velocidades, encaixe, salto e saidas). A <see cref="HandLadder"/>
 /// guarda so o que e da instancia (tamanho, posicao, fixacao, zonas e saidas
 /// do local); tudo que define COMO a escada se comporta fica aqui e vale para
 /// todas as escadas que usam o perfil. Um perfil sem prefabs serve so de
@@ -61,14 +61,6 @@ public sealed class HandLadderProfile : ScriptableObject
     [Min(.05f)] public float rungSpacing = .32f;
     [Tooltip("Largura inicial da escada em metros. Cada instancia pode sobrescrever este valor.")]
     [Min(.1f)] public float defaultWidth = 1.2f;
-
-    [Header("Interacao")]
-    [Tooltip("Texto do prompt enquanto o jogador esta na zona de entrada.")]
-    public string interactionMessage = "Escalar";
-    [Tooltip("Icone opcional do botao Interagir no prompt.")]
-    public Sprite interactionIcon;
-    [Tooltip("Em sobreposicao com outras interacoes vence a maior prioridade; em empate, a mais proxima.")]
-    public int interactionPriority;
 
     [Header("Escalada")]
     [Tooltip("Velocidade ao longo do eixo de subida, em metros por segundo.")]

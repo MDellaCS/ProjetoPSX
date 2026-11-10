@@ -25,7 +25,7 @@ public sealed class HeatNotchSound
     [Tooltip("Som tocado ao perder este notch (Heat ou Cold descendo de nivel). Vazio = silencio.")]
     public AudioCue loss = CreateCue();
 
-    public static AudioCue CreateCue() => new() { spatialBlend = 0f };
+    public static AudioCue CreateCue() => new();
 }
 
 [System.Serializable]

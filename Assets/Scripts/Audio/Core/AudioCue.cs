@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Definicao configuravel de um som. Um cue pode ter variacoes equivalentes do
 /// mesmo efeito para evitar repeticao mecanica. E o formato unico de som de
-/// todos os modulos de audio (Interface, Dialogo, Mundo e SFX).
+/// todos os modulos de audio (Interface, Dialogo e SFX).
 /// </summary>
 [Serializable]
 public sealed class AudioCue
@@ -19,14 +19,6 @@ public sealed class AudioCue
     [Min(.01f)] public float pitch = 1f;
     [Tooltip("Variacao aleatoria somada ou subtraida do pitch base a cada reproducao.")]
     [Range(0f, 1f)] public float pitchVariation;
-    [Tooltip("Quanto o som usa espacializacao 3D: zero e 2D, um e totalmente 3D. Sons de interface e dialogo sempre tocam em 2D.")]
-    [Range(0f, 1f)] public float spatialBlend = 1f;
-    [Tooltip("Distancia minima da fonte 3D antes de o volume comecar a diminuir.")]
-    [Min(0f)] public float minDistance = 1f;
-    [Tooltip("Distancia maxima de atenuacao da fonte 3D.")]
-    [Min(.01f)] public float maxDistance = 24f;
-    [Tooltip("Regra usada para diminuir o volume conforme a distancia da fonte.")]
-    public AudioRolloffMode rolloffMode = AudioRolloffMode.Logarithmic;
     [Tooltip("Prioridade da voz no mixer Unity: zero e a prioridade mais alta, 255 a mais baixa.")]
     [Range(0, 255)] public int priority = 128;
 

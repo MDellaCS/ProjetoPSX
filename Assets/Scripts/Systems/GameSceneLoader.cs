@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Playables;
 using UnityEngine.SceneManagement;
 using UnityEngine.Timeline;
@@ -44,10 +43,7 @@ public sealed class GameSceneLoader : MonoBehaviour
     [Tooltip("Nome do objeto da cena do menu que contem o CutsceneController iniciado pelo botao Novo Jogo.")]
     [SerializeField] private string newGameCutsceneObjectName = "NewGameIntro";
 
-    [Header("Atalhos de Teste")]
-    [Tooltip("Permite alternar com F9 entre as cenas encontradas em Assets/Scenes, exceto Bootstrap.")]
-    [SerializeField] private bool enableDebugSceneShortcuts = true;
-    [Tooltip("Arquivo da cena carregado por LoadGameplayScene. Selecione o asset .unity no Project.")]
+    [Tooltip("Arquivo da cena de gameplay para iniciar campanha e para LoadGameplayScene. Selecione o asset .unity no Project.")]
 #if UNITY_EDITOR
     [SerializeField] private SceneAsset gameplaySceneAsset;
     [SerializeField, HideInInspector] private bool gameplaySceneAssetInitialized;
@@ -61,6 +57,10 @@ public sealed class GameSceneLoader : MonoBehaviour
     private LoadingScreenHUD loadingScreen;
 
     public bool IsLoading => isLoading;
+    public string GameplayScenePath => gameplayScenePath;
+    public string DefaultSpawnId => defaultSpawnId;
+    public bool CanLoadSavedScene(string scenePath) => CanLoadScene(ResolveScenePath(scenePath));
+    public void LoadSavedScene(string scenePath, string spawnId) => LoadScene(scenePath, spawnId);
     public bool HasStartupSceneConfigured
     {
         get
@@ -68,6 +68,26 @@ public sealed class GameSceneLoader : MonoBehaviour
             string path = ResolveScenePath(mainMenuScenePath);
             return !string.IsNullOrWhiteSpace(path) && CanLoadScene(path);
         }
+    }
+
+    public bool HasGameplaySceneConfigured =>
+        !string.IsNullOrWhiteSpace(ResolveScenePath(gameplayScenePath)) &&
+        CanLoadScene(ResolveScenePath(gameplayScenePath));
+
+    public bool CanBeginNewCampaign(out string reason)
+    {
+        if (!HasGameplaySceneConfigured)
+        {
+            reason = "Configure uma cena de gameplay no GameSceneLoader do Bootstrap.";
+            return false;
+        }
+        if (ResolvePlayerObject() == null)
+        {
+            reason = "O Player persistente nao esta disponivel para iniciar a campanha.";
+            return false;
+        }
+        reason = null;
+        return true;
     }
 
     private void OnValidate()
@@ -139,17 +159,9 @@ public sealed class GameSceneLoader : MonoBehaviour
             loadingScreen.HideAfterSceneReady();
     }
 
-    private void Update()
+    public void DebugLoadNextScene()
     {
-        if (!Debug.isDebugBuild || !enableDebugSceneShortcuts || isLoading || Keyboard.current == null)
-            return;
-
-        if (Keyboard.current.f9Key.wasPressedThisFrame)
-            LoadNextSceneInFolder();
-    }
-
-    private void LoadNextSceneInFolder()
-    {
+        if (!Debug.isDebugBuild || isLoading) return;
         sceneCyclePaths ??= FindSceneCyclePaths();
         if (sceneCyclePaths.Count == 0)
             return;
@@ -407,6 +419,32 @@ public sealed class GameSceneLoader : MonoBehaviour
             return;
         }
 
+        if (!intro.CanStart)
+        {
+            PauseMenuHUD unavailableMenu = FindAnyObjectByType<PauseMenuHUD>();
+            if (unavailableMenu != null)
+                unavailableMenu.SetMainMenuMessage("Outra cutscene esta ativa ou a Timeline esta indisponivel.");
+            return;
+        }
+
+        if (!CanBeginNewCampaign(out string campaignError))
+        {
+            PauseMenuHUD unavailableMenu = FindAnyObjectByType<PauseMenuHUD>();
+            if (unavailableMenu != null)
+                unavailableMenu.SetMainMenuMessage(campaignError);
+            return;
+        }
+
+        GameObject playerObject = ResolvePlayerObject();
+
+        if (!GameSaveService.BeginNewCampaign(gameplayScenePath, defaultSpawnId,
+                playerObject, out string saveError))
+        {
+            PauseMenuHUD unavailableMenu = FindAnyObjectByType<PauseMenuHUD>();
+            if (unavailableMenu != null) unavailableMenu.SetMainMenuMessage(saveError);
+            return;
+        }
+
         PauseMenuHUD menu = FindAnyObjectByType<PauseMenuHUD>();
         if (menu != null)
             menu.SetMainMenuMessage(string.Empty);
@@ -421,8 +459,6 @@ public sealed class GameSceneLoader : MonoBehaviour
         PlayableDirector director = intro.GetComponent<PlayableDirector>();
         if (director != null)
             director.stopped += OnNewGameCutsceneStopped;
-        // Um novo jogo inicia um save de historia limpo, sem itens-chave anteriores.
-        KeyItemInventory.ResetForNewGame();
         if (!intro.PlayCutscene())
         {
             if (director != null)
@@ -440,6 +476,13 @@ public sealed class GameSceneLoader : MonoBehaviour
             if (menu != null)
                 menu.SetMainMenuMessage("A cutscene de início não pôde ser iniciada.");
         }
+    }
+
+    private GameObject ResolvePlayerObject()
+    {
+        if (player == null)
+            ResolvePlayer();
+        return player != null ? player.gameObject : null;
     }
 
     private void OnNewGameCutsceneStopped(PlayableDirector director)

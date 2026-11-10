@@ -53,13 +53,16 @@ public static class GameSaveResetService
 
     private static void DeleteProjectSaveKeys(GameObject player)
     {
+        GameSaveService.DeleteAllSaves();
         string[] keys =
         {
             "ProjetoPSX.InputBindings.V1", "ProjetoPSX.Settings.V1",
-            "ProjetoPSX.PlayerCurrency.v1", "ProjetoPSX.KeyItems.V1"
+            "ProjetoPSX.PlayerCurrency.v1", "ProjetoPSX.KeyItems.V1",
+            CorpseRun.SaveKey
         };
         foreach (string key in keys)
             PlayerPrefs.DeleteKey(key);
+        CorpseRun.ResetStoredProgress();
         if (player != null)
         {
             if (player.TryGetComponent(out PlayerProgression progression))

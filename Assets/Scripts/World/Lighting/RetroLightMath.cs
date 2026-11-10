@@ -6,6 +6,15 @@ using UnityEngine;
 /// </summary>
 public static class RetroLightMath
 {
+    /// <summary>Distancia radial corrigida para o apotema de um poligono regular orientado em setores.</summary>
+    public static float PolygonalRadialDistance(float radius, float angleRadians, int sides)
+    {
+        sides = Mathf.Max(3, sides);
+        float sector = Mathf.PI * 2f / sides;
+        float centeredAngle = angleRadians - Mathf.Round(angleRadians / sector) * sector;
+        return radius * Mathf.Cos(centeredAngle);
+    }
+
     /// <summary>Atenuacao por distancia (0..1). normalizedDistance = distancia / alcance.</summary>
     public static float Attenuation(float normalizedDistance, float coreRadius,
         float falloffExponent, int bands)

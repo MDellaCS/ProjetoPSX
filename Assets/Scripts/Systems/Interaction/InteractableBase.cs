@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public enum InteractionActivationMode
 {
@@ -9,82 +8,94 @@ public enum InteractionActivationMode
     Hold
 }
 
-/// <summary>
-/// Base de tudo que o jogador aciona com o botao Interagir (escadas, lojas,
-/// cutscenes, areas genericas). A base so descreve o objeto; quem decide qual
-/// objeto responde, mostra o prompt e consome o input e o
-/// <see cref="InteractionSystem"/>, que mantem UM candidato por frame.
-/// Para criar uma nova interacao herde desta classe e implemente
-/// <see cref="ContainsPlayer"/> e <see cref="Interact"/>.
-/// </summary>
+/// <summary>Comportamento acionado pelo arbitrador global de interacoes.</summary>
 public abstract class InteractableBase : MonoBehaviour
 {
-    [Header("Interacao")]
-    [Tooltip("Prioridade desta interacao quando varias areas estiverem disponiveis. Valores maiores vencem; em empate, vence a mais proxima.")]
-    [FormerlySerializedAs("priority")]
-    [SerializeField] private int interactionPriority;
-    [Tooltip("Toque unico ativa ao apertar Interagir; Segurar exige manter o botao pelo tempo configurado.")]
-    [SerializeField] private InteractionActivationMode activationMode;
-    [Tooltip("Tempo que o jogador deve manter Interagir pressionado para ativar esta interacao.")]
-    [Min(.1f)] [SerializeField] private float holdDuration = .65f;
-    [Tooltip("Exige caminho desobstruido entre jogador e alvo. Colliders nas layers marcadas bloqueiam a interacao.")]
-    [SerializeField] private bool blockByGeometry;
-    [Tooltip("Layers que podem bloquear a interacao quando Bloquear por Geometria estiver ativo.")]
-    [SerializeField] private LayerMask blockingLayers = Physics.DefaultRaycastLayers;
-    [Tooltip("Ponto de destino do teste de visibilidade. Vazio usa o ponto da interacao.")]
-    [SerializeField] private Transform visibilityTarget;
-
     private readonly RaycastHit[] visibilityHits = new RaycastHit[16];
+    private bool interactionUsed;
+    private float nextInteractionTime;
 
-    /// <summary>Em sobreposicao vence a maior prioridade; em empate, o mais proximo.</summary>
-    public virtual int InteractionPriority => interactionPriority;
-    public InteractionActivationMode ActivationMode => activationMode;
-    public float HoldDuration => Mathf.Max(.1f, holdDuration);
+    public InteractionProfile EffectiveInteractionProfile => ResolveProfile();
+    protected InteractionProfile InteractionSettings => EffectiveInteractionProfile;
+    public int ResolvedInteractionPriority => EffectiveInteractionProfile.Priority;
+    public InteractionActivationMode ActivationMode => EffectiveInteractionProfile.ActivationMode;
+    public float HoldDuration => EffectiveInteractionProfile.HoldDuration;
+    public string ResolvedInteractionMessage =>
+        !string.IsNullOrWhiteSpace(EffectiveInteractionProfile.PromptMessage)
+            ? EffectiveInteractionProfile.PromptMessage : InteractionMessage;
+    public Sprite ResolvedInteractionIcon => EffectiveInteractionProfile.PromptIcon != null
+        ? EffectiveInteractionProfile.PromptIcon : InteractionIcon;
 
-    /// <summary>Texto mostrado no prompt contextual.</summary>
     public abstract string InteractionMessage { get; }
-
-    /// <summary>Icone opcional no lugar do nome do botao.</summary>
     public virtual Sprite InteractionIcon => null;
 
-    /// <summary>Verdadeiro se o jogador esta na zona de acionamento (geometria).</summary>
-    public abstract bool ContainsPlayer(PlayerMovement player);
+    public virtual bool ContainsPlayer(PlayerMovement player)
+    {
+        return InteractionArea.ContainsPlayer(InteractionVolumeTransform(),
+            EffectiveInteractionProfile, player);
+    }
 
-    /// <summary>Regras extras (estado do jogador, "uma vez so", cooldown...). Falso esconde o prompt.</summary>
-    public virtual bool CanInteract(PlayerMovement player) =>
-        !blockByGeometry || HasClearPath(player);
+    public virtual bool CanInteract(PlayerMovement player)
+    {
+        InteractionProfile profile = EffectiveInteractionProfile;
+        if (player == null || (profile.RequireGrounded && !player.IsGrounded) ||
+            (profile.InteractOnce && interactionUsed) || Time.unscaledTime < nextInteractionTime)
+            return false;
+        return !profile.BlockByGeometry || HasClearPath(player);
+    }
 
-    /// <summary>Distancia ao quadrado usada para escolher o mais proximo entre candidatos.</summary>
+    public bool IsInsideInteractionArea(PlayerMovement player) => ContainsPlayer(player);
+    public float InteractionDistanceSqrTo(Vector3 position) => DistanceSqrTo(position);
+
     public virtual float DistanceSqrTo(Vector3 position) =>
-        (transform.position - position).sqrMagnitude;
+        InteractionArea.DistanceSqrTo(InteractionVolumeTransform(), EffectiveInteractionProfile, position);
 
-    /// <summary>Progresso visual do modo Segurar, atualizado pelo driver central.</summary>
+    protected Transform InteractionVolumeTransform()
+    {
+        InteractionArea area = GetComponent<InteractionArea>();
+        return area != null && area != this ? area.transform : transform;
+    }
+
     public virtual void SetHoldProgress(float progress) { }
+    public abstract bool Interact(PlayerMovement player);
 
-    protected virtual Vector3 InteractionPoint => transform.position;
+    public bool TryActivate(PlayerMovement player)
+    {
+        if (!CanInteract(player) || !Interact(player))
+            return false;
+        interactionUsed = true;
+        nextInteractionTime = Time.unscaledTime + EffectiveInteractionProfile.Cooldown;
+        return true;
+    }
+
+    private InteractionProfile ResolveProfile()
+    {
+        if (this is InteractionArea ownArea && ownArea.AssignedProfile != null)
+            return ownArea.AssignedProfile;
+        InteractionArea sibling = GetComponent<InteractionArea>();
+        if (sibling != null && sibling != this)
+            return sibling.AssignedProfile;
+        return InteractionProfile.DefaultFor(this);
+    }
 
     private bool HasClearPath(PlayerMovement player)
     {
-        if (player == null)
-            return false;
         Vector3 origin = PlayerCenter(player);
-        Vector3 target = visibilityTarget != null
-            ? visibilityTarget.position : InteractionPoint;
+        Vector3 target = InteractionArea.GetWorldCenter(InteractionVolumeTransform(),
+            EffectiveInteractionProfile);
         Vector3 delta = target - origin;
         float distance = delta.magnitude;
         if (distance <= .05f)
             return true;
-
-        int hitCount = Physics.RaycastNonAlloc(origin, delta / distance,
-            visibilityHits, distance, blockingLayers, QueryTriggerInteraction.Ignore);
-        if (hitCount >= visibilityHits.Length)
+        int count = Physics.RaycastNonAlloc(origin, delta / distance, visibilityHits,
+            distance, EffectiveInteractionProfile.BlockingLayers, QueryTriggerInteraction.Ignore);
+        if (count >= visibilityHits.Length)
             return false;
-        for (int i = 0; i < hitCount; i++)
+        for (int i = 0; i < count; i++)
         {
             Collider hit = visibilityHits[i].collider;
             if (hit == null || IsChildOf(hit.transform, player.transform) ||
-                IsChildOf(hit.transform, transform) || visibilityTarget != null &&
-                IsChildOf(hit.transform, visibilityTarget))
+                IsChildOf(hit.transform, transform))
                 continue;
             return false;
         }
@@ -94,36 +105,31 @@ public abstract class InteractableBase : MonoBehaviour
     private static bool IsChildOf(Transform candidate, Transform parent) =>
         candidate == parent || candidate.IsChildOf(parent);
 
-    /// <summary>Executa a interacao. Retorna verdadeiro se aconteceu (o prompt some).</summary>
-    public abstract bool Interact(PlayerMovement player);
+    protected virtual void OnEnable()
+    {
+        InteractionArea area = GetComponent<InteractionArea>();
+        if (area != null && area != this)
+        {
+            InteractionSystem.Register(area.GetInteractionHandler(this));
+            return;
+        }
+        InteractionSystem.Register(this);
+    }
 
-    protected virtual void OnEnable() => InteractionSystem.Register(this);
     protected virtual void OnDisable() => InteractionSystem.Unregister(this);
 
-    /// <summary>Centro da capsula do jogador (ou a posicao, sem motor).</summary>
+    protected virtual void OnDrawGizmos()
+    {
+        if (!InteractionGizmos.Visible || GetComponent<InteractionArea>() != null)
+            return;
+        InteractionArea.DrawProfileGizmo(InteractionVolumeTransform(), EffectiveInteractionProfile);
+    }
+
     public static Vector3 PlayerCenter(PlayerMovement player)
     {
         if (player == null)
             return Vector3.zero;
         PlayerCharacterController motor = player.EntityCharacterController;
         return motor != null ? motor.bounds.center : player.transform.position;
-    }
-
-    /// <summary>
-    /// Centro do jogador dentro do collider da area. Usa ClosestPoint (respeita
-    /// forma, escala e rotacao) e funciona mesmo se o jogador nasceu dentro da
-    /// area ou se a matriz de layers nao entrega callbacks de trigger.
-    /// </summary>
-    public static bool ColliderContainsPlayer(Collider area, PlayerMovement player)
-    {
-        if (area == null || player == null || !area.enabled ||
-            !area.gameObject.activeInHierarchy)
-            return false;
-
-        Vector3 center = PlayerCenter(player);
-        if (area is BoxCollider || area is SphereCollider || area is CapsuleCollider ||
-            (area is MeshCollider mesh && mesh.convex))
-            return (area.ClosestPoint(center) - center).sqrMagnitude <= .0001f;
-        return area.bounds.Contains(center);
     }
 }

@@ -176,7 +176,7 @@ public sealed class SetObjectsActiveReaction : WorldObjectReaction
     }
 }
 
-/// <summary>Toca um som no mundo.</summary>
+/// <summary>Toca um efeito sonoro 2D.</summary>
 [Serializable]
 public sealed class PlaySoundReaction : WorldObjectReaction
 {
@@ -194,7 +194,7 @@ public sealed class PlaySoundReaction : WorldObjectReaction
 
         AudioClip clip = clips[UnityEngine.Random.Range(0, clips.Length)];
         if (clip != null)
-            WorldAudio.PlayAt(clip, context.Owner.CenterPosition, volume);
+            SfxAudio.Play(clip, volume);
     }
 }
 

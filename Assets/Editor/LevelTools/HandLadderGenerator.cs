@@ -531,9 +531,8 @@ internal static class HandLadderGenerationRegression
 
             // Comportamento vem do perfil; sem perfil vale o padrao.
             float profileClimb = ladder.ClimbSpeed;
-            Check(Mathf.Abs(profileClimb - profile.climbSpeed) < .0001f &&
-                ladder.InteractionMessage == profile.interactionMessage,
-                "Velocidade e prompt devem vir do perfil.");
+            Check(Mathf.Abs(profileClimb - profile.climbSpeed) < .0001f,
+                "Velocidade deve vir do perfil da escada.");
             Set(ladder, "profile", null);
             Check(Mathf.Abs(ladder.ClimbSpeed - HandLadderProfile.Default.climbSpeed) < .0001f &&
                 ladder.RungSpacing == 0f,

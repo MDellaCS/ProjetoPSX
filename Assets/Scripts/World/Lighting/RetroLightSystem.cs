@@ -30,6 +30,7 @@ public sealed class RetroLight
     public float coreRadius;
     public float falloffExponent = 1f;
     public int bands;
+    public int bandSegments = 8;
     public float wrap;
     public float spotAngle = 45f;
     public float innerSpotAngle = 30f;
@@ -58,6 +59,7 @@ public static class RetroLightSystem
     private static readonly Vector4[] ColorData = new Vector4[MaxLights];
     private static readonly Vector4[] DirectionData = new Vector4[MaxLights];
     private static readonly Vector4[] ShapeData = new Vector4[MaxLights];
+    private static readonly Vector4[] FacetData = new Vector4[MaxLights];
     private static readonly RetroLight[] Selected = new RetroLight[MaxLights];
     private static readonly float[] SelectedScore = new float[MaxLights];
     private static readonly Plane[] FrustumPlanes = new Plane[6];
@@ -66,6 +68,7 @@ public static class RetroLightSystem
     private static readonly int LightColorId = Shader.PropertyToID("_RetroLightColor");
     private static readonly int LightDirectionId = Shader.PropertyToID("_RetroLightDirection");
     private static readonly int LightShapeId = Shader.PropertyToID("_RetroLightShape");
+    private static readonly int LightFacetId = Shader.PropertyToID("_RetroLightFacet");
     private static readonly int LightCountId = Shader.PropertyToID("_RetroLightCount");
     private static readonly int AmbientSkyId = Shader.PropertyToID("_RetroAmbientSky");
     private static readonly int AmbientGroundId = Shader.PropertyToID("_RetroAmbientGround");
@@ -335,7 +338,8 @@ public static class RetroLightSystem
             }
             DirectionData[i] = new Vector4(forward.x, forward.y, forward.z, cosOuter);
             ShapeData[i] = new Vector4(spotScale, Mathf.Max(.01f, light.falloffExponent),
-                Mathf.Max(0, light.bands), Mathf.Clamp01(light.wrap));
+                Mathf.Clamp(light.bands, 0, 64), Mathf.Clamp01(light.wrap));
+            FacetData[i] = new Vector4(Mathf.Clamp(light.bandSegments, 3, 32), 0f, 0f, 0f);
             Selected[i] = null;
         }
 
@@ -343,6 +347,7 @@ public static class RetroLightSystem
         Shader.SetGlobalVectorArray(LightColorId, ColorData);
         Shader.SetGlobalVectorArray(LightDirectionId, DirectionData);
         Shader.SetGlobalVectorArray(LightShapeId, ShapeData);
+        Shader.SetGlobalVectorArray(LightFacetId, FacetData);
         Shader.SetGlobalFloat(LightCountId, count);
         VisibleLightCount = count;
     }

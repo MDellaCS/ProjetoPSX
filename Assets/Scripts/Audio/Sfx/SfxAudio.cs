@@ -21,6 +21,15 @@ public sealed class SfxAudio : AudioModule<SfxAudioSettings>
         GetModule<SfxAudio>().PlayCue(cue, position);
     }
 
+    /// <summary>Reproduz um clip avulso em 2D.</summary>
+    public static void Play(AudioClip clip, float volume = 1f)
+    {
+        if (clip == null)
+            return;
+
+        GetModule<SfxAudio>().PlayClip(clip, volume, 1f, Vector3.zero, 128);
+    }
+
     /// <summary>Reproduz um SFX e devolve uma referencia que pode interrompe-lo sem afetar outras vozes.</summary>
     public static AudioPlaybackHandle PlayTracked(AudioCue cue, Vector3 position)
     {

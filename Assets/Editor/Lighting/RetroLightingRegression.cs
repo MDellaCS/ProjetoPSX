@@ -90,6 +90,13 @@ public static class RetroLightingRegression
         }
         Check(RetroLightMath.Attenuation(.97f, 0f, 1f, 4) > 0f, "Com faixas, a borda continua iluminada.");
 
+        const int polygonSides = 8;
+        float halfSector = Mathf.PI / polygonSides;
+        Check(Mathf.Abs(RetroLightMath.PolygonalRadialDistance(1f, 0f, polygonSides) - 1f) < 1e-4f,
+            "Distancia na normal da face facetada deve coincidir com o apotema.");
+        Check(Mathf.Abs(RetroLightMath.PolygonalRadialDistance(1f / Mathf.Cos(halfSector), halfSector,
+            polygonSides) - 1f) < 1e-4f, "Vertices facetados devem permanecer no contorno.");
+
         float edge = RetroLightMath.NormalizedDistanceFor(.5f, .2f, 2f);
         Check(Mathf.Abs(RetroLightMath.Attenuation(edge, .2f, 2f, 0) - .5f) < 1e-3f, "Inversa da queda (gizmos).");
     }

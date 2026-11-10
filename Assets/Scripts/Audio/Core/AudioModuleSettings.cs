@@ -13,7 +13,7 @@ public enum AudioVolumeChannel
 
 /// <summary>
 /// Configuracao comum de um modulo de audio. Cada modulo (Interface, Dialogo,
-/// Mundo, SFX) tem um asset proprio em Resources/Audio, carregado pelo nome da
+/// SFX) tem um asset proprio em Resources/Audio, carregado pelo nome da
 /// classe, sem depender de nenhum objeto de cena.
 /// </summary>
 public abstract class AudioModuleSettings : ScriptableObject

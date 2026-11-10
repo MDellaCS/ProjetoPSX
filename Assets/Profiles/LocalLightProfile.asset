@@ -17,13 +17,14 @@ MonoBehaviour:
     shape: 0
     localPosition: {x: -0.24, y: 1.34, z: 0.22}
     localEulerAngles: {x: 0, y: 0, z: 0}
-    color: {r: 1, g: 0.4888457, b: 0.28773582, a: 1}
-    intensity: 11.3
-    range: 90.4
+    color: {r: 1, g: 0.37177002, b: 0, a: 1}
+    intensity: 10.5
+    range: 55.3
     coreRadius: 0
     falloffExponent: 1.39
-    bands: 16
-    wrap: 0.159
+    bands: 13
+    bandSegments: 11
+    wrap: 0.081
     spotAngle: 179
     innerSpotAngle: 66
     flicker:

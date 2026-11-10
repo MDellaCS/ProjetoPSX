@@ -54,7 +54,7 @@ public sealed class ItemAcquisitionModalHUD : MonoBehaviour
     {
         if (item == null)
             return false;
-        return Show(item.Image, item.ItemName, "[E] Fechar");
+        return Show(item.Image, item.ItemName, "[E / Clique] Fechar");
     }
 
     /// <summary>Exibe a mesma modal para uma imagem e titulo de qualquer sistema.</summary>
@@ -96,7 +96,7 @@ public sealed class ItemAcquisitionModalHUD : MonoBehaviour
     private void Update()
     {
         if (isOpen && (GameInput.UICloseModalPressed || GameInput.UICancelPressed ||
-            GameInput.PausePressed))
+            GameInput.PausePressed || GameInput.UIClickPressed))
             Close();
     }
 

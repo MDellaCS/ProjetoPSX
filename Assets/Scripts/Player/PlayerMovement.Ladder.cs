@@ -10,6 +10,10 @@ using UnityEngine;
 /// </summary>
 public partial class PlayerMovement
 {
+    [Header("Ladder Collision")]
+    [Tooltip("Multiplicador do raio da capsula de colisao enquanto o jogador escala. Reduza para evitar que a capsula se prenda aos degraus e trilhos; o valor original volta ao sair da escada.")]
+    [Range(.2f, 1f)] [SerializeField] private float ladderCollisionRadiusMultiplier = .55f;
+
     private HandLadder activeLadder;
     private HandLadderGrip ladderGrip;
     private int ladderMountFrame = -1;
@@ -30,6 +34,8 @@ public partial class PlayerMovement
     private Quaternion ladderMoveToRotation;
     private float ladderMoveElapsed;
     private float ladderMoveDuration;
+    private float ladderOriginalColliderRadius;
+    private bool hasSavedLadderColliderRadius;
 
     /// <summary>Verdadeiro enquanto agarrado a uma escada.</summary>
     public bool IsOnLadder => activeLadder != null && playerState != null &&
@@ -54,6 +60,7 @@ public partial class PlayerMovement
             return false;
 
         activeLadder = ladder;
+        ReduceLadderColliderRadius();
         ladder.SetPlayerClimbing(true);
         ladderGrip = grip;
         // O Interagir que agarrou nao pode soltar/saltar no mesmo frame.
@@ -343,11 +350,33 @@ public partial class PlayerMovement
 
     private void ResetLadderState()
     {
+        RestoreLadderColliderRadius();
         if (activeLadder != null)
             activeLadder.SetPlayerClimbing(false);
         activeLadder = null;
         ladderGrip = default;
         ladderMoveActive = false;
         ladderMoveIsExit = false;
+    }
+
+    private void ReduceLadderColliderRadius()
+    {
+        if (controller == null || hasSavedLadderColliderRadius)
+            return;
+
+        ladderOriginalColliderRadius = controller.radius;
+        hasSavedLadderColliderRadius = true;
+        controller.radius = Mathf.Max(.05f,
+            ladderOriginalColliderRadius * Mathf.Clamp(ladderCollisionRadiusMultiplier, .2f, 1f));
+    }
+
+    private void RestoreLadderColliderRadius()
+    {
+        if (!hasSavedLadderColliderRadius)
+            return;
+
+        if (controller != null)
+            controller.radius = ladderOriginalColliderRadius;
+        hasSavedLadderColliderRadius = false;
     }
 }

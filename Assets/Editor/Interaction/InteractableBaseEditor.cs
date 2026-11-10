@@ -1,4 +1,4 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 
 public static class InteractionInspectorUtility
@@ -12,98 +12,84 @@ public static class InteractionInspectorUtility
         while (property.NextVisible(enterChildren))
         {
             enterChildren = false;
-            if (!ShouldShow(editor.target, serialized, property))
+            if (editor.target is InteractionArea area && property.name == "onInteract" &&
+                area.HasInteractionHandler)
                 continue;
-
+            if (editor.target is HandLadder && !ShouldShowHandLadderProperty(serialized, property))
+                continue;
             using (new EditorGUI.DisabledScope(property.propertyPath == "m_Script"))
                 EditorGUILayout.PropertyField(property, true);
         }
         serialized.ApplyModifiedProperties();
     }
 
-    private static bool ShouldShow(Object target, SerializedObject serialized,
+    private static bool ShouldShowHandLadderProperty(SerializedObject serialized,
         SerializedProperty property)
     {
-        SerializedProperty activation = serialized.FindProperty("activationMode");
-        bool holdSelected = IsSelected(activation,
-            (int)InteractionActivationMode.Hold);
-        if (property.name == "holdDuration" && !holdSelected)
+        SerializedProperty attachment = serialized.FindProperty("attachment");
+        bool surface = attachment != null &&
+            attachment.enumValueIndex == (int)HandLadderAttachment.Surface;
+        bool overhead = serialized.FindProperty("overhead")?.boolValue ?? false;
+        bool conform = serialized.FindProperty("conformToSurface")?.boolValue ?? false;
+        if ((property.name == "surfaceLayers" || property.name == "surfaceSearchDistance" ||
+             property.name == "surfaceStandoff" || property.name == "conformToSurface" ||
+             property.name == "autoSnapToSurface") && !surface)
             return false;
-
-        SerializedProperty blocked = serialized.FindProperty("blockByGeometry");
-        bool geometryBlockingEnabled = IsSelected(blocked, true);
-        if ((property.name == "blockingLayers" || property.name == "visibilityTarget") &&
-            !geometryBlockingEnabled)
+        if (property.name == "curveSampleSpacing" && (!surface || !conform || overhead))
             return false;
-        if (target is HandLadder && property.name == "interactionPriority")
+        if (property.name == "climbableFromBothSides" && (surface || overhead))
             return false;
-
-        if (target is InteractionArea)
+        if (property.name == "hangDepth" && !overhead)
+            return false;
+        if (property.name == "ledgeSearchDepth")
         {
-            SerializedProperty shape = serialized.FindProperty("areaShape");
-            if (shape == null || shape.hasMultipleDifferentValues)
-                return true;
-
-            InteractionAreaShape selectedShape =
-                (InteractionAreaShape)shape.enumValueIndex;
-            if (property.name == "areaCenter" &&
-                selectedShape == InteractionAreaShape.ExistingCollider)
-                return false;
-            if (property.name == "boxSize" && selectedShape != InteractionAreaShape.Box)
-                return false;
-            if (property.name == "areaRadius" &&
-                selectedShape != InteractionAreaShape.Sphere &&
-                selectedShape != InteractionAreaShape.Capsule)
-                return false;
-            if ((property.name == "capsuleHeight" ||
-                 property.name == "capsuleDirection") &&
-                selectedShape != InteractionAreaShape.Capsule)
-                return false;
-            if (property.name == "areaFocusPoint" && !geometryBlockingEnabled)
-                return false;
-        }
-
-        if (target is HandLadder)
-        {
-            SerializedProperty attachment = serialized.FindProperty("attachment");
-            bool surface = IsSelected(attachment, (int)HandLadderAttachment.Surface);
-            bool overhead = IsSelected(serialized.FindProperty("overhead"), true);
-            bool conform = IsSelected(serialized.FindProperty("conformToSurface"), true);
-            if ((property.name == "surfaceLayers" ||
-                 property.name == "surfaceSearchDistance" ||
-                 property.name == "surfaceStandoff" ||
-                 property.name == "conformToSurface" ||
-                 property.name == "autoSnapToSurface") && !surface)
-                return false;
-            if (property.name == "curveSampleSpacing" && (!surface || !conform || overhead))
-                return false;
-            if (property.name == "climbableFromBothSides" && (surface || overhead))
-                return false;
-            if (property.name == "hangDepth" && !overhead)
-                return false;
-            if (property.name == "entryBackDepth" && (!surface || overhead))
-                return false;
             SerializedProperty exit = serialized.FindProperty("topExitSide");
-            if (property.name == "ledgeSearchDepth" && exit != null &&
-                !exit.hasMultipleDifferentValues)
+            if (exit != null && !exit.hasMultipleDifferentValues)
             {
-                HandLadderExitSide selectedExit =
-                    (HandLadderExitSide)exit.enumValueIndex;
-                if (selectedExit == HandLadderExitSide.Front ||
-                    selectedExit == HandLadderExitSide.Auto && !surface)
+                HandLadderExitSide side = (HandLadderExitSide)exit.enumValueIndex;
+                if (side == HandLadderExitSide.Front ||
+                    side == HandLadderExitSide.Auto && !surface)
                     return false;
             }
         }
         return true;
     }
+}
 
-    private static bool IsSelected(SerializedProperty property, int value) =>
-        property != null && (property.hasMultipleDifferentValues ||
-            property.enumValueIndex == value);
+[CustomEditor(typeof(InteractionProfile))]
+public sealed class InteractionProfileEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.UpdateIfRequiredOrScript();
+        InteractionActivationMode activation =
+            (InteractionActivationMode)serializedObject.FindProperty("activationMode").enumValueIndex;
+        bool blocksGeometry = serializedObject.FindProperty("blockByGeometry").boolValue;
+        InteractionAreaShape shape =
+            (InteractionAreaShape)serializedObject.FindProperty("areaShape").enumValueIndex;
 
-    private static bool IsSelected(SerializedProperty property, bool value) =>
-        property != null && (property.hasMultipleDifferentValues ||
-            property.boolValue == value);
+        SerializedProperty property = serializedObject.GetIterator();
+        bool enterChildren = true;
+        while (property.NextVisible(enterChildren))
+        {
+            enterChildren = false;
+            if ((property.name == "holdDuration" && activation != InteractionActivationMode.Hold) ||
+                (property.name == "blockingLayers" && !blocksGeometry) ||
+                (property.name == "boxSize" && shape != InteractionAreaShape.Box) ||
+                (property.name == "areaRadius" && shape != InteractionAreaShape.Sphere &&
+                    shape != InteractionAreaShape.Capsule) ||
+                (property.name == "areaCenter" && shape == InteractionAreaShape.LadderEntry) ||
+                ((property.name == "capsuleHeight" || property.name == "capsuleDirection") &&
+                    shape != InteractionAreaShape.Capsule) ||
+                (property.name.StartsWith("ladderEntry") &&
+                    shape != InteractionAreaShape.LadderEntry))
+                continue;
+
+            using (new EditorGUI.DisabledScope(property.propertyPath == "m_Script"))
+                EditorGUILayout.PropertyField(property, true);
+        }
+        serializedObject.ApplyModifiedProperties();
+    }
 }
 
 [CustomEditor(typeof(InteractableBase), true)]
@@ -113,3 +99,12 @@ public sealed class InteractableBaseEditor : Editor
     public override void OnInspectorGUI() =>
         InteractionInspectorUtility.DrawProperties(this);
 }
+
+[CustomEditor(typeof(InteractionArea), true)]
+[CanEditMultipleObjects]
+public sealed class InteractionAreaEditor : Editor
+{
+    public override void OnInspectorGUI() =>
+        InteractionInspectorUtility.DrawProperties(this);
+}
+

@@ -74,6 +74,13 @@
 }
 
 .menu-view--settings { display: none; }
+.menu-view--save-slots { display: none; }
+.save-slots-list { flex-grow: 1; min-height: 0; margin: 12px 0; }
+.save-slot-button { min-height: 54px; margin-bottom: 8px; white-space: normal; -unity-text-align: middle-left; }
+.save-slot-confirm { display: none; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; }
+.save-slot-confirm .menu-message { width: 100%; -unity-text-align: middle-center; }
+.save-slot-confirm Button { margin: 8px 14px; }
+.sanctuary-save-row { display: none; }
 .menu-inventory-view { display: none; }
 .inventory-content { flex-direction: row; align-items: center; justify-content: center; flex-grow: 1; min-height: 0; width: 100%; }
 .inventory-detail { width: 42%; max-width: 560px; height: 100%; min-width: 0; align-items: center; justify-content: center; padding: 12px 28px; }
@@ -86,7 +93,7 @@
 .inventory-arrow { width: 48px; height: 64px; margin: 0 14px; padding: 0; color: var(--menu-text); font-size: 48px; background-color: rgba(0,0,0,0); border-width: 0; }
 .inventory-close-hint { align-self: center; margin-top: 16px; color: var(--menu-text-disabled); font-size: 16px; }
 .inventory-open { justify-content: center; }
-.inventory-open .menu-panel { width: 100%; max-width: 100%; height: 100%; padding: 5vh 5vw; background-color: rgba(0, 0, 0, 0); }
+.inventory-open .menu-panel { width: 100%; max-width: 100%; height: 100%; padding: 40px 64px; background-color: rgba(0, 0, 0, 0); }
 .inventory-open .menu-inventory-view { width: 100%; }
 
 .item-modal {

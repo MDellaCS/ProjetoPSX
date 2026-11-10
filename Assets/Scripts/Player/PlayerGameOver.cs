@@ -17,11 +17,13 @@ public class PlayerGameOver : MonoBehaviour
     private bool gameOverVisible;
     private bool restartRequested;
     private float deathTimer;
+    private CorpseRun corpseRun;
 
     void Awake()
     {
         playerState = GetComponent<PlayerState>();
         TryGetComponent(out playerHeat);
+        corpseRun = CorpseRun.EnsureOn(gameObject);
     }
 
     void Update()
@@ -33,6 +35,8 @@ public class PlayerGameOver : MonoBehaviour
         {
             deathDetected = true;
             deathTimer = 0f;
+            if (corpseRun == null) corpseRun = CorpseRun.EnsureOn(gameObject);
+            if (corpseRun != null) corpseRun.HandlePlayerDeath();
         }
 
         if (!gameOverVisible)
@@ -96,6 +100,7 @@ public class PlayerGameOver : MonoBehaviour
         deathDetected = false;
         gameOverVisible = false;
         deathTimer = 0f;
+        if (corpseRun != null) corpseRun.ResetAfterRestart();
 
         GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
         if (loader != null)

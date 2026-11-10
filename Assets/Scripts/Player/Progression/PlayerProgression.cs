@@ -42,6 +42,43 @@ public sealed class PlayerProgression : MonoBehaviour
     public float StatBonus(string id) => stats.TryGetValue(id, out float value) ? value : 0;
     public bool HasSpecial(string id) => !string.IsNullOrEmpty(id) && specials.Contains(id);
 
+    public PlayerUpgradeSaveEntry[] ExportSaveData()
+    {
+        Initialize();
+        if (Catalog == null || Catalog.attributes == null)
+            return Array.Empty<PlayerUpgradeSaveEntry>();
+        List<PlayerUpgradeSaveEntry> result = new();
+        foreach (PlayerUpgradeDefinition attribute in Catalog.attributes)
+        {
+            if (attribute == null || string.IsNullOrWhiteSpace(attribute.id)) continue;
+            result.Add(new PlayerUpgradeSaveEntry { id = attribute.id, level = Level(attribute) });
+        }
+        return result.ToArray();
+    }
+
+    public void RestoreSaveData(PlayerUpgradeSaveEntry[] savedLevels)
+    {
+        Initialize();
+        if (Catalog == null || Catalog.attributes == null) return;
+        foreach (PlayerUpgradeDefinition attribute in Catalog.attributes)
+        {
+            if (attribute == null || string.IsNullOrWhiteSpace(attribute.id)) continue;
+            int level = 1;
+            if (savedLevels != null)
+                foreach (PlayerUpgradeSaveEntry entry in savedLevels)
+                    if (entry != null && entry.id == attribute.id)
+                    {
+                        level = Mathf.Clamp(entry.level, 1, attribute.MaximumLevel);
+                        break;
+                    }
+            levels[attribute.id] = level;
+            PlayerPrefs.SetInt(SavePrefix + attribute.id, level);
+        }
+        ApplyBonuses();
+        PlayerPrefs.Save();
+        Changed?.Invoke();
+    }
+
     /// <summary>Retorna todos os atributos ao nivel inicial sem gravar novos saves.</summary>
     public void ResetProgress()
     {

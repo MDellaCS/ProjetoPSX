@@ -29,11 +29,12 @@ public sealed class LoadingScreenHUD : MonoBehaviour
     private float visualOpacity;
     private bool hasVisualOpacity;
     private bool isVisible = true;
+    private bool blocksGameplayInput = true;
 
     public bool IsLoading { get; private set; }
     public static LoadingScreenHUD Instance => instance;
     public static bool BlocksGameplayInput => instance != null &&
-        instance.isVisible;
+        instance.blocksGameplayInput;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => instance = null;
@@ -132,6 +133,7 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         }
 
         isVisible = true;
+        blocksGameplayInput = true;
         visibleSinceRealtime = Time.realtimeSinceStartup;
         GamePauseController.RequestPause(this);
         EnsureElements();
@@ -211,6 +213,12 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         if (waitAfterReady > 0f)
             yield return new WaitForSecondsRealtime(waitAfterReady);
 
+        // A cena ja esta pronta. Libera gameplay no primeiro frame do fade de
+        // saida, mantendo o overlay visivel enquanto ele desaparece.
+        blocksGameplayInput = false;
+        IsLoading = false;
+        GamePauseController.ReleasePause(this);
+
         float fadeDuration = Mathf.Max(0f, settings.fadeOutDuration);
         float elapsed = 0f;
         float startOpacity = hasVisualOpacity
@@ -228,8 +236,8 @@ public sealed class LoadingScreenHUD : MonoBehaviour
         SetOpacity(0f);
         SetVisible(false);
         isVisible = false;
+        blocksGameplayInput = false;
         IsLoading = false;
-        GamePauseController.ReleasePause(this);
         hideRoutine = null;
     }
 

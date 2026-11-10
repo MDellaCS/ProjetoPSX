@@ -18,8 +18,6 @@ public sealed class EnemyAttackReflector : MonoBehaviour
     [SerializeField] private bool staggerEnemyWhenReflectingHeavyAttacks;
 
     [Header("Audio")]
-    [Tooltip("AudioSource opcional usado para tocar o som da reflexao. Se vazio, o som toca na posicao do inimigo.")]
-    [SerializeField] private AudioSource audioSource;
     [Tooltip("Som tocado quando um ataque e refletido. Vazio desativa o feedback sonoro.")]
     [SerializeField] private AudioClip reflectSound;
     [Tooltip("Volume do som de reflexao, de zero a um.")]
@@ -68,9 +66,6 @@ public sealed class EnemyAttackReflector : MonoBehaviour
         if (reflectSound == null || reflectSoundVolume <= 0f)
             return;
 
-        if (audioSource != null)
-            audioSource.PlayOneShot(reflectSound, reflectSoundVolume);
-        else
-            WorldAudio.PlayAt(reflectSound, transform.position, reflectSoundVolume);
+        SfxAudio.Play(reflectSound, reflectSoundVolume);
     }
 }

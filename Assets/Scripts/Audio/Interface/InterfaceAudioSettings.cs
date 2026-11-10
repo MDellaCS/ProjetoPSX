@@ -11,19 +11,19 @@ public sealed class InterfaceAudioSettings : AudioModuleSettings
 
     [Header("Sons de Interface")]
     [Tooltip("Som curto ao mudar o foco para uma opcao com mouse, teclado ou controle.")]
-    public AudioCue focus = new() { spatialBlend = 0f };
+    public AudioCue focus = new();
     [Tooltip("Som ao confirmar uma opcao, abrir uma tela interna, trocar de aba ou alternar um botao.")]
-    public AudioCue confirm = new() { spatialBlend = 0f };
+    public AudioCue confirm = new();
     [Tooltip("Som ao voltar, cancelar ou fechar uma tela interna.")]
-    public AudioCue back = new() { spatialBlend = 0f };
+    public AudioCue back = new();
     [Tooltip("Som ao aumentar ou reduzir um valor de configuracao.")]
-    public AudioCue adjust = new() { spatialBlend = 0f };
+    public AudioCue adjust = new();
     [Tooltip("Som de opcao indisponivel, compra recusada ou requisito nao atendido.")]
-    public AudioCue unavailable = new() { spatialBlend = 0f };
+    public AudioCue unavailable = new();
     [Tooltip("Som de compra, salvamento ou outra acao concluida com sucesso.")]
-    public AudioCue success = new() { spatialBlend = 0f };
+    public AudioCue success = new();
     [Tooltip("Som de aviso antes de uma acao importante ou de restaurar configuracoes.")]
-    public AudioCue warning = new() { spatialBlend = 0f };
+    public AudioCue warning = new();
     [Tooltip("Intervalo minimo entre sons consecutivos de foco para evitar repeticao cansativa.")]
     [Min(0f)] public float focusMinimumInterval = .06f;
 

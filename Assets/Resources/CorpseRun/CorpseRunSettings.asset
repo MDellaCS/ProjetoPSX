@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 820af7d9feb387140ab717ea7a3720d2, type: 3}
+  m_Name: CorpseRunSettings
+  m_EditorClassIdentifier: Assembly-CSharp::CorpseRunSettings
+  corpseEnemyPrefab: {fileID: 3548428121191279224, guid: b2cb70aa1ec109f4bad6b65a8f0fce79, type: 3}
+  windupMultiplier: 1
+  activeMultiplier: 1
+  recoveryMultiplier: 1

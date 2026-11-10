@@ -4,11 +4,44 @@
     <ui:VisualElement name="debug-panel" picking-mode="Ignore">
         <ui:Label name="debug-text" text="DEBUG HUD" />
     </ui:VisualElement>
+    <ui:VisualElement name="debug-menu-panel">
+        <ui:Label text="DEBUG CONTROL" class="debug-menu-title" />
+        <ui:Label text="F4 opens/closes this menu" class="debug-menu-hint" />
+        <ui:VisualElement class="debug-menu-row">
+            <ui:Button name="status-max-button" text="MAX ALL STATUS" />
+            <ui:Button name="status-zero-button" text="ZERO ALL STATUS" />
+        </ui:VisualElement>
+        <ui:VisualElement name="heat-controls" class="debug-menu-row">
+            <ui:Button name="heat-minus-button" text="HEAT -10" />
+            <ui:Button name="heat-plus-button" text="HEAT +10" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
+            <ui:IntegerField name="currency-input" label="Money" value="0" />
+            <ui:Button name="currency-set-button" text="SET MONEY" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
+            <ui:Button name="god-mode-button" text="GOD MODE: OFF" />
+            <ui:Button name="combat-override-button" text="COMBAT OVERRIDE: NEUTRAL" />
+            <ui:Button name="slow-motion-button" text="SLOW MOTION: OFF" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
+            <ui:Button name="kill-player-button" text="KILL PLAYER" class="debug-danger" />
+            <ui:Button name="next-moveset-button" text="NEXT MOVESET" />
+            <ui:Button name="next-scene-button" text="NEXT SCENE" />
+            <ui:Button name="reload-scene-button" text="RELOAD SCENE" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
+            <ui:Button name="environment-previous-button" text="PREVIOUS ENVIRONMENT" />
+            <ui:Button name="environment-next-button" text="NEXT ENVIRONMENT" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
+            <ui:Button name="reset-save-button" text="RESET GAME SAVE" class="debug-danger" />
+            <ui:Button name="debug-close-button" text="CLOSE (F4)" />
+        </ui:VisualElement>
+        <ui:Label name="debug-action-status" text="Ready." class="debug-menu-status" />
+    </ui:VisualElement>
     <ui:VisualElement name="enemy-debug-panel" picking-mode="Ignore">
         <ui:Label name="enemy-debug-text" text="ENEMY DEBUG" />
-    </ui:VisualElement>
-    <ui:VisualElement name="test-shortcuts-panel">
-        <ui:Label name="test-shortcuts-text" text="TEST SHORTCUTS" />
     </ui:VisualElement>
     <ui:VisualElement name="cutscene-debug-panel" picking-mode="Ignore">
         <ui:Label name="cutscene-debug-text" text="CUTSCENE DEBUG" />

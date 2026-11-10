@@ -16,8 +16,7 @@ public sealed class DialogueAudio : AudioModule<DialogueAudioSettings>
         DialogueAudio module = GetModule<DialogueAudio>();
         if (module.Settings.interruptPreviousVoice)
             module.StopAll();
-        module.PlayClip(clip, volume, 1f, Vector3.zero, 0f, 1f, 25f,
-            AudioRolloffMode.Linear, module.Settings.priority);
+        module.PlayClip(clip, volume, 1f, Vector3.zero, module.Settings.priority);
     }
 
     /// <summary>Interrompe todas as vozes de dialogo (ex.: ao pular uma cutscene).</summary>

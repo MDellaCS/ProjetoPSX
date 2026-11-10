@@ -14,7 +14,7 @@ public sealed class ScenePlayerSpawnPoint : MonoBehaviour
     [Tooltip("Trigger de camera ativado assim que o jogador aparece neste spawn. Deixe vazio para iniciar com a CameraFollow livre.")]
     [SerializeField] private FixedCameraZone initialCameraTrigger;
 
-    internal string SpawnId => spawnId;
+    public string SpawnId => spawnId;
     internal bool IsDefault => isDefault;
     internal FixedCameraZone InitialCameraTrigger => initialCameraTrigger;
 

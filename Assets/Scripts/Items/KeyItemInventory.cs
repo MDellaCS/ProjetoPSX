@@ -41,6 +41,25 @@ public static class KeyItemInventory
         return item != null && collectedIds.Contains(item.Id);
     }
 
+    public static string[] ExportCollectedIds()
+    {
+        EnsureInitialized();
+        string[] result = new string[collectedIds.Count];
+        collectedIds.CopyTo(result);
+        return result;
+    }
+
+    public static void RestoreCollectedIds(string[] ids)
+    {
+        EnsureInitialized();
+        collectedIds.Clear();
+        if (ids != null)
+            foreach (string id in ids)
+                if (!string.IsNullOrWhiteSpace(id)) collectedIds.Add(id);
+        Persist();
+        Changed?.Invoke();
+    }
+
     public static bool Grant(KeyItemDefinition item, bool showModal = true)
     {
         EnsureInitialized();

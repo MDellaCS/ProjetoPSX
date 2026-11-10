@@ -123,8 +123,10 @@ public sealed class EnemyAttackController : MonoBehaviour
     {
         if (node?.attack == null || moveset == null)
             return;
+        bool useGlobalTiming = owner != null &&
+            owner.GetComponent<CorpseRunEnemy>() != null;
         CurrentAttack = new EnemyAttackRuntime(node, moveset,
-            windupDurationOverride);
+            windupDurationOverride, useGlobalTiming);
         CurrentPhase = EnemyAttackPhase.Windup;
         phaseTimer = Mathf.Max(0f, CurrentAttack.WindupDuration);
         recoveryElapsed = 0f;

@@ -25,13 +25,6 @@ public sealed class PlayerCombatStatus : MonoBehaviour
 
     private void Update()
     {
-        if (!GamePauseController.IsPaused && GameInput.DebugCombatPressed)
-            debugOverride = debugOverride switch
-            {
-                DebugOverride.Neutral => DebugOverride.ForceInCombat,
-                DebugOverride.ForceInCombat => DebugOverride.ForceOutOfCombat,
-                _ => DebugOverride.Neutral
-            };
         hasAggroedEnemies = EnemyBase.IsAnyEnemyAggroedOn(transform);
         if (hasAggroedEnemies || EnemyEncounter.IsPlayerInActiveEncounter(transform))
             combatTimer = combatTimerDuration;
@@ -41,4 +34,22 @@ public sealed class PlayerCombatStatus : MonoBehaviour
 
     public void RegisterDamageDealtToEnemy() => combatTimer = combatTimerDuration;
     public void RegisterDamageTakenFromEnemy() => combatTimer = combatTimerDuration;
+
+    public void ResetForNewGame()
+    {
+        combatTimer = 0f;
+        hasAggroedEnemies = false;
+        debugOverride = DebugOverride.Neutral;
+    }
+
+    public void DebugCycleCombatOverride()
+    {
+        if (!Debug.isDebugBuild) return;
+        debugOverride = debugOverride switch
+        {
+            DebugOverride.Neutral => DebugOverride.ForceInCombat,
+            DebugOverride.ForceInCombat => DebugOverride.ForceOutOfCombat,
+            _ => DebugOverride.Neutral
+        };
+    }
 }

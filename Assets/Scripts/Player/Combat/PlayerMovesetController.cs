@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerAttackController))]
@@ -73,8 +72,6 @@ public sealed class PlayerMovesetController : MonoBehaviour
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
         if (playerState != null && playerState.IsDead()) return;
-        if (Debug.isDebugBuild && Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
-            CycleMoveset();
         if (moveset == null) return;
         // Ataque externo (explosao de Burn) nao pertence ao moveset: um input
         // de ataque nao pode cancela-lo nem enfileirar continuacoes.
@@ -85,8 +82,9 @@ public sealed class PlayerMovesetController : MonoBehaviour
         TryHeldContinuation();
     }
 
-    private void CycleMoveset()
+    public void DebugCycleMoveset()
     {
+        if (!Debug.isDebugBuild) return;
         if (catalog == null)
             catalog = PlayerMovesetCatalog.Load();
         if (catalog == null || catalog.availableMovesets == null ||

@@ -110,12 +110,6 @@
                 {"name":"Pause","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e14","expectedControlType":"Button"},
                 {"name":"UnlockCursor","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e15","expectedControlType":"Button"},
                 {"name":"DebugHUD","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e16","expectedControlType":"Button"},
-                {"name":"DebugHeatDown","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e17","expectedControlType":"Button"},
-                {"name":"DebugHeatUp","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e18","expectedControlType":"Button"},
-                {"name":"DebugCombat","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e19","expectedControlType":"Button"},
-                {"name":"DebugGodMode","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1a","expectedControlType":"Button"},
-                {"name":"DebugMaxHeat","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1b","expectedControlType":"Button"},
-                {"name":"DebugSlowMotion","type":"Button","id":"2cad79a5-2828-4f4d-b498-9a08a7662045","expectedControlType":"Button"},
                 {"name":"Restart","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1c","expectedControlType":"Button"},
                 {"name":"Inventory","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022001","expectedControlType":"Button"}
             ],
@@ -509,12 +503,6 @@
                 {"name":"","id":"a2fe1f06-c765-46b3-9273-96b5c7bed1e3","path":"<Gamepad>/buttonSouth","action":"CutsceneSkip","groups":"Gamepad"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e26","path":"<Keyboard>/escape","action":"UnlockCursor"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e27","path":"<Keyboard>/f3","action":"DebugHUD"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e28","path":"<Keyboard>/f4","action":"DebugHeatDown"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e29","path":"<Keyboard>/f5","action":"DebugHeatUp"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2a","path":"<Keyboard>/f6","action":"DebugCombat"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2b","path":"<Keyboard>/f7","action":"DebugGodMode"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2c","path":"<Keyboard>/f8","action":"DebugMaxHeat"},
-                {"name":"","id":"466d7155-4b5a-4dca-bf31-9cf801e6d9f4","path":"<Keyboard>/f11","action":"DebugSlowMotion"},
                 {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2d","path":"<Keyboard>/r","action":"Restart"},
                 {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022002","path":"<Keyboard>/i","action":"Inventory","groups":"Keyboard&Mouse"}
             ]

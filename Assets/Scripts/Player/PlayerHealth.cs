@@ -105,8 +105,6 @@ public class PlayerHealth : MonoBehaviour
         if (CombatImpactSystem.IsGameplayFrozen(this))
             return;
 
-        UpdateDebugShortcuts();
-
         bool blocksPoiseRegen = playerState.IsStaggered() ||
             playerState.IsBurnStunned() || playerState.IsBurnWalking() ||
             playerMovement.IsLaunched;
@@ -137,25 +135,24 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    private void UpdateDebugShortcuts()
+    public void DebugSetStatus(bool maximize)
     {
-        if (GamePauseController.IsPaused)
-            return;
+        if (!Debug.isDebugBuild) return;
+        currentHealth = maximize ? MaxHealth : 0;
+        poise.SetCurrent(maximize ? maxPoise : 0f, maxPoise);
+        if (!maximize && playerState != null)
+            playerState.ChangeState(PlayerState.State.Dead);
+    }
 
-        if (!Debug.isDebugBuild)
-            return;
-        if (!playerState.IsDead() && GameInput.RestartPressed)
-        {
-            ItemAcquisitionModalHUD.Show(null,
-                "MODAL DE TESTE\n\nA tecla R abriu esta janela.\nO jogo fica pausado enquanto ela estiver aberta.",
-                "[E] ou [Esc] para fechar");
-        }
-        if (GameInput.DebugGodModePressed)
-            godMode = !godMode;
+    public void DebugToggleGodMode()
+    {
+        if (Debug.isDebugBuild) godMode = !godMode;
+    }
 
-        if (GameInput.DebugMaxHeatPressed)
-            if (playerHeat != null)
-                playerHeat.FillHeatAndSuperheatForDebug();
+    public void DebugKillPlayer()
+    {
+        if (Debug.isDebugBuild && playerState != null && !playerState.IsDead())
+            playerState.ChangeState(PlayerState.State.Dead);
     }
 
     /// <summary>Retorna estados temporarios de dano ao estado inicial de uma nova campanha.</summary>
@@ -178,6 +175,14 @@ public class PlayerHealth : MonoBehaviour
     public void ResetHealthForResourceMode()
     {
         currentHealth = MaxHealth;
+    }
+
+    /// <summary>Restaura a vida persistida e limpa uma morte anterior.</summary>
+    public void RestoreSaveHealth(int health)
+    {
+        currentHealth = Mathf.Clamp(health, 1, MaxHealth);
+        if (playerState != null && playerState.IsDead())
+            playerState.ChangeState(PlayerState.State.Normal);
     }
 
     private void StartStagger(bool heavyStagger, Vector3 attackerPosition,

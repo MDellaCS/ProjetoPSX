@@ -48,7 +48,7 @@ public sealed class InterfaceAudio : AudioModule<InterfaceAudioSettings>
             module.nextFocusSoundAt = Time.unscaledTime +
                 Mathf.Max(0f, module.Settings.focusMinimumInterval);
 
-        module.PlayCue(audioCue, Vector3.zero, 0f);
+        module.PlayCue(audioCue, Vector3.zero);
     }
 
     /// <summary>Toca um clip avulso de interface (ex.: titulo de area), sem variacao aleatoria.</summary>
@@ -57,7 +57,6 @@ public sealed class InterfaceAudio : AudioModule<InterfaceAudioSettings>
         if (clip == null)
             return;
 
-        GetModule<InterfaceAudio>().PlayClip(clip, volume, pitch, Vector3.zero, 0f,
-            1f, 25f, AudioRolloffMode.Linear, 128);
+        GetModule<InterfaceAudio>().PlayClip(clip, volume, pitch, Vector3.zero, 128);
     }
 }

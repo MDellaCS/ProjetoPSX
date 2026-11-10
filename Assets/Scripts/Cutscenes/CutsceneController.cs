@@ -176,6 +176,8 @@ public sealed class CutsceneController : MonoBehaviour
         return true;
     }
 
+    public bool CanStart => director != null && (active == null || active == this);
+
     /// <summary>
     /// Versao sem retorno para UnityEvents, como On Activated de uma
     /// StrenghLever ou um Signal Receiver.

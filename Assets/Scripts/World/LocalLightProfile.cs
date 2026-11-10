@@ -110,8 +110,10 @@ public sealed class LocalLightDefinition
     [Range(0f, .95f)] public float coreRadius = .1f;
     [Tooltip("Formato da queda. 1 e linear (PS1); 2 concentra a luz perto da fonte; valores menores que 1 empurram o brilho para longe.")]
     [Range(.25f, 4f)] public float falloffExponent = 1.4f;
-    [Tooltip("Faixas de luz por distancia. 0 deixa a queda continua; 2 a 6 cria aneis de luz marcados, como as poças de luz de Silent Hill 2.")]
-    [Range(0, 16)] public int bands;
+    [Tooltip("Quantidade de faixas de intensidade por distancia. 0 deixa a queda continua; valores altos criam mais degraus na luz.")]
+    [Range(0, 64)] public int bands;
+    [Tooltip("Lados dos contornos das faixas no chao. Valores baixos deixam a luz facetada, em estilo low-poly. O minimo e 3.")]
+    [Range(3, 32)] public int bandSegments = 8;
     [Tooltip("Quanto a luz contorna as superficies que nao estao de frente para ela. 0 e Lambert puro (lados escuros); 1 ilumina quase por igual, como luz ambiente local.")]
     [Range(0f, 1f)] public float wrap = .2f;
     [Tooltip("Abertura externa do cone Spot, em graus.")]
@@ -125,6 +127,8 @@ public sealed class LocalLightDefinition
     {
         intensity = Mathf.Max(0f, intensity);
         range = Mathf.Max(.01f, range);
+        bands = Mathf.Clamp(bands, 0, 64);
+        bandSegments = Mathf.Clamp(bandSegments, 3, 32);
         innerSpotAngle = Mathf.Clamp(innerSpotAngle, 0f, spotAngle);
         flicker ??= new LocalLightFlicker();
         flicker.Validate();

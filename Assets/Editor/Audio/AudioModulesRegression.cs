@@ -25,13 +25,11 @@ public static class AudioModulesRegression
         {
             InterfaceAudioSettings ui = Load<InterfaceAudioSettings>();
             DialogueAudioSettings dialogue = Load<DialogueAudioSettings>();
-            WorldAudioSettings world = Load<WorldAudioSettings>();
             SfxAudioSettings sfx = Load<SfxAudioSettings>();
 
             Check(ui.volumeChannel == AudioVolumeChannel.Interface, "Interface usa o volume de interface.");
             Check(dialogue.volumeChannel == AudioVolumeChannel.Effects &&
-                world.volumeChannel == AudioVolumeChannel.Effects &&
-                sfx.volumeChannel == AudioVolumeChannel.Effects, "Dialogo, mundo e SFX usam o volume de efeitos.");
+                sfx.volumeChannel == AudioVolumeChannel.Effects, "Dialogo e SFX usam o volume de efeitos.");
 
             // Interface: os sons que estavam no Bootstrap foram migrados.
             Check(ui.GetCue(MenuAudioCue.Focus).HasClip && ui.GetCue(MenuAudioCue.Confirm).HasClip &&
@@ -39,8 +37,8 @@ public static class AudioModulesRegression
             Check(ui.GetCue(MenuAudioCue.MenuOpen) == ui.confirm && ui.GetCue(MenuAudioCue.Toggle) == ui.confirm &&
                 ui.GetCue(MenuAudioCue.MenuClose) == ui.back && ui.GetCue(MenuAudioCue.None) == null,
                 "Mapeamento dos eventos semanticos de menu.");
-            Check(Mathf.Abs(ui.confirm.volume - .123f) < .001f && ui.confirm.spatialBlend == 0f,
-                "Volume e 2D migrados.");
+            Check(Mathf.Abs(ui.confirm.volume - .123f) < .001f,
+                "Volume migrado.");
 
             // Heat: um som manual de ganho e de perda por notch.
             Check(sfx.heatNotches != null && sfx.heatNotches.Length == SfxAudioSettings.DefaultHeatNotchCount,
@@ -63,8 +61,9 @@ public static class AudioModulesRegression
             // SFX migrado do asset antigo.
             Check(sfx.playerLightAttack.attackStart.HasClip && sfx.playerHurt.HasClip &&
                 sfx.playerFootstep.HasClip && sfx.enemyFootstep.HasClip, "Sons de SFX preservados.");
-            Check(Resources.Load("GameplayAudioSettings") == null && Resources.Load("GameAudioMixer") == null,
-                "Assets antigos (GameplayAudioSettings e mixer) nao devem existir.");
+            Check(Resources.Load("GameplayAudioSettings") == null && Resources.Load("GameAudioMixer") == null &&
+                Resources.Load("Audio/WorldAudioSettings") == null,
+                "Assets antigos (GameplayAudioSettings, mixer e audio espacial de mundo) nao devem existir.");
 
             Debug.Log("PASS: Audio modules regression.");
         }

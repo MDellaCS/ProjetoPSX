@@ -43,6 +43,88 @@
     white-space: normal;
 }
 
+#debug-menu-panel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 680px;
+    max-height: 90%;
+    padding: 20px;
+    translate: -50% -50%;
+    display: none;
+    background-color: rgb(22, 27, 32);
+    border-left-width: 2px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-color: rgb(83, 255, 150);
+    border-top-color: rgb(83, 255, 150);
+    border-right-color: rgb(83, 255, 150);
+    border-bottom-color: rgb(83, 255, 150);
+}
+
+.debug-menu-title {
+    color: rgb(110, 255, 165);
+    font-size: 32px;
+    -unity-font-style: bold;
+}
+
+.debug-menu-hint, .debug-menu-status {
+    color: rgb(185, 205, 190);
+    font-size: 19px;
+    margin-bottom: 12px;
+}
+
+.debug-menu-status {
+    margin-top: 8px;
+    white-space: normal;
+}
+
+.debug-menu-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.debug-menu-row Button {
+    min-height: 44px;
+    margin-right: 8px;
+    margin-bottom: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 18px;
+    color: rgb(230, 240, 232);
+    background-color: rgb(48, 61, 54);
+    border-left-color: rgb(102, 141, 113);
+    border-top-color: rgb(102, 141, 113);
+    border-right-color: rgb(102, 141, 113);
+    border-bottom-color: rgb(102, 141, 113);
+}
+
+.debug-menu-row Button:hover {
+    background-color: rgb(66, 92, 74);
+}
+
+.debug-menu-row Button.debug-danger {
+    color: white;
+    background-color: rgb(132, 47, 47);
+}
+
+#currency-input {
+    min-width: 240px;
+    min-height: 42px;
+    margin-right: 6px;
+    color: rgb(240, 240, 240);
+    font-size: 18px;
+}
+
+#currency-input .unity-base-field__label {
+    color: rgb(210, 220, 215);
+    font-size: 18px;
+}
+
 #enemy-debug-panel {
     position: absolute;
     right: 16px;

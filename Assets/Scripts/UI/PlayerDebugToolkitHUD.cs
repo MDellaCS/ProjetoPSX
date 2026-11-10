@@ -1,27 +1,30 @@
 using System.Text;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 /// <summary>
-/// Versao UI Toolkit do HUD de debug aberto por F3.
+/// HUD de inspecao F3 e menu de comandos F4.
 /// O UXML precisa ter os elementos "debug-panel" e "debug-text".
 /// </summary>
 [RequireComponent(typeof(PanelRenderer))]
 public class PlayerDebugToolkitHUD : MonoBehaviour
 {
     public static bool IsVisible { get; private set; }
+    public static bool IsDebugMenuVisible { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetDebugVisibility()
+    {
+        IsVisible = false;
+        IsDebugMenuVisible = false;
+    }
 
     [Header("References")]
     [SerializeField] private PanelRenderer panelRenderer;
     [SerializeField] private Transform playerTransform;
 
-    [Header("Display")]
-    [SerializeField] private bool visibleOnStart;
-
     private readonly StringBuilder textBuilder = new StringBuilder();
     private readonly StringBuilder cutsceneTextBuilder = new StringBuilder();
-    private readonly StringBuilder testShortcutsTextBuilder = new StringBuilder();
 
     private PlayerMovement playerMovement;
     private PlayerState playerState;
@@ -44,8 +47,19 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private VisualElement cutsceneDebugPanel;
     private Label cutsceneDebugText;
     private VisualElement cutsceneTimelineFill;
-    private VisualElement testShortcutsPanel;
-    private Label testShortcutsText;
+    private VisualElement debugMenuPanel;
+    private VisualElement heatControls;
+    private VisualElement boundButtonRoot;
+    private IntegerField currencyInput;
+    private Label debugActionStatus;
+    private Button godModeButton;
+    private Button combatOverrideButton;
+    private Button slowMotionButton;
+    private Button resetSaveButton;
+    private float resetConfirmationExpiresAt;
+    private bool currencyInputEdited;
+    private UnityEngine.CursorLockMode cursorLockBeforeDebug;
+    private bool cursorVisibleBeforeDebug;
     private bool isVisible;
 
     private void Awake()
@@ -57,7 +71,8 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             panelRenderer.RegisterUIReloadCallback(HandleUIReload);
 
         ResolvePlayerComponents();
-        SetVisible(visibleOnStart);
+        SetHudVisible(false);
+        SetDebugMenuVisible(false);
     }
 
     private void OnDestroy()
@@ -66,35 +81,27 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
 
         IsVisible = false;
+        IsDebugMenuVisible = false;
     }
 
     private void OnDisable()
     {
-        isVisible = false;
-        SetVisible(false);
-        IsVisible = false;
+        SetHudVisible(false);
+        SetDebugMenuVisible(false);
     }
 
     private void Update()
     {
-        if (Debug.isDebugBuild && Keyboard.current != null)
-        {
-            if (Keyboard.current.leftBracketKey.wasPressedThisFrame)
-                RetroLightSystem.CycleEnvironmentProfile(-1);
-            else if (Keyboard.current.rightBracketKey.wasPressedThisFrame)
-                RetroLightSystem.CycleEnvironmentProfile(1);
-        }
-
         if (GameInput.DebugHUDPressed)
         {
-            SetVisible(!isVisible);
+            SetHudVisible(!isVisible);
         }
 
-        if (!isVisible || debugText == null)
-            return;
+        if (GameInput.DebugMenuPressed)
+            SetDebugMenuVisible(!IsDebugMenuVisible);
 
-        if (GameInput.DebugSlowMotionPressed)
-            GameDebugTimeScale.Toggle();
+        if ((!isVisible && !IsDebugMenuVisible) || debugText == null)
+            return;
 
         // PlayerLockOn pode ser adicionado pelo sistema de ataques durante Awake.
         // A ordem de Awake entre objetos nao e garantida, entao tentamos
@@ -104,7 +111,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             ResolvePlayerComponents();
 
         UpdateDebugText();
-        UpdateTestShortcuts();
+        UpdateDebugActionLabels();
         UpdateLockedEnemyDebug();
         UpdateCutsceneDebug();
     }
@@ -126,10 +133,24 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         cutsceneDebugPanel = rootVisualElement.Q<VisualElement>("cutscene-debug-panel");
         cutsceneDebugText = rootVisualElement.Q<Label>("cutscene-debug-text");
         cutsceneTimelineFill = rootVisualElement.Q<VisualElement>("cutscene-timeline-fill");
-        testShortcutsPanel = rootVisualElement.Q<VisualElement>("test-shortcuts-panel");
-        testShortcutsText = rootVisualElement.Q<Label>("test-shortcuts-text");
+        debugMenuPanel = rootVisualElement.Q<VisualElement>("debug-menu-panel");
+        heatControls = rootVisualElement.Q<VisualElement>("heat-controls");
+        currencyInput = rootVisualElement.Q<IntegerField>("currency-input");
+        debugActionStatus = rootVisualElement.Q<Label>("debug-action-status");
+        godModeButton = rootVisualElement.Q<Button>("god-mode-button");
+        combatOverrideButton = rootVisualElement.Q<Button>("combat-override-button");
+        slowMotionButton = rootVisualElement.Q<Button>("slow-motion-button");
+        resetSaveButton = rootVisualElement.Q<Button>("reset-save-button");
+        BindDebugButtons(rootVisualElement);
+        if (currencyInput != null)
+        {
+            currencyInput.RegisterValueChangedCallback(_ => currencyInputEdited = true);
+            if (playerCurrency != null)
+                currencyInput.SetValueWithoutNotify(playerCurrency.Current);
+        }
 
-        SetVisible(isVisible);
+        SetHudVisible(isVisible);
+        SetDebugMenuVisible(IsDebugMenuVisible);
         if (waterStateLabel != null)
             waterStateLabel.style.display = DisplayStyle.None;
     }
@@ -222,58 +243,204 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
                attackController != null;
     }
 
-    private void SetVisible(bool value)
+    private void SetHudVisible(bool value)
     {
         isVisible = value;
         IsVisible = value;
 
         if (debugPanel != null)
-        {
-            debugPanel.style.display = value
-                ? DisplayStyle.Flex
-                : DisplayStyle.None;
-        }
-
+            debugPanel.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
         if (enemyDebugPanel != null)
             enemyDebugPanel.style.display = DisplayStyle.None;
         if (cutsceneDebugPanel != null)
             cutsceneDebugPanel.style.display = DisplayStyle.None;
-        if (testShortcutsPanel != null)
-            testShortcutsPanel.style.display = value
+    }
+
+    private void SetDebugMenuVisible(bool value)
+    {
+        value &= Debug.isDebugBuild;
+        if (value && !IsDebugMenuVisible)
+        {
+            cursorLockBeforeDebug = UnityEngine.Cursor.lockState;
+            cursorVisibleBeforeDebug = UnityEngine.Cursor.visible;
+            UnityEngine.Cursor.lockState = UnityEngine.CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
+        }
+        else if (!value && IsDebugMenuVisible)
+        {
+            UnityEngine.Cursor.lockState = cursorLockBeforeDebug;
+            UnityEngine.Cursor.visible = cursorVisibleBeforeDebug;
+        }
+
+        IsDebugMenuVisible = value;
+        if (debugMenuPanel != null)
+            debugMenuPanel.style.display = value
                 ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
-    private void UpdateTestShortcuts()
+    private void BindDebugButtons(VisualElement root)
     {
-        if (testShortcutsPanel == null || testShortcutsText == null)
+        if (root.Q<Button>("debug-close-button") == null ||
+            boundButtonRoot == root)
             return;
+        boundButtonRoot = root;
+        BindButton(root, "debug-close-button", CloseDebugMenu);
+        BindButton(root, "status-max-button", () => SetPlayerStatus(true));
+        BindButton(root, "status-zero-button", () => SetPlayerStatus(false));
+        BindButton(root, "heat-minus-button", () => AdjustPlayerHeat(-10f));
+        BindButton(root, "heat-plus-button", () => AdjustPlayerHeat(10f));
+        BindButton(root, "currency-set-button", SetCurrency);
+        BindButton(root, "god-mode-button", ToggleGodMode);
+        BindButton(root, "combat-override-button", CycleCombatOverride);
+        BindButton(root, "kill-player-button", KillPlayer);
+        BindButton(root, "slow-motion-button", ToggleSlowMotion);
+        BindButton(root, "next-moveset-button", CycleMoveset);
+        BindButton(root, "next-scene-button", LoadNextScene);
+        BindButton(root, "environment-previous-button", () => CycleEnvironment(-1));
+        BindButton(root, "environment-next-button", () => CycleEnvironment(1));
+        BindButton(root, "reload-scene-button", ReloadScene);
+        BindButton(root, "reset-save-button", RequestSaveReset);
+    }
 
-        testShortcutsPanel.style.display = DisplayStyle.Flex;
-        testShortcutsTextBuilder.Clear();
-        testShortcutsTextBuilder.AppendLine("TEST SHORTCUTS");
-        testShortcutsTextBuilder.AppendLine("F3  DEBUG HUD");
-        bool usesHealth = movesetController != null && movesetController.UsesHealth;
-        if (!usesHealth)
+    private static void BindButton(VisualElement root, string name,
+        System.Action action)
+    {
+        Button button = root.Q<Button>(name);
+        if (button == null) return;
+        button.clicked -= action;
+        button.clicked += action;
+    }
+
+    private void CloseDebugMenu()
+    {
+        if (Debug.isDebugBuild) SetDebugMenuVisible(false);
+    }
+
+    private void SetPlayerStatus(bool maximize)
+    {
+        if (!Debug.isDebugBuild) return;
+        if (playerHealth != null) playerHealth.DebugSetStatus(maximize);
+        if (playerHeat != null) playerHeat.DebugSetStatus(maximize);
+        SetActionStatus(maximize ? "Player status maximized." : "Player status zeroed.");
+    }
+
+    private void AdjustPlayerHeat(float amount)
+    {
+        if (!Debug.isDebugBuild || playerHeat == null) return;
+        playerHeat.DebugAdjustHeat(amount);
+        SetActionStatus("Heat: " + playerHeat.CurrentHeat.ToString("0.0"));
+    }
+
+    private void SetCurrency()
+    {
+        if (!Debug.isDebugBuild || currencyInput == null) return;
+        if (playerCurrency == null && playerTransform != null)
+            playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
+        if (playerCurrency == null && playerTransform != null)
+            playerCurrency = playerTransform.gameObject.AddComponent<PlayerCurrencyWallet>();
+        if (playerCurrency == null) return;
+        playerCurrency.DebugSetCurrency(currencyInput.value);
+        currencyInputEdited = false;
+        currencyInput.SetValueWithoutNotify(playerCurrency.Current);
+        SetActionStatus("Money set to " + playerCurrency.Current + ".");
+    }
+
+    private void ToggleGodMode()
+    {
+        if (!Debug.isDebugBuild || playerHealth == null) return;
+        playerHealth.DebugToggleGodMode();
+        UpdateDebugActionLabels();
+    }
+
+    private void CycleCombatOverride()
+    {
+        if (!Debug.isDebugBuild || combatStatus == null) return;
+        combatStatus.DebugCycleCombatOverride();
+        UpdateDebugActionLabels();
+    }
+
+    private void KillPlayer()
+    {
+        if (!Debug.isDebugBuild || playerHealth == null) return;
+        playerHealth.DebugKillPlayer();
+        SetActionStatus("Player killed.");
+    }
+
+    private void ToggleSlowMotion()
+    {
+        if (!Debug.isDebugBuild) return;
+        GameDebugTimeScale.Toggle();
+        UpdateDebugActionLabels();
+    }
+
+    private void CycleMoveset()
+    {
+        if (!Debug.isDebugBuild || movesetController == null) return;
+        movesetController.DebugCycleMoveset();
+        SetActionStatus("Moveset: " + movesetController.CurrentMovesetName);
+    }
+
+    private void LoadNextScene()
+    {
+        if (!Debug.isDebugBuild) return;
+        GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
+        if (loader != null) loader.DebugLoadNextScene();
+    }
+
+    private void CycleEnvironment(int direction)
+    {
+        if (!Debug.isDebugBuild) return;
+        RetroLightSystem.CycleEnvironmentProfile(direction);
+        RetroEnvironmentProfile environment = RetroLightSystem.ActiveEnvironment;
+        SetActionStatus("Environment: " + (environment != null ? environment.name : "Default"));
+    }
+
+    private void ReloadScene()
+    {
+        if (!Debug.isDebugBuild) return;
+        GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
+        if (loader != null) loader.ReloadCurrentScene();
+    }
+
+    private void RequestSaveReset()
+    {
+        if (!Debug.isDebugBuild || resetSaveButton == null) return;
+        if (Time.unscaledTime > resetConfirmationExpiresAt)
         {
-            testShortcutsTextBuilder.AppendLine("F4  HEAT - (HOLD)");
-            testShortcutsTextBuilder.AppendLine("F5  HEAT + (HOLD)");
-            testShortcutsTextBuilder.AppendLine("F8  MAX HEAT + SUPERHEAT");
+            resetConfirmationExpiresAt = Time.unscaledTime + 5f;
+            resetSaveButton.text = "CONFIRM RESET SAVE";
+            SetActionStatus("Click again within 5 seconds to erase this game's save.");
+            return;
         }
-        testShortcutsTextBuilder.AppendLine("F6  COMBAT OVERRIDE");
-        testShortcutsTextBuilder.Append("F7  GOD MODE: ")
-            .AppendLine(playerHealth != null && playerHealth.IsGodMode ? "ON" : "OFF");
-        testShortcutsTextBuilder.AppendLine("F9  NEXT SCENE");
-        if (Debug.isDebugBuild)
-        {
-            testShortcutsTextBuilder.Append("[ / ] ENVIRONMENT: ");
-            RetroEnvironmentProfile active = RetroLightSystem.ActiveEnvironment;
-            testShortcutsTextBuilder.AppendLine(active != null ? active.name : "NONE");
-        }
-        testShortcutsTextBuilder.AppendLine("U   NEXT PLAYER MOVESET");
-        testShortcutsTextBuilder.Append("F11 TIME: ")
-            .AppendLine(GameDebugTimeScale.IsSlowMotion ? "0.25x" : "1x");
-        testShortcutsTextBuilder.AppendLine("R   RESTART");
-        testShortcutsText.text = testShortcutsTextBuilder.ToString();
+
+        GameSaveResetService.ResetAllSavesAndReload(
+            playerTransform != null ? playerTransform.gameObject : null);
+    }
+
+    private void SetActionStatus(string message)
+    {
+        if (debugActionStatus != null) debugActionStatus.text = message;
+    }
+
+    private void UpdateDebugActionLabels()
+    {
+        if (heatControls != null)
+            heatControls.style.display = movesetController != null &&
+                movesetController.UsesHeat ? DisplayStyle.Flex : DisplayStyle.None;
+        if (godModeButton != null)
+            godModeButton.text = "GOD MODE: " +
+                (playerHealth != null && playerHealth.IsGodMode ? "ON" : "OFF");
+        if (combatOverrideButton != null)
+            combatOverrideButton.text = "COMBAT OVERRIDE: " +
+                (combatStatus == null || !combatStatus.IsCombatStateForced
+                    ? "NEUTRAL" : combatStatus.IsForcedInCombat ? "FORCE IN" : "FORCE OUT");
+        if (slowMotionButton != null)
+            slowMotionButton.text = "SLOW MOTION: " +
+                (GameDebugTimeScale.IsSlowMotion ? "ON" : "OFF");
+        if (currencyInput != null && playerCurrency != null && !currencyInputEdited)
+            currencyInput.SetValueWithoutNotify(playerCurrency.Current);
+        if (resetSaveButton != null && Time.unscaledTime > resetConfirmationExpiresAt)
+            resetSaveButton.text = "RESET GAME SAVE";
     }
 
     private void UpdateDebugText()
