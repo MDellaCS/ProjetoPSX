@@ -29,6 +29,9 @@ public static class GameSaveService
         public string[] keyItemIds = Array.Empty<string>();
         public PlayerUpgradeSaveEntry[] upgrades = Array.Empty<PlayerUpgradeSaveEntry>();
         public string corpseRunJson;
+        public string campaignId;
+        public string[] acquiredItemIds;
+        public GameWorldSaveState.Entry[] worldObjects;
     }
 
     public sealed class SlotInfo
@@ -64,6 +67,7 @@ public static class GameSaveService
     private static int activeManualSlot = AutomaticSlotIndex;
     private static double sessionPlayedSeconds;
     private static double savedPlayTimeBase;
+    private static string activeCampaignId;
 
     public static int ActiveManualSlot => activeManualSlot;
     public static bool HasAnySave
@@ -84,6 +88,7 @@ public static class GameSaveService
         activeManualSlot = IsManualSlotValid(storedSlot)
             ? storedSlot : AutomaticSlotIndex;
         sessionPlayedSeconds = 0d;
+        activeCampaignId = null;
         SaveData activeSave = activeManualSlot >= 0 ? ReadManual(activeManualSlot) : null;
         savedPlayTimeBase = activeSave != null ? Math.Max(0d, activeSave.playedSeconds) : 0d;
         SaveData checkpoint = ReadCheckpoint();
@@ -93,7 +98,7 @@ public static class GameSaveService
 
     public static void Tick(float deltaTime)
     {
-        if (deltaTime > 0f && !GamePauseController.IsPaused)
+        if (deltaTime > 0f && !float.IsInfinity(deltaTime) && !GamePauseController.IsPaused)
             sessionPlayedSeconds += deltaTime;
     }
 
@@ -111,16 +116,21 @@ public static class GameSaveService
         GameObject player, out string error)
     {
         GameSceneLoader loader = UnityEngine.Object.FindAnyObjectByType<GameSceneLoader>();
-        if (player == null || loader == null || !loader.CanLoadSavedScene(scenePath))
+        if (player == null || loader == null || !loader.isActiveAndEnabled || loader.IsLoading ||
+            CutsceneController.IsPlaying || !loader.CanLoadSavedScene(scenePath))
         {
             error = "A cena inicial ou o jogador nao esta disponivel para iniciar a campanha.";
             return false;
         }
 
         ResetPlayerCampaign(player);
+        GameWorldSaveState.ResetForNewGame();
         CollectableItem.ResetAllForNewGame();
+        KeyItemInventory.NotifyRestored();
         PlayerPrefs.DeleteKey(CheckpointKey);
+        PlayerPrefs.DeleteKey(CheckpointKey + ".backup");
         activeManualSlot = AutomaticSlotIndex;
+        activeCampaignId = Guid.NewGuid().ToString("N");
         PlayerPrefs.DeleteKey(ActiveSlotKey);
         sessionPlayedSeconds = 0d;
         savedPlayTimeBase = 0d;
@@ -132,6 +142,7 @@ public static class GameSaveService
     public static bool SaveManual(int slot, string location, string spawnId,
         out string error)
     {
+        if (!CanSave(out error)) return false;
         if (!IsManualSlotValid(slot) ||
             (activeManualSlot >= 0 && activeManualSlot != slot))
         {
@@ -148,6 +159,12 @@ public static class GameSaveService
             return false;
         }
         WriteManual(slot, data);
+        SaveData checkpoint = ReadCheckpoint();
+        if (checkpoint != null && checkpoint.campaignId == activeCampaignId)
+        {
+            checkpoint.slotIndex = slot;
+            Write(CheckpointKey, checkpoint);
+        }
         activeManualSlot = slot;
         PlayerPrefs.SetInt(ActiveSlotKey, slot);
         PlayerPrefs.Save();
@@ -157,13 +174,14 @@ public static class GameSaveService
 
     public static bool SaveCheckpoint(string location, string spawnId)
     {
+        if (!CanSave(out _)) return false;
         GameObject player = FindPlayer();
         if (player == null) return false;
         SaveData data = Capture(player, activeManualSlot,
             SceneManager.GetActiveScene().path, spawnId, location);
         if (data == null) return false;
         data.slotIndex = activeManualSlot;
-        PlayerPrefs.SetString(CheckpointKey, JsonUtility.ToJson(data));
+        Write(CheckpointKey, data);
         PlayerPrefs.Save();
         return true;
     }
@@ -194,17 +212,24 @@ public static class GameSaveService
     public static void DeleteAllSaves()
     {
         for (int i = 0; i < ManualSlotCount; i++)
+        {
             PlayerPrefs.DeleteKey(ManualKey(i));
+            PlayerPrefs.DeleteKey(ManualKey(i) + ".backup");
+        }
         PlayerPrefs.DeleteKey(CheckpointKey);
+        PlayerPrefs.DeleteKey(CheckpointKey + ".backup");
         PlayerPrefs.DeleteKey(ActiveSlotKey);
         activeManualSlot = AutomaticSlotIndex;
         sessionPlayedSeconds = 0d;
         savedPlayTimeBase = 0d;
+        activeCampaignId = null;
+        PlayerPrefs.Save();
     }
 
     public static string FormatPlayTime(double seconds)
     {
-        TimeSpan time = TimeSpan.FromSeconds(Math.Max(0d, seconds));
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds)) seconds = 0d;
+        TimeSpan time = TimeSpan.FromSeconds(Math.Clamp(seconds, 0d, 315537897599d));
         return time.TotalHours >= 1d
             ? $"{(int)time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}"
             : $"{time.Minutes:00}:{time.Seconds:00}";
@@ -213,11 +238,13 @@ public static class GameSaveService
     private static bool LoadData(SaveData data, out string error)
     {
         GameSceneLoader loader = UnityEngine.Object.FindAnyObjectByType<GameSceneLoader>();
-        if (loader == null || loader.IsLoading || !loader.CanLoadSavedScene(data.scenePath))
+        if (loader == null || !loader.isActiveAndEnabled || loader.IsLoading ||
+            CutsceneController.IsPlaying || !loader.CanLoadSavedScene(data.scenePath))
         {
             error = loader != null && loader.IsLoading
                 ? "Aguarde a transicao de cena terminar."
-                : "A cena deste save nao esta disponivel na build atual.";
+                : CutsceneController.IsPlaying ? "Aguarde a cutscene terminar."
+                : "A cena deste save ou o carregador nao esta disponivel.";
             return false;
         }
         GameObject player = FindPlayer();
@@ -230,6 +257,16 @@ public static class GameSaveService
         Restore(player, data);
         activeManualSlot = IsManualSlotValid(data.slotIndex)
             ? data.slotIndex : AutomaticSlotIndex;
+        activeCampaignId = string.IsNullOrEmpty(data.campaignId)
+            ? Guid.NewGuid().ToString("N") : data.campaignId;
+        // Um checkpoint antigo nao pode sobrescrever uma campanha que ocupou
+        // posteriormente o mesmo slot.
+        if (activeManualSlot >= 0 && !string.IsNullOrEmpty(data.campaignId))
+        {
+            SaveData manual = ReadManual(activeManualSlot);
+            if (manual != null && manual.campaignId != data.campaignId)
+                activeManualSlot = AutomaticSlotIndex;
+        }
         if (activeManualSlot >= 0)
             PlayerPrefs.SetInt(ActiveSlotKey, activeManualSlot);
         else
@@ -251,6 +288,7 @@ public static class GameSaveService
         PlayerHealth health = player.GetComponent<PlayerHealth>();
         PlayerHeat heat = player.GetComponent<PlayerHeat>();
         PlayerCurrencyWallet wallet = player.GetComponent<PlayerCurrencyWallet>();
+        activeCampaignId ??= Guid.NewGuid().ToString("N");
         return new SaveData
         {
             slotIndex = slot,
@@ -265,7 +303,10 @@ public static class GameSaveService
             currency = wallet != null ? wallet.Current : 0,
             keyItemIds = KeyItemInventory.ExportCollectedIds(),
             upgrades = progression.ExportSaveData(),
-            corpseRunJson = CorpseRun.ExportSaveData()
+            corpseRunJson = CorpseRun.ExportSaveData(),
+            campaignId = activeCampaignId,
+            acquiredItemIds = KeyItemInventory.ExportAcquiredIds(),
+            worldObjects = GameWorldSaveState.Export()
         };
     }
 
@@ -278,7 +319,8 @@ public static class GameSaveService
         PlayerCurrencyWallet wallet = player.GetComponent<PlayerCurrencyWallet>();
         if (wallet == null) wallet = player.AddComponent<PlayerCurrencyWallet>();
         wallet.RestoreSaveValue(data.currency);
-        KeyItemInventory.RestoreCollectedIds(data.keyItemIds);
+        KeyItemInventory.RestoreCollectedIds(data.keyItemIds, data.acquiredItemIds, false);
+        GameWorldSaveState.Restore(data.worldObjects);
         if (player.TryGetComponent(out PlayerHeat heat))
             heat.RestoreSaveState(data.currentHeat, data.currentSuperheat);
         if (player.TryGetComponent(out PlayerHealth health))
@@ -292,26 +334,58 @@ public static class GameSaveService
         PlayerProgression progression = PlayerProgression.GetOrAdd(player);
         progression.Initialize();
         progression.ResetProgress();
-        if (player.TryGetComponent(out PlayerCurrencyWallet wallet)) wallet.ResetProgress();
+        PlayerCurrencyWallet wallet = player.GetComponent<PlayerCurrencyWallet>();
+        if (wallet == null) wallet = player.AddComponent<PlayerCurrencyWallet>();
+        wallet.ResetProgress();
         if (player.TryGetComponent(out PlayerHeat heat)) heat.ResetForNewGame();
         if (player.TryGetComponent(out PlayerHealth health)) health.ResetForNewGame();
         if (player.TryGetComponent(out PlayerMovement movement)) movement.ResetForNewGame();
         if (player.TryGetComponent(out PlayerCombatStatus combatStatus)) combatStatus.ResetForNewGame();
-        KeyItemInventory.ResetForNewGame();
+        if (player.TryGetComponent(out PlayerGameOver gameOver)) gameOver.ResetForNewGame();
+        if (player.TryGetComponent(out PlayerState state)) state.ResetForNewGame();
+        KeyItemInventory.ResetForNewGame(false);
         CorpseRun.ResetStoredProgress();
     }
 
-    private static SaveData ReadManual(int slot) => Read(ManualKey(slot));
+    private static bool CanSave(out string error)
+    {
+        GameSceneLoader loader = UnityEngine.Object.FindAnyObjectByType<GameSceneLoader>();
+        GameObject player = FindPlayer();
+        bool dead = player != null && player.TryGetComponent(out PlayerState state) && state.IsDead();
+        if (player == null || dead || loader == null || !loader.isActiveAndEnabled || loader.IsLoading ||
+            PauseMenuHUD.IsMainMenuOpen ||
+            CutsceneController.IsPlaying || !loader.CanLoadSavedScene(SceneManager.GetActiveScene().path))
+        {
+            error = "Nao e possivel salvar durante morte, cutscene ou transicao de cena.";
+            return false;
+        }
+        error = null;
+        return true;
+    }
+
+    private static SaveData ReadManual(int slot)
+    {
+        SaveData data = Read(ManualKey(slot));
+        if (data != null) data.slotIndex = slot;
+        return data;
+    }
     private static SaveData ReadCheckpoint() => Read(CheckpointKey);
 
     private static SaveData Read(string key)
+        => ReadValue(key) ?? ReadValue(key + ".backup");
+
+    private static SaveData ReadValue(string key)
     {
         string json = PlayerPrefs.GetString(key, string.Empty);
         if (string.IsNullOrWhiteSpace(json)) return null;
         try
         {
             SaveData data = JsonUtility.FromJson<SaveData>(json);
-            return data != null && data.version == 1 && !string.IsNullOrWhiteSpace(data.scenePath)
+            return data != null && data.version == 1 && !string.IsNullOrWhiteSpace(data.scenePath) &&
+                !double.IsNaN(data.playedSeconds) && !double.IsInfinity(data.playedSeconds) &&
+                data.playedSeconds >= 0d && data.playedSeconds <= 315537897599d &&
+                !float.IsNaN(data.currentHeat) && !float.IsInfinity(data.currentHeat) &&
+                !float.IsNaN(data.currentSuperheat) && !float.IsInfinity(data.currentSuperheat)
                 ? data : null;
         }
         catch (Exception exception)
@@ -322,7 +396,18 @@ public static class GameSaveService
     }
 
     private static void WriteManual(int slot, SaveData data) =>
-        PlayerPrefs.SetString(ManualKey(slot), JsonUtility.ToJson(data));
+        Write(ManualKey(slot), data);
+
+    private static void Write(string key, SaveData data)
+    {
+        string json = JsonUtility.ToJson(data);
+        if (ReadValue(key) != null)
+        {
+            PlayerPrefs.SetString(key + ".backup", PlayerPrefs.GetString(key));
+            PlayerPrefs.Save();
+        }
+        PlayerPrefs.SetString(key, json);
+    }
 
     private static string ManualKey(int slot) => ManualKeyPrefix + slot;
 

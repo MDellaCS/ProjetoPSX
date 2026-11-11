@@ -22,11 +22,13 @@ public sealed class ScenePlayerSpawnPoint : MonoBehaviour
         string requestedSpawnId)
     {
         ScenePlayerSpawnPoint fallback = null;
-        foreach (ScenePlayerSpawnPoint point in
-                 FindObjectsByType<ScenePlayerSpawnPoint>(
-                     FindObjectsInactive.Exclude))
+        ScenePlayerSpawnPoint defaultPoint = null;
+        // A ordem da hierarquia e estavel entre cargas, mesmo quando uma cena
+        // possui por engano mais de um ponto marcado como padrao.
+        foreach (GameObject root in scene.GetRootGameObjects())
+        foreach (ScenePlayerSpawnPoint point in root.GetComponentsInChildren<ScenePlayerSpawnPoint>())
         {
-            if (point == null || point.gameObject.scene != scene)
+            if (point == null || !point.isActiveAndEnabled)
                 continue;
 
             if (!string.IsNullOrWhiteSpace(requestedSpawnId) &&
@@ -35,11 +37,11 @@ public sealed class ScenePlayerSpawnPoint : MonoBehaviour
                 return point;
             }
 
-            if (fallback == null || point.IsDefault)
-                fallback = point;
+            if (fallback == null) fallback = point;
+            if (defaultPoint == null && point.IsDefault) defaultPoint = point;
         }
 
-        return fallback;
+        return defaultPoint != null ? defaultPoint : fallback;
     }
 
     private void OnDrawGizmos()

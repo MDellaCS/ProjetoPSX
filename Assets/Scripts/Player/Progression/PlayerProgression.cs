@@ -91,6 +91,7 @@ public sealed class PlayerProgression : MonoBehaviour
             if (attribute == null || string.IsNullOrWhiteSpace(attribute.id))
                 continue;
             levels[attribute.id] = 1;
+            PlayerPrefs.DeleteKey(SavePrefix + attribute.id);
         }
 
         ApplyBonuses();

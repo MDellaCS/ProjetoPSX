@@ -183,8 +183,6 @@ public class PlayerHeat : MonoBehaviour
         burnPhaseTimer = 0f;
         burnElapsed = 0f;
         burnStartHeat = 0f;
-        rageGrants.Clear();
-        rageDuration = 0f;
         InterruptActions();
         if (movesetController != null)
             movesetController.ResetSequence();
@@ -219,10 +217,10 @@ public class PlayerHeat : MonoBehaviour
         burnPhaseTimer = 0f;
         burnElapsed = 0f;
         burnStartHeat = 0f;
-        rageGrants.Clear();
-        rageDuration = 0f;
-        currentHeat = Mathf.Clamp(heat, MinHeat, MaxHeat);
-        currentSuperheat = Mathf.Clamp(superheat, 0f, maxSuperheat);
+        currentHeat = float.IsNaN(heat) || float.IsInfinity(heat)
+            ? 0f : Mathf.Clamp(heat, MinHeat, MaxHeat);
+        currentSuperheat = float.IsNaN(superheat) || float.IsInfinity(superheat)
+            ? 0f : Mathf.Clamp(superheat, 0f, maxSuperheat);
         heatCoolingElapsed = 0f;
         heatGainCoolingDelayRemaining = 0f;
         if (playerState != null && !playerState.IsDead())

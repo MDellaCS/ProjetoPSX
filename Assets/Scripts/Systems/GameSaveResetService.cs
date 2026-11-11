@@ -23,6 +23,9 @@ public static class GameSaveResetService
         try
         {
             DeleteProjectSaveKeys(player);
+            KeyItemInventory.ResetForNewGame(false);
+            GameWorldSaveState.ResetForNewGame();
+            CollectableItem.ResetAllForNewGame();
             GameInputBindings.ResetToDefaults();
             GameSettingsService.ResetToDefaults();
 
@@ -36,6 +39,10 @@ public static class GameSaveResetService
                     heat.ResetForNewGame();
                 if (player.TryGetComponent(out PlayerHealth health))
                     health.ResetForNewGame();
+                if (player.TryGetComponent(out PlayerMovement movement))
+                    movement.ResetForNewGame();
+                if (player.TryGetComponent(out PlayerGameOver gameOver))
+                    gameOver.ResetForNewGame();
             }
 
             PlayerPrefs.Save();

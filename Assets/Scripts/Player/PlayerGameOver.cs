@@ -116,4 +116,14 @@ public class PlayerGameOver : MonoBehaviour
             loadingScreen.LoadSceneWithoutSceneLoader(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
     }
+
+    public void ResetForNewGame()
+    {
+        deathDetected = false;
+        gameOverVisible = false;
+        restartRequested = false;
+        deathTimer = 0f;
+        ResolveGameOverHUD();
+        if (gameOverHUD != null) gameOverHUD.Hide();
+    }
 }

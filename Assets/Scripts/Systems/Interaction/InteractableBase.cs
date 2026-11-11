@@ -68,6 +68,12 @@ public abstract class InteractableBase : MonoBehaviour
         return true;
     }
 
+    internal void ResetInteractionState()
+    {
+        interactionUsed = false;
+        nextInteractionTime = 0f;
+    }
+
     private InteractionProfile ResolveProfile()
     {
         if (this is InteractionArea ownArea && ownArea.AssignedProfile != null)

@@ -65,7 +65,7 @@ public class CollectableItem : InteractableBase
     private void Awake()
     {
         knownCollectables.Add(this);
-        collected = KeyItemInventory.Contains(item);
+        collected = KeyItemInventory.WasAcquired(item);
         if (collected)
         {
             gameObject.SetActive(false);
@@ -142,7 +142,7 @@ public class CollectableItem : InteractableBase
     }
 
     public override bool CanInteract(PlayerMovement player) =>
-        !collected && item != null && !KeyItemInventory.Contains(item) &&
+        !collected && item != null && !KeyItemInventory.WasAcquired(item) &&
         base.CanInteract(player);
 
     public override bool Interact(PlayerMovement player)

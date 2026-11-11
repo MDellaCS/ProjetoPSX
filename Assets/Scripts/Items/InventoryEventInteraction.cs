@@ -21,8 +21,17 @@ public sealed class InventoryEventInteraction : InteractableBase
 
     public override string InteractionMessage => "Interagir";
 
+    protected override void OnEnable()
+    {
+        RegisterSaveTargets();
+        base.OnEnable();
+    }
+
+    internal void RegisterSaveTargets() => GameWorldSaveState.Register(onRequirementMet);
+
     public override bool Interact(PlayerMovement player)
     {
+        RegisterSaveTargets();
         if (requirement == null || !requirement.IsSatisfied ||
             (consumeRequiredItems && !requirement.TryConsumeRequiredItems()))
         {

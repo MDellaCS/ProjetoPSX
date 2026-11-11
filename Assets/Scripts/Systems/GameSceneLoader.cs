@@ -53,6 +53,7 @@ public sealed class GameSceneLoader : MonoBehaviour
 
     private bool isLoading;
     private bool suppressMainMenuForNextSceneLoad;
+    private bool skipWorldCaptureForNextLoad;
     private string pendingSpawnId;
     private List<string> sceneCyclePaths;
     private LoadingScreenHUD loadingScreen;
@@ -63,7 +64,9 @@ public sealed class GameSceneLoader : MonoBehaviour
     public bool CanLoadSavedScene(string scenePath) => CanLoadScene(ResolveScenePath(scenePath));
     public void LoadSavedScene(string scenePath, string spawnId)
     {
+        if (isLoading || !isActiveAndEnabled || !CanLoadSavedScene(scenePath)) return;
         suppressMainMenuForNextSceneLoad = true;
+        skipWorldCaptureForNextLoad = true;
         LoadScene(scenePath, spawnId);
     }
     public bool HasStartupSceneConfigured
@@ -222,8 +225,12 @@ public sealed class GameSceneLoader : MonoBehaviour
     }
 
     /// <summary>Recarrega somente a fase atual; GameRoot e Player permanecem.</summary>
-    public void ReloadCurrentScene() =>
+    public void ReloadCurrentScene()
+    {
+        if (isLoading) return;
+        suppressMainMenuForNextSceneLoad = !PauseMenuHUD.IsMainMenuOpen;
         LoadScene(SceneManager.GetActiveScene().path, defaultSpawnId);
+    }
 
     public void LoadScene(string scenePath) => LoadScene(scenePath, defaultSpawnId);
 
@@ -241,6 +248,9 @@ public sealed class GameSceneLoader : MonoBehaviour
         }
 
         pendingSpawnId = spawnId;
+        if (!skipWorldCaptureForNextLoad)
+            GameWorldSaveState.CaptureCurrentObjects();
+        skipWorldCaptureForNextLoad = false;
         ResolveLoadingScreen();
         if (loadingScreen != null)
             loadingScreen.Show();
@@ -332,6 +342,8 @@ public sealed class GameSceneLoader : MonoBehaviour
 
         bool loadedFromSave = suppressMainMenuForNextSceneLoad;
         suppressMainMenuForNextSceneLoad = false;
+        GameWorldSaveState.ApplyScene(scene);
+        KeyItemInventory.NotifyRestored();
         PlacePlayerAtSceneSpawn(scene, pendingSpawnId, loadedFromSave);
         BindSceneCutscenesToPersistentCamera(scene);
         pendingSpawnId = null;
@@ -497,6 +509,11 @@ public sealed class GameSceneLoader : MonoBehaviour
     {
         director.stopped -= OnNewGameCutsceneStopped;
         SetGameplayPanelsEnabled(true);
+        // A introducao pode permanecer no proprio menu (a primeira area atual)
+        // ou encaminhar a campanha para uma fase configurada separadamente.
+        string destination = ResolveScenePath(gameplayScenePath);
+        if (!isLoading && destination != SceneManager.GetActiveScene().path)
+            LoadSavedScene(destination, defaultSpawnId);
     }
 
     private CutsceneController FindNewGameCutscene(Scene scene)

@@ -7,6 +7,7 @@ public static class KeyItemInventory
 {
     private const string SaveKey = "ProjetoPSX.KeyItems.V1";
     private static readonly HashSet<string> collectedIds = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> acquiredIds = new(StringComparer.Ordinal);
     private static readonly List<KeyItemDefinition> definitions = new();
     private static bool initialized;
 
@@ -17,6 +18,7 @@ public static class KeyItemInventory
     private static void ResetSession()
     {
         collectedIds.Clear();
+        acquiredIds.Clear();
         definitions.Clear();
         initialized = false;
         Changed = null;
@@ -49,16 +51,37 @@ public static class KeyItemInventory
         return result;
     }
 
-    public static void RestoreCollectedIds(string[] ids)
+    public static bool WasAcquired(KeyItemDefinition item)
+    {
+        EnsureInitialized();
+        return item != null && acquiredIds.Contains(item.Id);
+    }
+
+    public static string[] ExportAcquiredIds()
+    {
+        EnsureInitialized();
+        string[] result = new string[acquiredIds.Count];
+        acquiredIds.CopyTo(result);
+        return result;
+    }
+
+    public static void RestoreCollectedIds(string[] ids, string[] acquired = null, bool notify = true)
     {
         EnsureInitialized();
         collectedIds.Clear();
+        acquiredIds.Clear();
         if (ids != null)
             foreach (string id in ids)
                 if (!string.IsNullOrWhiteSpace(id)) collectedIds.Add(id);
+        acquiredIds.UnionWith(collectedIds);
+        if (acquired != null)
+            foreach (string id in acquired)
+                if (!string.IsNullOrWhiteSpace(id)) acquiredIds.Add(id);
         Persist();
-        Changed?.Invoke();
+        if (notify) Changed?.Invoke();
     }
+
+    public static void NotifyRestored() => Changed?.Invoke();
 
     public static bool Grant(KeyItemDefinition item, bool showModal = true)
     {
@@ -69,6 +92,7 @@ public static class KeyItemInventory
 
         if (!definitions.Contains(item))
             definitions.Add(item);
+        acquiredIds.Add(item.Id);
         Persist();
         Changed?.Invoke();
         if (showModal)
@@ -106,13 +130,14 @@ public static class KeyItemInventory
         return true;
     }
 
-    public static void ResetForNewGame()
+    public static void ResetForNewGame(bool notify = true)
     {
         EnsureInitialized();
         collectedIds.Clear();
+        acquiredIds.Clear();
         PlayerPrefs.DeleteKey(SaveKey);
         PlayerPrefs.Save();
-        Changed?.Invoke();
+        if (notify) Changed?.Invoke();
     }
 
     internal static void DeleteStoredProgress() => PlayerPrefs.DeleteKey(SaveKey);
@@ -145,6 +170,10 @@ public static class KeyItemInventory
             foreach (string id in stored.ids)
                 if (!string.IsNullOrWhiteSpace(id))
                     collectedIds.Add(id);
+            acquiredIds.UnionWith(collectedIds);
+            if (stored.acquiredIds != null)
+                foreach (string id in stored.acquiredIds)
+                    if (!string.IsNullOrWhiteSpace(id)) acquiredIds.Add(id);
         }
         catch (Exception exception)
         {
@@ -156,10 +185,15 @@ public static class KeyItemInventory
     {
         StoredItems stored = new();
         stored.ids.AddRange(collectedIds);
+        stored.acquiredIds.AddRange(acquiredIds);
         PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(stored));
         PlayerPrefs.Save();
     }
 
     [Serializable]
-    private sealed class StoredItems { public List<string> ids = new(); }
+    private sealed class StoredItems
+    {
+        public List<string> ids = new();
+        public List<string> acquiredIds = new();
+    }
 }

@@ -201,7 +201,7 @@ MonoBehaviour:
       - {fileID: 8300000, guid: 729bf64523bd709419856a0b2e46ba55, type: 3}
       - {fileID: 8300000, guid: c72a3e5a371f48d429e08c62d81e1422, type: 3}
       - {fileID: 8300000, guid: ad65af8eeba9ccf4280c8e28c204afb0, type: 3}
-      volume: 1
+      volume: 0.62
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0
@@ -237,11 +237,11 @@ MonoBehaviour:
   playerHeavyAttack:
     attackStart:
       clips:
-      - {fileID: 8300000, guid: 62aab6ffa26559048af41c0c983389df, type: 3}
-      - {fileID: 8300000, guid: 2955457ce041a5b4fa9f8679f5ef5ffe, type: 3}
-      - {fileID: 8300000, guid: 978f051231161704686c25b1c98632a6, type: 3}
-      - {fileID: 8300000, guid: 3b8a2dcff5bfa944da36120dcc5eaad8, type: 3}
-      - {fileID: 8300000, guid: f1e6f71ed35bfd24ab54f57d814f8859, type: 3}
+      - {fileID: 8300000, guid: 8c7f5f15c4c3879498a636163ed2f50e, type: 3}
+      - {fileID: 8300000, guid: 42efc7352a52cff408d263e3123ac500, type: 3}
+      - {fileID: 8300000, guid: 288b0f9014c1f9b4c9c9f558a526caa2, type: 3}
+      - {fileID: 8300000, guid: 3658b8edc22e5ac4ab2b5c527f55f014, type: 3}
+      - {fileID: 8300000, guid: fc639231b53a0344dab226a771084917, type: 3}
       volume: 1
       volumeVariation: 0
       pitch: 1
@@ -294,7 +294,7 @@ MonoBehaviour:
   playerFootstep:
     clips:
     - {fileID: 8300000, guid: 505a015d5525e0442ae4a62d5bac304d, type: 3}
-    volume: 4
+    volume: 1
     volumeVariation: 0.05
     pitch: 1
     pitchVariation: 0.05
@@ -302,7 +302,7 @@ MonoBehaviour:
   enemyFootstep:
     clips:
     - {fileID: 8300000, guid: 8e001351cd7065543a068386cde4c960, type: 3}
-    volume: 4
+    volume: 1
     volumeVariation: 0.05
     pitch: 1
     pitchVariation: 0.05

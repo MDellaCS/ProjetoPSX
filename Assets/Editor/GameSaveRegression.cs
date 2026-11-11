@@ -40,15 +40,23 @@ public static class GameSaveRegression
     {
         List<StringBackup> backups = new();
         for (int i = 0; i < GameSaveService.ManualSlotCount; i++)
+        {
             backups.Add(new StringBackup(ManualPrefix + i));
+            backups.Add(new StringBackup(ManualPrefix + i + ".backup"));
+        }
         backups.Add(new StringBackup(CheckpointKey));
+        backups.Add(new StringBackup(CheckpointKey + ".backup"));
         bool activeSlotExisted = PlayerPrefs.HasKey(ActiveSlotKey);
         int previousActiveSlot = PlayerPrefs.GetInt(ActiveSlotKey, -1);
         try
         {
             for (int i = 0; i < GameSaveService.ManualSlotCount; i++)
+            {
                 PlayerPrefs.DeleteKey(ManualPrefix + i);
+                PlayerPrefs.DeleteKey(ManualPrefix + i + ".backup");
+            }
             PlayerPrefs.DeleteKey(CheckpointKey);
+            PlayerPrefs.DeleteKey(CheckpointKey + ".backup");
             PlayerPrefs.DeleteKey(ActiveSlotKey);
 
             GameSaveService.SaveData manual = new()
@@ -78,6 +86,46 @@ public static class GameSaveRegression
                 "Checkpoint deve permanecer separado dos slots manuais.");
             Check(GameSaveService.FormatPlayTime(3723d) == "01:02:03", "Formatacao de tempo incorreta.");
             Check(GameSaveService.HasAnySave, "A lista de saves ocupados nao foi detectada.");
+            Check(GameSaveService.FormatPlayTime(double.NaN) == "00:00", "NaN quebrou o resumo.");
+            Check(GameSaveService.FormatPlayTime(double.PositiveInfinity) == "00:00", "Infinito quebrou o resumo.");
+            manual.slotIndex = 4;
+            PlayerPrefs.SetString(ManualPrefix + 0, JsonUtility.ToJson(manual));
+            Check(GameSaveService.GetManualSlot(0).data.slotIndex == 0,
+                "O slot deve ser determinado pelo local de armazenamento.");
+            PlayerPrefs.SetString(ManualPrefix + 0 + ".backup", JsonUtility.ToJson(manual));
+            PlayerPrefs.SetString(ManualPrefix + 0, "{ invalid json");
+            Check(GameSaveService.GetManualSlot(0).IsOccupied, "Backup valido nao recuperou save corrompido.");
+            PlayerPrefs.DeleteKey(ManualPrefix + 0 + ".backup");
+            PlayerPrefs.SetString(ManualPrefix + 0, "{}");
+            Check(!GameSaveService.GetManualSlot(0).IsOccupied, "Save incompleto foi aceito.");
+            manual.version = 999;
+            PlayerPrefs.SetString(ManualPrefix + 0, JsonUtility.ToJson(manual));
+            Check(!GameSaveService.GetManualSlot(0).IsOccupied, "Versao futura foi aceita.");
+
+            GameObject thermalPlayer = new("[Regression] Saved Rage");
+            PlayerRageUpgradeEffect rage = ScriptableObject.CreateInstance<PlayerRageUpgradeEffect>();
+            try
+            {
+                PlayerHeat heat = thermalPlayer.AddComponent<PlayerHeat>();
+                heat.SetRageGrant(rage, 5f);
+                heat.ResetForNewGame();
+                Check(heat.HasRageUnlocked, "Reset termico removeu um efeito persistente.");
+                heat.RestoreSaveState(20f, 10f);
+                Check(heat.HasRageUnlocked, "Load removeu Rage desbloqueado.");
+                Check(heat.CurrentHeat == 20f && heat.CurrentSuperheat == 10f, "Recursos termicos nao restaurados.");
+                heat.RestoreSaveState(float.NaN, float.PositiveInfinity);
+                Check(heat.CurrentHeat == 0f && heat.CurrentSuperheat == 0f, "Recursos invalidos nao tratados.");
+                heat.SetRageGrant(rage, 0f);
+                Check(!heat.HasRageUnlocked, "Remover o upgrade deve remover Rage.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(thermalPlayer);
+                UnityEngine.Object.DestroyImmediate(rage);
+            }
+            MonoScript savePointScript = AssetDatabase.LoadAssetAtPath<MonoScript>("Assets/Scripts/Systems/SavePoint.cs");
+            Check(savePointScript != null && savePointScript.GetClass() == typeof(SavePoint),
+                "Unity nao reconhece o componente SavePoint.");
             Debug.Log("PASS: game save regression.");
         }
         catch (Exception exception)

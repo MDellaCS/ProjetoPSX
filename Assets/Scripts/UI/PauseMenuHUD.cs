@@ -23,6 +23,7 @@ public sealed class PauseMenuHUD : MonoBehaviour
     }
 
     public static bool IsOpen { get; private set; }
+    public static bool IsMainMenuOpen => instance != null && instance.mainMenuMode;
     private static PauseMenuHUD instance;
     internal VisualElement UIRoot => root;
 

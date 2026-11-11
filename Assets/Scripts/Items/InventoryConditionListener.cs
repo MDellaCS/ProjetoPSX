@@ -31,11 +31,26 @@ public sealed class InventoryConditionListener : MonoBehaviour
 
     private void OnEnable()
     {
+        RegisterSaveTargets();
         KeyItemInventory.Changed += HandleInventoryChanged;
         conditionWasMet = requirement != null && requirement.IsSatisfied;
         hasInitialState = true;
         if (conditionWasMet && triggerWhenEnabled)
             TriggerConditionMet();
+    }
+
+    internal void RegisterSaveTargets()
+    {
+        GameWorldSaveState.Register(onConditionMet);
+        GameWorldSaveState.Register(onConditionLost);
+    }
+
+    internal void ResetForNewGame()
+    {
+        hasTriggered = false;
+        isExecuting = false;
+        hasInitialState = true;
+        conditionWasMet = requirement != null && requirement.IsSatisfied;
     }
 
     private void OnDisable()

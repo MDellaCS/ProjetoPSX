@@ -28,6 +28,7 @@ public static class InventoryItemEventsRegression
         bool hadStoredInventory = PlayerPrefs.HasKey(InventorySaveKey);
         string storedInventory = PlayerPrefs.GetString(InventorySaveKey, string.Empty);
         string[] previousItems = KeyItemInventory.ExportCollectedIds();
+        string[] previousAcquired = KeyItemInventory.ExportAcquiredIds();
         Scene previousActiveScene = SceneManager.GetActiveScene();
         Scene testScene = SceneManager.GetSceneByPath(TestScenePath);
         bool openedTestScene = !testScene.IsValid() || !testScene.isLoaded;
@@ -118,7 +119,7 @@ public static class InventoryItemEventsRegression
                 UnityEngine.Object.DestroyImmediate(testRoot);
             }
 
-            KeyItemInventory.RestoreCollectedIds(previousItems);
+            KeyItemInventory.RestoreCollectedIds(previousItems, previousAcquired);
             if (hadStoredInventory)
                 PlayerPrefs.SetString(InventorySaveKey, storedInventory);
             else
