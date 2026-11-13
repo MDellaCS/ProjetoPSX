@@ -12,6 +12,8 @@ Shader "Projeto PSX/Retro Lit"
         [NoScaleOffset] _EmissionMap("Emission Map", 2D) = "white" {}
 
         [Enum(Vertex, 0, Grid, 1, Pixel, 2)] _LightingMode("Lighting Mode", Float) = 2
+        [Enum(Global, 0, Vertex, 1, Grid, 2, Pixel, 3)] _LightingModeOverride("Lighting Mode Override", Float) = 0
+        [HideInInspector] _RendererLightingModeOverride("Renderer Lighting Mode Override", Float) = 0
         _GridSize("Grid Size", Range(0.05, 4)) = 0.5
         [Toggle] _FlatShading("Flat Shading", Float) = 0
 
@@ -45,6 +47,8 @@ Shader "Projeto PSX/Retro Lit"
             half4 _EmissionColor;
             half _UseVertexColor;
             half _LightingMode;
+            half _LightingModeOverride;
+            half _RendererLightingModeOverride;
             half _GridSize;
             half _FlatShading;
             half _AlphaClip;
@@ -125,7 +129,7 @@ Shader "Projeto PSX/Retro Lit"
                 output.color = input.color;
 
                 // Gouraud: a luz e calculada so nos vertices e interpolada no poligono.
-                if (RetroResolveLightingMode(_LightingMode) < 0.5)
+                if (RetroResolveLightingMode(_LightingMode, _LightingModeOverride, _RendererLightingModeOverride) < 0.5)
                 {
                     half3 local = RetroLocalLights(position.positionWS, normalWS);
                     half3 main = RetroMainLight(normalWS);
@@ -158,7 +162,7 @@ Shader "Projeto PSX/Retro Lit"
                     normalWS = dot(faceNormal, normalWS) < 0.0 ? -faceNormal : faceNormal;
                 }
 
-                float mode = RetroResolveLightingMode(_LightingMode);
+                float mode = RetroResolveLightingMode(_LightingMode, _LightingModeOverride, _RendererLightingModeOverride);
                 float3 samplePosition = input.positionWS;
                 half3 local;
                 half3 main;

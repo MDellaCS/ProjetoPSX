@@ -57,7 +57,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private Button slowMotionButton;
     private Button resetSaveButton;
     private float resetConfirmationExpiresAt;
-    private bool currencyInputEdited;
+    private VisualElement debugSubmenu;
+    private Label debugSubmenuTitle;
+    private ScrollView debugSubmenuList;
     private UnityEngine.CursorLockMode cursorLockBeforeDebug;
     private bool cursorVisibleBeforeDebug;
     private bool isVisible;
@@ -141,13 +143,11 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         combatOverrideButton = rootVisualElement.Q<Button>("combat-override-button");
         slowMotionButton = rootVisualElement.Q<Button>("slow-motion-button");
         resetSaveButton = rootVisualElement.Q<Button>("reset-save-button");
+        debugSubmenu = rootVisualElement.Q<VisualElement>("debug-submenu");
+        debugSubmenuTitle = rootVisualElement.Q<Label>("debug-submenu-title");
+        debugSubmenuList = rootVisualElement.Q<ScrollView>("debug-submenu-list");
         BindDebugButtons(rootVisualElement);
-        if (currencyInput != null)
-        {
-            currencyInput.RegisterValueChangedCallback(_ => currencyInputEdited = true);
-            if (playerCurrency != null)
-                currencyInput.SetValueWithoutNotify(playerCurrency.Current);
-        }
+
 
         SetHudVisible(isVisible);
         SetDebugMenuVisible(IsDebugMenuVisible);
@@ -273,6 +273,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         }
 
         IsDebugMenuVisible = value;
+        if (debugSubmenu != null) debugSubmenu.style.display = DisplayStyle.None;
         if (debugMenuPanel != null)
             debugMenuPanel.style.display = value
                 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -280,22 +281,23 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private void BindDebugButtons(VisualElement root)
     {
-        if (root.Q<Button>("debug-close-button") == null ||
-            boundButtonRoot == root)
+        if (boundButtonRoot == root)
             return;
         boundButtonRoot = root;
-        BindButton(root, "debug-close-button", CloseDebugMenu);
+        BindButton(root, "debug-submenu-back", CloseSubmenu);
         BindButton(root, "status-max-button", () => SetPlayerStatus(true));
         BindButton(root, "status-zero-button", () => SetPlayerStatus(false));
         BindButton(root, "heat-minus-button", () => AdjustPlayerHeat(-10f));
         BindButton(root, "heat-plus-button", () => AdjustPlayerHeat(10f));
-        BindButton(root, "currency-set-button", SetCurrency);
+        BindButton(root, "currency-take-button", () => AdjustCurrency(false));
+        BindButton(root, "currency-give-button", () => AdjustCurrency(true));
         BindButton(root, "god-mode-button", ToggleGodMode);
         BindButton(root, "combat-override-button", CycleCombatOverride);
         BindButton(root, "kill-player-button", KillPlayer);
         BindButton(root, "slow-motion-button", ToggleSlowMotion);
         BindButton(root, "next-moveset-button", CycleMoveset);
-        BindButton(root, "next-scene-button", LoadNextScene);
+        BindButton(root, "select-scene-button", OpenSceneSelector);
+        BindButton(root, "select-gizmos-button", OpenGizmoSelector);
         BindButton(root, "environment-previous-button", () => CycleEnvironment(-1));
         BindButton(root, "environment-next-button", () => CycleEnvironment(1));
         BindButton(root, "reload-scene-button", ReloadScene);
@@ -312,9 +314,50 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         button.clicked += action;
     }
 
-    private void CloseDebugMenu()
+    private void CloseSubmenu()
     {
-        if (Debug.isDebugBuild) SetDebugMenuVisible(false);
+        if (debugSubmenu != null) debugSubmenu.style.display = DisplayStyle.None;
+        if (debugMenuPanel != null && IsDebugMenuVisible) debugMenuPanel.style.display = DisplayStyle.Flex;
+    }
+
+    private bool OpenSubmenu(string title)
+    {
+        if (!Debug.isDebugBuild || debugSubmenu == null || debugSubmenuList == null) return false;
+        debugMenuPanel.style.display = DisplayStyle.None;
+        debugSubmenu.style.display = DisplayStyle.Flex;
+        debugSubmenuTitle.text = title;
+        debugSubmenuList.Clear();
+        return true;
+    }
+
+    private void OpenSceneSelector()
+    {
+        if (!OpenSubmenu("SELECT SCENE")) return;
+        foreach (string path in GameSceneLoader.FindSceneCyclePaths())
+        {
+            string scenePath = path;
+            var button = new Button(() => {
+                GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
+                if (loader == null) return;
+                SetDebugMenuVisible(false);
+                loader.DebugSelectScene(scenePath);
+            }) { text = System.IO.Path.GetFileNameWithoutExtension(path) };
+            debugSubmenuList.Add(button);
+        }
+    }
+
+    private void OpenGizmoSelector()
+    {
+        if (!OpenSubmenu("F3 GIZMOS")) return;
+        string[] labels = { "Interaction areas and ladders", "Lights", "Camera zones", "Water", "World objects and triggers", "Enemy encounters", "Player spawn points", "Player combat", "Enemy combat and detection", "Swing anchors and rope", "Flying puppet" };
+        foreach (DebugGizmoGroup group in System.Enum.GetValues(typeof(DebugGizmoGroup)))
+        {
+            DebugGizmoGroup selected = group;
+            var toggle = new Toggle(labels[(int)group]);
+            toggle.SetValueWithoutNotify(DebugGizmoSettings.Selected(group));
+            toggle.RegisterValueChangedCallback(evt => DebugGizmoSettings.Set(selected, evt.newValue));
+            debugSubmenuList.Add(toggle);
+        }
     }
 
     private void SetPlayerStatus(bool maximize)
@@ -332,18 +375,18 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         SetActionStatus("Heat: " + playerHeat.CurrentHeat.ToString("0.0"));
     }
 
-    private void SetCurrency()
+    private void AdjustCurrency(bool give)
     {
         if (!Debug.isDebugBuild || currencyInput == null) return;
         if (playerCurrency == null && playerTransform != null)
             playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
-        if (playerCurrency == null && playerTransform != null)
-            playerCurrency = playerTransform.gameObject.AddComponent<PlayerCurrencyWallet>();
         if (playerCurrency == null) return;
-        playerCurrency.DebugSetCurrency(currencyInput.value);
-        currencyInputEdited = false;
-        currencyInput.SetValueWithoutNotify(playerCurrency.Current);
-        SetActionStatus("Money set to " + playerCurrency.Current + ".");
+        int amount = Mathf.Max(0, currencyInput.value);
+        if (give)
+            playerCurrency.DebugSetCurrency((int)System.Math.Min(int.MaxValue, (long)playerCurrency.Current + amount));
+        else
+            playerCurrency.DebugSetCurrency(Mathf.Max(0, playerCurrency.Current - amount));
+        SetActionStatus("Currency: " + playerCurrency.Current + ".");
     }
 
     private void ToggleGodMode()
@@ -379,13 +422,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (!Debug.isDebugBuild || movesetController == null) return;
         movesetController.DebugCycleMoveset();
         SetActionStatus("Moveset: " + movesetController.CurrentMovesetName);
-    }
-
-    private void LoadNextScene()
-    {
-        if (!Debug.isDebugBuild) return;
-        GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
-        if (loader != null) loader.DebugLoadNextScene();
     }
 
     private void CycleEnvironment(int direction)
@@ -445,8 +481,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (slowMotionButton != null)
             slowMotionButton.text = "SLOW MOTION: " +
                 (GameDebugTimeScale.IsSlowMotion ? "ON" : "OFF");
-        if (currencyInput != null && playerCurrency != null && !currencyInputEdited)
-            currencyInput.SetValueWithoutNotify(playerCurrency.Current);
         if (resetSaveButton != null && Time.unscaledTime > resetConfirmationExpiresAt)
             resetSaveButton.text = "RESET GAME SAVE";
     }

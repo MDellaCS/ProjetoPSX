@@ -60,7 +60,7 @@ public class EncounterTrigger : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.Encounters))
             return;
 
         Collider trigger = GetComponent<Collider>();

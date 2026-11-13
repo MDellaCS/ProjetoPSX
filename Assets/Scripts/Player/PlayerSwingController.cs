@@ -635,7 +635,7 @@ public sealed class PlayerSwingController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!PlayerDebugToolkitHUD.IsVisible || !isSwinging ||
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.Swing) || !isSwinging ||
             currentAnchor == null)
         {
             return;

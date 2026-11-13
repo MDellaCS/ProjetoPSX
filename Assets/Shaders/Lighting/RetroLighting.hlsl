@@ -22,8 +22,12 @@ float4 _RetroFogHeight;      // x base, y 1/espessura, z ligada
 float4 _RetroLightingGlobal; // x modo forcado + 1 (0 = material), y grade forcada, z niveis de cor, w dither
 
 // 0 = Vertex, 1 = Grid, 2 = Pixel
-float RetroResolveLightingMode(float materialMode)
+float RetroResolveLightingMode(float materialMode, float materialOverride, float rendererOverride)
 {
+    if (rendererOverride > 0.5)
+        return rendererOverride - 1.0;
+    if (materialOverride > 0.5)
+        return materialOverride - 1.0;
     return _RetroLightingGlobal.x > 0.5 ? _RetroLightingGlobal.x - 1.0 : materialMode;
 }
 

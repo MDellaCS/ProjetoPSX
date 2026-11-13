@@ -30,8 +30,6 @@ public sealed class PlayerAttackMovement : MonoBehaviour
             // prioridade sobre qualquer alvo escolhido automaticamente.
             if (lockOn != null && lockOn.IsLockedOn)
                 direction = lockOn.GetDirectionToLockedTarget();
-            else if (runtime.HasAssistTarget)
-                direction = runtime.AssistTargetPosition - GetPlayerCenter();
             else if (movement != null &&
                 movement.DesiredDirection.sqrMagnitude > .001f)
                 direction = movement.DesiredDirection;
@@ -60,12 +58,4 @@ public sealed class PlayerAttackMovement : MonoBehaviour
     private static float Evaluate(PlayerAttackMovementDefinition data, float value) =>
         data.movementCurve != null ? Mathf.Clamp01(data.movementCurve.Evaluate(value)) : value;
 
-    private Vector3 GetPlayerCenter()
-    {
-        PlayerCharacterController controller = movement != null
-            ? movement.EntityCharacterController
-            : GetComponent<PlayerCharacterController>();
-        return transform.position + transform.rotation *
-            (controller != null ? controller.center : Vector3.zero);
-    }
 }

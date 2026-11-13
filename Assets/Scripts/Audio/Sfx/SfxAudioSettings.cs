@@ -74,8 +74,21 @@ public sealed class SfxAudioSettings : AudioModuleSettings
     public float footstepHeightOffset = .08f;
 
     [Header("Player")]
-    [Tooltip("Um som de ganho e um de perda para CADA notch de Heat/Cold, configurados a mao. Elemento 0 = notch 1 (10 de Heat), elemento 1 = notch 2, e assim por diante. Um notch maior que a lista usa o ultimo elemento. Ao perder um notch toca o som do nivel que acabou de ser deixado (descer de 2x para 1x toca a perda do notch 2).")]
+    [HideInInspector]
     public HeatNotchSound[] heatNotches = CreateHeatNotches(DefaultHeatNotchCount);
+    [Header("Sons dos notches")]
+    [Tooltip("Som compartilhado ao subir notches negativos em direcao ao zero.")]
+    public AudioClip coldRiseClip;
+    [Tooltip("Som compartilhado ao descer notches positivos em direcao ao zero.")]
+    public AudioClip heatFallClip;
+    [Tooltip("Sons ao subir notches positivos: elemento 0 corresponde ao notch +1, elemento 1 ao +2 e assim por diante.")]
+    public AudioClip[] heatRiseClips = new AudioClip[DefaultHeatNotchCount];
+    [Tooltip("Sons ao descer notches negativos: elemento 0 corresponde ao notch -1, elemento 1 ao -2 e assim por diante.")]
+    public AudioClip[] coldFallClips = new AudioClip[DefaultHeatNotchCount];
+    [Tooltip("Volume compartilhado por todos os sons de notch, antes dos volumes globais de efeitos.")]
+    [Range(0f, 5f)] public float notchVolume = 2.13f;
+    [Tooltip("Prioridade compartilhada das vozes dos notches: 0 e a mais alta e 255 a mais baixa.")]
+    [Range(0, 255)] public int notchPriority = 128;
     [Tooltip("Sons globais usados por todos os ataques leves do jogador, com variacoes de acerto por superficie.")]
     public GameplayAttackAudioSet playerLightAttack = new();
     [Tooltip("Sons globais usados por todos os ataques pesados do jogador, com variacoes de acerto por superficie.")]
@@ -119,15 +132,15 @@ public sealed class SfxAudioSettings : AudioModuleSettings
         _ => null
     };
 
-    /// <summary>Som configurado para o notch (1 = primeiro). Acima do ultimo configurado usa o ultimo.</summary>
-    public AudioCue GetHeatNotchCue(bool gained, int notch)
+    /// <summary>Seleciona o som do ultimo limite atravessado entre notches com sinal.</summary>
+    public AudioClip GetHeatNotchClip(int previousNotch, int nextNotch)
     {
-        if (heatNotches == null || heatNotches.Length == 0 || notch < 1)
-            return null;
-
-        HeatNotchSound sound = heatNotches[Mathf.Min(notch, heatNotches.Length) - 1];
-        if (sound == null)
-            return null;
-        return gained ? sound.gain : sound.loss;
+        if (previousNotch == nextNotch) return null;
+        if (nextNotch > previousNotch)
+            return nextNotch > 0 ? GetNotchClip(heatRiseClips, nextNotch) : coldRiseClip;
+        return nextNotch < 0 ? GetNotchClip(coldFallClips, -nextNotch) : heatFallClip;
     }
+
+    private static AudioClip GetNotchClip(AudioClip[] clips, int notch) =>
+        clips == null || clips.Length == 0 ? null : clips[Mathf.Min(notch, clips.Length) - 1];
 }

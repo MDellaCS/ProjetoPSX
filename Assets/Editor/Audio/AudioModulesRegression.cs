@@ -40,23 +40,38 @@ public static class AudioModulesRegression
             Check(Mathf.Abs(ui.confirm.volume - .123f) < .001f,
                 "Volume migrado.");
 
-            // Heat: um som manual de ganho e de perda por notch.
-            Check(sfx.heatNotches != null && sfx.heatNotches.Length == SfxAudioSettings.DefaultHeatNotchCount,
-                "A tabela de notches deve ter " + SfxAudioSettings.DefaultHeatNotchCount + " entradas.");
-            for (int notch = 1; notch <= sfx.heatNotches.Length; notch++)
+            // Usa clipes distintos para detectar selecoes incorretas mesmo
+            // quando o asset ainda compartilha os mesmos clipes de exemplo.
+            SfxAudioSettings notchSettings = ScriptableObject.CreateInstance<SfxAudioSettings>();
+            AudioClip[] notchClips = new AudioClip[6];
+            try
             {
-                Check(sfx.GetHeatNotchCue(true, notch) == sfx.heatNotches[notch - 1].gain &&
-                    sfx.GetHeatNotchCue(false, notch) == sfx.heatNotches[notch - 1].loss,
-                    "Notch " + notch + " usa a propria entrada.");
-                Check(sfx.heatNotches[notch - 1].gain.HasClip && sfx.heatNotches[notch - 1].loss.HasClip,
-                    "Notch " + notch + " migrado com som de ganho e de perda.");
+                for (int i = 0; i < notchClips.Length; i++)
+                    notchClips[i] = AudioClip.Create("notch-test-" + i, 1, 1, 44100, false);
+                notchSettings.coldRiseClip = notchClips[0];
+                notchSettings.heatFallClip = notchClips[1];
+                notchSettings.heatRiseClips = new[] { notchClips[2], notchClips[3] };
+                notchSettings.coldFallClips = new[] { notchClips[4], notchClips[5] };
+                Check(notchSettings.GetHeatNotchClip(-2, -1) == notchClips[0] &&
+                    notchSettings.GetHeatNotchClip(-1, 0) == notchClips[0],
+                    "Subir Cold usa o som compartilhado.");
+                Check(notchSettings.GetHeatNotchClip(2, 1) == notchClips[1] &&
+                    notchSettings.GetHeatNotchClip(1, 0) == notchClips[1],
+                    "Descer Heat usa o som compartilhado.");
+                Check(notchSettings.GetHeatNotchClip(-2, 2) == notchClips[3] &&
+                    notchSettings.GetHeatNotchClip(0, 1) == notchClips[2] &&
+                    notchSettings.GetHeatNotchClip(2, -2) == notchClips[5] &&
+                    notchSettings.GetHeatNotchClip(0, -1) == notchClips[4],
+                    "Saltos e travessias do zero usam o ultimo notch alcancado.");
+                Check(notchSettings.GetHeatNotchClip(1, 1) == null,
+                    "Sem mudanca de notch nao ha som.");
             }
-
-            Check(sfx.GetHeatNotchCue(true, 99) == sfx.heatNotches[^1].gain,
-                "Notch acima da lista usa o ultimo elemento.");
-            Check(sfx.GetHeatNotchCue(true, 0) == null, "Notch 0 nao toca.");
-            Check(sfx.GetHeatNotchCue(true, 1).pitch < sfx.GetHeatNotchCue(true, 5).pitch,
-                "A semente migrada sobe de nota a cada notch.");
+            finally
+            {
+                foreach (AudioClip clip in notchClips)
+                    if (clip != null) UnityEngine.Object.DestroyImmediate(clip);
+                UnityEngine.Object.DestroyImmediate(notchSettings);
+            }
 
             // SFX migrado do asset antigo.
             Check(sfx.playerLightAttack.attackStart.HasClip && sfx.playerHurt.HasClip &&

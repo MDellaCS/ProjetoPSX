@@ -147,6 +147,16 @@ public sealed class GameSceneLoader : MonoBehaviour
     private IEnumerator Start()
     {
         ResolveLoadingScreen();
+        if (Debug.isDebugBuild)
+        {
+            string selected = PlayerPrefs.GetString("Debug.StartScene", "");
+            if (IsCycleScene(selected) && CanLoadScene(selected))
+            {
+                suppressMainMenuForNextSceneLoad = !string.Equals(selected, ResolveScenePath(mainMenuScenePath), System.StringComparison.OrdinalIgnoreCase);
+                LoadScene(selected);
+                yield break;
+            }
+        }
         if (!string.IsNullOrWhiteSpace(mainMenuScenePath))
         {
             // So esconde os paineis se o menu puder mesmo ser carregado;
@@ -180,7 +190,7 @@ public sealed class GameSceneLoader : MonoBehaviour
         LoadScene(sceneCyclePaths[nextIndex]);
     }
 
-    private static List<string> FindSceneCyclePaths()
+    public static List<string> FindSceneCyclePaths()
     {
         var paths = new List<string>();
 #if UNITY_EDITOR
@@ -202,6 +212,15 @@ public sealed class GameSceneLoader : MonoBehaviour
 #endif
         paths.Sort(System.StringComparer.OrdinalIgnoreCase);
         return paths;
+    }
+
+    public void DebugSelectScene(string path)
+    {
+        if (!Debug.isDebugBuild || isLoading || !FindSceneCyclePaths().Contains(path) || !CanLoadScene(path)) return;
+        PlayerPrefs.SetString("Debug.StartScene", path);
+        PlayerPrefs.Save();
+        suppressMainMenuForNextSceneLoad = !string.Equals(path, ResolveScenePath(mainMenuScenePath), System.StringComparison.OrdinalIgnoreCase);
+        LoadScene(path);
     }
 
     private static bool IsCycleScene(string path) =>

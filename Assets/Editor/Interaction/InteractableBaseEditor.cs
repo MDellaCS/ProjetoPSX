@@ -31,6 +31,9 @@ public static class InteractionInspectorUtility
             attachment.enumValueIndex == (int)HandLadderAttachment.Surface;
         bool overhead = serialized.FindProperty("overhead")?.boolValue ?? false;
         bool conform = serialized.FindProperty("conformToSurface")?.boolValue ?? false;
+        if (property.name == "allowGrapple" &&
+            serialized.FindProperty("isClimbable")?.boolValue == false)
+            return false;
         if ((property.name == "surfaceLayers" || property.name == "surfaceSearchDistance" ||
              property.name == "surfaceStandoff" || property.name == "conformToSurface" ||
              property.name == "autoSnapToSurface") && !surface)

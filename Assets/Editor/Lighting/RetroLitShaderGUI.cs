@@ -12,7 +12,9 @@ public sealed class RetroLitShaderGUI : ShaderGUI
     private static readonly GUIContent LightingMode = new("Lighting Mode",
         "Vertex: luz calculada so nos vertices e interpolada (Gouraud, PS1/PS2). ATENCAO: um chao ou parede grande com poucos vertices nao recebe luz no meio, pois os cantos ficam fora do alcance. Use apenas em malhas subdivididas.\n" +
         "Grid: luz amostrada em celulas de mundo, com aspecto de texel grande, independente da malha.\n" +
-        "Pixel: luz suave por pixel (early PS3). O RetroLightingSettings pode forcar um modo para todos os materiais.");
+        "Pixel: luz suave por pixel (early PS3). Usado quando o ajuste global esta em Per Material e nao ha override.");
+    private static readonly GUIContent LightingOverride = new("Lighting Mode Override",
+        "Global usa o modo de Retro Lighting Settings. Vertex, Grid e Pixel substituem o modo global neste material.");
     private static readonly GUIContent GridSize = new("Grid Size",
         "Tamanho, em metros, de cada celula de luz no modo Grid. Valores maiores deixam a luz mais blocada.");
     private static readonly GUIContent FlatShading = new("Flat Shading",
@@ -40,9 +42,10 @@ public sealed class RetroLitShaderGUI : ShaderGUI
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Iluminacao retro", EditorStyles.boldLabel);
+        MaterialProperty lightingOverride = FindProperty("_LightingModeOverride", properties);
+        editor.ShaderProperty(lightingOverride, LightingOverride);
         editor.ShaderProperty(lightingMode, LightingMode);
-        if (Mathf.RoundToInt(lightingMode.floatValue) == 1)
-            editor.ShaderProperty(FindProperty("_GridSize", properties), GridSize);
+        editor.ShaderProperty(FindProperty("_GridSize", properties), GridSize);
         editor.ShaderProperty(FindProperty("_FlatShading", properties), FlatShading);
 
         EditorGUILayout.Space();

@@ -51,13 +51,6 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
             DrawField("heldAttackBranchThreshold");
         }
 
-        if (usage.hasAttacks)
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Global Target Assist", EditorStyles.boldLabel);
-            DrawField("targetAssistRangePadding");
-        }
-
         if (usage.hasLightTransitions || usage.hasHeavyTransitions)
         {
             EditorGUILayout.Space();

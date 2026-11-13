@@ -9,7 +9,7 @@ public static class InteractionGizmos
     public static readonly Color ZoneFill = new(.1f, .75f, 1f, .12f);
     public static readonly Color ZoneLine = new(.1f, .75f, 1f, .9f);
 
-    public static bool Visible => !Application.isPlaying || PlayerDebugToolkitHUD.IsVisible;
+    public static bool Visible => DebugGizmoSettings.Enabled(DebugGizmoGroup.Interaction);
 
     /// <summary>Desenha o collider como area (caixa, esfera, capsula ou limites).</summary>
     public static void DrawCollider(Collider collider, Color fill, Color line)
@@ -51,5 +51,32 @@ public static class InteractionGizmos
         Gizmos.DrawCube(center, size);
         Gizmos.color = line;
         Gizmos.DrawWireCube(center, size);
+    }
+}
+
+public enum DebugGizmoGroup { Interaction, Lights, Camera, Water, World, Encounters, Spawns, PlayerCombat, EnemyCombat, Swing, FlyingPuppet }
+
+public static class DebugGizmoSettings
+{
+    private static readonly System.Collections.Generic.Dictionary<DebugGizmoGroup, bool> values = new();
+
+    public static bool Enabled(DebugGizmoGroup group) => !Application.isPlaying ||
+        (PlayerDebugToolkitHUD.IsVisible && Selected(group));
+
+    public static bool Selected(DebugGizmoGroup group)
+    {
+        if (!values.TryGetValue(group, out bool value))
+        {
+            value = PlayerPrefs.GetInt("Debug.Gizmo." + group, 1) != 0;
+            values[group] = value;
+        }
+        return value;
+    }
+
+    public static void Set(DebugGizmoGroup group, bool value)
+    {
+        values[group] = value;
+        PlayerPrefs.SetInt("Debug.Gizmo." + group, value ? 1 : 0);
+        PlayerPrefs.Save();
     }
 }

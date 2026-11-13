@@ -22,6 +22,7 @@ public sealed class HandLadderSpine
     public Vector3[] center;
     public Vector3[] right;
     public Vector3[] normal;
+    public float sampledWidth;
 
     public int Count => progress != null ? progress.Length : 0;
 
@@ -36,6 +37,50 @@ public sealed class HandLadderSpine
                 (right[i] - other.right[i]).sqrMagnitude > tolerance * tolerance)
                 return false;
         return true;
+    }
+
+    // Remove amostras apenas quando as tres faixas e a normal continuam
+    // suficientemente proximas da interpolacao entre as extremidades.
+    public HandLadderSpine Simplified(Matrix4x4 localToWorld)
+    {
+        if (Count <= 2) return this;
+        bool[] keep = new bool[Count];
+        keep[0] = keep[Count - 1] = true;
+        var ranges = new Stack<(int first, int last)>();
+        ranges.Push((0, Count - 1));
+        while (ranges.Count > 0)
+        {
+            var (first, last) = ranges.Pop();
+            float span = progress[last] - progress[first];
+            float worst = 1f;
+            int split = -1;
+            for (int i = first + 1; i < last; i++)
+            {
+                float t = span > .000001f ? (progress[i] - progress[first]) / span : 0f;
+                float error = Mathf.Max(Mathf.Max(
+                    localToWorld.MultiplyVector(left[i] - Vector3.Lerp(left[first], left[last], t)).magnitude,
+                    localToWorld.MultiplyVector(center[i] - Vector3.Lerp(center[first], center[last], t)).magnitude),
+                    localToWorld.MultiplyVector(right[i] - Vector3.Lerp(right[first], right[last], t)).magnitude) / .01f;
+                float normalError = Vector3.Angle(normal[i], Vector3.Slerp(normal[first], normal[last], t)) / 2f;
+                error = Mathf.Max(error, normalError);
+                if (error > worst) { worst = error; split = i; }
+            }
+            if (split < 0) continue;
+            keep[split] = true;
+            ranges.Push((first, split));
+            ranges.Push((split, last));
+        }
+        int count = 0;
+        for (int i = 0; i < keep.Length; i++) if (keep[i]) count++;
+        HandLadderSpine result = new() { sampledWidth = sampledWidth, progress = new float[count],
+            left = new Vector3[count], center = new Vector3[count], right = new Vector3[count], normal = new Vector3[count] };
+        for (int i = 0, j = 0; i < keep.Length; i++)
+        {
+            if (!keep[i]) continue;
+            result.progress[j] = progress[i]; result.left[j] = left[i]; result.center[j] = center[i];
+            result.right[j] = right[i]; result.normal[j] = normal[i]; j++;
+        }
+        return result;
     }
 }
 
@@ -73,8 +118,7 @@ public sealed class HandLadder : InteractableBase
     [Header("Forma")]
     [Tooltip("Altura entre a base e o topo da escada, em metros.")]
     [Min(.3f)] [SerializeField] private float height = 3f;
-    [Tooltip("Largura da escada. Zero usa a largura padrao do perfil (ou 1 m sem perfil).")]
-    [Min(0f)] [SerializeField] private float width;
+    [SerializeField, HideInInspector] private float width;
     [Tooltip("Direcao local, no objeto da escada, que aponta da base para o topo. Gire o vetor para escadas inclinadas.")]
     [SerializeField] private Vector3 climbAxis = Vector3.up;
     [Tooltip("Direcao local que aponta para fora da escada, para onde o jogador sobe. Numa escada em parede e a normal da parede.")]
@@ -105,24 +149,23 @@ public sealed class HandLadder : InteractableBase
     [SerializeField] private bool climbableFromBothSides;
     [Tooltip("Camadas que contam como superficie ao encaixar a escada. Evite camadas de personagens.")]
     [SerializeField] private LayerMask surfaceLayers = ~0;
-    [Tooltip("Distancia maxima, em metros, para procurar a superficie ao encaixar.")]
-    [Min(.1f)] [SerializeField] private float surfaceSearchDistance = 2f;
-    [Tooltip("Folga visivel, em metros, entre a superficie e as barras/degraus da escada.")]
-    [Min(0f)] [SerializeField] private float surfaceStandoff = .1f;
+    [SerializeField, HideInInspector] private float surfaceSearchDistance = 2f;
+    [SerializeField, HideInInspector] private float surfaceStandoff = .1f;
     [Tooltip("No modo Surface, a escada acompanha a curvatura do objeto (rocha, coluna): trilhos e degraus seguem a superficie e o jogador escala pela curva. Em paredes retas nada muda.")]
     [SerializeField] private bool conformToSurface = true;
-    [Tooltip("Distancia, em metros, entre as amostras da superficie ao acompanhar uma curva. Menor = mais fiel e mais pecas geradas.")]
-    [Min(.1f)] [SerializeField] private float curveSampleSpacing = .3f;
+    [SerializeField, HideInInspector] private float curveSampleSpacing = .3f;
     [Tooltip("No modo Surface, encaixa a escada na superficie sozinha: ao mudar/mover no Editor e ao iniciar o jogo. Desmarque para posicionar a mao.")]
     [SerializeField] private bool autoSnapToSurface = true;
 
     [Header("Visual gerado (opcional)")]
     [Tooltip("Perfil da escada: visual (prefabs), espacamento dos degraus e todo o comportamento (prompt, velocidades, encaixe, salto, saidas). Vazio = comportamento padrao, sem visual gerado e subida continua (use sua propria malha). Crie um perfil sem prefabs para ter degraus na sua malha.")]
     [SerializeField] private HandLadderProfile profile;
-    [Tooltip("Espaco adicional entre degraus, somado ao espacamento do perfil.")]
-    [Min(0f)] [SerializeField] private float extraGap;
-    [Tooltip("Gera os dois trilhos laterais quando o perfil tem um prefab de trilho.")]
-    [SerializeField] private bool generateSideRails = true;
+    [SerializeField, HideInInspector] private float extraGap;
+    [SerializeField, HideInInspector] private bool generateSideRails = true;
+
+    [Header("Area efetiva")]
+    [Tooltip("Trecho da escada que terá degraus, trilhos e área de escalada. Os valores vão de 0 (base) a 1 (topo).")]
+    [SerializeField, HideInInspector] private Vector2 effectiveArea = new(0f, 1f);
 
     [Header("Saidas")]
     [Tooltip("Lado por onde o topo sai. Auto: escada solta sai pela frente; escada em superficie sai por tras (sobre a borda).")]
@@ -203,6 +246,8 @@ public sealed class HandLadder : InteractableBase
 
     protected override void OnEnable()
     {
+        if (!IsClimbable)
+            return;
         base.OnEnable();
         if (!activeLadders.Contains(this))
             activeLadders.Add(this);
@@ -216,7 +261,8 @@ public sealed class HandLadder : InteractableBase
     }
 
     public float Height => height;
-    public bool IsClimbable => isClimbable;
+    public bool IsClimbable => isClimbable && ClimbLength > .0001f;
+    public float ClimbLength => height * (EffectiveArea.y - EffectiveArea.x);
     public bool HasCollision => hasCollision;
     public bool InvertStartAndEnd => invertStartAndEnd;
     // Comportamento vem do perfil (ou do padrao, sem perfil).
@@ -228,21 +274,21 @@ public sealed class HandLadder : InteractableBase
     public float ExitDistance => Feel.exitDistance;
     public float TopExitRise => Feel.topExitRise;
     public bool IsOverhead => overhead;
-    public bool AllowGrapple => allowGrapple;
+    public bool AllowGrapple => IsClimbable && allowGrapple;
     /// <summary>Distancia do jogador ao plano da escada (ou das barras aos pes, na escada de teto).</summary>
     public float GripOffset => overhead ? hangDepth : PlayerForwardOffset;
     public float MountMinDuration => Feel.mountMinDuration;
     public float ExitDuration => Feel.exitDuration;
     /// <summary>Altura maxima, a partir da base, em que o jogador fica agarrado.</summary>
-    public float MaxProgress => overhead ? height : Mathf.Max(0f, height - Feel.topGripClearance);
+    public float MaxProgress => overhead ? ClimbLength : Mathf.Max(0f, ClimbLength - Feel.topGripClearance);
     public float JumpOffSpeed => Feel.jumpOffSpeed;
     public float JumpOffHeightMultiplier => Feel.jumpOffHeightMultiplier;
     public float DropAwaySpeed => Feel.dropAwaySpeed;
     public HandLadderAttachment Attachment => attachment;
     public bool ClimbableFromBothSides => climbableFromBothSides;
     public LayerMask SurfaceLayers => surfaceLayers;
-    public float SurfaceSearchDistance => surfaceSearchDistance;
-    public float SurfaceStandoff => surfaceStandoff;
+    public float SurfaceSearchDistance => Mathf.Max(.1f, profile != null ? profile.surfaceSearchDistance : surfaceSearchDistance);
+    public float SurfaceStandoff => Mathf.Max(0f, profile != null ? profile.surfaceStandoff : surfaceStandoff);
     public bool AutoSnapToSurface => autoSnapToSurface;
 
     /// <summary>Distancia do plano da escada ate a superficie: folga + meia espessura da peca mais grossa.</summary>
@@ -255,26 +301,30 @@ public sealed class HandLadder : InteractableBase
             {
                 if (profile.rungPrefab != null)
                     thickness = profile.rungThickness;
-                if (generateSideRails && profile.railPrefab != null)
+                if (profile.generateSideRails && profile.railPrefab != null)
                     thickness = Mathf.Max(thickness, profile.railThickness);
             }
 
-            return surfaceStandoff + thickness * .5f;
+            return SurfaceStandoff + thickness * .5f;
         }
     }
     public float StepPhase => Feel.stepPhase;
     public Transform TopExit => topExit;
     public Transform BottomExit => bottomExit;
     public HandLadderProfile Profile => profile;
-    public float ExtraGap => extraGap;
-    public bool GenerateSideRails => generateSideRails;
+    public float ExtraGap => profile != null ? Mathf.Max(0f, profile.extraGap) : Mathf.Max(0f, extraGap);
+    public float CurveSampleSpacing => Mathf.Max(.1f, profile != null ? profile.sampleSpacing : curveSampleSpacing);
+    public bool GenerateSideRails => profile != null ? profile.generateSideRails : generateSideRails;
     public Transform GeneratedRoot => generatedRoot;
     public int GeneratedRungCount => generatedRungCount;
-    public float Width => width > .01f ? width : profile != null ? profile.defaultWidth : 1f;
+    public Vector2 EffectiveArea => new(
+        Mathf.Clamp01(Mathf.Min(effectiveArea.x, effectiveArea.y)),
+        Mathf.Clamp01(Mathf.Max(effectiveArea.x, effectiveArea.y)));
+    public float Width => profile != null ? Mathf.Max(.1f, profile.width) : width > .01f ? width : 1f;
 
     /// <summary>Distancia entre degraus (perfil + Extra Gap, ou o valor manual). 0 = sem degraus (subida continua).</summary>
     public float RungSpacing => profile != null
-        ? Mathf.Max(.05f, profile.rungSpacing + extraGap)
+        ? Mathf.Max(.05f, profile.rungSpacing + ExtraGap)
         : 0f;
 
     public int RungCount => RungSpacing > 0f
@@ -355,8 +405,14 @@ public sealed class HandLadder : InteractableBase
         if (!IsCurved)
             return LocalClimbAxis * progress + LocalWidthAxis * (Width * .5f * lane);
         Locate(progress, out int i, out float t);
-        Vector3[] points = lane < 0 ? spine.left : lane > 0 ? spine.right : spine.center;
-        return Vector3.Lerp(points[i], points[i + 1], t);
+        Vector3 center = Vector3.Lerp(spine.center[i], spine.center[i + 1], t);
+        if (lane == 0) return center;
+        Vector3[] points = lane < 0 ? spine.left : spine.right;
+        Vector3 point = Vector3.Lerp(points[i], points[i + 1], t);
+        // Espinhas antigas nao guardavam a largura usada na amostragem.
+        float sampledWidth = spine.sampledWidth > .01f ? spine.sampledWidth :
+            Vector3.Distance(spine.left[0], spine.right[0]);
+        return sampledWidth > .01f ? center + (point - center) * (Width / sampledWidth) : point;
     }
 
     /// <summary>Ponto do plano da escada (onde ficam os trilhos) em uma altura e deslocamento lateral.</summary>
@@ -397,7 +453,7 @@ public sealed class HandLadder : InteractableBase
         if (!IsCurved)
             return ClimbDirection;
         float a = Mathf.Max(0f, progress - .1f);
-        float b = Mathf.Min(height, progress + .1f);
+        float b = Mathf.Min(ClimbLength, progress + .1f);
         Vector3 tangent = PlanePointAt(b) - PlanePointAt(a);
         return tangent.sqrMagnitude > 1e-8f ? tangent.normalized : ClimbDirection;
     }
@@ -414,20 +470,22 @@ public sealed class HandLadder : InteractableBase
             return;
         }
 
-        int best = 0;
+        float bestProgress = 0f;
         float bestDistance = float.MaxValue;
-        for (int i = 0; i < spine.Count; i++)
+        for (int i = -1; i <= spine.Count; i++)
         {
-            float distance = (transform.TransformPoint(spine.center[i]) - point).sqrMagnitude;
+            float geometry = i < 0 ? height * EffectiveArea.x : i == spine.Count
+                ? height * EffectiveArea.y : Mathf.Clamp(spine.progress[i], height * EffectiveArea.x, height * EffectiveArea.y);
+            float distance = (transform.TransformPoint(LocalLanePoint(0, geometry)) - point).sqrMagnitude;
             if (distance < bestDistance)
             {
                 bestDistance = distance;
-                best = i;
+                bestProgress = geometry;
             }
         }
 
-        float progress = ToClimbProgress(spine.progress[best]);
-        Vector3 center = transform.TransformPoint(spine.center[best]);
+        float progress = ToClimbProgress(bestProgress);
+        Vector3 center = transform.TransformPoint(LocalLanePoint(0, bestProgress));
         Vector3 offset = point - center;
         along = progress + Vector3.Dot(offset, GetTangent(progress));
         across = Vector3.Dot(offset, WidthDirection);
@@ -443,9 +501,12 @@ public sealed class HandLadder : InteractableBase
         if (!conformToSurface || attachment != HandLadderAttachment.Surface || overhead)
             return null;
 
-        int count = Mathf.Max(2, Mathf.CeilToInt(height / Mathf.Max(.1f, curveSampleSpacing)) + 1);
+        bool autoSampling = profile == null || profile.autoSampleSpacing;
+        float spacing = autoSampling ? Mathf.Min(CurveSampleSpacing, .25f) : CurveSampleSpacing;
+        int count = Mathf.Clamp(Mathf.CeilToInt(height / spacing) + 1, 2, 1024);
         HandLadderSpine result = new()
         {
+            sampledWidth = Width,
             progress = new float[count],
             left = new Vector3[count],
             center = new Vector3[count],
@@ -457,7 +518,7 @@ public sealed class HandLadder : InteractableBase
         Vector3 approach = ApproachDirection;
         Vector3 across = WidthDirection;
         float half = Width * .5f;
-        float frontProbe = Mathf.Min(1f, surfaceSearchDistance * .5f);
+        float frontProbe = Mathf.Min(1f, SurfaceSearchDistance * .5f);
         float offset = SurfaceOffset;
         float maxDeviation = 0f;
         float maxTilt = 0f;
@@ -512,7 +573,7 @@ public sealed class HandLadder : InteractableBase
                     Vector3 tangent = Vector3.ProjectOnPlane(climb * direction, lastNormal);
                     tangent = tangent.sqrMagnitude > 1e-4f ? tangent.normalized : climb * direction;
                     Vector3 expected = lastPoint + tangent * step;
-                    float reach = frontProbe + Mathf.Max(surfaceSearchDistance, step * 2f);
+                    float reach = frontProbe + Mathf.Max(SurfaceSearchDistance, step * 2f);
                     if (HandLadderSurfaceProbe.Cast(this, expected + lastNormal * frontProbe,
                             -lastNormal, reach, out RaycastHit hit) &&
                         Vector3.Dot(hit.normal, lastNormal) > .2f)
@@ -535,7 +596,7 @@ public sealed class HandLadder : InteractableBase
         // As laterais mantem a largura definida em relacao ao centro. A
         // sondagem so encosta cada ponto na parede; se nao achar superficie,
         // usa o offset fixo e continua acompanhando a normal central.
-        float reachSide = frontProbe + Mathf.Max(surfaceSearchDistance, half * 2f);
+        float reachSide = frontProbe + Mathf.Max(SurfaceSearchDistance, half * 2f);
         for (int i = 0; i < count; i++)
         {
             int before = Mathf.Max(0, i - 1);
@@ -612,7 +673,7 @@ public sealed class HandLadder : InteractableBase
                     result.normal[i + 1] * .25f).normalized;
             }
 
-        return result;
+        return autoSampling ? result.Simplified(transform.localToWorldMatrix) : result;
     }
 
     public override string InteractionMessage => "Escalar";
@@ -651,17 +712,18 @@ public sealed class HandLadder : InteractableBase
     public Vector3 LocalWidthAxis => Vector3.Cross(LocalClimbAxis, LocalApproachAxis).normalized;
     private Vector3 GeometryClimbDirection => transform.TransformDirection(LocalClimbAxis).normalized;
     public Vector3 ClimbDirection => GeometryClimbDirection * (invertStartAndEnd ? -1f : 1f);
-    private Vector3 StartPosition => transform.position +
+    private float GeometryStart => height * (invertStartAndEnd ? EffectiveArea.y : EffectiveArea.x);
+    private Vector3 StartPosition => transform.position + GeometryClimbDirection * GeometryStart;
+    internal Vector3 ClimbStartPosition => transform.position +
         (invertStartAndEnd ? GeometryClimbDirection * height : Vector3.zero);
-    internal Vector3 ClimbStartPosition => StartPosition;
     public Vector3 ApproachDirection => transform.TransformDirection(LocalApproachAxis).normalized;
     public Vector3 WidthDirection => transform.TransformDirection(LocalWidthAxis).normalized;
 
     private float ToGeometryProgress(float progress) =>
-        invertStartAndEnd ? height - progress : progress;
+        GeometryStart + (invertStartAndEnd ? -progress : progress);
 
     private float ToClimbProgress(float progress) =>
-        invertStartAndEnd ? height - progress : progress;
+        (progress - GeometryStart) * (invertStartAndEnd ? -1f : 1f);
 
     /// <summary>Verdadeiro se o topo sai por tras do plano da escada.</summary>
     public bool TopExitsBack => topExitSide == HandLadderExitSide.Back ||
@@ -678,7 +740,7 @@ public sealed class HandLadder : InteractableBase
             ? InteractionSettings.LadderEntryBackDepth : .1f;
 
     public override bool ContainsPlayer(PlayerMovement player) =>
-        isClimbable && TryGetEntry(player, out _);
+        IsClimbable && TryGetEntry(player, out _);
 
     public override float DistanceSqrTo(Vector3 position) => GetEntryDistanceSqr(position);
 
@@ -698,7 +760,7 @@ public sealed class HandLadder : InteractableBase
     // ---------------------------------------------------------------- zona
 
     public override bool CanInteract(PlayerMovement player) =>
-        isClimbable && player != null && player.CanBeginLadderClimb &&
+        IsClimbable && player != null && player.CanBeginLadderClimb &&
         base.CanInteract(player);
 
     public override bool Interact(PlayerMovement player) =>
@@ -734,15 +796,19 @@ public sealed class HandLadder : InteractableBase
         if (IsCurved)
         {
             float nearest = float.MaxValue;
-            for (int i = 0; i < spine.Count; i++)
+            for (int i = -1; i <= spine.Count; i++)
+            {
+                float geometry = i < 0 ? height * EffectiveArea.x : i == spine.Count
+                    ? height * EffectiveArea.y : Mathf.Clamp(spine.progress[i], height * EffectiveArea.x, height * EffectiveArea.y);
                 nearest = Mathf.Min(nearest,
-                    (transform.TransformPoint(spine.center[i]) - position).sqrMagnitude);
+                    (transform.TransformPoint(LocalLanePoint(0, geometry)) - position).sqrMagnitude);
+            }
             return nearest;
         }
 
         Vector3 origin = StartPosition;
         Vector3 climb = ClimbDirection;
-        float along = Mathf.Clamp(Vector3.Dot(position - origin, climb), 0f, height);
+        float along = Mathf.Clamp(Vector3.Dot(position - origin, climb), 0f, ClimbLength);
         return (origin + climb * along - position).sqrMagnitude;
     }
 
@@ -753,14 +819,16 @@ public sealed class HandLadder : InteractableBase
     public bool TryGetEntryAt(Vector3 point, out HandLadderGrip grip)
     {
         grip = default;
-        if (!isClimbable)
+        if (!IsClimbable)
             return false;
         ToFrame(point, out float along, out float across, out float forward);
         float half = Width * .5f;
 
         float margin = InteractionSettings.LadderEntryMargin;
+        float lower = (invertStartAndEnd ? EffectiveArea.y < 1f : EffectiveArea.x > 0f) ? 0f : -margin;
+        float upper = ClimbLength + ((invertStartAndEnd ? EffectiveArea.x > 0f : EffectiveArea.y < 1f) ? 0f : margin);
         bool inside = Mathf.Abs(across) <= half + margin &&
-            along >= -margin && along <= height + margin &&
+            along >= lower && along <= upper &&
             forward <= EntryFront && forward >= -EntryBack;
         if (!inside)
             return false;
@@ -769,7 +837,7 @@ public sealed class HandLadder : InteractableBase
         grip = new HandLadderGrip
         {
             side = BothSides && forward < 0f ? -1 : 1,
-            progress = Mathf.Clamp(along, 0f, height),
+            progress = Mathf.Clamp(along, 0f, ClimbLength),
             lateral = LateralClimbSpeed > 0f ? Mathf.Clamp(across, -limit, limit) : 0f
         };
         return true;
@@ -807,7 +875,7 @@ public sealed class HandLadder : InteractableBase
     public Quaternion GetExitFacing(HandLadderGrip grip, bool top)
     {
         ResolveExit(grip, top, out bool back);
-        Vector3 approach = GetNormal(top ? height : 0f, grip.side);
+        Vector3 approach = GetNormal(top ? ClimbLength : 0f, grip.side);
         Vector3 forward = Vector3.ProjectOnPlane(back ? -approach : approach, Vector3.up);
         return forward.sqrMagnitude > .0001f
             ? Quaternion.LookRotation(forward.normalized) : Quaternion.identity;
@@ -822,14 +890,16 @@ public sealed class HandLadder : InteractableBase
         Transform marker = top
             ? (invertStartAndEnd ? bottomExit : topExit)
             : (invertStartAndEnd ? topExit : bottomExit);
-        Vector3 approach = GetNormal(top ? height : 0f, grip.side);
-        if (marker != null)
+        Vector3 approach = GetNormal(top ? ClimbLength : 0f, grip.side);
+        bool cutEnd = top ? (invertStartAndEnd ? EffectiveArea.x > 0f : EffectiveArea.y < 1f)
+            : (invertStartAndEnd ? EffectiveArea.y < 1f : EffectiveArea.x > 0f);
+        if (marker != null && !cutEnd)
         {
             back = top && TopExitsBack;
             return marker.position;
         }
 
-        Vector3 end = PlanePointAt(top ? height : 0f, grip.lateral);
+        Vector3 end = PlanePointAt(top ? ClimbLength : 0f, grip.lateral);
         if (top && topExitSide != HandLadderExitSide.Front)
         {
             if (TryFindTopLedge(end, -approach, out Vector3 ledge))
@@ -927,7 +997,7 @@ public sealed class HandLadder : InteractableBase
         grip = default;
         point = default;
         angle = 180f;
-        if (!isClimbable || !allowGrapple || rayDirection.sqrMagnitude < .0001f)
+        if (!AllowGrapple || rayDirection.sqrMagnitude < .0001f)
             return false;
         rayDirection.Normalize();
 
@@ -941,15 +1011,17 @@ public sealed class HandLadder : InteractableBase
             // Escada curva: amostra mais proxima do raio da mira.
             along = 0f;
             float bestMiss = float.MaxValue;
-            for (int i = 0; i < spine.Count; i++)
+            for (int i = -1; i <= spine.Count; i++)
             {
-                Vector3 sample = transform.TransformPoint(spine.center[i]) - rayOrigin;
+                float geometry = i < 0 ? height * EffectiveArea.x : i == spine.Count
+                    ? height * EffectiveArea.y : Mathf.Clamp(spine.progress[i], height * EffectiveArea.x, height * EffectiveArea.y);
+                Vector3 sample = transform.TransformPoint(LocalLanePoint(0, geometry)) - rayOrigin;
                 float ahead = Mathf.Max(0f, Vector3.Dot(sample, rayDirection));
                 float miss = (sample - rayDirection * ahead).sqrMagnitude;
                 if (miss < bestMiss)
                 {
                     bestMiss = miss;
-                    along = ToClimbProgress(spine.progress[i]);
+                    along = ToClimbProgress(geometry);
                 }
             }
         }
@@ -961,11 +1033,11 @@ public sealed class HandLadder : InteractableBase
             float e = Vector3.Dot(climb, w0);
             float denom = 1f - b * b;
             float t = denom > .00001f ? Mathf.Max(0f, (b * e - d) / denom) : 0f;
-            along = Mathf.Clamp(e + t * b, 0f, height);
+            along = Mathf.Clamp(e + t * b, 0f, ClimbLength);
         }
         float spacing = RungSpacing;
         float rung = spacing > 0f
-            ? Mathf.Clamp(Mathf.Round(along / spacing) * spacing, 0f, height) : along;
+            ? Mathf.Clamp(ToClimbProgress(Mathf.Round(ToGeometryProgress(along) / spacing) * spacing), 0f, ClimbLength) : along;
 
         int side = 1;
         float front = Vector3.Dot(playerCenter - PlanePointAt(rung), GetNormal(rung));
@@ -1044,7 +1116,7 @@ public sealed class HandLadder : InteractableBase
 
     protected override void OnDrawGizmos()
     {
-        if (!InteractionGizmos.Visible)
+        if (!IsClimbable || !InteractionGizmos.Visible)
             return;
 
         base.OnDrawGizmos();
@@ -1054,7 +1126,7 @@ public sealed class HandLadder : InteractableBase
         Vector3 approach = ApproachDirection;
         Vector3 across = WidthDirection;
         float half = Width * .5f;
-        Vector3 top = origin + climb * height;
+        Vector3 top = origin + climb * ClimbLength;
 
         // Quadro reto da escada (trilhos e eixo). Em escada curva ele ficaria solto
         // no ar; ali valem os trilhos que acompanham a superficie, desenhados abaixo.
@@ -1071,7 +1143,7 @@ public sealed class HandLadder : InteractableBase
 
         // Normal: para onde o jogador salta.
         Gizmos.color = new Color(1f, .35f, .85f, .95f);
-        float midProgress = height * .5f;
+        float midProgress = ClimbLength * .5f;
         Vector3 mid = PlanePointAt(midProgress);
         DrawArrow(mid, GetNormal(midProgress) * .9f);
         if (BothSides)
@@ -1103,10 +1175,13 @@ public sealed class HandLadder : InteractableBase
             Gizmos.color = new Color(.1f, .65f, .95f, .9f);
             for (int i = 0; i < spine.Count - 1; i++)
             {
-                Gizmos.DrawLine(transform.TransformPoint(spine.left[i]),
-                    transform.TransformPoint(spine.left[i + 1]));
-                Gizmos.DrawLine(transform.TransformPoint(spine.right[i]),
-                    transform.TransformPoint(spine.right[i + 1]));
+                float a = Mathf.Max(height * EffectiveArea.x, spine.progress[i]);
+                float b = Mathf.Min(height * EffectiveArea.y, spine.progress[i + 1]);
+                if (b <= a) continue;
+                Gizmos.DrawLine(transform.TransformPoint(LocalLanePoint(-1, a)),
+                    transform.TransformPoint(LocalLanePoint(-1, b)));
+                Gizmos.DrawLine(transform.TransformPoint(LocalLanePoint(1, a)),
+                    transform.TransformPoint(LocalLanePoint(1, b)));
             }
         }
 
@@ -1119,7 +1194,7 @@ public sealed class HandLadder : InteractableBase
 
     public void DrawEntryAreaGizmo()
     {
-        if (!isClimbable)
+        if (!IsClimbable)
             return;
         Matrix4x4 previous = Gizmos.matrix;
         float margin = InteractionSettings.LadderEntryMargin;
@@ -1129,8 +1204,11 @@ public sealed class HandLadder : InteractableBase
         {
             for (int i = 0; i < spine.Count - 1; i++)
             {
-                float a = spine.progress[i];
-                float b = spine.progress[i + 1];
+                float geometryA = Mathf.Max(height * EffectiveArea.x, spine.progress[i]);
+                float geometryB = Mathf.Min(height * EffectiveArea.y, spine.progress[i + 1]);
+                if (geometryB <= geometryA) continue;
+                float a = ToClimbProgress(geometryA);
+                float b = ToClimbProgress(geometryB);
                 float middle = (a + b) * .5f;
                 Vector3 from = PlanePointAt(a);
                 Vector3 to = PlanePointAt(b);
@@ -1147,8 +1225,8 @@ public sealed class HandLadder : InteractableBase
             Gizmos.matrix = Matrix4x4.TRS(origin,
                 Quaternion.LookRotation(ApproachDirection, ClimbDirection), Vector3.one);
             Vector3 size = new(Width + margin * 2f,
-                height + margin * 2f, depth);
-            InteractionGizmos.DrawBox(new Vector3(0f, height * .5f, zoneCenter), size,
+                ClimbLength, depth);
+            InteractionGizmos.DrawBox(new Vector3(0f, ClimbLength * .5f, zoneCenter), size,
                 InteractionGizmos.ZoneFill, InteractionGizmos.ZoneLine);
         }
         Gizmos.matrix = previous;
@@ -1156,7 +1234,7 @@ public sealed class HandLadder : InteractableBase
 
     private void OnDrawGizmosSelected()
     {
-        if (Application.isPlaying)
+        if (!IsClimbable || !InteractionGizmos.Visible || Application.isPlaying)
             return;
 
         // Previa da superficie: mostra onde o botao Encaixar vai bater.
@@ -1164,7 +1242,7 @@ public sealed class HandLadder : InteractableBase
         Vector3 direction = -ApproachDirection;
         bool hit = HandLadderSurfaceProbe.TryFind(this, out RaycastHit surface);
         Gizmos.color = hit ? new Color(.3f, 1f, .5f) : new Color(1f, .3f, .3f);
-        Vector3 end = hit ? surface.point : start + direction * surfaceSearchDistance;
+        Vector3 end = hit ? surface.point : start + direction * SurfaceSearchDistance;
         Gizmos.DrawLine(start, end);
         if (hit)
             Gizmos.DrawWireSphere(surface.point, .08f);
@@ -1172,7 +1250,7 @@ public sealed class HandLadder : InteractableBase
 
     private void DrawExitGizmo(bool top, Color color)
     {
-        HandLadderGrip grip = new() { side = 1, progress = top ? height : 0f };
+        HandLadderGrip grip = new() { side = 1, progress = top ? ClimbLength : 0f };
         Vector3 exit = GetExitPosition(grip, top);
         Vector3 from = PlanePointAt(grip.progress) +
             GetNormal(grip.progress, grip.side) * PlayerForwardOffset;

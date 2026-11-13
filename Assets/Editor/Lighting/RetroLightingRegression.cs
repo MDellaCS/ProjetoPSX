@@ -21,6 +21,7 @@ public static class RetroLightingRegression
             CheckFalloff();
             CheckFlicker();
             CheckEmitterRegistration();
+            CheckFlickerWithRangeMultiplier();
             CheckLightBudget();
             CheckMaterialConversion();
             CheckRenderedLight();
@@ -154,6 +155,56 @@ public static class RetroLightingRegression
         }
     }
 
+    private static void CheckFlickerWithRangeMultiplier()
+    {
+        LocalLightProfile profile = ScriptableObject.CreateInstance<LocalLightProfile>();
+        GameObject host = new("Retro Flicker Range Test") { hideFlags = HideFlags.HideAndDontSave };
+        host.SetActive(false);
+        try
+        {
+            LocalLightDefinition definition = profile.lights[0];
+            definition.intensity = 4f;
+            definition.range = 20f;
+            definition.flicker.enabled = true;
+            definition.flicker.mode = LocalLightFlickerMode.Pulse;
+            definition.flicker.speed = 1f;
+            definition.flicker.updatesPerSecond = 0f;
+            definition.flicker.minimumIntensity = .5f;
+            definition.flicker.maximumIntensity = 1.5f;
+            definition.flicker.rangeVariation = .5f;
+            LocalLightEmitter emitter = host.AddComponent<LocalLightEmitter>();
+            emitter.Profile = profile;
+            host.SetActive(true);
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var lights = (System.Collections.Generic.List<RetroLight>)typeof(LocalLightEmitter)
+                .GetField("lights", flags).GetValue(emitter);
+            var apply = typeof(LocalLightEmitter).GetMethod("ApplyFlicker", flags);
+            foreach (LocalLightShape shape in Enum.GetValues(typeof(LocalLightShape)))
+            {
+                definition.shape = shape;
+                lights[0].spot = shape == LocalLightShape.Spot;
+                apply.Invoke(emitter, new object[] { 0, definition, .75f, 0f });
+                Check(Mathf.Abs(lights[0].intensity - 2f) < .001f &&
+                    Mathf.Abs(lights[0].range - 10f) < .001f,
+                    shape + ": minimo do flicker deve usar intensidade e alcance base.");
+                emitter.SetRangeMultiplier(0f);
+                emitter.SetRangeMultiplier(2f);
+                Check(Mathf.Abs(lights[0].range - 20f) < .001f,
+                    shape + ": multiplicador externo deve preservar o alcance do flicker, inclusive apos zero.");
+                emitter.SetRangeMultiplier(1f);
+                apply.Invoke(emitter, new object[] { 0, definition, .25f, 0f });
+                Check(Mathf.Abs(lights[0].intensity - 6f) < .001f &&
+                    Mathf.Abs(lights[0].range - 20f) < .001f,
+                    shape + ": maximo do flicker deve usar intensidade e alcance base.");
+            }
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(host);
+            UnityEngine.Object.DestroyImmediate(profile);
+        }
+    }
+
     private static void CheckLightBudget()
     {
         GameObject cameraObject = new("Retro Light Test Camera") { hideFlags = HideFlags.HideAndDontSave };
@@ -257,6 +308,17 @@ public static class RetroLightingRegression
             settings.lightingModeOverride = RetroLightingModeOverride.Grid;
             float grid = RenderBrightness(camera);
             Check(grid > dark + 5f, "Modo Grid deve iluminar um chao grande (" + grid.ToString("0.0") + ").");
+
+            material.SetFloat("_LightingModeOverride", 1f);
+            float vertexOverride = RenderBrightness(camera);
+            Check(vertexOverride < grid - 5f,
+                "Override Vertex do material deve prevalecer sobre Grid global.");
+            MaterialPropertyBlock block = new();
+            RetroLightingOverride.ApplyToRenderer(floor.GetComponent<Renderer>(),
+                RetroLightingRendererOverride.Pixel, block);
+            float pixelOverride = RenderBrightness(camera);
+            Check(pixelOverride > vertexOverride + 5f,
+                "Override Pixel do objeto deve prevalecer sobre Vertex do material.");
         }
         finally
         {

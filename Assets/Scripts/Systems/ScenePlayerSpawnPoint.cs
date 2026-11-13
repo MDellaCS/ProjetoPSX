@@ -46,7 +46,7 @@ public sealed class ScenePlayerSpawnPoint : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!PlayerDebugToolkitHUD.IsVisible && Application.isPlaying)
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.Spawns) && Application.isPlaying)
             return;
 
         Gizmos.color = new Color(.15f, .9f, 1f, .9f);

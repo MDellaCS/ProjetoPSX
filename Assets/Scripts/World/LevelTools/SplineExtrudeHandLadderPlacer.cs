@@ -24,18 +24,15 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
     [Range(0f, 360f)] [SerializeField] private float wallAngleDegrees;
     [Tooltip("Marcado coloca a escada na face interna do tubo e orienta o jogador para dentro. Desmarcado usa a face externa.")]
     [SerializeField] private bool insideTube = true;
-    [Tooltip("Distancia em metros entre os trilhos da escada e a parede. Na face interna, valores positivos movem a escada para o centro do tubo.")]
-    [Min(0f)] [SerializeField] private float wallClearance = .06f;
-    [Tooltip("Largura da escada em metros, medida sobre a circunferencia do tubo.")]
-    [Min(.2f)] [SerializeField] private float ladderWidth = .8f;
+    [SerializeField, HideInInspector] private float wallClearance = .06f;
+    [SerializeField, HideInInspector] private float ladderWidth = .8f;
 
     [Header("Trecho e amostragem")]
     [Tooltip("Comprimento em metros removido do inicio do trecho extrudido. Deixa a escada afastada da borda do tubo.")]
     [Min(0f)] [SerializeField] private float startTrim;
     [Tooltip("Comprimento em metros removido do fim do trecho extrudido. Deixa a escada afastada da borda do tubo.")]
     [Min(0f)] [SerializeField] private float endTrim;
-    [Tooltip("Distancia aproximada em metros entre pontos que definem a curvatura. Menor acompanha melhor curvas e aumenta o numero de pecas geradas.")]
-    [Min(.08f)] [SerializeField] private float sampleSpacing = .3f;
+    [SerializeField, HideInInspector] private float sampleSpacing = .3f;
 
     [Header("Escada")]
     [Tooltip("Perfil opcional da escada. Define degraus, trilhos e comportamento; vazio mantem a escalada continua sem gerar pecas visuais.")]
@@ -48,11 +45,11 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
     public int SplineIndex => splineIndex;
     public float WallAngleDegrees => wallAngleDegrees;
     public bool InsideTube => insideTube;
-    public float WallClearance => wallClearance;
-    public float LadderWidth => ladderWidth;
+    public float WallClearance => Mathf.Max(0f, ladderProfile != null ? ladderProfile.wallClearance : wallClearance);
+    public float LadderWidth => ladderProfile != null ? Mathf.Max(.1f, ladderProfile.width) : Mathf.Max(.1f, ladderWidth);
     public float StartTrim => startTrim;
     public float EndTrim => endTrim;
-    public float SampleSpacing => sampleSpacing;
+    public float SampleSpacing => ladderProfile != null ? Mathf.Max(.1f, ladderProfile.sampleSpacing) : Mathf.Max(.08f, sampleSpacing);
     public HandLadderProfile LadderProfile => ladderProfile;
     public Transform GeneratedRoot => generatedRoot;
 
@@ -120,10 +117,13 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
             return false;
         }
 
-        int count = Mathf.Clamp(Mathf.CeilToInt(length / Mathf.Max(.08f, sampleSpacing)) + 1,
+        bool autoSampling = ladderProfile == null || ladderProfile.autoSampleSpacing;
+        float spacing = autoSampling ? Mathf.Min(SampleSpacing, .25f) : SampleSpacing;
+        int count = Mathf.Clamp(Mathf.CeilToInt(length / spacing) + 1,
             2, 1024);
         spine = new HandLadderSpine
         {
+            sampledWidth = LadderWidth,
             progress = new float[count],
             left = new Vector3[count],
             center = new Vector3[count],
@@ -131,7 +131,7 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
             normal = new Vector3[count]
         };
 
-        float halfWidth = ladderWidth * .5f;
+        float halfWidth = LadderWidth * .5f;
         float pathLength = length;
         for (int i = 0; i < count; i++)
         {
@@ -169,7 +169,7 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
 
             Vector3 axis = (Vector3)container.EvaluatePosition(selectedSplineIndex, t);
             float wallRadius = Mathf.Max(.001f, source.Radius +
-                (insideTube ? -wallClearance : wallClearance));
+                (insideTube ? -WallClearance : WallClearance));
             Vector3 center = axis + radial * wallRadius;
 
             spine.progress[i] = progress;
@@ -186,6 +186,8 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
             }
         }
 
+        if (autoSampling)
+            spine = spine.Simplified(Matrix4x4.identity);
         return true;
     }
 
@@ -256,7 +258,12 @@ public sealed class SplineExtrudeHandLadderPlacer : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (!InteractionGizmos.Visible || !TryBuildSpine(out HandLadderSpine preview,
+        if (!InteractionGizmos.Visible)
+            return;
+        HandLadder ladder = generatedRoot != null ? generatedRoot.GetComponentInChildren<HandLadder>(true) : null;
+        if (ladder != null && !ladder.IsClimbable)
+            return;
+        if (!TryBuildSpine(out HandLadderSpine preview,
                 out _, out _, out _, out _, out _))
             return;
 

@@ -55,6 +55,9 @@ public class InteractionArea : InteractableBase
         if (!InteractionGizmos.Visible)
             return;
 
+        if (GetSiblingInteractionHandler() is HandLadder ladder && !ladder.IsClimbable)
+            return;
+
         InteractionProfile profile = areaProfile != null
             ? areaProfile
             : EffectiveInteractionProfile;

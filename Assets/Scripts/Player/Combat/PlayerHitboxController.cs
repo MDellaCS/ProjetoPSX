@@ -459,7 +459,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible) return;
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerCombat)) return;
         Gizmos.color = Color.crimson;
         foreach (DebugVolume volume in debugVolumes)
         {

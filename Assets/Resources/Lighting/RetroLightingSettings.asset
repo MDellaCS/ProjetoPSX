@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6408bee8badf487cbe6c10982eb62a55, type: 3}
   m_Name: RetroLightingSettings
   m_EditorClassIdentifier: Assembly-CSharp::RetroLightingSettings
-  maxVisibleLights: 16
+  maxVisibleLights: 17
   localLightIntensityMultiplier: 1
-  lightingModeOverride: 0
+  lightingModeOverride: 3
   gridCellSizeOverride: 0
   colorLevels: 0
   ditherStrength: 0

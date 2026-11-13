@@ -91,7 +91,8 @@ internal static class SplineExtrudeHandLadderPlacerGenerator
         HandLadder ladder = Undo.AddComponent<HandLadder>(ladderObject);
         SerializedObject serializedLadder = new(ladder);
         SetFloat(serializedLadder, "height", height);
-        SetFloat(serializedLadder, "width", placer.LadderWidth);
+        if (placer.LadderProfile == null)
+            SetFloat(serializedLadder, "width", placer.LadderWidth);
         SetVector3(serializedLadder, "climbAxis", Vector3.up);
         SetVector3(serializedLadder, "approachAxis", Vector3.forward);
         SetBool(serializedLadder, "isClimbable", true);
@@ -99,7 +100,8 @@ internal static class SplineExtrudeHandLadderPlacerGenerator
         SetInt(serializedLadder, "attachment", (int)HandLadderAttachment.Surface);
         SetBool(serializedLadder, "conformToSurface", true);
         SetBool(serializedLadder, "autoSnapToSurface", false);
-        SetFloat(serializedLadder, "curveSampleSpacing", placer.SampleSpacing);
+        if (placer.LadderProfile == null)
+            SetFloat(serializedLadder, "curveSampleSpacing", placer.SampleSpacing);
         SetInt(serializedLadder, "topExitSide", (int)HandLadderExitSide.Front);
         SetObject(serializedLadder, "profile", placer.LadderProfile);
         serializedLadder.ApplyModifiedPropertiesWithoutUndo();
@@ -184,6 +186,7 @@ internal static class SplineExtrudeHandLadderPlacerRegression
     public static void Run()
     {
         GameObject sourceObject = null;
+        HandLadderProfile testProfile = null;
         try
         {
             sourceObject = new GameObject("RegressionTubeSpline");
@@ -224,12 +227,32 @@ internal static class SplineExtrudeHandLadderPlacerRegression
                 throw new System.InvalidOperationException(
                     "A escada nao respeitou a face interna e a folga da parede do tubo.");
 
+            testProfile = ScriptableObject.CreateInstance<HandLadderProfile>();
+            testProfile.wallClearance = .3f;
+            testProfile.sampleSpacing = 1f;
+            testProfile.autoSampleSpacing = false;
+            placer.SetLadderProfile(testProfile);
+            if (!placer.TryBuildSpine(out HandLadderSpine profileSpine, out _, out Vector3 profilePoint,
+                    out _, out _, out error) ||
+                Mathf.Abs(Vector3.Distance(profilePoint, axis) - 1.7f) > .01f ||
+                profileSpine.Count != 11)
+                throw new System.InvalidOperationException(
+                    "A folga e a amostragem do tubo devem vir do perfil: " + error);
+
+            testProfile.autoSampleSpacing = true;
+            if (!placer.TryBuildSpine(out HandLadderSpine automaticSpine, out _, out _,
+                    out _, out _, out error) || automaticSpine.Count != 2)
+                throw new System.InvalidOperationException(
+                    "A amostragem automatica deve simplificar um tubo reto: " + error);
+
             Debug.Log("Spline Extrude Hand Ladder Regression: aprovada.");
         }
         finally
         {
             if (sourceObject != null)
                 Object.DestroyImmediate(sourceObject);
+            if (testProfile != null)
+                Object.DestroyImmediate(testProfile);
         }
     }
 

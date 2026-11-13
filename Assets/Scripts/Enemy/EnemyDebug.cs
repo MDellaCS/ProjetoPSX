@@ -108,7 +108,7 @@ public sealed class EnemyDebug : MonoBehaviour
 
     public void DrawGizmos()
     {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible)
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyCombat))
             return;
         if (brain == null || attacks == null)
             return;

@@ -35,9 +35,16 @@ internal static class HandLadderGenerator
         int count = ladder.RungCount;
         float half = ladder.Width * .5f;
         bool curved = ladder.IsCurved;
+        Vector2 area = ladder.EffectiveArea;
+        float areaStart = ladder.Height * area.x;
+        float areaEnd = ladder.Height * area.y;
+        int generatedRungs = 0;
         for (int i = 0; i < count; i++)
         {
             float y = Mathf.Min(i * spacing, ladder.Height);
+            if (y < areaStart - .0001f || y > areaEnd + .0001f)
+                continue;
+
             if (curved)
             {
                 // Degrau em duas metades (esquerda-centro e centro-direita): acompanha
@@ -45,6 +52,17 @@ internal static class HandLadderGenerator
                 Vector3 leftPoint = ladder.LocalLanePoint(-1, y);
                 Vector3 centerPoint = ladder.LocalLanePoint(0, y);
                 Vector3 rightPoint = ladder.LocalLanePoint(1, y);
+                if (Aligned(centerPoint - leftPoint, rightPoint - centerPoint))
+                {
+                    Vector3 across = rightPoint - leftPoint;
+                    CreatePiece(profile.rungPrefab, root, $"Rung_{i + 1:000}",
+                        (leftPoint + rightPoint) * .5f,
+                        AlignAxis(AxisVector(profile.rungWidthAxis), across, profile.rungRollDegrees),
+                        profile.rungWidthAxis, across.magnitude + profile.rungThickness * .5f,
+                        profile.rungThickness);
+                    generatedRungs++;
+                    continue;
+                }
                 for (int half2 = 0; half2 < 2; half2++)
                 {
                     Vector3 a = half2 == 0 ? leftPoint : centerPoint;
@@ -59,6 +77,8 @@ internal static class HandLadderGenerator
                         profile.rungThickness);
                 }
 
+                generatedRungs++;
+
                 continue;
             }
 
@@ -67,6 +87,7 @@ internal static class HandLadderGenerator
             CreatePiece(profile.rungPrefab, root, $"Rung_{i + 1:000}",
                 ladder.LocalClimbAxis * y, rungRotation,
                 profile.rungWidthAxis, ladder.Width, profile.rungThickness);
+            generatedRungs++;
         }
 
         if (ladder.GenerateSideRails && profile.railPrefab != null && curved)
@@ -74,38 +95,55 @@ internal static class HandLadderGenerator
             // Trilhos em segmentos entre as amostras da superficie (com leve sobreposicao).
             HandLadderSpine spine = ladder.Spine;
             for (int lane = -1; lane <= 1; lane += 2)
+            {
+                bool pending = false;
+                Vector3 start = default, end = default;
+                int pieceIndex = 0;
                 for (int i = 0; i < spine.Count - 1; i++)
                 {
-                    Vector3 a = ladder.LocalLanePoint(lane, spine.progress[i]);
-                    Vector3 b = ladder.LocalLanePoint(lane, spine.progress[i + 1]);
+                    float segmentStart = Mathf.Max(areaStart, spine.progress[i]);
+                    float segmentEnd = Mathf.Min(areaEnd, spine.progress[i + 1]);
+                    if (segmentEnd - segmentStart < .0001f)
+                        continue;
+                    Vector3 a = ladder.LocalLanePoint(lane, segmentStart);
+                    Vector3 b = ladder.LocalLanePoint(lane, segmentEnd);
                     Vector3 direction = b - a;
                     if (direction.sqrMagnitude < 1e-6f)
                         continue;
-                    CreatePiece(profile.railPrefab, root,
-                        $"Rail_{(lane < 0 ? "Left" : "Right")}_{i + 1:000}",
-                        (a + b) * .5f,
-                        AlignAxis(AxisVector(profile.railLengthAxis), direction,
-                            profile.railRollDegrees),
-                        profile.railLengthAxis,
-                        direction.magnitude + profile.railThickness * .6f,
-                        profile.railThickness);
+                    if (pending && (end - a).sqrMagnitude < 1e-8f && Aligned(end - start, direction))
+                        end = b;
+                    else
+                    {
+                        if (pending)
+                            CreateRail(profile, root, lane, ++pieceIndex, start, end);
+                        start = a;
+                        end = b;
+                        pending = true;
+                    }
                 }
+                if (pending)
+                    CreateRail(profile, root, lane, ++pieceIndex, start, end);
+            }
         }
         else if (ladder.GenerateSideRails && profile.railPrefab != null)
         {
-            Quaternion railRotation = AlignAxis(AxisVector(profile.railLengthAxis),
-                ladder.LocalClimbAxis, profile.railRollDegrees);
-            // Os trilhos ficam no mesmo plano dos degraus (que os atravessam).
-            Vector3 railCenter = ladder.LocalClimbAxis * (ladder.Height * .5f);
-            CreatePiece(profile.railPrefab, root, "Rail_Left",
-                railCenter - ladder.LocalWidthAxis * half, railRotation,
-                profile.railLengthAxis, ladder.Height, profile.railThickness);
-            CreatePiece(profile.railPrefab, root, "Rail_Right",
-                railCenter + ladder.LocalWidthAxis * half, railRotation,
-                profile.railLengthAxis, ladder.Height, profile.railThickness);
+            float selectedHeight = areaEnd - areaStart;
+            if (selectedHeight > .0001f)
+            {
+                Quaternion railRotation = AlignAxis(AxisVector(profile.railLengthAxis),
+                    ladder.LocalClimbAxis, profile.railRollDegrees);
+                // Os trilhos ficam no mesmo plano dos degraus (que os atravessam).
+                Vector3 railCenter = ladder.LocalClimbAxis * ((areaStart + areaEnd) * .5f);
+                CreatePiece(profile.railPrefab, root, "Rail_Left",
+                    railCenter - ladder.LocalWidthAxis * half, railRotation,
+                    profile.railLengthAxis, selectedHeight, profile.railThickness);
+                CreatePiece(profile.railPrefab, root, "Rail_Right",
+                    railCenter + ladder.LocalWidthAxis * half, railRotation,
+                    profile.railLengthAxis, selectedHeight, profile.railThickness);
+            }
         }
 
-        ladder.SetGenerated(root, count);
+        ladder.SetGenerated(root, generatedRungs);
         EditorUtility.SetDirty(ladder);
         EditorSceneManager.MarkSceneDirty(ladder.gameObject.scene);
     }
@@ -148,6 +186,21 @@ internal static class HandLadderGenerator
     }
 
     private static bool solidPieces;
+
+    private static bool Aligned(Vector3 a, Vector3 b) =>
+        a.sqrMagnitude > 1e-6f && b.sqrMagnitude > 1e-6f &&
+        Vector3.Angle(a, b) < .01f;
+
+    private static void CreateRail(HandLadderProfile profile, Transform root,
+        int lane, int index, Vector3 a, Vector3 b)
+    {
+        Vector3 direction = b - a;
+        CreatePiece(profile.railPrefab, root,
+            $"Rail_{(lane < 0 ? "Left" : "Right")}_{index:000}", (a + b) * .5f,
+            AlignAxis(AxisVector(profile.railLengthAxis), direction, profile.railRollDegrees),
+            profile.railLengthAxis, direction.magnitude + profile.railThickness * .6f,
+            profile.railThickness);
+    }
 
     private static void CreatePiece(GameObject prefab, Transform root, string name,
         Vector3 localPosition, Quaternion localRotation,
@@ -269,6 +322,17 @@ internal sealed class HandLadderEditor : Editor
     {
         EditorGUI.BeginChangeCheck();
         InteractionInspectorUtility.DrawProperties(this);
+        SerializedProperty effectiveAreaProperty = serializedObject.FindProperty("effectiveArea");
+        Vector2 effectiveArea = effectiveAreaProperty.vector2Value;
+        float areaStart = Mathf.Clamp01(Mathf.Min(effectiveArea.x, effectiveArea.y));
+        float areaEnd = Mathf.Clamp01(Mathf.Max(effectiveArea.x, effectiveArea.y));
+        EditorGUILayout.MinMaxSlider(new GUIContent("Area efetiva",
+            "Seleciona o trecho da base (0) ao topo (1) com degraus, trilhos e área de escalada."),
+            ref areaStart, ref areaEnd, 0f, 1f);
+        EditorGUILayout.LabelField($"{areaStart:0.00} - {areaEnd:0.00}",
+            EditorStyles.miniLabel);
+        effectiveAreaProperty.vector2Value = new Vector2(areaStart, areaEnd);
+        serializedObject.ApplyModifiedProperties();
         bool changed = EditorGUI.EndChangeCheck();
         HandLadder ladder = (HandLadder)target;
         bool canGenerate = ladder.Profile != null && ladder.Profile.rungPrefab != null;
@@ -295,7 +359,7 @@ internal sealed class HandLadderEditor : Editor
                 HandLadderGenerator.GenerateNow(ladder);
         EditorGUILayout.HelpBox(
             "Gizmos: caixa ciano = zona onde o prompt aparece; seta rosa = normal (direção do salto); linha amarela = trilho do jogador; esferas verde/laranja = saídas do topo/base. " +
-            "Sem perfil, a escada não gera visual: use sua própria malha e ajuste Height/Width pelos gizmos.",
+            "Sem perfil, a escada não gera visual: use sua própria malha e ajuste Height pelos gizmos.",
             MessageType.Info);
         if (changed && ladder.Attachment != HandLadderAttachment.Surface && ladder.HasSpine)
         {
@@ -373,7 +437,11 @@ internal sealed class HandLadderProfileEditor : Editor
             if (ladder != null && ladder.gameObject.scene.IsValid() &&
                 PrefabStageUtility.GetPrefabStage(ladder.gameObject) == null &&
                 ladder.Profile == profile)
+            {
+                if (ladder.Attachment == HandLadderAttachment.Surface && ladder.AutoSnapToSurface)
+                    HandLadderGenerator.TrySnapToSurface(ladder);
                 HandLadderGenerator.GenerateNow(ladder);
+            }
     }
 }
 
@@ -430,7 +498,7 @@ internal static class HandLadderGenerationRegression
             profile = ScriptableObject.CreateInstance<HandLadderProfile>();
             profile.rungPrefab = sourceStep;
             profile.rungSpacing = .5f;
-            profile.defaultWidth = 1f;
+            profile.width = 1f;
             profile.rungWidthAxis = HandLadderPrefabAxis.Z;
             profile.railPrefab = sourceStep;
 
@@ -438,6 +506,20 @@ internal static class HandLadderGenerationRegression
             HandLadder ladder = ladderObject.AddComponent<HandLadder>();
             Set(ladder, "profile", profile);
             Set(ladder, "height", 2f);
+            profile.surfaceSearchDistance = 3f;
+            profile.surfaceStandoff = .25f;
+            Check(Mathf.Abs(ladder.SurfaceSearchDistance - 3f) < .001f &&
+                Mathf.Abs(ladder.SurfaceStandoff - .25f) < .001f,
+                "Distancias da superficie devem vir do perfil.");
+            profile.extraGap = .2f;
+            profile.sampleSpacing = .7f;
+            Check(Mathf.Abs(ladder.RungSpacing - .7f) < .001f &&
+                Mathf.Abs(ladder.CurveSampleSpacing - .7f) < .001f,
+                "Espacamento dos degraus e amostragem devem vir do perfil.");
+            profile.extraGap = 0f;
+            profile.sampleSpacing = .3f;
+            profile.surfaceSearchDistance = 2f;
+            profile.surfaceStandoff = .1f;
 
             // 1. Geracao: degraus, trilhos, nenhuma entrada/saida filha.
             HandLadderGenerator.GenerateNow(ladder);
@@ -457,6 +539,15 @@ internal static class HandLadderGenerationRegression
             Check(Mathf.Abs(rail.localScale.x * 2f - profile.railThickness) < .001f &&
                 Mathf.Abs(rail.localScale.z * .2f - profile.railThickness) < .001f,
                 "A espessura do trilho vale nos dois eixos perpendiculares ao comprimento.");
+            profile.width = 1.5f;
+            profile.generateSideRails = false;
+            HandLadderGenerator.GenerateNow(ladder);
+            Check(Mathf.Abs(ladder.Width - 1.5f) < .001f &&
+                ladder.GeneratedRoot.Find("Rail_Left") == null &&
+                ladder.GeneratedRoot.Find("Rail_Right") == null,
+                "Largura e presenca dos trilhos devem vir do perfil.");
+            profile.width = 1f;
+            profile.generateSideRails = true;
             Set(ladder, "profile", null);
             HandLadderGenerator.GenerateNow(ladder);
             Check(ladder.GeneratedRoot == null && ladder.transform.childCount == 0,

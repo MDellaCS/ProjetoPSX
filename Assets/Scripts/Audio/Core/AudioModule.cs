@@ -120,7 +120,7 @@ public abstract class AudioModule : MonoBehaviour
     }
 
     protected AudioPlaybackHandle PlayClip(AudioClip clip, float volume, float pitch,
-        Vector3 position, int priority)
+        Vector3 position, int priority, bool applyGlobalPitch = true)
     {
         AudioModuleSettings settings = BaseSettings;
         if (clip == null || !settings.moduleEnabled)
@@ -135,7 +135,7 @@ public abstract class AudioModule : MonoBehaviour
         source.dopplerLevel = 0f;
         voice.baseVolume = Mathf.Max(0f, volume) * settings.globalVolume;
         source.volume = GetOutputVolume();
-        source.pitch = Mathf.Max(.01f, pitch) * settings.globalPitch;
+        source.pitch = Mathf.Max(.01f, pitch) * (applyGlobalPitch ? settings.globalPitch : 1f);
         voice.startedAt = Time.unscaledTime;
         voice.playbackToken = ++nextPlaybackToken;
         // PlayOneShot aceita escalas acima de 1, ao contrario do limite pratico de

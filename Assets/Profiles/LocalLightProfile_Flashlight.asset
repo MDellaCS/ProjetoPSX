@@ -29,8 +29,8 @@ MonoBehaviour:
     flicker:
       enabled: 0
       mode: 0
-      minimumIntensity: 1.6
-      maximumIntensity: 2
+      minimumIntensity: 0.3470716
+      maximumIntensity: 0.4338395
       speed: 6
       updatesPerSecond: 12
       rangeVariation: 0

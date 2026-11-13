@@ -280,7 +280,7 @@ public sealed class WaterVolume : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !PlayerDebugToolkitHUD.IsVisible)
+        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.Water))
             return;
 
         Collider collider = volumeCollider != null

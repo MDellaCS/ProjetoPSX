@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -17,12 +17,13 @@ public sealed class LocalLightEmitter : MonoBehaviour
     [SerializeField] private Vector3 positionOffset;
     [Tooltip("Rotacao local em graus aplicada ao conjunto de luzes do perfil.")]
     [SerializeField] private Vector3 rotationOffset;
-    [Tooltip("Multiplica a intensidade de todas as luzes deste emissor (inclusive min/max do flicker). Use para variar objetos que compartilham o mesmo perfil.")]
+    [Tooltip("Multiplica a intensidade base de todas as luzes deste emissor, inclusive durante o flicker. Use para variar objetos que compartilham o mesmo perfil.")]
     [Min(0f)] [SerializeField] private float intensityMultiplier = 1f;
     [Tooltip("Mostra o flicker tambem fora do Play, no Editor.")]
     [SerializeField] private bool previewFlickerInEditor;
 
     private readonly List<RetroLight> lights = new();
+    private readonly List<float> flickerRangeMultipliers = new();
     private LocalLightProfile appliedProfile;
     private int appliedRevision = -1;
     private bool settingsDirty = true;
@@ -74,7 +75,7 @@ public sealed class LocalLightEmitter : MonoBehaviour
             if (profile == null || profile.lights == null || i >= profile.lights.Count || profile.lights[i] == null)
                 continue;
             LocalLightDefinition definition = profile.lights[i];
-            lights[i].range = definition.range * externalRangeMultiplier;
+            lights[i].range = definition.range * externalRangeMultiplier * flickerRangeMultipliers[i];
         }
     }
 
@@ -120,18 +121,20 @@ public sealed class LocalLightEmitter : MonoBehaviour
             LocalLightDefinition definition = profile.lights[i];
             if (definition == null || !definition.enabled || !definition.flicker.enabled)
                 continue;
-            ApplyFlicker(lights[i], definition, time, phase + i * 3.17f);
+            ApplyFlicker(i, definition, time, phase + i * 3.17f);
         }
         if (!Application.isPlaying)
             UnityEditorRepaint();
     }
 
-    private void ApplyFlicker(RetroLight light, LocalLightDefinition definition, float time, float lightPhase)
+    private void ApplyFlicker(int index, LocalLightDefinition definition, float time, float lightPhase)
     {
         LocalLightFlicker flicker = definition.flicker;
         float t = flicker.Evaluate(time, lightPhase);
-        light.intensity = Mathf.Lerp(flicker.minimumIntensity, flicker.maximumIntensity, t) * intensityMultiplier * dynamicIntensityMultiplier;
-        light.range = definition.range * externalRangeMultiplier * (1f - flicker.rangeVariation * (1f - t));
+        RetroLight light = lights[index];
+        light.intensity = definition.intensity * Mathf.Lerp(flicker.minimumIntensity, flicker.maximumIntensity, t) * intensityMultiplier * dynamicIntensityMultiplier;
+        flickerRangeMultipliers[index] = 1f - flicker.rangeVariation * (1f - t);
+        light.range = definition.range * externalRangeMultiplier * flickerRangeMultipliers[index];
     }
 
     private void Rebuild()
@@ -146,15 +149,20 @@ public sealed class LocalLightEmitter : MonoBehaviour
         {
             RetroLightSystem.Unregister(lights[^1]);
             lights.RemoveAt(lights.Count - 1);
+            flickerRangeMultipliers.RemoveAt(flickerRangeMultipliers.Count - 1);
         }
         while (lights.Count < count)
+        {
             lights.Add(new RetroLight());
+            flickerRangeMultipliers.Add(1f);
+        }
 
         Quaternion offsetRotation = Quaternion.Euler(rotationOffset);
         for (int i = 0; i < count; i++)
         {
             LocalLightDefinition definition = profile.lights[i];
             RetroLight light = lights[i];
+            flickerRangeMultipliers[i] = 1f;
             light.owner = transform;
             if (definition == null)
             {
@@ -182,7 +190,7 @@ public sealed class LocalLightEmitter : MonoBehaviour
             {
                 hasFlicker = true;
                 // Comeca dentro da faixa min-max mesmo antes do primeiro Update.
-                ApplyFlicker(light, definition, 0f, phase + i * 3.17f);
+                ApplyFlicker(i, definition, 0f, phase + i * 3.17f);
             }
         }
     }
@@ -196,7 +204,7 @@ public sealed class LocalLightEmitter : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !InteractionGizmos.Visible)
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.Lights))
             return;
         DrawLightGizmos();
     }

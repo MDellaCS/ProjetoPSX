@@ -216,3 +216,14 @@
     width: 0%;
     background-color: rgb(255, 180, 45);
 }
+
+.debug-submenu {
+    position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+    width: 500px; height: 70%; padding: 20px; display: none;
+    background-color: rgb(22, 27, 32);
+    border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px;
+    border-left-color: rgb(83, 255, 150); border-right-color: rgb(83, 255, 150);
+    border-top-color: rgb(83, 255, 150); border-bottom-color: rgb(83, 255, 150);
+}
+#debug-submenu-list { flex-grow: 1; }
+#debug-submenu-list Button, #debug-submenu-list Toggle { min-height: 36px; font-size: 18px; color: rgb(230, 240, 232); }

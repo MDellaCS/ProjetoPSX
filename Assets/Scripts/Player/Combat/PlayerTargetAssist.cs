@@ -1,56 +1,52 @@
-using UnityEngine;
+﻿using UnityEngine;
 
-/// <summary>
-/// Seleciona um inimigo para auxiliar a mira dos ataques do jogador e captura
-/// a posicao desse alvo no instante em que o ataque comeca.
-/// </summary>
+/// <summary>Seleciona o alvo do grapple de combate e do seu indicador.</summary>
 [DisallowMultipleComponent]
 public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
 {
-    [Header("Global Target Assist")]
-    [Tooltip("Ativa a selecao de inimigos e o giro assistido no inicio dos ataques do jogador.")]
-    [SerializeField] private bool targetAssistEnabled = true;
-    [Tooltip("Distancia maxima para selecionar um inimigo como alvo assistido.")]
-    [Min(.1f)] [SerializeField] private float targetAssistRange = 16f;
-    [Tooltip("Abertura horizontal da assistencia em cada lado quando o alvo esta no limite do alcance.")]
-    [Range(0f, 180f)] [SerializeField] private float targetAssistAngle = 55f;
-    [Tooltip("Abertura horizontal maxima em cada lado quando o alvo esta perto. Interpola suavemente ate o angulo de longo alcance.")]
-    [Range(0f, 180f)] [SerializeField] private float targetAssistNearAngle = 90f;
-    [Tooltip("Controla como o angulo de assistencia passa de Target Assist Near Angle (distancia 0) para Target Assist Angle (distancia maxima). X representa a distancia normalizada; Y representa o progresso entre os dois angulos. Uma curva reta faz uma interpolacao uniforme.")]
-    [SerializeField] private AnimationCurve targetAssistNearAngleDistanceCurve =
-        AnimationCurve.Linear(0f, 0f, 1f, 1f);
-    [Tooltip("Camadas que podem bloquear a visibilidade entre o jogador e o inimigo assistido.")]
+    // Preserva os valores de cenas e prefabs que usavam a assistencia global.
+    [HideInInspector, SerializeField] private bool targetAssistEnabled = true;
+    [HideInInspector, SerializeField] private float targetAssistRange = 16f;
+    [HideInInspector, SerializeField] private float targetAssistAngle = 55f;
+    [HideInInspector, SerializeField] private float targetAssistNearAngle = 90f;
+    [HideInInspector, SerializeField] private AnimationCurve targetAssistNearAngleDistanceCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [Tooltip("Camadas que bloqueiam a visibilidade entre o jogador e o inimigo para o grapple de combate.")]
     [SerializeField] private LayerMask targetObstructionMask = Physics.DefaultRaycastLayers;
 
     private PlayerCharacterController characterController;
     private PlayerLockOn lockOn;
     private PlayerState playerState;
-    private Mesh assistAreaMesh;
-    private float assistAreaMeshAngle = -1f;
-    private float assistAreaMeshNearAngle = -1f;
-    private int assistAreaMeshCurveHash;
-
-    public bool IsEnabled => targetAssistEnabled;
-    public float MaximumRange => targetAssistRange;
-    public EnemyBase CurrentBestTarget => FindBestTarget(targetAssistRange);
 
     public int GrappleTargetPriority => 200;
+
+    private void Awake()
+    {
+        characterController = GetComponent<PlayerCharacterController>();
+        lockOn = GetComponent<PlayerLockOn>();
+        playerState = GetComponent<PlayerState>();
+    }
 
     private void OnEnable() => GrappleTargetSystem.Register(this);
     private void OnDisable() => GrappleTargetSystem.Unregister(this);
 
-    /// <summary>Indicador do gancho: inimigo que o ataque de grapple miraria agora.</summary>
+    // Usado ao criar o componente em jogadores com a configuracao antiga.
+    public void ConfigureFromLegacy(float range, float farAngle,
+        float nearAngle, LayerMask obstructionMask, bool enabled)
+    {
+        targetAssistRange = range;
+        targetAssistAngle = farAngle;
+        targetAssistNearAngle = nearAngle;
+        targetObstructionMask = obstructionMask;
+        targetAssistEnabled = enabled;
+    }
+
     public bool TryGetGrappleTarget(out GrappleTarget target)
     {
         target = default;
-        if (playerState == null)
-            playerState = GetComponent<PlayerState>();
-        if (playerState != null && !playerState.IsNormal())
-            return false;
-
+        if (playerState == null) playerState = GetComponent<PlayerState>();
+        if (playerState != null && !playerState.IsNormal()) return false;
         EnemyBase enemy = FindCombatGrappleTarget();
-        if (enemy == null)
-            return false;
+        if (enemy == null) return false;
         Collider body = enemy.GetComponentInChildren<Collider>();
         target = new GrappleTarget
         {
@@ -61,67 +57,30 @@ public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
         return true;
     }
 
-    private void Awake()
-    {
-        characterController = GetComponent<PlayerCharacterController>();
-        lockOn = GetComponent<PlayerLockOn>();
-    }
-
-    /// <summary>
-    /// Copia as configuracoes serializadas no antigo componente de grapple,
-    /// usado apenas quando este componente e criado automaticamente.
-    /// </summary>
-    public void ConfigureFromLegacy(float range, float farAngle,
-        float nearAngle, LayerMask obstructionMask, bool enabled)
-    {
-        targetAssistRange = Mathf.Max(.1f, range);
-        targetAssistAngle = Mathf.Clamp(farAngle, 0f, 180f);
-        targetAssistNearAngle = Mathf.Clamp(nearAngle, 0f, 180f);
-        targetObstructionMask = obstructionMask;
-        targetAssistEnabled = enabled;
-    }
-
-    /// <summary>Captura o melhor alvo valido e sua posicao mundial atual.</summary>
-    public bool TryCaptureTarget(out EnemyBase target,
-        out Vector3 lockedPosition)
-    {
-        return TryCaptureTarget(targetAssistRange, out target,
-            out lockedPosition);
-    }
-
-    /// <summary>
-    /// Captura o alvo travado, quando houver, ou o melhor alvo automatico
-    /// dentro do alcance informado pelo ataque.
-    /// </summary>
-    public bool TryCaptureTarget(float attackRange, out EnemyBase target,
-        out Vector3 lockedPosition)
-    {
-        if (lockOn == null)
-            lockOn = GetComponent<PlayerLockOn>();
-        EnemyBase lockedEnemy = lockOn != null ? lockOn.LockedEnemy : null;
-        // Lock-on e uma escolha explicita do jogador: ele sempre vence a
-        // selecao automatica, inclusive fora do alcance da hitbox.
-        target = lockedEnemy != null
-            ? lockedEnemy
-            : targetAssistEnabled
-                ? FindBestTarget(Mathf.Min(targetAssistRange,
-                    Mathf.Max(0f, attackRange)))
-                : null;
-        lockedPosition = target != null ? target.AttackOrigin : default;
-        return target != null;
-    }
-
-    /// <summary>Alvo do gancho de combate: o travado ou o melhor dentro do alcance e da mira proprios (GrappleSettings.Combat).</summary>
+    /// <summary>Prioriza o lock-on elegivel e, depois, o melhor inimigo visivel na area do grapple.</summary>
     public EnemyBase FindCombatGrappleTarget()
     {
-        if (lockOn == null)
-            lockOn = GetComponent<PlayerLockOn>();
+        CombatGrappleSettings settings = GrappleSettings.Combat;
+        Vector3 origin = GetPlayerCenter();
+        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        if (forward.sqrMagnitude < .0001f) return null;
+        if (lockOn == null) lockOn = GetComponent<PlayerLockOn>();
         EnemyBase locked = lockOn != null ? lockOn.LockedEnemy : null;
-        if (locked != null)
-            return locked;
+        if (IsEligibleTarget(locked, origin, forward, settings)) return locked;
 
-        CombatGrappleSettings combat = GrappleSettings.Combat;
-        return FindBestTarget(combat.range, combat.assistAngle, combat.assistNearAngle);
+        EnemyBase best = null;
+        float bestScore = float.PositiveInfinity;
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
+        {
+            if (!IsEligibleTarget(enemy, origin, forward, settings)) continue;
+            Vector3 offset = enemy.AttackOrigin - origin;
+            Vector3 horizontal = Vector3.ProjectOnPlane(offset, Vector3.up);
+            float score = offset.magnitude + Vector3.Angle(forward, horizontal) * .025f;
+            if (score >= bestScore) continue;
+            best = enemy;
+            bestScore = score;
+        }
+        return best;
     }
 
     public bool TryCaptureCombatGrappleTarget(out EnemyBase target, out Vector3 lockedPosition)
@@ -131,280 +90,86 @@ public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
         return target != null;
     }
 
-    public EnemyBase FindBestTarget(float maximumRange)
-    {
-        if (!targetAssistEnabled)
-            return null;
-        return FindBestTarget(maximumRange, targetAssistAngle, targetAssistNearAngle);
-    }
-
-    /// <summary>Melhor alvo com alcance e abertura de mira informados (nao depende de Target Assist Enabled).</summary>
-    public EnemyBase FindBestTarget(float maximumRange, float farAngle, float nearAngle)
-    {
-
-        Vector3 origin = GetPlayerCenter();
-        Vector3 forward = Vector3.ProjectOnPlane(transform.forward,
-            Vector3.up).normalized;
-        if (forward.sqrMagnitude < .0001f)
-            return null;
-
-        EnemyBase best = null;
-        float bestScore = float.PositiveInfinity;
-        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
-        {
-            if (enemy == null || !IsEligibleTarget(enemy, origin, forward,
-                maximumRange, farAngle, nearAngle))
-                continue;
-
-            Vector3 offset = enemy.AttackOrigin - origin;
-            float distance = offset.magnitude;
-            Vector3 horizontal = Vector3.ProjectOnPlane(offset, Vector3.up);
-            float angle = Vector3.Angle(forward, horizontal);
-            float score = distance + angle * .025f;
-            if (score >= bestScore)
-                continue;
-
-            best = enemy;
-            bestScore = score;
-        }
-
-        return best;
-    }
-
     private bool IsEligibleTarget(EnemyBase enemy, Vector3 origin,
-        Vector3 forward, float maximumRange, float farAngle, float nearAngle)
+        Vector3 forward, CombatGrappleSettings settings)
     {
-        if (enemy == null || !enemy.CanBeLockOnTarget)
-            return false;
-
+        if (enemy == null || !enemy.CanBeLockOnTarget) return false;
         Vector3 offset = enemy.AttackOrigin - origin;
+        if (!IsWithinArea(offset, forward, settings.assistCircleRadius,
+            settings.range, settings.assistAngle, settings.assistHeight)) return false;
         float distance = offset.magnitude;
+        if (distance <= .0001f) return true;
+        return !Physics.Raycast(origin, offset / distance, out RaycastHit hit,
+            distance, targetObstructionMask, QueryTriggerInteraction.Ignore) ||
+            (hit.collider != null && hit.collider.GetComponentInParent<EnemyBase>() == enemy);
+    }
+
+    internal static bool IsWithinArea(Vector3 offset, Vector3 forward,
+        float circleRadius, float coneRange, float coneHalfAngle, float height)
+    {
+        if (Mathf.Abs(offset.y) > Mathf.Max(0f, height) * .5f) return false;
         Vector3 horizontal = Vector3.ProjectOnPlane(offset, Vector3.up);
-        if (distance > maximumRange || horizontal.sqrMagnitude < .0001f)
-            return false;
-
-        float angle = Vector3.Angle(forward, horizontal);
-        return angle <= GetAssistAngleAtDistance(distance, maximumRange, farAngle, nearAngle) &&
-            !IsTargetOccluded(origin, enemy);
-    }
-
-    private bool IsTargetOccluded(Vector3 origin, EnemyBase enemy)
-    {
-        Vector3 toTarget = enemy.AttackOrigin - origin;
-        float distance = toTarget.magnitude;
-        if (!Physics.Raycast(origin, toTarget.normalized,
-            out RaycastHit hit, distance, targetObstructionMask,
-            QueryTriggerInteraction.Ignore))
-        {
-            return false;
-        }
-
-        return hit.collider != null &&
-            hit.collider.GetComponentInParent<EnemyBase>() != enemy;
-    }
-
-    private float GetAssistAngleAtDistance(float distance, float range,
-        float farAngle, float nearAngle)
-    {
-        float normalizedDistance = Mathf.Clamp01(
-            distance / Mathf.Max(.01f, range));
-        float angleProgress = targetAssistNearAngleDistanceCurve == null ||
-            targetAssistNearAngleDistanceCurve.length == 0
-            ? normalizedDistance
-            : targetAssistNearAngleDistanceCurve.Evaluate(normalizedDistance);
-        return Mathf.LerpUnclamped(nearAngle, farAngle, angleProgress);
+        float distanceSqr = horizontal.sqrMagnitude;
+        float circle = Mathf.Max(0f, circleRadius);
+        if (distanceSqr <= circle * circle) return true;
+        float range = Mathf.Max(0f, coneRange);
+        return distanceSqr <= range * range &&
+            Vector3.Angle(forward, horizontal) <= Mathf.Clamp(coneHalfAngle, 0f, 180f);
     }
 
     private Vector3 GetPlayerCenter()
     {
-        Vector3 centerOffset = characterController != null
-            ? characterController.center
-            : Vector3.zero;
-        return transform.position + transform.rotation * centerOffset;
+        if (characterController == null) characterController = GetComponent<PlayerCharacterController>();
+        return transform.position + transform.rotation *
+            (characterController != null ? characterController.center : Vector3.zero);
     }
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
-            !targetAssistEnabled)
-        {
-            return;
-        }
-
-        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-        if (forward.sqrMagnitude < .0001f)
-            return;
-        forward.Normalize();
-
-        Vector3 assistOrigin = GetPlayerCenter();
-        float groundY = characterController != null
-            ? characterController.bounds.min.y
-            : transform.position.y;
-        assistOrigin.y = groundY + .035f;
-        Quaternion areaRotation = Quaternion.LookRotation(forward, Vector3.up);
-        float range = Mathf.Max(.1f, targetAssistRange);
-        EnsureAssistAreaMesh();
-
-        Matrix4x4 previousMatrix = Gizmos.matrix;
-        Color previousColor = Gizmos.color;
-        Gizmos.matrix = Matrix4x4.TRS(
-            assistOrigin, areaRotation, new Vector3(range, 1f, range));
-        Gizmos.color = new Color(.62f, .08f, .95f, .34f);
-        if (assistAreaMesh != null &&
-            (targetAssistAngle > 0f || targetAssistNearAngle > 0f))
-        {
-            Gizmos.DrawMesh(assistAreaMesh);
-        }
-
-        Gizmos.matrix = previousMatrix;
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerCombat)) return;
+        Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        if (forward.sqrMagnitude < .0001f) return;
+        CombatGrappleSettings settings = GrappleSettings.Combat;
+        Vector3 center = GetPlayerCenter();
+        float halfHeight = Mathf.Max(0f, settings.assistHeight) * .5f;
+        Color previous = Gizmos.color;
         Gizmos.color = new Color(.82f, .42f, 1f, .98f);
-        DrawAssistBoundaries(assistOrigin, forward, range);
-        Gizmos.color = previousColor;
+        DrawArea(center + Vector3.up * halfHeight, forward, settings);
+        DrawArea(center - Vector3.up * halfHeight, forward, settings);
+        float circle = Mathf.Max(0f, settings.assistCircleRadius);
+        float range = Mathf.Max(0f, settings.range);
+        float angle = Mathf.Clamp(settings.assistAngle, 0f, 180f);
+        DrawVertical(center + forward * circle, halfHeight);
+        DrawVertical(center - forward * circle, halfHeight);
+        DrawVertical(center + Quaternion.AngleAxis(-angle, Vector3.up) * forward * range, halfHeight);
+        DrawVertical(center + Quaternion.AngleAxis(angle, Vector3.up) * forward * range, halfHeight);
+        Gizmos.color = previous;
     }
 
-    private void EnsureAssistAreaMesh()
+    private static void DrawArea(Vector3 origin, Vector3 forward, CombatGrappleSettings settings)
     {
-        if (assistAreaMesh != null &&
-            Mathf.Approximately(assistAreaMeshAngle, targetAssistAngle) &&
-            Mathf.Approximately(assistAreaMeshNearAngle, targetAssistNearAngle) &&
-            assistAreaMeshCurveHash == GetAngleCurveHash())
-        {
-            return;
-        }
-
-        if (assistAreaMesh == null)
-        {
-            assistAreaMesh = new Mesh
-            {
-                name = "Player Target Assist Ground Sector",
-                hideFlags = HideFlags.HideAndDontSave
-            };
-        }
-
-        const int radialSegments = 24;
-        const int angularSegments = 32;
-        Vector3[] vertices = new Vector3[
-            1 + radialSegments * (angularSegments + 1)];
-        int[] triangles = new int[
-            angularSegments * 3 +
-            (radialSegments - 1) * angularSegments * 6];
-        vertices[0] = Vector3.zero;
-
-        int VertexIndex(int radialIndex, int angleIndex) =>
-            1 + (radialIndex - 1) * (angularSegments + 1) + angleIndex;
-
-        for (int radialIndex = 1; radialIndex <= radialSegments; radialIndex++)
-        {
-            float radius = radialIndex / (float)radialSegments;
-            float halfAngle = GetAssistAngleAtDistance(
-                radius * targetAssistRange, targetAssistRange,
-                targetAssistAngle, targetAssistNearAngle);
-            for (int angleIndex = 0; angleIndex <= angularSegments; angleIndex++)
-            {
-                float angle = Mathf.Lerp(-halfAngle, halfAngle,
-                    angleIndex / (float)angularSegments) * Mathf.Deg2Rad;
-                vertices[VertexIndex(radialIndex, angleIndex)] =
-                    new Vector3(Mathf.Sin(angle) * radius, 0f,
-                        Mathf.Cos(angle) * radius);
-            }
-        }
-
-        int triangleIndex = 0;
-        for (int angleIndex = 0; angleIndex < angularSegments; angleIndex++)
-        {
-            triangles[triangleIndex++] = 0;
-            triangles[triangleIndex++] = VertexIndex(1, angleIndex);
-            triangles[triangleIndex++] = VertexIndex(1, angleIndex + 1);
-        }
-
-        for (int radialIndex = 2; radialIndex <= radialSegments; radialIndex++)
-        {
-            for (int angleIndex = 0; angleIndex < angularSegments; angleIndex++)
-            {
-                int innerStart = VertexIndex(radialIndex - 1, angleIndex);
-                int innerNext = VertexIndex(radialIndex - 1, angleIndex + 1);
-                int outerStart = VertexIndex(radialIndex, angleIndex);
-                int outerNext = VertexIndex(radialIndex, angleIndex + 1);
-
-                triangles[triangleIndex++] = innerStart;
-                triangles[triangleIndex++] = outerStart;
-                triangles[triangleIndex++] = innerNext;
-                triangles[triangleIndex++] = innerNext;
-                triangles[triangleIndex++] = outerStart;
-                triangles[triangleIndex++] = outerNext;
-            }
-        }
-
-        assistAreaMesh.Clear();
-        assistAreaMesh.vertices = vertices;
-        assistAreaMesh.triangles = triangles;
-        assistAreaMesh.RecalculateNormals();
-        assistAreaMesh.RecalculateBounds();
-        assistAreaMeshAngle = targetAssistAngle;
-        assistAreaMeshNearAngle = targetAssistNearAngle;
-        assistAreaMeshCurveHash = GetAngleCurveHash();
+        float circle = Mathf.Max(0f, settings.assistCircleRadius);
+        float range = Mathf.Max(0f, settings.range);
+        float angle = Mathf.Clamp(settings.assistAngle, 0f, 180f);
+        DrawArc(origin, forward, circle, 180f);
+        DrawArc(origin, forward, range, angle);
+        Gizmos.DrawLine(origin, origin + Quaternion.AngleAxis(-angle, Vector3.up) * forward * range);
+        Gizmos.DrawLine(origin, origin + Quaternion.AngleAxis(angle, Vector3.up) * forward * range);
     }
 
-    private int GetAngleCurveHash()
+    private static void DrawArc(Vector3 origin, Vector3 forward, float radius, float halfAngle)
     {
-        if (targetAssistNearAngleDistanceCurve == null)
-            return 0;
-
-        unchecked
+        const int segments = 48;
+        Vector3 previous = origin + Quaternion.AngleAxis(-halfAngle, Vector3.up) * forward * radius;
+        for (int i = 1; i <= segments; i++)
         {
-            int hash = 17;
-            foreach (Keyframe key in targetAssistNearAngleDistanceCurve.keys)
-            {
-                hash = hash * 31 + key.time.GetHashCode();
-                hash = hash * 31 + key.value.GetHashCode();
-                hash = hash * 31 + key.inTangent.GetHashCode();
-                hash = hash * 31 + key.outTangent.GetHashCode();
-            }
-            return hash;
+            float angle = Mathf.Lerp(-halfAngle, halfAngle, i / (float)segments);
+            Vector3 point = origin + Quaternion.AngleAxis(angle, Vector3.up) * forward * radius;
+            Gizmos.DrawLine(previous, point);
+            previous = point;
         }
     }
 
-    private void DrawAssistBoundaries(Vector3 origin, Vector3 forward,
-        float range)
-    {
-        const int radialSegments = 48;
-        Vector3 previousLeft = origin;
-        Vector3 previousRight = origin;
-        for (int index = 1; index <= radialSegments; index++)
-        {
-            float distance = range * index / radialSegments;
-            float angle = GetAssistAngleAtDistance(distance, targetAssistRange,
-                targetAssistAngle, targetAssistNearAngle);
-            Vector3 left = origin +
-                Quaternion.AngleAxis(-angle, Vector3.up) * forward * distance;
-            Vector3 right = origin +
-                Quaternion.AngleAxis(angle, Vector3.up) * forward * distance;
-            Gizmos.DrawLine(previousLeft, left);
-            Gizmos.DrawLine(previousRight, right);
-            previousLeft = left;
-            previousRight = right;
-        }
-
-        const int arcSegments = 48;
-        Vector3 previousArcPoint = origin +
-            Quaternion.AngleAxis(-targetAssistAngle, Vector3.up) * forward * range;
-        for (int index = 1; index <= arcSegments; index++)
-        {
-            float angle = Mathf.Lerp(-targetAssistAngle,
-                targetAssistAngle, index / (float)arcSegments);
-            Vector3 point = origin +
-                Quaternion.AngleAxis(angle, Vector3.up) * forward * range;
-            Gizmos.DrawLine(previousArcPoint, point);
-            previousArcPoint = point;
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (assistAreaMesh == null)
-            return;
-
-        Destroy(assistAreaMesh);
-        assistAreaMesh = null;
-    }
+    private static void DrawVertical(Vector3 point, float halfHeight) =>
+        Gizmos.DrawLine(point - Vector3.up * halfHeight, point + Vector3.up * halfHeight);
 }

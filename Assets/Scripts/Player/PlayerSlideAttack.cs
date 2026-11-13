@@ -195,7 +195,7 @@ public class PlayerSlideAttack : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying ||
-            !PlayerDebugToolkitHUD.IsVisible ||
+            !DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerCombat) ||
             !IsActive)
             return;
 

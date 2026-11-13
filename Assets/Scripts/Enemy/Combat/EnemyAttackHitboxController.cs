@@ -261,7 +261,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible)
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyCombat))
             return;
         Gizmos.color = Color.red;
         foreach (DebugVolume volume in debugVolumes)

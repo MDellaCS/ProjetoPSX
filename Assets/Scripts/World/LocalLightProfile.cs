@@ -23,13 +23,13 @@ public enum LocalLightFlickerMode
 [Serializable]
 public sealed class LocalLightFlicker
 {
-    [Tooltip("Liga a oscilacao. Enquanto ligada, a intensidade varia entre Intensidade Minima e Maxima e ignora a Intensidade base.")]
+    [Tooltip("Liga a oscilação de intensidade e alcance em relação aos valores base desta luz.")]
     public bool enabled;
     [Tooltip("Formato da oscilacao: Smooth (chama), Jitter (saltos), Pulse (seno) ou Failing (lampada com defeito).")]
     public LocalLightFlickerMode mode = LocalLightFlickerMode.Smooth;
-    [Tooltip("Menor intensidade atingida pela oscilacao, na mesma escala da Intensidade. Pode ser zero para a luz apagar por completo.")]
+    [Tooltip("Multiplicador mínimo da intensidade base: 0 apaga a luz, 0,5 usa metade e 1 mantém a intensidade base.")]
     [Min(0f)] public float minimumIntensity = .6f;
-    [Tooltip("Maior intensidade atingida pela oscilacao, na mesma escala da Intensidade.")]
+    [Tooltip("Multiplicador máximo da intensidade base: 1 mantém a intensidade base e 1,2 aumenta o brilho em 20%.")]
     [Min(0f)] public float maximumIntensity = 1.2f;
     [Tooltip("Rapidez da oscilacao, em ciclos por segundo aproximados. Em Failing, e a chance de falha por segundo.")]
     [Min(0f)] public float speed = 6f;
@@ -120,7 +120,7 @@ public sealed class LocalLightDefinition
     [Range(1f, 179f)] public float spotAngle = 45f;
     [Tooltip("Abertura interna do cone Spot, em graus. Entre o angulo interno e o externo a luz se apaga; valores proximos criam borda dura.")]
     [Range(0f, 179f)] public float innerSpotAngle = 30f;
-    [Tooltip("Oscilacao opcional da intensidade entre um minimo e um maximo.")]
+    [Tooltip("Oscilação opcional de intensidade e alcance em relação aos valores base da luz.")]
     public LocalLightFlicker flicker = new();
 
     public void Validate()

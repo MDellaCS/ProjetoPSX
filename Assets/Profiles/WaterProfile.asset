@@ -21,16 +21,16 @@ MonoBehaviour:
   shallowAttackMovementMultiplier: 0.6
   shallowAcceleration: 45
   shallowDeceleration: 35
-  deepAcceleration: 14
-  deepDeceleration: 8
+  deepAcceleration: 7
+  deepDeceleration: 3
   deepJumpCompensatesDepth: 1
   deepJumpExitBoost: 2.5
-  deepSpeedMultiplier: 0.3
+  deepSpeedMultiplier: 0.4
   floatFeetDepth: 1.69
-  floatSpringFrequency: 6
+  floatSpringFrequency: 6.07
   floatMaxVerticalSpeed: 6
   floatBobbingEnabled: 1
-  floatBobbingScale: 1
+  floatBobbingScale: 0.33
   deepAllowsDash: 0
   deepAllowsAttacks: 0
   coolsHeatInShallowWater: 1

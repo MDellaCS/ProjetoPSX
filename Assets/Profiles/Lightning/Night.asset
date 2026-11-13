@@ -14,15 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RetroEnvironmentProfile
   ambientSkyColor: {r: 0.0754717, g: 0.06087576, b: 0.06087576, a: 1}
   ambientGroundColor: {r: 0.066037714, g: 0.05825025, b: 0.05825025, a: 1}
-  ambientIntensity: 1.79
+  ambientIntensity: 6.74
   unityReflectionIntensity: 0
   fogEnabled: 0
-  fogColor: {r: 0.3, g: 0.31, b: 0.3, a: 1}
+  fogColor: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
   fogCenter: 1
-  fogStart: 5.3
-  fogEnd: 48.2
-  fogMaxOpacity: 0.884
-  fogLightPierce: 0.436
-  heightFog: 1
+  fogStart: 0
+  fogEnd: 56.7
+  fogMaxOpacity: 0.598
+  fogLightPierce: 0.29
+  heightFog: 0
   heightFogBaseOffset: 3.15
   heightFogThickness: 15.6

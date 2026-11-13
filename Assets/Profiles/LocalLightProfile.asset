@@ -14,25 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalLightProfile
   lights:
   - enabled: 1
-    shape: 0
-    localPosition: {x: -0.24, y: 1.34, z: 0.22}
+    shape: 1
+    localPosition: {x: -0.24, y: 1.34, z: 0}
     localEulerAngles: {x: 0, y: 0, z: 0}
-    color: {r: 1, g: 0.37177002, b: 0, a: 1}
-    intensity: 10.5
-    range: 55.3
+    color: {r: 1, g: 0.55400765, b: 0.2783019, a: 1}
+    intensity: 23.6
+    range: 91.9
     coreRadius: 0
-    falloffExponent: 1.39
-    bands: 13
-    bandSegments: 11
-    wrap: 0.081
+    falloffExponent: 4
+    bands: 6
+    bandSegments: 8
+    wrap: 0.467
     spotAngle: 179
-    innerSpotAngle: 66
+    innerSpotAngle: 124
     flicker:
       enabled: 1
       mode: 0
-      minimumIntensity: 8
-      maximumIntensity: 11.56
-      speed: 1
-      updatesPerSecond: 94
-      rangeVariation: 0.017
-      failureDuration: 1
+      minimumIntensity: 0.7
+      maximumIntensity: 1.3
+      speed: 0.3
+      updatesPerSecond: 18
+      rangeVariation: 0.051
+      failureDuration: 5.5

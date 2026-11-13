@@ -26,7 +26,7 @@ public static class InteractionSystem
 
     internal static void Register(InteractableBase item)
     {
-        if (item == null)
+        if (item == null || item is HandLadder ladder && !ladder.IsClimbable)
             return;
         if (!items.Contains(item))
             items.Add(item);

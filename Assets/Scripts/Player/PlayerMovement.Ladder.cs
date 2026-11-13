@@ -89,7 +89,7 @@ public partial class PlayerMovement
     private bool HandleLadderClimb()
     {
         HandLadder ladder = activeLadder;
-        if (ladder == null || !ladder.isActiveAndEnabled)
+        if (ladder == null || !ladder.isActiveAndEnabled || !ladder.IsClimbable)
         {
             FinishLadderClimb();
             return true;

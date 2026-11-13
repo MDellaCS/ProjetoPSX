@@ -629,7 +629,9 @@ public class PlayerHeat : MonoBehaviour
     public void DebugAdjustHeat(float amount)
     {
         if (!Debug.isDebugBuild || !IsHeatModeActive || IsBurning) return;
+        float previousHeat = currentHeat;
         currentHeat = Mathf.Clamp(currentHeat + amount, MinHeat, MaxHeat);
+        PlayHeatNotchSounds(previousHeat, currentHeat);
         if (amount > 0f) RegisterHeatGain();
         ResetHeatCoolingRamp();
     }
@@ -646,24 +648,12 @@ public class PlayerHeat : MonoBehaviour
 
     private void PlayHeatNotchSounds(float previousHeat, float nextHeat)
     {
-        int previousNotch = Mathf.FloorToInt(Mathf.Abs(previousHeat) / HeatPerNotch + .0001f);
-        int nextNotch = Mathf.FloorToInt(Mathf.Abs(nextHeat) / HeatPerNotch + .0001f);
+        int previousNotch = Mathf.FloorToInt(Mathf.Abs(previousHeat) / HeatPerNotch + .0001f) * (previousHeat < 0f ? -1 : 1);
+        int nextNotch = Mathf.FloorToInt(Mathf.Abs(nextHeat) / HeatPerNotch + .0001f) * (nextHeat < 0f ? -1 : 1);
         if (previousNotch == nextNotch)
             return;
 
-        int direction = nextNotch > previousNotch ? 1 : -1;
-        for (int notch = previousNotch + direction; direction > 0
-            ? notch <= nextNotch : notch >= nextNotch; notch += direction)
-        {
-            // O notch zero e apenas a transicao entre Heat positivo e Cold.
-            if (notch == 0)
-                continue;
-            // Ao perder um notch, a nota representa o nivel que acabou de ser
-            // deixado. Assim a descida de 2x para 1x toca a nota de 2x.
-            int soundedNotch = direction < 0 ? Mathf.Abs(notch) + 1 : Mathf.Abs(notch);
-            SfxAudio.PlayHeatNotch(direction > 0,
-                soundedNotch, transform.position);
-        }
+        SfxAudio.PlayHeatNotch(previousNotch, nextNotch, transform.position);
     }
 
     private void CheckColdDeath()

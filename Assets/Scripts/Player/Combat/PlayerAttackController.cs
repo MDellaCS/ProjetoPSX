@@ -129,27 +129,15 @@ public sealed class PlayerAttackController : MonoBehaviour
             : 0f;
         EnemyBase assistedTarget = null;
         Vector3 assistedTargetPosition = default;
-        float targetAssistRange = definition.UsesTargetAssistTrajectory &&
-            targetAssist != null
-            ? targetAssist.MaximumRange
-            : definition.GetTargetAssistRange(moveset != null
-                ? moveset.targetAssistRangePadding : 0f);
-        // O gancho de combate tem alcance e mira proprios (GrappleSettings.Combat).
-        bool hasAssistedTarget = targetAssist != null && (isGrappleAttack
-            ? targetAssist.TryCaptureCombatGrappleTarget(out assistedTarget,
-                out assistedTargetPosition)
-            : targetAssist.TryCaptureTarget(targetAssistRange, out assistedTarget,
-                out assistedTargetPosition));
-        if (hasAssistedTarget)
+        // Somente o grapple captura um alvo para orientar sua hitbox.
+        if (isGrappleAttack && targetAssist != null &&
+            targetAssist.TryCaptureCombatGrappleTarget(out assistedTarget,
+                out assistedTargetPosition))
         {
-            if (isGrappleAttack)
-            {
-                Vector3 direction = Vector3.ProjectOnPlane(
-                    assistedTargetPosition - GetPlayerCenter(), Vector3.up);
-                if (direction.sqrMagnitude > .0001f)
-                    transform.rotation =
-                        Quaternion.LookRotation(direction.normalized);
-            }
+            Vector3 direction = Vector3.ProjectOnPlane(
+                assistedTargetPosition - GetPlayerCenter(), Vector3.up);
+            if (direction.sqrMagnitude > .0001f)
+                transform.rotation = Quaternion.LookRotation(direction.normalized);
         }
 
         CurrentAttack = new PlayerAttackRuntime(definition, heat,
@@ -202,18 +190,13 @@ public sealed class PlayerAttackController : MonoBehaviour
         float extendedArmHeightOffset = moveset != null
             ? moveset.extendedArmHitboxHeightOffset : 0f;
 
-        EnemyBase assistedTarget = null;
-        Vector3 assistedTargetPosition = default;
-        targetAssist?.TryCaptureTarget(out assistedTarget,
-            out assistedTargetPosition);
-
         // Somente a explosao de Burn recebe escala Heavy; sua carga especial
         // e capturada sem consumo. Outros eventos externos nao usam Heat.
         PlayerHeat attackHeat = definition.attackId == "BurnExplosion"
             ? heat : null;
         CurrentAttack = new PlayerAttackRuntime(definition, attackHeat,
             rotationSpeed, extendedArmRadius, extendedArmHeightOffset,
-            false, assistedTarget, assistedTargetPosition);
+            false, null, default);
         RecordAttackStart(definition);
         CurrentPhase = PlayerAttackPhase.Windup;
         phaseTimer = CurrentAttack.WindupDuration;

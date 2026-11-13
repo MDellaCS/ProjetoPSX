@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public enum HandLadderPrefabAxis
 {
@@ -47,6 +48,8 @@ public sealed class HandLadderProfile : ScriptableObject
     public float rungRollDegrees;
     [Tooltip("Espessura do degrau, em metros, nos dois eixos perpendiculares ao comprimento. 0 mantem a espessura original do prefab.")]
     [Min(0f)] public float rungThickness = .06f;
+    [Tooltip("Gera os dois trilhos laterais nas escadas deste perfil quando um prefab de trilho estiver configurado.")]
+    public bool generateSideRails = true;
     [Tooltip("Prefab opcional para os dois trilhos laterais. O eixo configurado abaixo e alinhado com a subida; deixe vazio para gerar somente os degraus.")]
     public GameObject railPrefab;
     [Tooltip("Eixo local do prefab que percorre o comprimento dos trilhos. Este eixo e alinhado com a direcao de subida.")]
@@ -59,8 +62,23 @@ public sealed class HandLadderProfile : ScriptableObject
     [Header("Medidas")]
     [Tooltip("Distancia entre o centro de dois degraus consecutivos, em metros. O jogador sobe de espaco em espaco entre os degraus.")]
     [Min(.05f)] public float rungSpacing = .32f;
-    [Tooltip("Largura inicial da escada em metros. Cada instancia pode sobrescrever este valor.")]
-    [Min(.1f)] public float defaultWidth = 1.2f;
+    [Tooltip("Espaco adicional, em metros, somado ao espacamento entre os degraus das escadas deste perfil.")]
+    [Min(0f)] public float extraGap;
+    [FormerlySerializedAs("defaultWidth")]
+    [Tooltip("Largura, em metros, das escadas deste perfil; afeta degraus, trilhos e area de escalada.")]
+    [Min(.1f)] public float width = 1.2f;
+    [Tooltip("Ajusta automaticamente os segmentos à curvatura: usa menos trechos em linhas retas e mais em curvas.")]
+    public bool autoSampleSpacing = true;
+    [Tooltip("Distância máxima entre amostras ao medir a superfície. No modo automático, limita a precisão da medição antes de simplificar os segmentos.")]
+    [Min(.1f)] public float sampleSpacing = .3f;
+
+    [Header("Distancia da superficie")]
+    [Tooltip("Distancia maxima, em metros, para procurar a parede ao encaixar uma escada na superficie.")]
+    [Min(.1f)] public float surfaceSearchDistance = 2f;
+    [Tooltip("Folga visivel, em metros, entre a parede e as barras ou degraus da escada encaixada.")]
+    [Min(0f)] public float surfaceStandoff = .1f;
+    [Tooltip("Distancia, em metros, entre o plano da escada gerada em um tubo e a parede do tubo.")]
+    [Min(0f)] public float wallClearance = .06f;
 
     [Header("Escalada")]
     [Tooltip("Velocidade ao longo do eixo de subida, em metros por segundo.")]

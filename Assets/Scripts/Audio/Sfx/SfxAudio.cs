@@ -6,6 +6,11 @@ using UnityEngine;
 /// </summary>
 public sealed class SfxAudio : AudioModule<SfxAudioSettings>
 {
+    private AudioPlaybackHandle heatNotchPlayback;
+    private AudioClip pendingHeatNotchClip;
+    private Vector3 pendingHeatNotchPosition;
+    private bool heatNotchPending;
+
     /// <summary>Configuracao do SFX, sem precisar de nenhum objeto na cena.</summary>
     public static SfxAudioSettings CurrentSettings => GetModule<SfxAudio>().Settings;
 
@@ -37,9 +42,24 @@ public sealed class SfxAudio : AudioModule<SfxAudioSettings>
     }
 
     /// <summary>Toca o som configurado do notch (ganho ou perda) de Heat.</summary>
-    public static void PlayHeatNotch(bool gained, int notchIndex, Vector3 position)
+    public static void PlayHeatNotch(int previousNotch, int nextNotch, Vector3 position)
     {
         SfxAudio module = GetModule<SfxAudio>();
-        module.PlayCue(module.Settings.GetHeatNotchCue(gained, notchIndex), position);
+        module.heatNotchPlayback?.Stop();
+        module.heatNotchPlayback = null;
+        module.pendingHeatNotchClip = module.Settings.GetHeatNotchClip(previousNotch, nextNotch);
+        module.pendingHeatNotchPosition = position;
+        if (module.heatNotchPending) return;
+        module.heatNotchPending = true;
+        module.StartCoroutine(module.PlayPendingHeatNotch());
+    }
+
+    private System.Collections.IEnumerator PlayPendingHeatNotch()
+    {
+        yield return new WaitForEndOfFrame();
+        heatNotchPending = false;
+        heatNotchPlayback = PlayClip(pendingHeatNotchClip, Settings.notchVolume, 1f,
+            pendingHeatNotchPosition, Settings.notchPriority, false);
+        pendingHeatNotchClip = null;
     }
 }

@@ -5,12 +5,15 @@ using UnityEngine;
 public sealed class CombatGrappleSettings
 {
     [Header("Alcance e assistencia de mira")]
-    [Tooltip("Distancia maxima, em metros, para o ataque de grapple escolher um inimigo (e para o indicador mostra-lo).")]
-    [Min(.1f)] public float range = 20f;
-    [Tooltip("Abertura horizontal da mira assistida, em graus de cada lado, quando o inimigo esta no limite do alcance.")]
+    [Tooltip("Alcance horizontal do cone frontal de assistencia do grapple, em metros, medido a partir do centro do jogador.")]
+    [Min(0f)] public float range = 20f;
+    [Tooltip("Abertura do cone frontal em graus para cada lado da direcao do jogador.")]
     [Range(0f, 180f)] public float assistAngle = 20f;
-    [Tooltip("Abertura horizontal da mira assistida, em graus de cada lado, quando o inimigo esta colado no jogador. Interpola ate Assist Angle com a distancia.")]
-    [Range(0f, 180f)] public float assistNearAngle = 35f;
+    [Tooltip("Raio horizontal, em metros, da area circular ao redor do jogador que tambem seleciona inimigos para o grapple.")]
+    [Min(0f)] public float assistCircleRadius = 3f;
+    [Tooltip("Altura total, em metros, da area de assistencia do grapple, dividida igualmente acima e abaixo do centro do jogador.")]
+    [Min(0f)] public float assistHeight = 8f;
+    [HideInInspector] public float assistNearAngle = 35f;
 
     [Header("Puxao")]
     [Tooltip("Distancia minima entre as superficies do jogador e do inimigo ao terminar o puxao, em metros.")]

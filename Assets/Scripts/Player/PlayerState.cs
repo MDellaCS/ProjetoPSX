@@ -25,6 +25,10 @@ public class PlayerState : MonoBehaviour
     [Header("Debug - State Colors")]
     [SerializeField] private Renderer playerRenderer;
 
+    [Header("Iluminacao")]
+    [Tooltip("Modo de iluminação do jogador e seus renderizadores. Global respeita os materiais e o Retro Lighting Settings.")]
+    [SerializeField] private RetroLightingRendererOverride lightingModeOverride = RetroLightingRendererOverride.Pixel;
+
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color attackingColor = Color.yellow;
     [SerializeField] private Color dashingColor = Color.cyan;
@@ -85,6 +89,11 @@ public class PlayerState : MonoBehaviour
     void Awake()
     {
         playerHeat = GetComponent<PlayerHeat>();
+        MaterialPropertyBlock lightingBlock = new();
+        RetroLightingOverride.ApplyToRenderer(playerRenderer, lightingModeOverride, lightingBlock);
+        foreach (Renderer childRenderer in GetComponentsInChildren<Renderer>(true))
+            if (childRenderer != playerRenderer)
+                RetroLightingOverride.ApplyToRenderer(childRenderer, lightingModeOverride, lightingBlock);
         CacheDebugMaterials();
 
         UpdateStateColor();

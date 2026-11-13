@@ -31,6 +31,8 @@ public sealed class PlayerHeatLightDriver : MonoBehaviour
     private float rangeVelocity;
     private float currentIntensityMultiplier;
     private float currentRangeMultiplier;
+    private PlayerMovesetController movesetController;
+    private bool heatModifiersApplied;
 
     private void Awake() => ResolveReferences();
 
@@ -41,27 +43,34 @@ public sealed class PlayerHeatLightDriver : MonoBehaviour
         currentRangeMultiplier = minimumRangeMultiplier;
         intensityVelocity = 0f;
         rangeVelocity = 0f;
-        Apply(minimumIntensityMultiplier);
+        ResetModifiers();
     }
 
     private void OnDisable()
     {
-        if (emitter != null)
-        {
-            emitter.DynamicIntensityMultiplier = 1f;
-            emitter.SetRangeMultiplier(1f);
-        }
+        ResetModifiers();
     }
 
     private void Update()
     {
         ResolveReferences();
-        if (emitter == null || heat == null)
+        if (emitter == null)
             return;
 
-        float normalizedHeat = heat.IsHeatModeActive
-            ? Mathf.Clamp01(heat.CurrentHeat / Mathf.Max(1f, heat.MaxHeat))
-            : 0f;
+        if (heat == null || movesetController == null || movesetController.Moveset == null ||
+            !heat.IsHeatModeActive)
+        {
+            if (heatModifiersApplied)
+            {
+                ResetModifiers();
+                currentIntensityMultiplier = minimumIntensityMultiplier;
+                currentRangeMultiplier = minimumRangeMultiplier;
+                intensityVelocity = rangeVelocity = 0f;
+            }
+            return;
+        }
+
+        float normalizedHeat = Mathf.Clamp01(heat.CurrentHeat / Mathf.Max(1f, heat.MaxHeat));
         float targetIntensity = Mathf.Lerp(minimumIntensityMultiplier, maximumIntensityMultiplier, normalizedHeat);
         float targetRange = Mathf.Lerp(minimumRangeMultiplier, maximumRangeMultiplier, normalizedHeat);
 
@@ -80,6 +89,17 @@ public sealed class PlayerHeatLightDriver : MonoBehaviour
 
         float pulse = normalizedHeat * maximumHeatPulse * Mathf.Sin(Time.time * pulseFrequency * Mathf.PI * 2f);
         Apply(currentIntensityMultiplier * (1f + pulse));
+        heatModifiersApplied = true;
+    }
+
+    private void ResetModifiers()
+    {
+        if (emitter != null)
+        {
+            emitter.DynamicIntensityMultiplier = 1f;
+            emitter.SetRangeMultiplier(1f);
+        }
+        heatModifiersApplied = false;
     }
 
     private void Apply(float intensityMultiplier)
@@ -96,5 +116,7 @@ public sealed class PlayerHeatLightDriver : MonoBehaviour
             emitter = GetComponent<LocalLightEmitter>();
         if (heat == null)
             heat = GetComponent<PlayerHeat>();
+        if (movesetController == null)
+            movesetController = GetComponent<PlayerMovesetController>();
     }
 }

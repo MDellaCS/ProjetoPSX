@@ -4,11 +4,19 @@ public enum RetroLightingModeOverride
 {
     [Tooltip("Cada material usa o proprio Lighting Mode.")]
     PerMaterial,
-    [Tooltip("Forca iluminacao por vertice (Gouraud) em todos os materiais Retro Lit.")]
+    [Tooltip("Usa iluminacao por vertice (Gouraud) como padrao dos materiais Retro Lit.")]
     Vertex,
-    [Tooltip("Forca iluminacao em grade de mundo em todos os materiais Retro Lit.")]
+    [Tooltip("Usa iluminacao em grade de mundo como padrao dos materiais Retro Lit.")]
     Grid,
-    [Tooltip("Forca iluminacao por pixel em todos os materiais Retro Lit.")]
+    [Tooltip("Usa iluminacao por pixel como padrao dos materiais Retro Lit.")]
+    Pixel
+}
+
+public enum RetroLightingRendererOverride
+{
+    Global,
+    Vertex,
+    Grid,
     Pixel
 }
 
@@ -28,7 +36,7 @@ public sealed class RetroLightingSettings : ScriptableObject
     [Min(0f)] public float localLightIntensityMultiplier = 1f;
 
     [Header("Estilo")]
-    [Tooltip("Sobrescreve o Lighting Mode de todos os materiais Retro Lit. Per Material respeita cada material. Vertex so ilumina bem malhas subdivididas; em chao e paredes grandes use Grid ou Pixel.")]
+    [Tooltip("Modo padrao dos materiais Retro Lit. Cada material ou objeto com override pode escolher outro modo. Per Material usa o Lighting Mode de cada material.")]
     public RetroLightingModeOverride lightingModeOverride = RetroLightingModeOverride.PerMaterial;
     [Tooltip("Tamanho da celula da grade, em metros, usado quando o modo Grid e forcado. Zero usa o valor de cada material.")]
     [Min(0f)] public float gridCellSizeOverride;
