@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="debug-level-row">
+        <ui:Label name="level-name" class="debug-level-name" />
+        <ui:Button name="level-minus" text="-" />
+        <ui:Label name="level-value" class="debug-level-value" />
+        <ui:Button name="level-plus" text="+" />
+    </ui:VisualElement>
+</ui:UXML>

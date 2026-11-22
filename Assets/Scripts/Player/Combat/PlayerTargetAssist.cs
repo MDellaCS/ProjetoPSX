@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>Seleciona o alvo do grapple de combate e do seu indicador.</summary>
 [DisallowMultipleComponent]
@@ -14,7 +14,6 @@ public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
     [SerializeField] private LayerMask targetObstructionMask = Physics.DefaultRaycastLayers;
 
     private PlayerCharacterController characterController;
-    private PlayerLockOn lockOn;
     private PlayerState playerState;
 
     public int GrappleTargetPriority => 200;
@@ -22,7 +21,6 @@ public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
     private void Awake()
     {
         characterController = GetComponent<PlayerCharacterController>();
-        lockOn = GetComponent<PlayerLockOn>();
         playerState = GetComponent<PlayerState>();
     }
 
@@ -57,16 +55,13 @@ public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
         return true;
     }
 
-    /// <summary>Prioriza o lock-on elegivel e, depois, o melhor inimigo visivel na area do grapple.</summary>
+    /// <summary>Seleciona o melhor inimigo visivel na area do grapple.</summary>
     public EnemyBase FindCombatGrappleTarget()
     {
         CombatGrappleSettings settings = GrappleSettings.Combat;
         Vector3 origin = GetPlayerCenter();
         Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
         if (forward.sqrMagnitude < .0001f) return null;
-        if (lockOn == null) lockOn = GetComponent<PlayerLockOn>();
-        EnemyBase locked = lockOn != null ? lockOn.LockedEnemy : null;
-        if (IsEligibleTarget(locked, origin, forward, settings)) return locked;
 
         EnemyBase best = null;
         float bestScore = float.PositiveInfinity;
@@ -93,7 +88,7 @@ public sealed class PlayerTargetAssist : MonoBehaviour, IGrappleTargetProvider
     private bool IsEligibleTarget(EnemyBase enemy, Vector3 origin,
         Vector3 forward, CombatGrappleSettings settings)
     {
-        if (enemy == null || !enemy.CanBeLockOnTarget) return false;
+        if (enemy == null || !enemy.CanBeCombatTarget) return false;
         Vector3 offset = enemy.AttackOrigin - origin;
         if (!IsWithinArea(offset, forward, settings.assistCircleRadius,
             settings.range, settings.assistAngle, settings.assistHeight)) return false;

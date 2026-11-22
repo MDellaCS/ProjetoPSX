@@ -15,6 +15,25 @@ public enum PlayerResourceMode
 }
 
 [Serializable]
+public sealed class PlayerPityMechanicSettings
+{
+    [Tooltip("Ativa a protecao de VitalOil deste moveset.")]
+    public bool enabled;
+    [Tooltip("Ativa o limite de VitalOil maximo que um unico golpe pode remover.")]
+    public bool limitDamage = true;
+    [Tooltip("Fracao maxima do VitalOil maximo que um golpe pode remover quando a protecao esta disponivel.")]
+    [Range(0f, 1f)] public float maxDamagePercent = .8f;
+    [Tooltip("Ativa a protecao contra um golpe letal quando o VitalOil esta acima do limite configurado.")]
+    public bool preventLethalDamage = true;
+    [Tooltip("Fracao minima do VitalOil maximo exigida antes do golpe para impedir a morte.")]
+    [Range(0f, 1f)] public float minimumVitalOilPercent = .3f;
+    [Tooltip("Fracao do VitalOil maximo preservada ao impedir um golpe letal.")]
+    [Range(0f, 1f)] public float survivorVitalOilPercent = .05f;
+    [Tooltip("Tempo em segundos ate ambas as protecoes poderem atuar novamente apos reduzir o dano de um golpe.")]
+    [Min(0f)] public float cooldownSeconds = 50f;
+}
+
+[Serializable]
 public class PlayerMoveTransition
 {
     [Tooltip("Botao que escolhe esta transicao.")]
@@ -69,6 +88,10 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     public string displayName = "Moveset";
     [Tooltip("Escolhe o recurso defensivo do moveset. Heat usa o sistema de calor; Health usa uma barra de vida tradicional e desativa as mecanicas de calor.")]
     public PlayerResourceMode resourceMode = PlayerResourceMode.Heat;
+    [Tooltip("Configura as protecoes de dano do VitalOil neste moveset.")]
+    public PlayerPityMechanicSettings pityMechanic = new();
+    [Tooltip("Ataque executado automaticamente durante o slide deste moveset. Vazio deixa o slide sem ataque.")]
+    public PlayerAttackDefinition slideAttack;
     [Tooltip("Tempo global sem novo input que classifica a proxima entrada como PAUSE.")]
     [Min(0f)] public float globalPauseDelay = .25f;
 

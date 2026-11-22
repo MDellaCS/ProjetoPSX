@@ -1,22 +1,14 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerGameOver : MonoBehaviour
 {
-    [Header("Interface")]
-    [Tooltip("Opcional. Se vazio, encontra o GameOverHUD global da cena.")]
-    [SerializeField] private GameOverHUD gameOverHUD;
-
-    [Header("Timing")]
-    [Tooltip("Tempo em segundos reais entre a morte e a exibicao da tela de Game Over.")]
-    [SerializeField] private float showDelay = 1.5f;
-
     private PlayerState playerState;
     private PlayerHeat playerHeat;
 
     private bool deathDetected;
     private bool gameOverVisible;
     private bool restartRequested;
-    private float deathTimer;
     private CorpseRun corpseRun;
 
     void Awake()
@@ -34,54 +26,41 @@ public class PlayerGameOver : MonoBehaviour
         if (!deathDetected)
         {
             deathDetected = true;
-            deathTimer = 0f;
+            SplashTextMessages.Request(SplashTextMessage.PlayerDied);
             if (corpseRun == null) corpseRun = CorpseRun.EnsureOn(gameObject);
             if (corpseRun != null) corpseRun.HandlePlayerDeath();
         }
 
-        if (!gameOverVisible)
-        {
-            deathTimer += Time.unscaledDeltaTime;
+        if (GamePauseController.IsPaused) return;
 
-            if (deathTimer >= showDelay)
-                ShowGameOver();
-        }
+        gameOverVisible = SplashTextMessages.DeathPresented;
 
-        if (!restartRequested && gameOverVisible && GameInput.RestartPressed)
+        if (!restartRequested && SplashTextMessages.DeathCompleted)
         {
-            RestartGame();
+            restartRequested = true;
+            StartCoroutine(RestartAfterLoading());
         }
     }
 
-    void ShowGameOver()
+    private IEnumerator RestartAfterLoading()
     {
-        gameOverVisible = true;
-        ResolveGameOverHUD();
+        LoadingScreenHUD loadingScreen = LoadingScreenHUD.Instance;
+        if (loadingScreen != null)
+        {
+            loadingScreen.Show();
+            yield return loadingScreen.WaitForFadeInComplete();
+        }
 
-        if (gameOverHUD != null)
-            gameOverHUD.Show(GetDeathMessage());
-    }
-
-    private string GetDeathMessage()
-    {
-        if (playerHeat == null || !playerHeat.IsHeatModeActive)
-            return "VOCE MORREU";
-
-        if (playerHeat.CurrentHeat <= playerHeat.MinHeat)
-            return "VOCE SUCUMBIU AO FRIO EXTREMO";
-
-        return "VOCE MORREU";
-    }
-
-    private void ResolveGameOverHUD()
-    {
-        if (gameOverHUD == null)
-            gameOverHUD = FindAnyObjectByType<GameOverHUD>();
+        RestartGame();
+        if (loadingScreen != null && FindAnyObjectByType<GameSceneLoader>() == null &&
+            !loadingScreen.IsLoading)
+            loadingScreen.HideAfterSceneReady();
     }
 
     private void RestartGame()
     {
         restartRequested = true;
+        SplashTextMessages.Reset();
 
         // O Player vive no GameRoot persistente e nao e recriado ao recarregar
         // uma fase. Limpa primeiro os estados da campanha anterior.
@@ -93,13 +72,10 @@ public class PlayerGameOver : MonoBehaviour
             progression.ReapplyActiveEffects();
         if (TryGetComponent(out PlayerMovement movement))
             movement.ResetForNewGame();
-        if (gameOverHUD != null)
-            gameOverHUD.Hide();
         GameTimeScaleEffects.ResetForGameRestart();
 
         deathDetected = false;
         gameOverVisible = false;
-        deathTimer = 0f;
         if (corpseRun != null) corpseRun.ResetAfterRestart();
 
         GameSceneLoader loader = FindAnyObjectByType<GameSceneLoader>();
@@ -119,11 +95,9 @@ public class PlayerGameOver : MonoBehaviour
 
     public void ResetForNewGame()
     {
+        SplashTextMessages.Reset();
         deathDetected = false;
         gameOverVisible = false;
         restartRequested = false;
-        deathTimer = 0f;
-        ResolveGameOverHUD();
-        if (gameOverHUD != null) gameOverHUD.Hide();
     }
 }

@@ -18,7 +18,8 @@ public sealed class EnemyHealth : MonoBehaviour
     }
 
     [Header("Health")]
-    [Tooltip("Vida maxima do inimigo.")]
+    [Tooltip("Quantidade de unidades de vida maxima do inimigo. O valor de cada unidade e definido em Combat Unit Settings.")]
+    [InspectorName("Vida maxima (unidades)")]
     [Min(1)] [SerializeField] private int maxHealth = 100;
     [Tooltip("Impede que a vida chegue a zero; util para bonecos de teste.")]
     [SerializeField] private bool isUnkillable;
@@ -65,7 +66,6 @@ public sealed class EnemyHealth : MonoBehaviour
     private readonly List<RendererColorState> enemyRenderers = new();
     private readonly HashSet<Renderer> cachedEnemyRenderers = new();
     private MaterialPropertyBlock colorBlock;
-    private DamageNumberSpawner damageNumbers;
     private readonly CombatPoiseState poise = new();
     private float staggerTimer;
     private bool isGuardBreakStagger;
@@ -73,6 +73,7 @@ public sealed class EnemyHealth : MonoBehaviour
     private bool isShowingGuardVisual;
     private float unkillableHealthRegenRemainder;
     private float nextCollisionDamageTime;
+    private int resolvedMaxHealth;
 
     private void Awake()
     {
@@ -81,11 +82,10 @@ public sealed class EnemyHealth : MonoBehaviour
 
     public bool IsDead { get; private set; }
     public int CurrentHealth { get; private set; }
-    public int MaxHealth => maxHealth;
+    public int MaxHealth => resolvedMaxHealth > 0 ? resolvedMaxHealth : CombatUnitSettings.EnemyHealth(maxHealth);
     public float CurrentPoise => poise.Current;
     public int MaxPoise => maxPoise;
-    public float HealthPercent => maxHealth > 0
-        ? Mathf.Clamp01((float)CurrentHealth / maxHealth) : 0f;
+    public float HealthPercent => Mathf.Clamp01((float)CurrentHealth / MaxHealth);
 
     /// <summary>Limita dano e Poise de colisao sem interferir na reacao fisica.</summary>
     internal bool TryConsumeCollisionDamageProtection(float duration)
@@ -114,12 +114,10 @@ public sealed class EnemyHealth : MonoBehaviour
         dodge = enemyDodge;
         gore = GetComponent<EnemyGore>();
         attackReflector = GetComponent<EnemyAttackReflector>();
-        CurrentHealth = maxHealth;
+        resolvedMaxHealth = CombatUnitSettings.EnemyHealth(maxHealth);
+        CurrentHealth = resolvedMaxHealth;
         poise.Initialize(maxPoise);
         CacheEnemyRenderers();
-        damageNumbers = GetComponent<DamageNumberSpawner>();
-        if (damageNumbers == null)
-            damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
         SetStateVisual(owner.CurrentState);
     }
 
@@ -136,7 +134,7 @@ public sealed class EnemyHealth : MonoBehaviour
     /// </summary>
     public void TickHealth()
     {
-        if (!isUnkillable || IsDead || CurrentHealth >= maxHealth)
+        if (!isUnkillable || IsDead || CurrentHealth >= MaxHealth)
         {
             unkillableHealthRegenRemainder = 0f;
             return;
@@ -150,7 +148,7 @@ public sealed class EnemyHealth : MonoBehaviour
             return;
 
         int healthBeforeHealing = CurrentHealth;
-        CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + healing);
+        CurrentHealth = (int)System.Math.Min(MaxHealth, (long)CurrentHealth + healing);
         if (CurrentHealth != healthBeforeHealing)
             owner.RaiseHealthChanged();
     }
@@ -184,7 +182,7 @@ public sealed class EnemyHealth : MonoBehaviour
         int healthBeforeDamage = CurrentHealth;
         CurrentHealth -= finalHitDamage;
         if (damage > 0)
-            damageNumbers?.ShowDamage(damage);
+            DamageNumberSpawner.ShowEnemyDamage(transform, damage);
         poiseResult = poise.ReceiveHit(poiseDamage, maxPoise);
         if (isGuardBreakStagger)
             poiseResult = default;
@@ -207,7 +205,7 @@ public sealed class EnemyHealth : MonoBehaviour
                 owner.RaiseHealthChanged();
                 CombatParticleSystem.ReportEnemyDamage(owner, damageDealt,
                     true, particleDirection, impactPosition, hasImpactPosition, gore,
-                    finalHitDamage, maxHealth);
+                    finalHitDamage, MaxHealth);
                 Die(damageDealt, resolvedDirection, particleDirection);
                 return true;
             }

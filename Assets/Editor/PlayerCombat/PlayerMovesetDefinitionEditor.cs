@@ -10,6 +10,9 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
 
         DrawField("displayName");
         DrawField("resourceMode");
+        DrawField("slideAttack");
+        if (serializedObject.FindProperty("resourceMode").enumValueIndex == (int)PlayerResourceMode.Heat)
+            DrawField("pityMechanic", true);
 
         MovesetUsage usage = GetUsage();
         if (usage.hasTransitions)

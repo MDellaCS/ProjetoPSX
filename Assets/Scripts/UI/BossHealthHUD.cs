@@ -1,154 +1,120 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-/// <summary>
-/// HUD de chefe em UI Toolkit. Um unico PanelRenderer e reutilizado pelo
-/// chefe atualmente ativo.
-/// </summary>
 [RequireComponent(typeof(PanelRenderer))]
-public class BossHealthHUD : MonoBehaviour
+public sealed class BossHealthHUD : MonoBehaviour
 {
-    [Header("References")]
+    [Tooltip("Painel que desenha as barras dos chefes ativos.")]
     [SerializeField] private PanelRenderer panelRenderer;
+    [Tooltip("Estrutura visual usada para o nome e a vida de cada chefe.")]
+    [SerializeField] private VisualTreeAsset rowTemplate;
 
-    private EnemyBase currentBoss;
-    private EnemyBase currentHealth;
-    private string currentBossName;
-
-    private VisualElement bossPanel;
-    private Label bossNameText;
-    private VisualElement healthFill;
-    private Label healthValueText;
-
-    private void Awake()
+    private sealed class Row
     {
-        if (panelRenderer == null)
-            panelRenderer = GetComponent<PanelRenderer>();
+        internal EnemyBase boss;
+        internal string name;
+        internal int health;
+        internal int maximum;
+        internal VisualElement element;
+        internal VisualElement fill;
+        internal Label value;
 
-        if (panelRenderer != null)
-            panelRenderer.RegisterUIReloadCallback(HandleUIReload);
+        internal void Paint()
+        {
+            if (fill == null) return;
+            fill.style.width = Length.Percent(maximum > 0 ? 100f * health / maximum : 0f);
+            value.text = health + " / " + maximum;
+        }
     }
 
-    private void OnDestroy()
-    {
-        UnsubscribeFromHealth();
+    private readonly List<Row> rows = new();
+    private VisualElement stack;
+    private VisualElement viewport;
 
-        if (panelRenderer != null)
-            panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
+    private void OnEnable()
+    {
+        if (panelRenderer == null) panelRenderer = GetComponent<PanelRenderer>();
+        panelRenderer.RegisterUIReloadCallback(Bind);
+    }
+
+    private void OnDisable()
+    {
+        panelRenderer.UnregisterUIReloadCallback(Bind);
+        Unbind();
+    }
+
+    private void Unbind()
+    {
+        viewport?.UnregisterCallback<GeometryChangedEvent>(FitStack);
+        stack?.UnregisterCallback<GeometryChangedEvent>(FitStack);
+        viewport = null;
+        stack = null;
+    }
+
+    private void FitStack(GeometryChangedEvent evt)
+    {
+        if (stack == null || stack.layout.height <= 0f) return;
+        float available = Mathf.Max(1f, viewport.layout.height - stack.layout.y - 8f);
+        float scale = Mathf.Min(1f, available / stack.layout.height);
+        stack.style.scale = new Scale(new Vector3(scale, scale, 1f));
+    }
+
+    private void Bind(PanelRenderer _, VisualElement root, int version)
+    {
+        Unbind();
+        viewport = root;
+        stack = root?.Q("boss-hud");
+        if (stack == null) return;
+        viewport.RegisterCallback<GeometryChangedEvent>(FitStack);
+        stack.RegisterCallback<GeometryChangedEvent>(FitStack);
+        stack.Clear();
+        foreach (Row row in rows) Build(row);
+    }
+
+    private void Build(Row row)
+    {
+        if (stack == null || rowTemplate == null) return;
+        var tree = rowTemplate.Instantiate();
+        row.element = tree.Q(className: "boss-row");
+        row.element.Q<Label>("boss-name").text = row.name;
+        row.fill = row.element.Q("boss-health-fill");
+        row.value = row.element.Q<Label>("boss-health-value");
+        stack.Add(row.element);
+        row.Paint();
     }
 
     public void Show(EnemyBase boss, string bossName)
     {
-        if (boss == null)
-            return;
+        if (boss == null) return;
+        foreach (Row existing in rows)
+            if (existing.boss == boss) return;
+        var row = new Row { boss = boss, name = bossName, health = boss.CurrentHealth,
+            maximum = boss.MaxHealth };
+        rows.Add(row);
+        Build(row);
+    }
 
-        if (currentBoss != boss)
+    public void SetHealth(EnemyBase boss, int current, int maximum)
+    {
+        foreach (Row row in rows)
         {
-            UnsubscribeFromHealth();
-            currentBoss = boss;
-            currentHealth = boss;
-
-            if (currentHealth != null)
-                currentHealth.HealthChanged += UpdateHealth;
+            if (!ReferenceEquals(row.boss, boss)) continue;
+            row.health = current;
+            row.maximum = maximum;
+            row.Paint();
+            return;
         }
-
-        currentBossName = string.IsNullOrWhiteSpace(bossName)
-            ? boss.name
-            : bossName;
-
-        RefreshVisuals();
-        SetVisible(true);
     }
 
     public void Hide(EnemyBase boss)
     {
-        if (boss != null && boss != currentBoss)
+        for (int i = rows.Count - 1; i >= 0; i--)
+        {
+            if (!ReferenceEquals(rows[i].boss, boss)) continue;
+            rows[i].element?.RemoveFromHierarchy();
+            rows.RemoveAt(i);
             return;
-
-        UnsubscribeFromHealth();
-        currentBoss = null;
-        currentHealth = null;
-        currentBossName = null;
-        SetVisible(false);
-    }
-
-    private void HandleUIReload(
-        PanelRenderer _,
-        VisualElement rootVisualElement,
-        int __)
-    {
-        if (rootVisualElement == null)
-            return;
-
-        bossPanel = rootVisualElement.Q<VisualElement>("boss-hud");
-        bossNameText = rootVisualElement.Q<Label>("boss-name");
-        healthFill = rootVisualElement.Q<VisualElement>("boss-health-fill");
-        healthValueText = rootVisualElement.Q<Label>("boss-health-value");
-
-        ValidateElement(bossPanel, "boss-hud");
-        ValidateElement(bossNameText, "boss-name");
-        ValidateElement(healthFill, "boss-health-fill");
-        ValidateElement(healthValueText, "boss-health-value");
-
-        RefreshVisuals();
-        SetVisible(currentBoss != null);
-    }
-
-    private void UpdateHealth(EnemyBase _, int current, int maximum)
-    {
-        UpdateHealthVisuals(current, maximum);
-    }
-
-    private void RefreshVisuals()
-    {
-        if (currentBoss != null && bossNameText != null)
-            bossNameText.text = currentBossName;
-
-        if (currentHealth != null)
-        {
-            UpdateHealthVisuals(
-                currentHealth.CurrentHealth,
-                currentHealth.MaxHealth
-            );
         }
-    }
-
-    private void UpdateHealthVisuals(int current, int maximum)
-    {
-        float amount = maximum > 0
-            ? Mathf.Clamp01((float)current / maximum)
-            : 0f;
-
-        if (healthFill != null)
-        {
-            healthFill.style.width = new Length(
-                amount * 100f,
-                LengthUnit.Percent
-            );
-        }
-
-        if (healthValueText != null)
-            healthValueText.text = current + " / " + maximum;
-    }
-
-    private void UnsubscribeFromHealth()
-    {
-        if (currentHealth != null)
-            currentHealth.HealthChanged -= UpdateHealth;
-    }
-
-    private void SetVisible(bool value)
-    {
-        if (bossPanel != null)
-        {
-            bossPanel.style.display = value
-                ? DisplayStyle.Flex
-                : DisplayStyle.None;
-        }
-    }
-
-    private void ValidateElement(VisualElement element, string elementName)
-    {
-        // Elementos ausentes deixam apenas a parte correspondente do HUD inerte.
     }
 }

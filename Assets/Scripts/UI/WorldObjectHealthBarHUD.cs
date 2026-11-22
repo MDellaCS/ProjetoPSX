@@ -15,7 +15,6 @@ public sealed class WorldObjectHealthBarHUD : MonoBehaviour
     private const string BarTemplateResource = "WorldObjectHealthBarHUD/WorldObjectHealthBar";
     private const string PanelSettingsResource = "WorldObjectHealthBarHUD/PanelSettings";
     private const float BarHeightPixels = 26f;
-    private const float PlayerLookupInterval = 1f;
 
     private static WorldObjectHealthBarHUD instance;
 
@@ -27,8 +26,6 @@ public sealed class WorldObjectHealthBarHUD : MonoBehaviour
     private VisualElement layer;
     private VisualTreeAsset barTemplate;
     private Camera worldCamera;
-    private PlayerLockOn playerLockOn;
-    private float nextPlayerLookup;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => instance = null;
@@ -124,7 +121,6 @@ public sealed class WorldObjectHealthBarHUD : MonoBehaviour
 
         if (worldCamera == null || !worldCamera.isActiveAndEnabled)
             worldCamera = Camera.main;
-        ResolvePlayerLockOn();
 
         usedThisFrame.Clear();
         IReadOnlyList<WorldObject> objects = WorldObject.Active;
@@ -142,9 +138,7 @@ public sealed class WorldObjectHealthBarHUD : MonoBehaviour
         if (worldObject == null)
             return;
 
-        bool lockedOn = playerLockOn != null &&
-            playerLockOn.LockedTarget == worldObject.transform;
-        if (!worldObject.ShouldShowHealthBar(lockedOn))
+        if (!worldObject.ShouldShowHealthBar())
             return;
 
         Vector3 screen = worldCamera.WorldToScreenPoint(
@@ -209,12 +203,4 @@ public sealed class WorldObjectHealthBarHUD : MonoBehaviour
         }
     }
 
-    private void ResolvePlayerLockOn()
-    {
-        if (playerLockOn != null || Time.unscaledTime < nextPlayerLookup)
-            return;
-
-        nextPlayerLookup = Time.unscaledTime + PlayerLookupInterval;
-        playerLockOn = FindAnyObjectByType<PlayerLockOn>();
-    }
 }

@@ -125,23 +125,6 @@
     font-size: 18px;
 }
 
-#enemy-debug-panel {
-    position: absolute;
-    right: 16px;
-    top: 250px;
-    min-width: 250px;
-    padding: 12px;
-    background-color: rgba(0, 0, 0, 0.78);
-    border-left-width: 2px;
-    border-top-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
-    border-left-color: rgb(130, 255, 160);
-    border-top-color: rgb(130, 255, 160);
-    border-right-color: rgb(130, 255, 160);
-    border-bottom-color: rgb(130, 255, 160);
-}
-
 #test-shortcuts-panel {
     position: absolute;
     right: 16px;
@@ -161,13 +144,6 @@
 
 #test-shortcuts-text {
     color: rgb(255, 240, 200);
-    font-size: 16px;
-    -unity-font-style: normal;
-    white-space: normal;
-}
-
-#enemy-debug-text {
-    color: rgb(220, 255, 225);
     font-size: 16px;
     -unity-font-style: normal;
     white-space: normal;
@@ -227,3 +203,24 @@
 }
 #debug-submenu-list { flex-grow: 1; }
 #debug-submenu-list Button, #debug-submenu-list Toggle { min-height: 36px; font-size: 18px; color: rgb(230, 240, 232); }
+
+#debug-submenu-list Button {
+    min-height: 44px;
+    margin-bottom: 6px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(48, 61, 54);
+    border-left-color: rgb(102, 141, 113);
+    border-top-color: rgb(102, 141, 113);
+    border-right-color: rgb(102, 141, 113);
+    border-bottom-color: rgb(102, 141, 113);
+}
+
+#debug-submenu-list Button:hover {
+    background-color: rgb(66, 92, 74);
+}
+
+.debug-level-row { flex-direction: row; align-items: center; margin-bottom: 6px; }
+.debug-level-name { flex-grow: 1; color: rgb(230, 240, 232); font-size: 20px; }
+.debug-level-value { min-width: 80px; color: rgb(230, 240, 232); font-size: 18px; -unity-text-align: middle-center; }
+.debug-level-row Button { min-width: 48px; }

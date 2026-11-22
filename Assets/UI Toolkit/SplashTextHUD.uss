@@ -1,0 +1,18 @@
+:root {
+    -unity-font-definition: url("project://database/Assets/Fonts/Crimson%20Text/CrimsonText-Regular.ttf");
+}
+
+.splash-text {
+    display: none;
+    position: absolute;
+    top: 50%;
+    translate: 0 -50%;
+    left: 4%;
+    right: 4%;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    font-size: 68px;
+    color: white;
+    padding: 8px;
+}
+

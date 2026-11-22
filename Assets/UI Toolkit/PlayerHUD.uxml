@@ -2,33 +2,27 @@
     <Style src="PlayerHUD.uss" />
     <Style src="PlayerHeatHUD.uss" />
     <ui:VisualElement name="player-hud" picking-mode="Ignore">
-        <ui:VisualElement name="lock-on-marker" class="lock-on-marker" picking-mode="Ignore" />
-        <ui:VisualElement name="player-combo-meter" class="player-combo-meter" picking-mode="Ignore">
-            <ui:Label name="player-combo-title" class="player-combo-title" text="COMBO" />
-            <ui:Label name="player-combo-count" class="player-combo-count" text="0" />
-            <ui:VisualElement class="player-combo-timer-track">
-                <ui:VisualElement name="player-combo-timer-fill" class="player-combo-timer-fill" />
-            </ui:VisualElement>
-            <ui:Label name="player-combo-reward" class="player-combo-reward" text="" />
-        </ui:VisualElement>
         <ui:VisualElement name="human-health-bar" class="human-health-bar">
             <ui:Label name="human-health-title" text="VIDA" class="human-health-title" />
             <ui:VisualElement name="human-health-track" class="human-health-track">
+                <ui:VisualElement name="human-health-loss" class="human-health-loss" />
                 <ui:VisualElement name="human-health-fill" class="human-health-fill" />
             </ui:VisualElement>
             <ui:Label name="human-health-value" text="100 / 100" class="human-health-value" />
         </ui:VisualElement>
-        <ui:VisualElement name="heat-thermometer">
-            <ui:VisualElement name="thermometer-heading">
-                <ui:Label name="thermometer-title" text="TERMÔMETRO" />
-                <ui:Label name="heat-power-value" text="1x" />
+        <ui:VisualElement name="vital-oil-bar" class="vital-oil-bar" picking-mode="Ignore">
+            <ui:VisualElement class="vital-oil-track">
+                <ui:VisualElement name="vital-oil-loss" class="vital-oil-loss" />
+                <ui:VisualElement name="vital-oil-fill" class="vital-oil-fill" />
             </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="heat-thermometer">
             <ui:VisualElement name="thermometer-main-row">
-                <ui:VisualElement name="thermometer-cold-notches" class="thermometer-notch-group" />
-                <ui:VisualElement name="thermometer-zero-notch" />
                 <ui:VisualElement name="thermometer-hot-notches" class="thermometer-notch-group" />
             </ui:VisualElement>
-            <ui:VisualElement name="thermometer-superheat-notches" class="thermometer-notch-group thermometer-superheat-row" />
+        </ui:VisualElement>
+        <ui:VisualElement name="heat-multiplier" picking-mode="Ignore">
+            <ui:Label name="heat-power-value" text="1x" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

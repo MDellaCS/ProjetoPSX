@@ -20,6 +20,7 @@ public sealed class PlayerAttackController : MonoBehaviour
     private float phaseTimer;
     private bool finishAfterActive;
     private bool isExternalAttack;
+    private bool isSlideAttack;
 
     public PlayerAttackRuntime CurrentAttack { get; private set; }
     public PlayerAttackPhase CurrentPhase { get; private set; }
@@ -68,6 +69,28 @@ public sealed class PlayerAttackController : MonoBehaviour
         if (!IsAttacking || GamePauseController.IsPaused ||
             CutsceneController.IsPlayerControlLocked ||
             CombatImpactSystem.IsGameplayFrozen(this)) return;
+        if (isSlideAttack)
+        {
+            PlayerSlideAttack slide = GetComponent<PlayerSlideAttack>();
+            if (playerState == null || !playerState.IsSliding())
+            {
+                FinishAttack();
+                return;
+            }
+            if (CurrentPhase == PlayerAttackPhase.Windup)
+            {
+                phaseTimer -= Time.deltaTime;
+                if (phaseTimer <= 0f) ChangePhase(PlayerAttackPhase.Active);
+            }
+            else if (CurrentPhase == PlayerAttackPhase.Active && slide != null && slide.IsActive)
+            {
+                PlayerAttackRuntime activeSlide = CurrentAttack;
+                hitboxes.Tick(CurrentPhaseProgress);
+                if (CurrentAttack != activeSlide) return;
+                phaseTimer = Mathf.Max(0f, phaseTimer - Time.deltaTime);
+            }
+            return;
+        }
         PlayerAttackRuntime tickedAttack = CurrentAttack;
         attackMovement.Tick(CurrentPhase, Time.deltaTime);
         if (CurrentPhase == PlayerAttackPhase.Active)
@@ -211,10 +234,24 @@ public sealed class PlayerAttackController : MonoBehaviour
         return true;
     }
 
+    public bool TryStartSlideAttack(PlayerAttackDefinition definition)
+    {
+        if (definition == null || definition.activeDuration <= 0f ||
+            playerState == null || !playerState.IsSliding() ||
+            !TryStartExternalAttack(definition)) return false;
+        isSlideAttack = true;
+        return true;
+    }
+
+    public bool IsSlideAttack => isSlideAttack && IsAttacking;
+
     /// <summary>Indica se a definicao terminou seu cooldown individual.</summary>
     public bool CanStartAttack(PlayerAttackDefinition definition)
     {
         if (definition == null)
+            return false;
+        if (definition.kind == PlayerAttackKind.Heavy && definition.attackId != "BurnExplosion" &&
+            heat != null && heat.IsHeatModeActive && heat.CurrentHeat < heat.HeavyAttackHeatCost)
             return false;
         if (definition.cooldownDuration <= 0f)
             return true;
@@ -316,7 +353,7 @@ public sealed class PlayerAttackController : MonoBehaviour
         bool finishedExternalAttack = isExternalAttack;
         if (!notify)
             attackAudio?.CancelAttackSounds(finished);
-        CurrentAttack = null; CurrentPhase = PlayerAttackPhase.None; phaseTimer = 0f; finishAfterActive = false; isExternalAttack = false;
+        CurrentAttack = null; CurrentPhase = PlayerAttackPhase.None; phaseTimer = 0f; finishAfterActive = false; isExternalAttack = false; isSlideAttack = false;
         hitboxes.End(); attackMovement.End();
         if (!finishedExternalAttack && playerState != null && playerState.IsAttacking()) playerState.ChangeState(PlayerState.State.Normal);
         if (notify && finished != null) AttackFinished?.Invoke(finished);

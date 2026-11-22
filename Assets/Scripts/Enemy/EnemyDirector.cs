@@ -414,7 +414,7 @@ public class EnemyDirector : MonoBehaviour
         releasedEnemies.Clear();
         foreach (EnemyBase enemy in activeAttackers)
         {
-            if (enemy == null || enemy.IsDead || !enemy.CanBeLockOnTarget ||
+            if (enemy == null || enemy.IsDead || !enemy.CanBeCombatTarget ||
                 enemy.Target == null || enemy.CurrentState == EnemyBase.State.Idle)
             {
                 releasedEnemies.Add(enemy);

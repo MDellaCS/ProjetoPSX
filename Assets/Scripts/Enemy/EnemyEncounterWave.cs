@@ -59,6 +59,25 @@ public sealed class EnemyEncounterWave : MonoBehaviour
         ? nextSceneEnemy < enemies.Count : spawnedCount < TotalSpawnCount;
     private int TotalSpawnCount => HasValidPrefab() ? Mathf.Max(1, spawnCount) : 0;
 
+    internal bool HasUpcomingBoss
+    {
+        get
+        {
+            if (!HasPendingEnemies) return false;
+            if (source == EnemyEncounterWaveSource.SpawnPrefabs)
+            {
+                foreach (EnemyBase prefab in enemyPrefabs)
+                    if (prefab != null && prefab.IsBoss) return true;
+            }
+            else
+            {
+                for (int i = nextSceneEnemy; i < enemies.Count; i++)
+                    if (enemies[i] != null && enemies[i].IsBoss) return true;
+            }
+            return false;
+        }
+    }
+
     internal void Prepare(EnemyEncounter owner)
     {
         encounter = owner;
@@ -164,7 +183,7 @@ public sealed class EnemyEncounterWave : MonoBehaviour
     {
         enemy.gameObject.SetActive(true);
         // O alvo entra na lista de combate imediatamente para poder receber
-        // lock-on durante a apresentacao, mas EnemyBase bloqueia IA enquanto
+        // selecao de alvos durante a apresentacao, mas EnemyBase bloqueia IA enquanto
         // IsSpawning estiver ativo.
         if (player != null)
             enemy.SetEncounterEngaged(player);

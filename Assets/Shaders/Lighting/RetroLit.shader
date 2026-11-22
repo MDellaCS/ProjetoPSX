@@ -16,6 +16,13 @@ Shader "Projeto PSX/Retro Lit"
         [HideInInspector] _RendererLightingModeOverride("Renderer Lighting Mode Override", Float) = 0
         _GridSize("Grid Size", Range(0.05, 4)) = 0.5
         [Toggle] _FlatShading("Flat Shading", Float) = 0
+        _MetallicShine("Metallic Shine", Range(0, 1)) = 0
+        _ShineSharpness("Shine Sharpness", Range(8, 128)) = 48
+        _ShineLimit("Shine Limit", Range(0, 8)) = 8
+        [Enum(Off, 0, Light, 1, Dark, 2)] _ReactiveGlowMode("Reactive Glow Mode", Float) = 0
+        _ReactiveGlowColor("Reactive Glow Color", Color) = (1, 1, 1, 1)
+        _ReactiveGlowMax("Reactive Glow Max", Range(0, 8)) = 1
+        _ReactiveGlowThreshold("Reactive Glow Threshold", Range(0.01, 8)) = 1
 
         [Toggle(_ALPHATEST_ON)] _AlphaClip("Alpha Clip", Float) = 0
         _Cutoff("Alpha Cutoff", Range(0, 1)) = 0.5
@@ -45,12 +52,19 @@ Shader "Projeto PSX/Retro Lit"
             float4 _BaseMap_ST;
             half4 _BaseColor;
             half4 _EmissionColor;
+            half4 _ReactiveGlowColor;
             half _UseVertexColor;
             half _LightingMode;
             half _LightingModeOverride;
             half _RendererLightingModeOverride;
             half _GridSize;
             half _FlatShading;
+            half _MetallicShine;
+            half _ShineSharpness;
+            half _ShineLimit;
+            half _ReactiveGlowMode;
+            half _ReactiveGlowMax;
+            half _ReactiveGlowThreshold;
             half _AlphaClip;
             half _Cutoff;
             half _Cull;
@@ -196,11 +210,122 @@ Shader "Projeto PSX/Retro Lit"
                     local *= occlusion.directAmbientOcclusion;
                 #endif
 
-                half3 emission = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv).rgb * _EmissionColor.rgb;
-                half3 color = albedo.rgb * (ambient + main * shadow + local) + emission;
+                half3 shine = 0;
+                if (_MetallicShine > 0.0)
+                {
+                    half3 viewDir = SafeNormalize(GetWorldSpaceViewDir(input.positionWS));
+                    half3 localShine;
+                    RetroLocalLights(samplePosition, normalWS, viewDir, _ShineSharpness, localShine);
+                    #if defined(_SCREEN_SPACE_OCCLUSION)
+                        localShine *= occlusion.directAmbientOcclusion;
+                    #endif
+                    shine = localShine * (_MetallicShine * 0.35);
+                    half peak = max(shine.r, max(shine.g, shine.b));
+                    shine *= min(1.0h, _ShineLimit / max(peak, 0.0001h));
+                }
+
+                half3 emissionMask = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv).rgb;
+                half3 emission = emissionMask * _EmissionColor.rgb;
+                if (_ReactiveGlowMode > 0.5)
+                {
+                    // Apenas luzes locais do RetroLightSystem controlam a emissao reativa.
+                    half brightness = dot(local, half3(0.299, 0.587, 0.114));
+                    half response = saturate(brightness / max(_ReactiveGlowThreshold, 0.01h));
+                    if (_ReactiveGlowMode > 1.5)
+                        response = 1.0h - response;
+                    emission += emissionMask * _ReactiveGlowColor.rgb * (_ReactiveGlowMax * response);
+                }
+                half3 color = albedo.rgb * (ambient + main * shadow + local) + emission + shine;
                 color = RetroApplyFog(color, fog, local);
                 color = RetroQuantize(color, input.positionCS.xy);
                 return half4(color, 1.0);
+            }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "ReactiveGlowMask"
+            Tags { "LightMode" = "ReactiveGlowMask" }
+            Cull [_Cull]
+            ZWrite Off
+            ZTest LEqual
+
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex GlowVert
+            #pragma fragment GlowFrag
+            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "RetroLighting.hlsl"
+
+            struct GlowAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            struct GlowVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
+                half3 normalWS : TEXCOORD1;
+                float2 uv : TEXCOORD2;
+                half3 vertexLocal : TEXCOORD3;
+                nointerpolation half3 flatLocal : TEXCOORD4;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            GlowVaryings GlowVert(GlowAttributes input)
+            {
+                GlowVaryings output = (GlowVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(output.positionWS);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
+                if (RetroResolveLightingMode(_LightingMode, _LightingModeOverride, _RendererLightingModeOverride) < 0.5)
+                {
+                    output.vertexLocal = RetroLocalLights(output.positionWS, output.normalWS);
+                    output.flatLocal = output.vertexLocal;
+                }
+                return output;
+            }
+            half4 GlowFrag(GlowVaryings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                RetroAlphaClip(input.uv);
+                if (_ReactiveGlowMode < 0.5) return 0;
+                half3 normalWS = normalize(input.normalWS);
+                bool flat = _FlatShading > 0.5;
+                if (flat)
+                {
+                    float3 faceNormal = normalize(cross(ddy(input.positionWS), ddx(input.positionWS)));
+                    normalWS = dot(faceNormal, normalWS) < 0.0 ? -faceNormal : faceNormal;
+                }
+                float mode = RetroResolveLightingMode(_LightingMode, _LightingModeOverride, _RendererLightingModeOverride);
+                half3 local;
+                if (mode < 0.5)
+                    local = flat ? input.flatLocal : input.vertexLocal;
+                else
+                {
+                    float3 samplePosition = mode < 1.5 ? RetroSnapToGrid(input.positionWS, normalWS, RetroResolveGridSize(_GridSize)) : input.positionWS;
+                    local = RetroLocalLights(samplePosition, normalWS);
+                }
+                #if defined(_SCREEN_SPACE_OCCLUSION)
+                    local *= GetScreenSpaceAmbientOcclusion(GetNormalizedScreenSpaceUV(input.positionCS)).directAmbientOcclusion;
+                #endif
+                half brightness = dot(local, half3(0.299, 0.587, 0.114));
+                half response = saturate(brightness / max(_ReactiveGlowThreshold, 0.01h));
+                if (_ReactiveGlowMode > 1.5) response = 1.0h - response;
+                half3 mask = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv).rgb;
+                return half4(mask * _ReactiveGlowColor.rgb * (_ReactiveGlowMax * response), 1);
             }
             ENDHLSL
         }

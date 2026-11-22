@@ -19,6 +19,20 @@ public sealed class RetroLitShaderGUI : ShaderGUI
         "Tamanho, em metros, de cada celula de luz no modo Grid. Valores maiores deixam a luz mais blocada.");
     private static readonly GUIContent FlatShading = new("Flat Shading",
         "Cada triangulo recebe um tom unico de luz, revelando as faces da malha (sombreamento facetado).");
+    private static readonly GUIContent MetallicShine = new("Brilho metalico",
+        "Intensidade do reflexo das luzes locais retro, semelhante a ferro polido. Zero desativa o brilho.");
+    private static readonly GUIContent ShineSharpness = new("Nitidez do brilho",
+        "Controla a concentracao do reflexo: valores maiores produzem pontos de luz menores e mais definidos.");
+    private static readonly GUIContent ShineLimit = new("Limite do brilho metalico",
+        "Limita a intensidade maxima do reflexo das luzes, mesmo quando elas sao muito fortes.");
+    private static readonly GUIContent ReactiveGlowMode = new("Emissao reativa",
+        "Off desliga. Light aumenta a emissao conforme a superficie recebe luz; Dark faz a emissao desaparecer conforme recebe luz. Considera apenas luzes locais do sistema retro, incluindo a do jogador.");
+    private static readonly GUIContent ReactiveGlowColor = new("Cor da emissao reativa",
+        "Cor do brilho reativo. O mapa de emissao tambem controla onde ele aparece.");
+    private static readonly GUIContent ReactiveGlowMax = new("Intensidade maxima da emissao",
+        "Brilho maximo da emissao reativa. Valores acima de 1 podem produzir halo quando HDR e Bloom estiverem ativos.");
+    private static readonly GUIContent ReactiveGlowThreshold = new("Luz para resposta completa",
+        "Quantidade de iluminacao necessaria para atingir o maximo em Light ou apagar em Dark. Valores maiores exigem mais luz.");
     private static readonly GUIContent AlphaClip = new("Alpha Clip",
         "Descarta pixels com alpha abaixo do limite (folhagem, grades). Nao ha transparencia parcial.");
     private static readonly GUIContent Cutoff = new("Alpha Cutoff", "Limite de alpha do recorte.");
@@ -47,6 +61,24 @@ public sealed class RetroLitShaderGUI : ShaderGUI
         editor.ShaderProperty(lightingMode, LightingMode);
         editor.ShaderProperty(FindProperty("_GridSize", properties), GridSize);
         editor.ShaderProperty(FindProperty("_FlatShading", properties), FlatShading);
+        MaterialProperty metallicShine = FindProperty("_MetallicShine", properties);
+        editor.ShaderProperty(metallicShine, MetallicShine);
+        if (metallicShine.floatValue > 0f || metallicShine.hasMixedValue)
+        {
+            editor.ShaderProperty(FindProperty("_ShineSharpness", properties), ShineSharpness);
+            editor.ShaderProperty(FindProperty("_ShineLimit", properties), ShineLimit);
+        }
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Emissao reativa", EditorStyles.boldLabel);
+        MaterialProperty glowMode = FindProperty("_ReactiveGlowMode", properties);
+        editor.ShaderProperty(glowMode, ReactiveGlowMode);
+        if (glowMode.floatValue > 0.5f || glowMode.hasMixedValue)
+        {
+            editor.ShaderProperty(FindProperty("_ReactiveGlowColor", properties), ReactiveGlowColor);
+            editor.ShaderProperty(FindProperty("_ReactiveGlowMax", properties), ReactiveGlowMax);
+            editor.ShaderProperty(FindProperty("_ReactiveGlowThreshold", properties), ReactiveGlowThreshold);
+        }
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Renderizacao", EditorStyles.boldLabel);

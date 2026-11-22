@@ -33,7 +33,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerCombatStatus combatStatus;
     private PlayerAttackController attackController;
     private PlayerMovesetController movesetController;
-    private PlayerLockOn playerLockOn;
     private PlayerCurrencyWallet playerCurrency;
     private PlayerCharacterController playerCharacterController;
     private WaterSensor waterSensor;
@@ -42,8 +41,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private VisualElement debugPanel;
     private Label debugText;
     private Label waterStateLabel;
-    private VisualElement enemyDebugPanel;
-    private Label enemyDebugText;
     private VisualElement cutsceneDebugPanel;
     private Label cutsceneDebugText;
     private VisualElement cutsceneTimelineFill;
@@ -105,16 +102,12 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if ((!isVisible && !IsDebugMenuVisible) || debugText == null)
             return;
 
-        // PlayerLockOn pode ser adicionado pelo sistema de ataques durante Awake.
-        // A ordem de Awake entre objetos nao e garantida, entao tentamos
-        // encontra-lo novamente enquanto o F3 estiver aberto.
-        if (!HasPlayerComponents() || playerLockOn == null || playerCurrency == null ||
+        if (!HasPlayerComponents() || playerCurrency == null ||
             movesetController == null)
             ResolvePlayerComponents();
 
         UpdateDebugText();
         UpdateDebugActionLabels();
-        UpdateLockedEnemyDebug();
         UpdateCutsceneDebug();
     }
 
@@ -130,8 +123,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         debugPanel = rootVisualElement.Q<VisualElement>("debug-panel");
         debugText = rootVisualElement.Q<Label>("debug-text");
         waterStateLabel = rootVisualElement.Q<Label>("water-state-label");
-        enemyDebugPanel = rootVisualElement.Q<VisualElement>("enemy-debug-panel");
-        enemyDebugText = rootVisualElement.Q<Label>("enemy-debug-text");
         cutsceneDebugPanel = rootVisualElement.Q<VisualElement>("cutscene-debug-panel");
         cutsceneDebugText = rootVisualElement.Q<Label>("cutscene-debug-text");
         cutsceneTimelineFill = rootVisualElement.Q<VisualElement>("cutscene-timeline-fill");
@@ -227,7 +218,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         combatStatus = playerTransform.GetComponent<PlayerCombatStatus>();
         attackController = playerTransform.GetComponent<PlayerAttackController>();
         movesetController = playerTransform.GetComponent<PlayerMovesetController>();
-        playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
         playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
         playerCharacterController = playerTransform.GetComponent<PlayerCharacterController>();
         waterSensor = playerTransform.GetComponent<WaterSensor>();
@@ -250,8 +240,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
         if (debugPanel != null)
             debugPanel.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
-        if (enemyDebugPanel != null)
-            enemyDebugPanel.style.display = DisplayStyle.None;
         if (cutsceneDebugPanel != null)
             cutsceneDebugPanel.style.display = DisplayStyle.None;
     }
@@ -285,8 +273,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             return;
         boundButtonRoot = root;
         BindButton(root, "debug-submenu-back", CloseSubmenu);
-        BindButton(root, "status-max-button", () => SetPlayerStatus(true));
-        BindButton(root, "status-zero-button", () => SetPlayerStatus(false));
+        BindButton(root, "edit-levels-button", OpenLevelEditor);
         BindButton(root, "heat-minus-button", () => AdjustPlayerHeat(-10f));
         BindButton(root, "heat-plus-button", () => AdjustPlayerHeat(10f));
         BindButton(root, "currency-take-button", () => AdjustCurrency(false));
@@ -360,12 +347,44 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         }
     }
 
-    private void SetPlayerStatus(bool maximize)
+    private void OpenLevelEditor()
     {
-        if (!Debug.isDebugBuild) return;
-        if (playerHealth != null) playerHealth.DebugSetStatus(maximize);
-        if (playerHeat != null) playerHeat.DebugSetStatus(maximize);
-        SetActionStatus(maximize ? "Player status maximized." : "Player status zeroed.");
+        if (!OpenSubmenu("LEVEL UP STATS")) return;
+        if (playerTransform == null) ResolvePlayerComponents();
+        if (playerTransform == null) return;
+        PlayerProgression progression = PlayerProgression.GetOrAdd(playerTransform.gameObject);
+        progression.Initialize();
+        VisualTreeAsset rowTemplate = Resources.Load<VisualTreeAsset>("DebugLevelRow");
+        if (progression.Catalog == null || progression.Catalog.attributes == null || rowTemplate == null)
+        {
+            SetActionStatus("Level editor unavailable.");
+            CloseSubmenu();
+            return;
+        }
+
+        foreach (PlayerUpgradeDefinition attribute in progression.Catalog.attributes)
+        {
+            if (attribute == null || !attribute.purchasable || string.IsNullOrWhiteSpace(attribute.id))
+                continue;
+            TemplateContainer row = rowTemplate.Instantiate();
+            Label name = row.Q<Label>("level-name");
+            Label value = row.Q<Label>("level-value");
+            Button minus = row.Q<Button>("level-minus");
+            Button plus = row.Q<Button>("level-plus");
+            if (name == null || value == null || minus == null || plus == null) continue;
+            name.text = attribute.displayName;
+            void Refresh()
+            {
+                int level = progression.Level(attribute);
+                value.text = $"{level} / {attribute.MaximumLevel}";
+                minus.SetEnabled(level > 1);
+                plus.SetEnabled(level < attribute.MaximumLevel && attribute.GetLevel(level + 1) != null);
+            }
+            minus.clicked += () => { progression.DebugSetLevel(attribute, progression.Level(attribute) - 1); Refresh(); };
+            plus.clicked += () => { progression.DebugSetLevel(attribute, progression.Level(attribute) + 1); Refresh(); };
+            Refresh();
+            debugSubmenuList.Add(row);
+        }
     }
 
     private void AdjustPlayerHeat(float amount)
@@ -567,6 +586,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         }
         else
         {
+            textBuilder.Append("VITAL OIL: ")
+                .Append(playerHealth.CurrentVitalOil)
+                .Append(" / ")
+                .AppendLine(playerHealth.MaxVitalOil.ToString());
             textBuilder.Append("HEAT: ")
                 .Append(FormatSigned(playerHeat.CurrentHeat))
                 .Append(" / ")
@@ -577,10 +600,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
                 .AppendLine(playerHeat.HeavyDamageMultiplier.ToString("0.#") + "x");
             textBuilder.Append("HEAVY POISE: ")
                 .AppendLine(playerHeat.HeavyPoiseMultiplier.ToString("0.##") + "x");
-            textBuilder.Append("SUPERHEAT: ")
-                .Append(playerHeat.CurrentSuperheat.ToString("0.0"))
-                .Append(" / ")
-                .AppendLine(playerHeat.MaxSuperheat.ToString("0"));
             textBuilder.Append("BURN: ")
                 .AppendLine(playerHeat.IsBurning ? "YES" : "NO");
             textBuilder.Append("RAGE: ")
@@ -593,21 +612,6 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         textBuilder.Append("ATTACKING: ")
             .AppendLine(attackController.IsAttacking ? "YES" : "NO");
         debugText.text = textBuilder.ToString();
-    }
-
-    private void UpdateLockedEnemyDebug()
-    {
-        if (enemyDebugPanel == null || enemyDebugText == null)
-            return;
-
-        EnemyBase enemy = playerLockOn != null
-            ? playerLockOn.LockedEnemy
-            : null;
-        bool show = enemy != null;
-        enemyDebugPanel.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
-
-        if (show)
-            enemyDebugText.text = enemy.GetDebugStatusText();
     }
 
     private void UpdateCutsceneDebug()

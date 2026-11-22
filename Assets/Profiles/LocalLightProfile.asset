@@ -22,8 +22,8 @@ MonoBehaviour:
     range: 91.9
     coreRadius: 0
     falloffExponent: 4
-    bands: 6
-    bandSegments: 8
+    bands: 0
+    bandSegments: 3
     wrap: 0.467
     spotAngle: 179
     innerSpotAngle: 124

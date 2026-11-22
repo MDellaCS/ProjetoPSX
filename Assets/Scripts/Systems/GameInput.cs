@@ -43,19 +43,6 @@ public static class GameInput
             return gameplay?.FindAction("Look")?.activeControl?.device is Mouse;
         }
     }
-    public static Vector2 CycleTarget => ReadVector2("CycleTarget");
-    /// <summary>Verdadeiro quando CycleTarget vem de um controle mantido (D-pad), nao de pulsos do scroll.</summary>
-    public static bool CycleTargetIsHeldInput
-    {
-        get
-        {
-            EnsureInitialized();
-            InputAction action = gameplay != null
-                ? gameplay.FindAction("CycleTarget") : null;
-            return action != null && action.activeControl != null &&
-                !(action.activeControl.device is Mouse);
-        }
-    }
     public static bool LightPressed => !MouseClickWillLockCursor() &&
         Pressed("LightAttack");
     public static bool HeavyPressed => Pressed("HeavyAttack");
@@ -66,7 +53,6 @@ public static class GameInput
     public static bool DashPressed => Pressed("Dash");
     public static bool CrouchHeld => Held("Crouch");
     public static bool CrouchPressed => Pressed("Crouch");
-    public static bool LockOnPressed => Pressed("LockOn");
     public static bool InteractPressed => Pressed("Interact");
     public static bool InteractHeld => Held("Interact");
     /// <summary>Abre o inventario pelo atalho I tanto no gameplay como no menu pausado.</summary>

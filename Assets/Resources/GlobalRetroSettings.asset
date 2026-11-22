@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a11805dc53964ac59aa0c1da7b758f12, type: 3}
   m_Name: GlobalRetroSettings
   m_EditorClassIdentifier: 
-  ativo: 1
-  resolucao: 0
-  altura: 300
-  niveisCor: 20
-  dithering: 0.099
+  ativo: 0
+  resolucao: 1
+  altura: 720
+  niveisCor: 32
+  dithering: 1
   intensidadeCor: 1
   intensidadePixel: 1

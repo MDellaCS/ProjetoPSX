@@ -110,11 +110,11 @@ public static class GameSaveRegression
                 heat.SetRageGrant(rage, 5f);
                 heat.ResetForNewGame();
                 Check(heat.HasRageUnlocked, "Reset termico removeu um efeito persistente.");
-                heat.RestoreSaveState(20f, 10f);
+                heat.RestoreSaveState(20f);
                 Check(heat.HasRageUnlocked, "Load removeu Rage desbloqueado.");
-                Check(heat.CurrentHeat == 20f && heat.CurrentSuperheat == 10f, "Recursos termicos nao restaurados.");
-                heat.RestoreSaveState(float.NaN, float.PositiveInfinity);
-                Check(heat.CurrentHeat == 0f && heat.CurrentSuperheat == 0f, "Recursos invalidos nao tratados.");
+                Check(heat.CurrentHeat == 20f, "Recursos termicos nao restaurados.");
+                heat.RestoreSaveState(float.NaN);
+                Check(heat.CurrentHeat == 0f, "Recursos invalidos nao tratados.");
                 heat.SetRageGrant(rage, 0f);
                 Check(!heat.HasRageUnlocked, "Remover o upgrade deve remover Rage.");
             }

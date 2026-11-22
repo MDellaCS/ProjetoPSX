@@ -20,7 +20,7 @@ public enum WorldObjectDepletedAction
 
 /// <summary>
 /// Um estado de gameplay de um objeto de mundo: ele define se o objeto pode ser
-/// atingido, se pode ser travado pelo lock-on, como o dano e medido e o que
+/// atingido, como o dano e medido e o que
 /// acontece ao entrar, ao ser atingido e ao ser esgotado.
 /// </summary>
 [Serializable]
@@ -33,8 +33,6 @@ public sealed class WorldObjectState
     [Header("Comportamento")]
     [Tooltip("Se desmarcado, golpes atravessam o objeto: ele nao recebe dano, nao gera hitstop nem reacoes.")]
     public bool hittable = true;
-    [Tooltip("Se marcado, o jogador pode travar a mira (lock-on) neste objeto enquanto ele estiver neste estado.")]
-    public bool lockOnEnabled = true;
 
     [Header("Visual")]
     [Tooltip("Objetos filhos (ou da cena) ativados ao entrar neste estado. Ex.: a malha 'rachada'.")]

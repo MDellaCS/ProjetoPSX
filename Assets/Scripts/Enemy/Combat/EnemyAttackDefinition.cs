@@ -179,7 +179,8 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     [Min(0f)] public float recoveryDuration = .7f;
 
     [Header("Power")]
-    [Tooltip("Dano base antes dos multiplicadores de Strike.")]
+    [Tooltip("Dano base em unidades, convertido pelo valor global de dano inimigo antes dos multiplicadores de Strike.")]
+    [InspectorName("Dano base (unidades)")]
     [Min(0)] public int baseDamage = 10;
     [Tooltip("Dano base de Poise antes dos multiplicadores de Strike.")]
     [Min(0)] public int basePoiseDamage = 10;

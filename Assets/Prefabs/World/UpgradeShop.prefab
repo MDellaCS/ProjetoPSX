@@ -101,7 +101,6 @@ GameObject:
   - component: {fileID: 8346629251918636781}
   - component: {fileID: 8617785130624017666}
   - component: {fileID: 1120223400672314349}
-  - component: {fileID: 6423026520264382021}
   - component: {fileID: 4230714307871936687}
   m_Layer: 0
   m_Name: UpgradeShop
@@ -167,18 +166,6 @@ MonoBehaviour:
   currencyGorePieces: 3
   overkillThresholdPercent: 0.5
   overkillCurrencyMultiplier: 2
---- !u!114 &6423026520264382021
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4649087730192986163}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61a28708b833fff47bfc3f9487644c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldLockOnTarget
 --- !u!114 &4230714307871936687
 MonoBehaviour:
   m_ObjectHideFlags: 0

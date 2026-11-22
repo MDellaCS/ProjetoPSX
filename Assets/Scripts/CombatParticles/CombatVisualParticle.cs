@@ -64,7 +64,7 @@ public sealed class CombatVisualParticle : MonoBehaviour
         float fadeStartPercent = 25f, float firstCurrencyBlinkStartPercent = 30f,
         float secondCurrencyBlinkStartPercent = 10f,
         float firstCurrencyBlinkFrequency = 3f,
-        float secondCurrencyBlinkFrequency = 8f)
+        float secondCurrencyBlinkFrequency = 8f, bool vitalOil = false)
     {
         RestoreDefaultVisual();
         profile = newProfile;
@@ -97,7 +97,7 @@ public sealed class CombatVisualParticle : MonoBehaviour
             firstCurrencyBlinkFrequency, secondCurrencyBlinkFrequency);
         noiseSeed = Random.value * 1000f;
         if (TryGetComponent(out CurrencyGorePickup pickup))
-            pickup.Initialize(currencyValue);
+            pickup.Initialize(currencyValue, vitalOil);
     }
 
     /// <summary>Inicializa uma peca real do modelo como particula fisica.</summary>

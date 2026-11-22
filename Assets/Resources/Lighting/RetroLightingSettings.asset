@@ -15,7 +15,7 @@ MonoBehaviour:
   maxVisibleLights: 17
   localLightIntensityMultiplier: 1
   lightingModeOverride: 3
-  gridCellSizeOverride: 0
+  gridCellSizeOverride: 2.94
   colorLevels: 0
   ditherStrength: 0
   defaultEnvironment: {fileID: 11400000, guid: 6d8ed9348ee7c514493012b653bf73e7, type: 2}

@@ -29,41 +29,47 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         [Tooltip("Caminho completo do estado no Animator. Ex.: Base Layer.L1")]
         public string animatorStatePath;
 
-        [Header("Regioes normalizadas do clip")]
-        [Range(0f, 1f)] public float windupStart;
-        [Range(0f, 1f)] public float windupEnd;
-        [Range(0f, 1f)] public float activeStart;
-        [Range(0f, 1f)] public float activeEnd;
-        [Range(0f, 1f)] public float recoveryStart;
-        [Range(0f, 1f)] public float recoveryEnd;
+        [HideInInspector] public float windupStart;
+        [HideInInspector] public float windupEnd;
+        [HideInInspector] public float activeStart;
+        [HideInInspector] public float activeEnd;
+        [HideInInspector] public float recoveryStart;
+        [HideInInspector] public float recoveryEnd;
 
-        public float GetClipProgress(PlayerAttackPhase phase,
+        public float GetClipProgress(PlayerAttackRuntime attack, PlayerAttackPhase phase,
             float phaseProgress)
         {
+            float windup = Mathf.Max(0f, attack.WindupDuration);
+            float active = Mathf.Max(0f, attack.ActiveDuration);
+            float recovery = Mathf.Max(0f, attack.RecoveryDuration);
+            float total = windup + active + recovery;
+            if (total <= 0f)
+                return 0f;
+
             float start;
             float end;
 
             switch (phase)
             {
                 case PlayerAttackPhase.Windup:
-                    start = windupStart;
-                    end = windupEnd;
+                    start = 0f;
+                    end = windup;
                     break;
                 case PlayerAttackPhase.Active:
-                    start = activeStart;
-                    end = activeEnd;
+                    start = windup;
+                    end = windup + active;
                     break;
                 case PlayerAttackPhase.Recovery:
-                    start = recoveryStart;
-                    end = recoveryEnd;
+                    start = windup + active;
+                    end = total;
                     break;
                 default:
                     return 0f;
             }
 
             return Mathf.Lerp(
-                Mathf.Clamp01(start),
-                Mathf.Clamp01(end),
+                start / total,
+                end / total,
                 Mathf.Clamp01(phaseProgress)
             );
         }
@@ -99,7 +105,7 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
     };
 
     [Header("Attack Bindings")]
-    [Tooltip("Dados puramente visuais. Adicione uma entrada para cada Attack Name que possuir clip proprio.")]
+    [Tooltip("Caminhos opcionais para estados de ataque. Sem entrada, usa o estado com o mesmo nome do ataque.")]
     [SerializeField] private AttackBinding[] attackBindings =
     {
         CreateDefaultAttackBinding("L1"),
@@ -201,15 +207,25 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         );
     }
 
-    public void PresentAttack(string attackId, PlayerAttackPhase phase,
+    public void PresentAttack(PlayerAttackRuntime attack, PlayerAttackPhase phase,
         float phaseProgress)
     {
+        string attackId = attack?.Definition.attackId;
         if (string.IsNullOrEmpty(attackId) || animator == null ||
             !animator.isActiveAndEnabled ||
-            CombatImpactSystem.IsPresentationFrozen(animator) ||
-            !attackBindingMap.TryGetValue(attackId, out AttackBinding binding))
+            CombatImpactSystem.IsPresentationFrozen(animator))
         {
             return;
+        }
+
+        if (!attackBindingMap.TryGetValue(attackId, out AttackBinding binding))
+        {
+            if (layerIndex < 0 || layerIndex >= animator.layerCount)
+                return;
+
+            binding = CreateDefaultAttackBinding(attackId);
+            binding.animatorStatePath = animator.GetLayerName(layerIndex) + "." + attackId;
+            attackBindingMap[attackId] = binding;
         }
 
         int stateHash = Animator.StringToHash(binding.animatorStatePath);
@@ -221,7 +237,7 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         animator.Play(
             stateHash,
             layerIndex,
-            binding.GetClipProgress(phase, phaseProgress)
+            binding.GetClipProgress(attack, phase, phaseProgress)
         );
     }
 
@@ -302,12 +318,6 @@ public class PlayerAnimatorPlayback : MonoBehaviour, IPlayerAnimationPlayback,
         new()
         {
             attackId = attackId,
-            animatorStatePath = "Base Layer." + attackId,
-            windupStart = 0f,
-            windupEnd = .35f,
-            activeStart = .35f,
-            activeEnd = .6f,
-            recoveryStart = .6f,
-            recoveryEnd = 1f
+            animatorStatePath = "Base Layer." + attackId
         };
 }

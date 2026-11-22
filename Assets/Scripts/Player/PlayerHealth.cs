@@ -4,10 +4,15 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(PlayerState))]
 public class PlayerHealth : MonoBehaviour
 {
+    private const string DebugGodModeKey = "ProjetoPSX.Debug.GodMode.v1";
     [Header("Vida")]
     [Tooltip("Vida maxima usada por movesets configurados com o recurso Health. Ao chegar a zero, o jogador morre.")]
     [Min(1)] public int maxHealth = 100;
     private int currentHealth;
+    [Tooltip("VitalOil maximo do moveset Mechanism. Ao chegar a zero, o jogador morre.")]
+    [Min(1)] [SerializeField] private int maxVitalOil = 100;
+    private int currentVitalOil;
+    private float pityCooldownRemaining;
 
     [Header("Poise")]
     [Tooltip("Poise maximo do player. Enquanto estiver acima de zero, golpes nao causam Stagger, Juggle ou Launches.")]
@@ -39,10 +44,6 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Permite que uma quebra de Poise mantenha o player em Juggle no ar.")]
     public bool canBeJuggled = true;
 
-    [Header("Damage Numbers")]
-    [Tooltip("Cor dos numeros de dano recebido pelo player.")]
-    [SerializeField] private Color incomingDamageNumberColor = new Color(1f, .3f, .3f);
-
     private Material[] playerMaterials = System.Array.Empty<Material>();
 
     private PlayerState playerState;
@@ -52,7 +53,6 @@ public class PlayerHealth : MonoBehaviour
     private PlayerMovesetController movesetController;
 
     private PlayerHeat playerHeat;
-    private DamageNumberSpawner damageNumbers;
     private bool godMode;
 
     private float staggerTimer;
@@ -62,9 +62,13 @@ public class PlayerHealth : MonoBehaviour
     private Color normalColor;
 
     public bool IsGodMode => godMode;
+    public event System.Action<float, int, int> ResourcesLostToDamage;
     public int CurrentHealth => currentHealth;
     public int MaxHealth => Mathf.Max(1, maxHealth);
     public float HealthPercent => MaxHealth > 0 ? Mathf.Clamp01((float)currentHealth / MaxHealth) : 0f;
+    public int CurrentVitalOil => currentVitalOil;
+    public int MaxVitalOil => Mathf.Max(1, maxVitalOil);
+    public float VitalOilPercent => (float)currentVitalOil / MaxVitalOil;
     public float CurrentPoise => poise.Current;
     public float CurrentStaggerRemaining => playerState != null && playerState.IsStaggered()
         ? Mathf.Max(0f, staggerTimer) : 0f;
@@ -76,7 +80,9 @@ public class PlayerHealth : MonoBehaviour
 
     private void Awake()
     {
+        godMode = Debug.isDebugBuild && PlayerPrefs.GetInt(DebugGodModeKey, 0) == 1;
         currentHealth = MaxHealth;
+        currentVitalOil = MaxVitalOil;
     }
 
     void Start()
@@ -90,10 +96,6 @@ public class PlayerHealth : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
         movesetController = GetComponent<PlayerMovesetController>();
         playerHeat = GetComponent<PlayerHeat>();
-        PlayerComboSystem.EnsureOn(gameObject);
-        damageNumbers = GetComponent<DamageNumberSpawner>();
-        if (damageNumbers == null)
-            damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
         poise.Initialize(maxPoise);
 
         if (playerMaterials.Length > 0)
@@ -104,6 +106,9 @@ public class PlayerHealth : MonoBehaviour
     {
         if (CombatImpactSystem.IsGameplayFrozen(this))
             return;
+
+        if (!GamePauseController.IsPaused && !CutsceneController.IsPlayerControlLocked)
+            pityCooldownRemaining = Mathf.Max(0f, pityCooldownRemaining - Time.deltaTime);
 
         bool blocksPoiseRegen = playerState.IsStaggered() ||
             playerState.IsBurnStunned() || playerState.IsBurnWalking() ||
@@ -139,6 +144,7 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!Debug.isDebugBuild) return;
         currentHealth = maximize ? MaxHealth : 0;
+        currentVitalOil = maximize ? MaxVitalOil : 0;
         poise.SetCurrent(maximize ? maxPoise : 0f, maxPoise);
         if (!maximize && playerState != null)
             playerState.ChangeState(PlayerState.State.Dead);
@@ -146,7 +152,10 @@ public class PlayerHealth : MonoBehaviour
 
     public void DebugToggleGodMode()
     {
-        if (Debug.isDebugBuild) godMode = !godMode;
+        if (!Debug.isDebugBuild) return;
+        godMode = !godMode;
+        PlayerPrefs.SetInt(DebugGodModeKey, godMode ? 1 : 0);
+        PlayerPrefs.Save();
     }
 
     public void DebugKillPlayer()
@@ -158,14 +167,13 @@ public class PlayerHealth : MonoBehaviour
     /// <summary>Retorna estados temporarios de dano ao estado inicial de uma nova campanha.</summary>
     public void ResetForNewGame()
     {
-        if (TryGetComponent(out PlayerComboSystem comboSystem))
-            comboSystem.ResetForNewGame();
-        godMode = false;
         staggerTimer = 0f;
         activeStaggerDuration = 0f;
         waitingForForcedReactionEnd = false;
         poise.Initialize(maxPoise);
         currentHealth = MaxHealth;
+        currentVitalOil = MaxVitalOil;
+        pityCooldownRemaining = 0f;
         if (playerState != null)
             playerState.ResetForNewGame();
         SetPlayerColor(normalColor);
@@ -175,6 +183,7 @@ public class PlayerHealth : MonoBehaviour
     public void ResetHealthForResourceMode()
     {
         currentHealth = MaxHealth;
+        currentVitalOil = MaxVitalOil;
     }
 
     /// <summary>Restaura a vida persistida e limpa uma morte anterior.</summary>
@@ -183,6 +192,18 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Clamp(health, 1, MaxHealth);
         if (playerState != null && playerState.IsDead())
             playerState.ChangeState(PlayerState.State.Normal);
+    }
+
+    public void RestoreSaveVitalOil(int vitalOil)
+    {
+        currentVitalOil = Mathf.Clamp(vitalOil, 1, MaxVitalOil);
+        pityCooldownRemaining = 0f;
+    }
+
+    public void RestoreVitalOil(int amount)
+    {
+        if (amount > 0 && playerState != null && !playerState.IsDead())
+            currentVitalOil = Mathf.Min(MaxVitalOil, currentVitalOil + amount);
     }
 
     private void StartStagger(bool heavyStagger, Vector3 attackerPosition,
@@ -285,7 +306,6 @@ public class PlayerHealth : MonoBehaviour
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {
-            PlayerComboSystem.RegisterPlayerDamaged(transform);
             if (combatStatus != null)
                 combatStatus.RegisterDamageTakenFromEnemy();
             EnemyBase.NotifyPlayerDamagedByEnemy();
@@ -299,8 +319,7 @@ public class PlayerHealth : MonoBehaviour
                 transform.position);
         }
 
-        if (damageNumbers != null)
-            damageNumbers.ShowDamage(damage, incomingDamageNumberColor);
+        DamageNumberSpawner.ShowPlayerDamage(transform, damage);
 
         PlayerMovesetController activeMoveset = movesetController != null
             ? movesetController : GetComponent<PlayerMovesetController>();
@@ -308,22 +327,36 @@ public class PlayerHealth : MonoBehaviour
         // GodMode protege somente o recurso final. O golpe ainda confirma
         // dano, mantém o combate ativo, gera feedback e reduz Poise, podendo
         // provocar stagger ou outras reações normalmente.
-        if (!godMode && usesHealth)
+        if (!godMode)
         {
-            currentHealth = Mathf.Max(0, currentHealth - Mathf.Max(0, damage));
-            if (currentHealth == 0)
+            float previousHeat = playerHeat != null ? playerHeat.CurrentHeat : 0f;
+            int previousHealth = currentHealth;
+            int previousVitalOil = currentVitalOil;
+            float remaining = Mathf.Max(0, damage);
+            if (!usesHealth && playerHeat != null)
+            {
+                remaining *= playerHeat.HeavyDamageMultiplier;
+                float absorbed = Mathf.Min(playerHeat.CurrentHeat, remaining);
+                playerHeat.RemoveHeat(absorbed);
+                remaining -= absorbed;
+            }
+            if (usesHealth)
+                currentHealth = Mathf.Max(0, currentHealth - Mathf.CeilToInt(remaining));
+            else
+                currentVitalOil = Mathf.Max(0, currentVitalOil - ApplyPityMechanic(
+                    Mathf.CeilToInt(remaining), activeMoveset != null ? activeMoveset.Moveset : null));
+            float heatLost = playerHeat != null ? Mathf.Max(0f, previousHeat - playerHeat.CurrentHeat) : 0f;
+            int healthLost = previousHealth - currentHealth;
+            int vitalOilLost = previousVitalOil - currentVitalOil;
+            if (heatLost > 0f || healthLost > 0 || vitalOilLost > 0)
+                ResourcesLostToDamage?.Invoke(heatLost, healthLost, vitalOilLost);
+            if (usesHealth ? currentHealth == 0 : currentVitalOil == 0)
                 playerState.ChangeState(PlayerState.State.Dead);
-        }
-        else if (!godMode)
-        {
-            if (playerHeat != null)
-                playerHeat.RemoveHeat(damage);
         }
         CombatPoiseHitResult poiseHit = poise.ReceiveHit(poiseDamage, maxPoise);
 
-        // O impacto pertence ao dano confirmado, inclusive se ele levar o
-        // player a Cold extremo ou ocorrer durante Burning. Knockback e
-        // Stagger continuam sendo regras separadas abaixo.
+        // O impacto pertence ao dano confirmado; knockback e stagger
+        // continuam sendo regras separadas abaixo.
         if (causedByEnemy)
         {
             CombatImpactSystem.ReportEnemyAttackImpact(
@@ -352,6 +385,31 @@ public class PlayerHealth : MonoBehaviour
         ApplyPoiseReaction(poiseHit, requestedReaction, attackerPosition,
             damage, causesHeavyStagger);
         return true;
+    }
+
+    private int ApplyPityMechanic(int damage, PlayerMovesetDefinition moveset)
+    {
+        PlayerPityMechanicSettings pity = moveset != null ? moveset.pityMechanic : null;
+        if (damage <= 0 || pity == null || !pity.enabled || pityCooldownRemaining > 0f)
+            return damage;
+
+        int limitedDamage = damage;
+        if (pity.limitDamage)
+            limitedDamage = Mathf.Min(limitedDamage,
+                Mathf.FloorToInt(MaxVitalOil * Mathf.Clamp01(pity.maxDamagePercent)));
+
+        bool lethal = damage >= currentVitalOil;
+        if (pity.preventLethalDamage && lethal &&
+            currentVitalOil >= MaxVitalOil * Mathf.Clamp01(pity.minimumVitalOilPercent))
+        {
+            int protectedVitalOil = Mathf.Max(1,
+                Mathf.CeilToInt(MaxVitalOil * Mathf.Clamp01(pity.survivorVitalOilPercent)));
+            limitedDamage = Mathf.Min(limitedDamage, Mathf.Max(0, currentVitalOil - protectedVitalOil));
+        }
+
+        if (limitedDamage < damage)
+            pityCooldownRemaining = Mathf.Max(0f, pity.cooldownSeconds);
+        return limitedDamage;
     }
 
     private void ApplyPoiseReaction(CombatPoiseHitResult poiseHit,

@@ -15,7 +15,7 @@ public static class GameSaveService
     [Serializable]
     public sealed class SaveData
     {
-        public int version = 1;
+        public int version = 2;
         public int slotIndex = AutomaticSlotIndex;
         public string scenePath;
         public string spawnId;
@@ -24,7 +24,7 @@ public static class GameSaveService
         public double playedSeconds;
         public int currentHealth;
         public float currentHeat;
-        public float currentSuperheat;
+        public int currentVitalOil;
         public int currency;
         public string[] keyItemIds = Array.Empty<string>();
         public PlayerUpgradeSaveEntry[] upgrades = Array.Empty<PlayerUpgradeSaveEntry>();
@@ -299,7 +299,7 @@ public static class GameSaveService
             playedSeconds = savedPlayTimeBase + sessionPlayedSeconds,
             currentHealth = health != null ? health.CurrentHealth : 0,
             currentHeat = heat != null ? heat.CurrentHeat : 0f,
-            currentSuperheat = heat != null ? heat.CurrentSuperheat : 0f,
+            currentVitalOil = health != null ? health.CurrentVitalOil : 0,
             currency = wallet != null ? wallet.Current : 0,
             keyItemIds = KeyItemInventory.ExportCollectedIds(),
             upgrades = progression.ExportSaveData(),
@@ -322,9 +322,12 @@ public static class GameSaveService
         KeyItemInventory.RestoreCollectedIds(data.keyItemIds, data.acquiredItemIds, false);
         GameWorldSaveState.Restore(data.worldObjects);
         if (player.TryGetComponent(out PlayerHeat heat))
-            heat.RestoreSaveState(data.currentHeat, data.currentSuperheat);
+            heat.RestoreSaveState(data.currentHeat);
         if (player.TryGetComponent(out PlayerHealth health))
+        {
             health.RestoreSaveHealth(data.currentHealth);
+            health.RestoreSaveVitalOil(data.version < 2 ? data.currentHealth : data.currentVitalOil);
+        }
         CorpseRun.RestoreSaveData(data.corpseRunJson);
     }
 
@@ -381,11 +384,10 @@ public static class GameSaveService
         try
         {
             SaveData data = JsonUtility.FromJson<SaveData>(json);
-            return data != null && data.version == 1 && !string.IsNullOrWhiteSpace(data.scenePath) &&
+            return data != null && (data.version == 1 || data.version == 2) && !string.IsNullOrWhiteSpace(data.scenePath) &&
                 !double.IsNaN(data.playedSeconds) && !double.IsInfinity(data.playedSeconds) &&
                 data.playedSeconds >= 0d && data.playedSeconds <= 315537897599d &&
-                !float.IsNaN(data.currentHeat) && !float.IsInfinity(data.currentHeat) &&
-                !float.IsNaN(data.currentSuperheat) && !float.IsInfinity(data.currentSuperheat)
+                !float.IsNaN(data.currentHeat) && !float.IsInfinity(data.currentHeat)
                 ? data : null;
         }
         catch (Exception exception)

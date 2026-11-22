@@ -71,7 +71,6 @@ public static class PlayerProgressionSetup
                 BoxCollider body = root.AddComponent<BoxCollider>();
                 body.center = Vector3.up; body.size = new Vector3(1.3f, 2, 1.3f);
                 root.AddComponent<EnemyGore>();
-                root.AddComponent<WorldLockOnTarget>();
                 CurrencyShopTerminal terminal = root.AddComponent<CurrencyShopTerminal>();
                 GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 visual.name = "VisualRoot";

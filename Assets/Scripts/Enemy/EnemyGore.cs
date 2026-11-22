@@ -1,10 +1,20 @@
 using UnityEngine;
 
+public enum EnemyMaterialType { Tissue, Mechanical }
+
 /// <summary>Configuracao opcional de particulas para um inimigo.</summary>
 [DisallowMultipleComponent]
 [AddComponentMenu("Projeto PSX/Enemy Gore")]
 public sealed class EnemyGore : MonoBehaviour
 {
+    [Header("Tipo de inimigo")]
+    [Tooltip("Inimigos mecanicos liberam fragmentos de VitalOil ao morrer.")]
+    [SerializeField] private EnemyMaterialType enemyType;
+    [Tooltip("Intervalo de VitalOil recuperado por cada fragmento mecanico coletado.")]
+    [SerializeField] private Vector2Int vitalOilValue = new(2, 5);
+    public bool IsMechanical => enemyType == EnemyMaterialType.Mechanical;
+    public Vector2Int VitalOilValue => new(Mathf.Max(0, Mathf.Min(vitalOilValue.x, vitalOilValue.y)), Mathf.Max(0, Mathf.Max(vitalOilValue.x, vitalOilValue.y)));
+
     [Header("Particle Profiles")]
     [Tooltip("Perfil emitido quando este inimigo recebe dano. Vazio usa o perfil global de impacto.")]
     [SerializeField] private CombatParticleProfile damageProfile;

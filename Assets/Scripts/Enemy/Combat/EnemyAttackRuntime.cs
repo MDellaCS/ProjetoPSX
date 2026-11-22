@@ -29,7 +29,7 @@ public sealed class EnemyAttackRuntime
             ? Mathf.Max(0f, corpseSettings.recoveryMultiplier) : 1f;
         Node = node;
         Definition = node.attack;
-        Damage = Definition.baseDamage;
+        Damage = CombatUnitSettings.EnemyDamage(Definition.baseDamage);
         PoiseDamage = Definition.basePoiseDamage;
         WindupDuration = Mathf.Max(0f,
             (windupDurationOverride ?? Definition.windupDuration) * windupMultiplier);

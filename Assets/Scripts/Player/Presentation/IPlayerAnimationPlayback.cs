@@ -16,7 +16,7 @@ public interface IPlayerAnimationPlayback
 public interface IPlayerAttackAnimationPlayback
 {
     void PresentAttack(
-        string attackId,
+        PlayerAttackRuntime attack,
         PlayerAttackPhase phase,
         float phaseProgress
     );

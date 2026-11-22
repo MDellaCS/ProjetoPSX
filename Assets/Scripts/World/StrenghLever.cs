@@ -10,7 +10,7 @@ public enum StrenghLeverActivationMode
 /// <summary>
 /// Gatilho de mundo simples ativado pelo dano dos ataques do player. A regra de
 /// dano usa os mesmos modelos do WorldObject. Para novos objetos (com estados,
-/// particulas, dinheiro, barra de vida e lock-on) prefira o componente
+/// particulas, dinheiro e barra de vida) prefira o componente
 /// WorldObject; esta classe continua para as alavancas ja existentes nas cenas.
 /// </summary>
 [DisallowMultipleComponent]

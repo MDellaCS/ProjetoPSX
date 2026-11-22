@@ -97,6 +97,10 @@ public sealed class CombatParticleSystem : MonoBehaviour
                 renderer, gore != null ? gore.ParticleCountMultiplier : 1f,
                 gore != null ? gore.CurrencyValueRange : default,
                 currencyGorePieces);
+            if (gore != null && gore.IsMechanical)
+                system.Emit(gore.DeathProfile, system.defaultGore, position,
+                    direction, damageDealt, renderer, gore.ParticleCountMultiplier,
+                    gore.VitalOilValue, Mathf.Max(1, gore.CurrencyGorePieces), true);
         }
     }
 
@@ -137,7 +141,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
         CombatParticleProfile fallbackProfile, Vector3 position, Vector3 direction,
         int damageDealt, Renderer sourceRenderer,
         float particleCountMultiplier = 1f, Vector2Int currencyValueRange = default,
-        int currencyGorePieces = 0)
+        int currencyGorePieces = 0, bool vitalOil = false)
     {
         EnsureDefaults();
         CombatParticleProfile profile = overrideProfile != null ? overrideProfile : fallbackProfile;
@@ -172,7 +176,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
                 velocity += scatter.normalized * profile.randomSpeed;
             int value = index < collectibleCount
                 ? Random.Range(minimumValue, maximumValue + 1) : 0;
-            SpawnVisual(profile, spawnPosition, velocity, size, material, value);
+            SpawnVisual(profile, spawnPosition, velocity, size, material, value, vitalOil);
         }
     }
 
@@ -223,7 +227,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
     }
 
     private void SpawnVisual(CombatParticleProfile profile, Vector3 position,
-        Vector3 velocity, float size, Material material, int currencyValue = 0)
+        Vector3 velocity, float size, Material material, int currencyValue = 0, bool vitalOil = false)
     {
         CombatVisualParticle particle = freeVisual.Count > 0
             ? freeVisual.Dequeue()
@@ -235,7 +239,7 @@ public sealed class CombatParticleSystem : MonoBehaviour
             minimumCurrencyGoreLifetime, particleFadeStartRemainingPercent,
             currencyBlinkStartRemainingPercent,
             currencyFastBlinkStartRemainingPercent,
-            currencyBlinkFrequency, currencyFastBlinkFrequency);
+            currencyBlinkFrequency, currencyFastBlinkFrequency, vitalOil);
         activeVisual.Add(particle);
     }
 

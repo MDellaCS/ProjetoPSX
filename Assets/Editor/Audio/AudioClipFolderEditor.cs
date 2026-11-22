@@ -157,7 +157,7 @@ internal sealed class AudioModuleSettingsFolderEditor : Editor
             using (new EditorGUI.DisabledScope(property.propertyPath == "m_Script"))
                 EditorGUILayout.PropertyField(property, true);
             if (target is SfxAudioSettings &&
-                (property.propertyPath == "heatRiseClips" || property.propertyPath == "coldFallClips"))
+                property.propertyPath == "heatRiseClips")
             {
                 Rect button = EditorGUILayout.GetControlRect();
                 AudioClipFolderEditor.DrawButton(EditorGUI.IndentedRect(button), property);

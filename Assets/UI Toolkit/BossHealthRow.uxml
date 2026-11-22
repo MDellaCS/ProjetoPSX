@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement class="boss-row" picking-mode="Ignore">
+        <ui:Label name="boss-name" picking-mode="Ignore" />
+        <ui:VisualElement name="boss-health-track" picking-mode="Ignore">
+            <ui:VisualElement name="boss-health-fill" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:Label name="boss-health-value" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -22,7 +22,7 @@ public sealed class CutsceneController : MonoBehaviour
     [SerializeField] private bool playOnEnable;
 
     [Header("Controle de Gameplay")]
-    [Tooltip("Bloqueia movimento, ataques, lock-on e buffer do jogador enquanto a Timeline toca.")]
+    [Tooltip("Bloqueia movimento, ataques e buffer do jogador enquanto a Timeline toca.")]
     [SerializeField] private bool lockPlayerControl = true;
     [Tooltip("Congela a IA e os ataques dos inimigos enquanto a Timeline toca.")]
     [SerializeField] private bool freezeEnemies = true;

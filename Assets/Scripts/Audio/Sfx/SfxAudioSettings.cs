@@ -20,9 +20,9 @@ public enum GameplayAudioSurfaceType
 [System.Serializable]
 public sealed class HeatNotchSound
 {
-    [Tooltip("Som tocado ao ganhar este notch (Heat ou Cold subindo de nivel). Vazio = silencio.")]
+    [Tooltip("Som tocado ao ganhar este notch (Heat subindo de nivel). Vazio = silencio.")]
     public AudioCue gain = CreateCue();
-    [Tooltip("Som tocado ao perder este notch (Heat ou Cold descendo de nivel). Vazio = silencio.")]
+    [Tooltip("Som tocado ao perder este notch (Heat descendo de nivel). Vazio = silencio.")]
     public AudioCue loss = CreateCue();
 
     public static AudioCue CreateCue() => new();
@@ -77,14 +77,10 @@ public sealed class SfxAudioSettings : AudioModuleSettings
     [HideInInspector]
     public HeatNotchSound[] heatNotches = CreateHeatNotches(DefaultHeatNotchCount);
     [Header("Sons dos notches")]
-    [Tooltip("Som compartilhado ao subir notches negativos em direcao ao zero.")]
-    public AudioClip coldRiseClip;
     [Tooltip("Som compartilhado ao descer notches positivos em direcao ao zero.")]
     public AudioClip heatFallClip;
     [Tooltip("Sons ao subir notches positivos: elemento 0 corresponde ao notch +1, elemento 1 ao +2 e assim por diante.")]
     public AudioClip[] heatRiseClips = new AudioClip[DefaultHeatNotchCount];
-    [Tooltip("Sons ao descer notches negativos: elemento 0 corresponde ao notch -1, elemento 1 ao -2 e assim por diante.")]
-    public AudioClip[] coldFallClips = new AudioClip[DefaultHeatNotchCount];
     [Tooltip("Volume compartilhado por todos os sons de notch, antes dos volumes globais de efeitos.")]
     [Range(0f, 5f)] public float notchVolume = 2.13f;
     [Tooltip("Prioridade compartilhada das vozes dos notches: 0 e a mais alta e 255 a mais baixa.")]
@@ -132,13 +128,13 @@ public sealed class SfxAudioSettings : AudioModuleSettings
         _ => null
     };
 
-    /// <summary>Seleciona o som do ultimo limite atravessado entre notches com sinal.</summary>
+    /// <summary>Seleciona o som do ultimo limite de Heat atravessado.</summary>
     public AudioClip GetHeatNotchClip(int previousNotch, int nextNotch)
     {
         if (previousNotch == nextNotch) return null;
         if (nextNotch > previousNotch)
-            return nextNotch > 0 ? GetNotchClip(heatRiseClips, nextNotch) : coldRiseClip;
-        return nextNotch < 0 ? GetNotchClip(coldFallClips, -nextNotch) : heatFallClip;
+            return nextNotch > 0 ? GetNotchClip(heatRiseClips, nextNotch) : null;
+        return heatFallClip;
     }
 
     private static AudioClip GetNotchClip(AudioClip[] clips, int notch) =>

@@ -74,6 +74,17 @@ public sealed class EnemyEncounter : MonoBehaviour
     public EncounterState CurrentState => state;
     public int CurrentWaveIndex => currentWaveIndex;
     public int WaveCount => waves.Count;
+    internal bool HasLivingPlayer => player != null && player.gameObject.activeInHierarchy &&
+        player.TryGetComponent(out PlayerState state) && !state.IsDead();
+    internal bool HasUpcomingBoss
+    {
+        get
+        {
+            foreach (EnemyEncounterWave wave in waves)
+                if (wave.HasUpcomingBoss) return true;
+            return false;
+        }
+    }
     public int LivingEnemyCount
     {
         get
@@ -342,7 +353,8 @@ public sealed class EnemyEncounter : MonoBehaviour
 
     private void ResolvePlayer()
     {
-        if (player != null) return;
+        if (player != null && player.gameObject.activeInHierarchy) return;
+        player = null;
         if (Time.unscaledTime < nextPlayerLookupTime)
             return;
         nextPlayerLookupTime = Time.unscaledTime + .5f;

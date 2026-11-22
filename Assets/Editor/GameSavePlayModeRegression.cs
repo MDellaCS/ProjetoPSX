@@ -174,7 +174,7 @@ public static class GameSavePlayModeRegression
         }
         bool hadRage = heat.HasRageUnlocked;
         float maxHeat = heat.MaxHeat;
-        heat.RestoreSaveState(maxHeat - 1f, 12f);
+        heat.RestoreSaveState(maxHeat - 1f);
         health.RestoreSaveHealth(47);
         wallet.RestoreSaveValue(321);
 
@@ -211,15 +211,14 @@ public static class GameSavePlayModeRegression
         string originalCheckpoint = PlayerPrefs.GetString(Checkpoint);
         wallet.RestoreSaveValue(999);
         progression.ResetProgress();
-        heat.RestoreSaveState(0f, 0f);
+        heat.RestoreSaveState(0f);
         health.RestoreSaveHealth(5);
         Check(GameSaveService.LoadManual(0, out _, out _), "Carregar save manual inicia transicao.");
         Check(!GameSaveService.SaveCheckpoint("Invalido", ""), "Checkpoint bloqueado durante carregamento.");
         Check(!GameSaveService.BeginNewCampaign(scenePath, "", player, out _), "Novo Jogo bloqueado durante carregamento.");
         while (!Ready(loader)) yield return null;
         Check(wallet.Current == 321 && health.CurrentHealth == 47, "Load restaura moeda e vida exatas.");
-        Check(Mathf.Approximately(heat.MaxHeat, maxHeat) && Mathf.Approximately(heat.CurrentHeat, maxHeat - 1f) &&
-            Mathf.Approximately(heat.CurrentSuperheat, 12f), "Load restaura Carga, Heat e Superheat.");
+        Check(Mathf.Approximately(heat.MaxHeat, maxHeat) && Mathf.Approximately(heat.CurrentHeat, maxHeat - 1f), "Load restaura Carga e Heat.");
         Check(heat.HasRageUnlocked == hadRage, "Load preserva desbloqueio de Rage.");
         Check(JsonUtility.ToJson(new Levels { entries = progression.ExportSaveData() }) ==
             JsonUtility.ToJson(new Levels { entries = snapshot.upgrades }), "Load restaura todos os niveis.");

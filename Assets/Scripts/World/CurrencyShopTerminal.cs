@@ -7,7 +7,7 @@ public enum ShopDestructionMode
 }
 
 /// <summary>Terminal destrutivel; todos os terminais acessam o mesmo catalogo e progresso do Player.</summary>
-[RequireComponent(typeof(Collider), typeof(EnemyGore), typeof(WorldLockOnTarget))]
+[RequireComponent(typeof(Collider), typeof(EnemyGore))]
 [DisallowMultipleComponent]
 public sealed class CurrencyShopTerminal : MonoBehaviour, IPlayerAttackTarget
 {

@@ -159,7 +159,7 @@ public class PlayerAnimationPresenter : MonoBehaviour
             if (playback is IPlayerAttackAnimationPlayback attackPlayback)
             {
                 attackPlayback.PresentAttack(
-                    attackController.CurrentAttackId,
+                    attackController.CurrentAttack,
                     attackController.CurrentPhase,
                     attackController.CurrentPhaseProgress
                 );

@@ -45,11 +45,12 @@ MonoBehaviour:
     probeSamplingDebugTexture: {fileID: 2800000, guid: 24ec0e140fb444a44ab96ee80844e18e, type: 3}
     probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
+  - {fileID: 3344556677889900123}
   - {fileID: 7833122117494664109}
   - {fileID: -6771907895668788512}
   - {fileID: 7833122117494664110}
   - {fileID: 3344556677889900112}
-  m_RendererFeatureMap: ad6b866f10d7b46ce0b2ffe2a55905a2ae6b866f10d7b46cl
+  m_RendererFeatureMap: 5bbec90c94406a2ead6b866f10d7b46ce0b2ffe2a55905a2ae6b866f10d7b46c50bec90c94406a2e
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 3
@@ -144,3 +145,17 @@ MonoBehaviour:
   passIndex: 0
   bindDepthStencilAttachment: 0
   m_Version: 1
+--- !u!114 &3344556677889900123
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b41de4a7e45e4614bc4d38ee2d189e12, type: 3}
+  m_Name: Retro Bloom
+  m_EditorClassIdentifier: Assembly-CSharp::RetroBloomRendererFeature
+  m_Active: 1
+  settings: {fileID: 11400000, guid: b41de4a7e45e4614bc4d38ee2d189e14, type: 2}

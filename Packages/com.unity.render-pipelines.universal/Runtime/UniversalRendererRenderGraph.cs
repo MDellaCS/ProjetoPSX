@@ -1460,6 +1460,26 @@ namespace UnityEngine.Rendering.Universal
                     SetupAfterPostRenderGraphFinalPassDebug(renderGraph, frameData);
             }
 
+            // Projeto PSX: include screen-space panels in the retro fullscreen pass.
+            // Keep IMGUI at its normal position and retain the stock path when
+            // no intermediate target is available or backdrop composition is required.
+            bool retroOverlayRendered = false;
+            if (cameraData.cameraType == CameraType.Game && cameraData.rendersOverlayUI &&
+                cameraData.isLastBaseCamera && cameraData.resolveFinalTarget && !cameraData.isHDROutputActive &&
+                !m_DrawOverlayUIPass.RequiresComposition() && hasPassesAfterPostProcessing &&
+                !resourceData.isActiveTargetBackBuffer && Shader.GetGlobalVector("_GlobalRetroParams").x > 0.5f)
+            {
+                var color = resourceData.activeColorTexture;
+                var depthDesc = renderGraph.GetTextureDesc(color);
+                depthDesc.format = UnityEngine.Experimental.Rendering.GraphicsFormat.None;
+                depthDesc.depthBufferBits = DepthBits.Depth24;
+                depthDesc.clearBuffer = true;
+                depthDesc.name = "_RetroOverlayDepth";
+                var depth = renderGraph.CreateTexture(depthDesc);
+                m_DrawOverlayUIPass.RenderOverlayUIToolkitAndUGUI(renderGraph, frameData, in color, in depth);
+                retroOverlayRendered = true;
+            }
+
             //We already checked the passes so we can skip here if there are none as a small optimization
             if (hasPassesAfterPostProcessing)
                 RecordCustomRenderGraphPasses(renderGraph, RenderPassEvent.AfterRenderingPostProcessing);
@@ -1523,11 +1543,11 @@ namespace UnityEngine.Rendering.Universal
                     depth = resourceData.activeDepthTexture;
                 }
 
-                if (renderOverlayComposite)
+                if (!retroOverlayRendered && renderOverlayComposite)
                 {
                     m_DrawOverlayUIPass.RenderOverlayUIToolkitAndUGUIComposite(renderGraph, frameData, in color);
                 }
-                else
+                else if (!retroOverlayRendered)
                 {
                     m_DrawOverlayUIPass.RenderOverlayUIToolkitAndUGUI(renderGraph, frameData, in color, in depth);
                 }

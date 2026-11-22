@@ -48,21 +48,14 @@ public static class AudioModulesRegression
             {
                 for (int i = 0; i < notchClips.Length; i++)
                     notchClips[i] = AudioClip.Create("notch-test-" + i, 1, 1, 44100, false);
-                notchSettings.coldRiseClip = notchClips[0];
                 notchSettings.heatFallClip = notchClips[1];
                 notchSettings.heatRiseClips = new[] { notchClips[2], notchClips[3] };
-                notchSettings.coldFallClips = new[] { notchClips[4], notchClips[5] };
-                Check(notchSettings.GetHeatNotchClip(-2, -1) == notchClips[0] &&
-                    notchSettings.GetHeatNotchClip(-1, 0) == notchClips[0],
-                    "Subir Cold usa o som compartilhado.");
                 Check(notchSettings.GetHeatNotchClip(2, 1) == notchClips[1] &&
                     notchSettings.GetHeatNotchClip(1, 0) == notchClips[1],
                     "Descer Heat usa o som compartilhado.");
-                Check(notchSettings.GetHeatNotchClip(-2, 2) == notchClips[3] &&
-                    notchSettings.GetHeatNotchClip(0, 1) == notchClips[2] &&
-                    notchSettings.GetHeatNotchClip(2, -2) == notchClips[5] &&
-                    notchSettings.GetHeatNotchClip(0, -1) == notchClips[4],
-                    "Saltos e travessias do zero usam o ultimo notch alcancado.");
+                Check(notchSettings.GetHeatNotchClip(0, 2) == notchClips[3] &&
+                    notchSettings.GetHeatNotchClip(0, 1) == notchClips[2],
+                    "Subir Heat usa o som do ultimo notch alcancado.");
                 Check(notchSettings.GetHeatNotchClip(1, 1) == null,
                     "Sem mudanca de notch nao ha som.");
             }

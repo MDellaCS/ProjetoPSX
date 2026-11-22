@@ -11,7 +11,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 {
     private const string CombatModifierId = "Gameplay.Combat";
     private const string HeatModifierId = "Gameplay.Heat";
-    private const string ColdModifierId = "Gameplay.Cold";
 
     [Header("Combat")]
     [Tooltip("Metros somados a distancia base da camera enquanto o player esta em combate. Use valor negativo para aproximar.")]
@@ -36,19 +35,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     [Tooltip("Tempo de suavizacao da influencia do Heat na camera.")]
     [Min(0f)] [SerializeField] private float heatBlendTime = .2f;
 
-    [Header("Negative Heat / Cold")]
-    [Tooltip("Metros somados a distancia base quando o Cold chega ao maximo. Valores positivos afastam a camera.")]
-    [SerializeField] private float maximumColdDistanceOffset = 2f;
-    [Tooltip("Graus somados ao campo de visao quando o Cold chega ao maximo. Valores negativos estreitam a visao.")]
-    [SerializeField] private float maximumColdFieldOfViewOffset = -12f;
-    [Tooltip("Graus maximos de Roll quando o Cold chega ao maximo. Simula a camera tombando horizontalmente para um lado.")]
-    [SerializeField] private float maximumColdRollOffset = 8f;
-    [Tooltip("Curva compartilhada pelos efeitos visuais de Cold. X representa a magnitude de Cold normalizada (0 a 1); Y representa a parcela aplicada a distancia, FOV e Roll.")]
-    [SerializeField] private AnimationCurve negativeHeatEffectsCurve =
-        AnimationCurve.Linear(0f, 0f, 1f, 1f);
-    [Tooltip("Tempo de suavizacao da influencia do Cold na camera.")]
-    [Min(0f)] [SerializeField] private float coldBlendTime = .2f;
-
     [Header("Thermal Color Grading")]
     [Tooltip("Global Volume que recebera uma copia runtime do Profile para o grading termico. Se vazio, encontra o primeiro Volume global ativo.")]
     [SerializeField] private Volume thermalVolume;
@@ -58,13 +44,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     [Range(-100f, 100f)] [SerializeField] private float maximumHeatSaturation = 8f;
     [Tooltip("Contrast adicional no Heat maximo.")]
     [Range(-100f, 100f)] [SerializeField] private float maximumHeatContrast = 8f;
-    [Tooltip("Temperature adicional no Cold maximo. Valores negativos deixam a imagem mais fria.")]
-    [Range(-100f, 100f)] [SerializeField] private float maximumColdTemperature = -40f;
-    [Tooltip("Saturation adicional no Cold maximo. Valores negativos dessaturam a imagem.")]
-    [Range(-100f, 100f)] [SerializeField] private float maximumColdSaturation = -20f;
-    [Tooltip("Contrast adicional no Cold maximo.")]
-    [Range(-100f, 100f)] [SerializeField] private float maximumColdContrast = 6f;
-
     [Header("Player Centered Fog")]
     [Tooltip("Ativa a nevoa centrada na posicao mundial do player. Requer o Renderer Feature 'Player Centered Fog' configurado no PC_Renderer.")]
     [SerializeField] private bool playerCenteredFogEnabled = true;
@@ -147,8 +126,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
     private float combatVelocity;
     private float heatWeight;
     private float heatVelocity;
-    private float coldWeight;
-    private float coldVelocity;
     private WhiteBalance whiteBalance;
     private ColorAdjustments colorAdjustments;
     private float baseTemperature;
@@ -196,7 +173,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         {
             effects.RemoveModifier(CombatModifierId);
             effects.RemoveModifier(HeatModifierId);
-            effects.RemoveModifier(ColdModifierId);
         }
         Shader.SetGlobalFloat(HeatPeripheralBlurId, 0f);
         Shader.SetGlobalFloat(PlayerCenteredFogEnabledId, 0f);
@@ -209,11 +185,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
             positiveHeatEffectsCurve.length == 0)
         {
             positiveHeatEffectsCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-        }
-        if (negativeHeatEffectsCurve == null ||
-            negativeHeatEffectsCurve.length == 0)
-        {
-            negativeHeatEffectsCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         }
         playerCenteredFogEndRadius = Mathf.Max(playerCenteredFogStartRadius + .01f,
             playerCenteredFogEndRadius);
@@ -261,21 +232,6 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         Shader.SetGlobalFloat(HeatPeripheralBlurId,
             maximumHeatPeripheralBlur * heatWeight);
 
-        float maximumCold = playerHeat != null && playerHeat.IsHeatModeActive
-            ? Mathf.Max(0f, -playerHeat.MinHeat) : 0f;
-        float normalizedCold = maximumCold > 0f
-            ? Mathf.Clamp01(-playerHeat.CurrentHeat / maximumCold) : 0f;
-        float coldTargetWeight = Mathf.Clamp01(negativeHeatEffectsCurve != null
-            ? negativeHeatEffectsCurve.Evaluate(normalizedCold)
-            : normalizedCold);
-        coldWeight = Damp(coldWeight, coldTargetWeight,
-            ref coldVelocity, coldBlendTime);
-        CameraModifier coldModifier = CameraModifier.Identity;
-        coldModifier.distanceOffset = maximumColdDistanceOffset * coldWeight;
-        coldModifier.fieldOfViewOffset =
-            maximumColdFieldOfViewOffset * coldWeight;
-        coldModifier.rollOffset = maximumColdRollOffset * coldWeight;
-        effects.SetModifier(ColdModifierId, coldModifier);
         ApplyThermalColorGrading();
     }
 
@@ -338,14 +294,11 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         // Os pesos ja foram calculados pelas mesmas curvas e pelos mesmos
         // tempos de blend usados para distancia, FOV e Roll da camera.
         whiteBalance.temperature.value = baseTemperature +
-            maximumHeatTemperature * heatWeight +
-            maximumColdTemperature * coldWeight;
+            maximumHeatTemperature * heatWeight;
         colorAdjustments.saturation.value = baseSaturation +
-            maximumHeatSaturation * heatWeight +
-            maximumColdSaturation * coldWeight;
+            maximumHeatSaturation * heatWeight;
         colorAdjustments.contrast.value = baseContrast +
-            maximumHeatContrast * heatWeight +
-            maximumColdContrast * coldWeight;
+            maximumHeatContrast * heatWeight;
     }
 
     private void EnsureThermalProfile()

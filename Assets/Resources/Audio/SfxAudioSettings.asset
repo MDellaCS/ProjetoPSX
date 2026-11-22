@@ -183,7 +183,6 @@ MonoBehaviour:
       pitch: 4
       pitchVariation: 0
       priority: 128
-  coldRiseClip: {fileID: 8300000, guid: 735300fbf9d864e4684f9bd7992d0835, type: 3}
   heatFallClip: {fileID: 8300000, guid: 547f9b4d25a2e9f4493ee6721101f208, type: 3}
   heatRiseClips:
   - {fileID: 8300000, guid: 4094e0e175bf0f64c95fba57676996a7, type: 3}
@@ -196,18 +195,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: f2186f43256ce194db2c19daedcb117e, type: 3}
   - {fileID: 8300000, guid: 1a67b5fde2b86674ebc63f16b18bb0ce, type: 3}
   - {fileID: 8300000, guid: ec265f1ee9047db428e6028f70c74a02, type: 3}
-  coldFallClips:
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  - {fileID: 8300000, guid: 7b6c20fcbc3fe5f409f4df7399187d9f, type: 3}
-  notchVolume: 1
+  notchVolume: 0.15
   notchPriority: 66
   playerLightAttack:
     attackStart:
@@ -268,7 +256,7 @@ MonoBehaviour:
       - {fileID: 8300000, guid: 288b0f9014c1f9b4c9c9f558a526caa2, type: 3}
       - {fileID: 8300000, guid: 3658b8edc22e5ac4ab2b5c527f55f014, type: 3}
       - {fileID: 8300000, guid: fc639231b53a0344dab226a771084917, type: 3}
-      volume: 1
+      volume: 0.05
       volumeVariation: 0
       pitch: 1
       pitchVariation: 0

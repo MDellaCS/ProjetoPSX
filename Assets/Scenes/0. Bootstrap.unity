@@ -146,7 +146,6 @@ GameObject:
   - component: {fileID: 825647894}
   - component: {fileID: 825647893}
   - component: {fileID: 825647892}
-  - component: {fileID: 825647891}
   - component: {fileID: 825647890}
   - component: {fileID: 825647909}
   - component: {fileID: 825647912}
@@ -162,6 +161,93 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!1001 &303411539
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1728328394}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      propertyPath: m_Name
+      value: champ
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 303411541}
+  m_SourcePrefab: {fileID: 100100000, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+--- !u!1 &303411540 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 06861a68d638aa540bb725d52f08de10, type: 3}
+  m_PrefabInstance: {fileID: 303411539}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &303411541
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 303411540}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 2c539b9187fbe3541b3d72002c426d9b, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &311817221
 GameObject:
   m_ObjectHideFlags: 0
@@ -464,41 +550,10 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   heatBlendTime: 0.6
-  maximumColdDistanceOffset: 2
-  maximumColdFieldOfViewOffset: -35
-  maximumColdRollOffset: 2.3
-  negativeHeatEffectsCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: -0.07901001
-      value: 0.16375732
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 0.88749695
-      value: 1.0071449
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  coldBlendTime: 0.2
   thermalVolume: {fileID: 832575518}
   maximumHeatTemperature: 6
   maximumHeatSaturation: 10
   maximumHeatContrast: 10
-  maximumColdTemperature: -6
-  maximumColdSaturation: -30
-  maximumColdContrast: -8
   playerCenteredFogEnabled: 0
   playerCenteredFogColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
   playerCenteredFogStartRadius: 0
@@ -722,63 +777,6 @@ PanelRenderer:
   m_PivotReferenceSize: 0
   m_Pivot: 0
   m_Position: 0
---- !u!1001 &406902157
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 1728328394}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
-      propertyPath: m_Name
-      value: Untitled7
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 12d3c5ee26394414885e8760a6f41e3d, type: 3}
 --- !u!1 &408286050
 GameObject:
   m_ObjectHideFlags: 0
@@ -812,15 +810,17 @@ MonoBehaviour:
   panelRenderer: {fileID: 408286052}
   playerTransform: {fileID: 0}
   multiplierChangeDelay: 0.2
+  damageLossHoldSeconds: 1.2
+  damageLossFadeSeconds: 0.5
   thermometerVerticalPositionPercent: 64.2
   thermometerPanelWidth: 520
   thermometerMinimumPanelHeight: 64
+  multiplierVisualScale: 1.7
   multiplierBaseFontSize: 26
   multiplierFontSizePerStep: 3.5
   multiplierMaximumFontSize: 64
   multiplierRotationPerStep: 2
   multiplierMaximumHotRotation: 35
-  multiplierMaximumColdRotation: 25
   multiplierColors:
     serializedVersion: 2
     key0: {r: 0.3, g: 0.75, b: 1, a: 1}
@@ -851,79 +851,18 @@ MonoBehaviour:
     m_ColorSpace: -1
     m_NumColorKeys: 4
     m_NumAlphaKeys: 2
+  notchVisualScale: 2
   notchesPerMajorDivider: 2
   thermometerNotchWidth: 12
   thermometerBarHeight: 9
-  superheatBarHeight: 9
   emptyNotchColor: {r: 0.2735849, g: 0.2735849, b: 0.2735849, a: 1}
   minorDividerColor: {r: 0.02, g: 0.03, b: 0.05, a: 0.9}
   majorDividerColor: {r: 0.75, g: 0.78, b: 0.82, a: 0.9}
   majorDividerWidth: 2
-  zeroMarkerColor: {r: 0.92, g: 0.94, b: 0.97, a: 1}
-  coldBarColors:
-    serializedVersion: 2
-    key0: {r: 0.04, g: 0.13, b: 0.35, a: 1}
-    key1: {r: 0.2, g: 0.85, b: 1, a: 1}
-    key2: {r: 0, g: 0, b: 0, a: 0}
-    key3: {r: 0, g: 0, b: 0, a: 0}
-    key4: {r: 0, g: 0, b: 0, a: 0}
-    key5: {r: 0, g: 0, b: 0, a: 0}
-    key6: {r: 0, g: 0, b: 0, a: 0}
-    key7: {r: 0, g: 0, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 65535
-    ctime2: 0
-    ctime3: 0
-    ctime4: 0
-    ctime5: 0
-    ctime6: 0
-    ctime7: 0
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_ColorSpace: -1
-    m_NumColorKeys: 2
-    m_NumAlphaKeys: 2
   heatBarColors:
     serializedVersion: 2
     key0: {r: 1, g: 0.75, b: 0.08, a: 1}
     key1: {r: 1, g: 0.18, b: 0.02, a: 1}
-    key2: {r: 0, g: 0, b: 0, a: 0}
-    key3: {r: 0, g: 0, b: 0, a: 0}
-    key4: {r: 0, g: 0, b: 0, a: 0}
-    key5: {r: 0, g: 0, b: 0, a: 0}
-    key6: {r: 0, g: 0, b: 0, a: 0}
-    key7: {r: 0, g: 0, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 65535
-    ctime2: 0
-    ctime3: 0
-    ctime4: 0
-    ctime5: 0
-    ctime6: 0
-    ctime7: 0
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_ColorSpace: -1
-    m_NumColorKeys: 2
-    m_NumAlphaKeys: 2
-  superheatBarColors:
-    serializedVersion: 2
-    key0: {r: 0.45, g: 0, b: 0.02, a: 1}
-    key1: {r: 1, g: 0.08, b: 0.02, a: 1}
     key2: {r: 0, g: 0, b: 0, a: 0}
     key3: {r: 0, g: 0, b: 0, a: 0}
     key4: {r: 0, g: 0, b: 0, a: 0}
@@ -1173,19 +1112,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDebug
   labelHeightOffset: 1.25
   fontSize: 30
---- !u!114 &825647891
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 9138424708753252038, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-  m_PrefabInstance: {fileID: 1676307159516073868}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 181039840}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 536ee412887f1af498cd4e6038c32726, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerLockOn
-  maximumLockDistance: 17
 --- !u!114 &825647892
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1291,14 +1217,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerSlideAttack
   minimumSlideSpeed: 12
-  hitboxWidthMultiplier: 1.75
-  hitboxDepthMultiplier: 1.75
   launchedEnemyCollisionIgnoreDuration: 0.15
-  slideHitboxLayers:
-    serializedVersion: 2
-    m_Bits: 243
   launchForwardConversion: 0
-  poiseDamage: 60
 --- !u!114 &825647900
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1338,8 +1258,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60b9ce9e54d84a447849626e4b4d309f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerGameOver
-  gameOverHUD: {fileID: 1120693876}
-  showDelay: 1.5
 --- !u!114 &825647903
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1365,20 +1283,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeat
   maxHeat: 100
-  maxColdMagnitude: 100
-  heavyDamageAdditivePowerBonus: 7
-  heatGeneratedPerDamageDealt: 0.38
-  maxSuperheat: 50
-  excessHeatToSuperheatMultiplier: 0.5
+  damageMultiplierPerNotch: 0.75
+  heavyAttackNotchCost: 4
+  heatGeneratedPerDamageDealt: 0.3
   passiveHeatCoolingAfterGainDelay: 5
   initialPassiveHeatCoolingPerSecond: 0.2
   finalPassiveHeatCoolingPerSecond: 18
   passiveHeatCoolingRampDuration: 15
   passiveHeatCoolingRampExponent: 1.4
-  passiveColdRecoveryPerSecond: 1
-  coldRecoveryLimitPercent: 0.8
-  passiveSuperheatCoolingPerSecond: 1
-  coldSuperheatCoolingPerSecond: 4
   burnPreExplosionDuration: 1.5
   burnInitialStunDuration: 0.4
   burningDuration: 8
@@ -1408,7 +1320,6 @@ MonoBehaviour:
     m_RotationOrder: 4
   burnFinalStunDuration: 1.5
   burnMovementSpeedMultiplier: 0.2
-  burnFinalColdPercent: 0.8
   burnExplosionAttack: {fileID: 11400000, guid: c43e4c5dbbe741f98d30da582a2619c9, type: 2}
 --- !u!114 &825647905
 MonoBehaviour:
@@ -1423,6 +1334,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerState
   playerRenderer: {fileID: 0}
+  lightingModeOverride: 3
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   attackingColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   dashingColor: {r: 0, g: 1, b: 1, a: 1}
@@ -1446,6 +1358,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHealth: 150
+  maxVitalOil: 100
   maxPoise: 100
   lightStaggerDuration: 0.8
   lightStaggerDistance: 1.2
@@ -1458,7 +1371,6 @@ MonoBehaviour:
   canBeLaunchedDown: 1
   canBeLaunchedForwards: 1
   canBeJuggled: 1
-  incomingDamageNumberColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!114 &825647907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1519,11 +1431,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCurrencyWallet
   collectRadius: 0.4
-  attractionRadius: 20
+  attractionRadius: 40
   playerCurrencyCenterHeightOffset: 1.8
-  attractionDelay: 3
+  attractionDelay: 4
   attractionAcceleration: 15
-  attractionAccelerationRampDuration: 2
+  attractionAccelerationRampDuration: 4
   attractionAccelerationCurve:
     serializedVersion: 2
     m_Curve:
@@ -2301,10 +2213,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CombatImpactSystem
   lightAttackImpact:
     hitstopDuration: 0
-    cameraShakeDuration: 0.08
+    cameraShakeDuration: 0.1
   heavyAttackImpact:
-    hitstopDuration: 0.34
-    cameraShakeDuration: 0.23
+    hitstopDuration: 0.1
+    cameraShakeDuration: 0.2
   impactShakeIntensity:
     serializedVersion: 2
     m_Curve:
@@ -2383,14 +2295,14 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  damageForMaximumShake: 2200
-  maximumShakeDistance: 2.3
-  maximumShakeYaw: 25
+  damageForMaximumShake: 1000
+  maximumShakeDistance: 5
+  maximumShakeYaw: 40
   enemyAttackImpact:
-    hitstopDuration: 0.34
-    cameraShakeDuration: 0.23
+    hitstopDuration: 0.4
+    cameraShakeDuration: 0.1
   enemyDamageReference: 30
-  maxEnemyDamageHitstopBonus: 0.025
+  maxEnemyDamageHitstopBonus: 1
 --- !u!1 &1120693875
 GameObject:
   m_ObjectHideFlags: 0
@@ -2401,27 +2313,14 @@ GameObject:
   m_Component:
   - component: {fileID: 1120693878}
   - component: {fileID: 1120693877}
-  - component: {fileID: 1120693876}
+  - component: {fileID: 1120693879}
   m_Layer: 5
-  m_Name: GameOverHUD
+  m_Name: SplashTextHUD
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1120693876
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1120693875}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b5bf8f76fc34cf59a468ca5621c5096, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameOverHUD
-  panelRenderer: {fileID: 1120693877}
 --- !u!1931382934 &1120693877
 PanelRenderer:
   m_ObjectHideFlags: 0
@@ -2468,10 +2367,10 @@ PanelRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 3
+  m_SortingOrder: 8
   m_MaskInteraction: 0
   serializedVersion: 1
-  m_PanelSettings: {fileID: 11400000, guid: 31127c8587432094893ff789bd4e51fc, type: 2}
+  m_PanelSettings: {fileID: 11400000, guid: 4fa1e58224984d3ca4559612b9c39aec, type: 2}
   sourceAsset: {fileID: 9197481963319205126, guid: c171f180bb5146f3a2db6c518ced62ba, type: 3}
   m_ParentUI: {fileID: 0}
   m_WorldSpaceSizeMode: 1
@@ -2495,6 +2394,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1633331293}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1120693879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1120693875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db69cbfb74874309b0d89e1756b3df26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SplashTextHUD
+  textHeightPercent: 50
+  fontSize: 138
+  bold: 0
+  victoryText: ELIMINADO
+  victoryColor: {r: 0.20754719, g: 0.20754719, b: 0.20754719, a: 1}
+  victoryHold: 4
+  victoryDelay: 3
+  deathText: VOCE MORREU
+  deathColor: {r: 0.8627451, g: 0.29803923, b: 0.3137255, a: 1}
+  deathHold: 4
+  deathDelay: 4
+  revealDuration: 8
+  presentation: 6
+  easing: 3
+  fadeInDuration: 0
+  fadeOutDuration: 4
+  letterSound: {fileID: 8300000, guid: 4094e0e175bf0f64c95fba57676996a7, type: 3}
+  finalLetterSound: {fileID: 8300000, guid: 44198f190ca46e648a764c8309c1aa0d, type: 3}
+  letterSoundVolume: 0.5
+  finalLetterSoundVolume: 1
+  bloomEnabled: 1
+  bloomDuration: 2
+  bloomIntensity: 1
+  bloomRadius: 33
+  bloomColor: {r: 0.7264151, g: 0.7264151, b: 0.7264151, a: 1}
+  bloomTextIntensity: 1
+  bloomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &1170707651
 GameObject:
   m_ObjectHideFlags: 0
@@ -2575,10 +2536,10 @@ PanelRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 9
   m_MaskInteraction: 0
   serializedVersion: 1
-  m_PanelSettings: {fileID: 11400000, guid: 31127c8587432094893ff789bd4e51fc, type: 2}
+  m_PanelSettings: {fileID: 11400000, guid: 4fa1e58224984d3ca4559612b9c39aec, type: 2}
   sourceAsset: {fileID: 9197481963319205126, guid: e9000000000000000000000000000010, type: 3}
   m_ParentUI: {fileID: 0}
   m_WorldSpaceSizeMode: 1
@@ -2792,7 +2753,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1728328394}
-  - component: {fileID: 1728328396}
   - component: {fileID: 1728328395}
   m_Layer: 0
   m_Name: VisualRoot
@@ -2828,7 +2788,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5ecdb19aa6eb66489830ac25c2a8053, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAnimatorPlayback
-  animator: {fileID: 1728328396}
+  animator: {fileID: 303411541}
   layerIndex: 0
   transitionDuration: 0.08
   disableRootMotion: 1
@@ -2856,53 +2816,7 @@ MonoBehaviour:
     animatorStatePath: Base Layer.Stunned
   - visualState: 9
     animatorStatePath: Base Layer.Dead
-  attackBindings:
-  - attackId: L1
-    animatorStatePath: Base Layer.L1
-    windupStart: 0
-    windupEnd: 0.35
-    activeStart: 0.35
-    activeEnd: 0.6
-    recoveryStart: 0.6
-    recoveryEnd: 1
-  - attackId: L2
-    animatorStatePath: Base Layer.L2
-    windupStart: 0
-    windupEnd: 0.35
-    activeStart: 0.35
-    activeEnd: 0.6
-    recoveryStart: 0.6
-    recoveryEnd: 1
-  - attackId: L3
-    animatorStatePath: Base Layer.L3
-    windupStart: 0
-    windupEnd: 0.35
-    activeStart: 0.35
-    activeEnd: 0.6
-    recoveryStart: 0.6
-    recoveryEnd: 1
---- !u!95 &1728328396
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 5219193251145174000, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-  m_PrefabInstance: {fileID: 1676307159516073868}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1728328393}
-  m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: 2faa610713d3b3c439473daa55e8c60a, type: 3}
-  m_Controller: {fileID: 9100000, guid: 2c539b9187fbe3541b3d72002c426d9b, type: 2}
-  m_CullingMode: 1
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  attackBindings: []
 --- !u!1 &1841670992
 GameObject:
   m_ObjectHideFlags: 0
@@ -2968,6 +2882,7 @@ GameObject:
   - component: {fileID: 2139451645}
   - component: {fileID: 2139451644}
   - component: {fileID: 2139451646}
+  - component: {fileID: 2139451647}
   m_Layer: 5
   m_Name: BossHUD
   m_TagString: Untagged
@@ -3061,6 +2976,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossHealthHUD
   panelRenderer: {fileID: 2139451644}
+  rowTemplate: {fileID: 9197481963319205126, guid: 2cdcf5c02472454685a44daeb40756d8, type: 3}
+--- !u!114 &2139451647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2139451642}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd62e642ee5f48e294f6fb38ecfceba5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossFightController
+  removalDelay: 1.5
 --- !u!1001 &1676307159516073868
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3101,9 +3030,9 @@ PrefabInstance:
       propertyPath: heavyStaggerMinimumDurationPercent
       value: 0.6
       objectReference: {fileID: 0}
-    - target: {fileID: 3120045850818620310, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-      propertyPath: slideHitboxLayers.m_Bits
-      value: 243
+    - target: {fileID: 1973184329187279451, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      propertyPath: attackBindings.Array.size
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3481279927476739912, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: m_Name
@@ -3157,10 +3086,6 @@ PrefabInstance:
       propertyPath: steepSlopeSlideAcceleration
       value: 45
       objectReference: {fileID: 0}
-    - target: {fileID: 4893564215035896505, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-      propertyPath: gameOverHUD
-      value: 
-      objectReference: {fileID: 1120693876}
     - target: {fileID: 5494030409911995304, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 200
@@ -3214,8 +3139,8 @@ PrefabInstance:
       value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-      propertyPath: burnFinalColdPercent
-      value: 0.8
+      propertyPath: heavyAttackNotchCost
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burnFinalStunDuration
@@ -3226,8 +3151,8 @@ PrefabInstance:
       value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
-      propertyPath: coldRecoveryLimitPercent
-      value: 0.8
+      propertyPath: damageMultiplierPerNotch
+      value: 0.75
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burnMovementSpeedMultiplier
@@ -3235,7 +3160,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: heatGeneratedPerDamageDealt
-      value: 0.38
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burningHeatDescentCurve.m_Curve.Array.data[1].inSlope

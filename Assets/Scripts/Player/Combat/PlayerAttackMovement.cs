@@ -4,14 +4,12 @@ using UnityEngine;
 public sealed class PlayerAttackMovement : MonoBehaviour
 {
     private PlayerMovement movement;
-    private PlayerLockOn lockOn;
     private PlayerAttackRuntime runtime;
     private float elapsed;
 
     private void Awake()
     {
         movement = GetComponent<PlayerMovement>();
-        lockOn = PlayerLockOn.GetOrAdd(gameObject);
     }
 
     public void Begin(PlayerAttackRuntime attack) { runtime = attack; elapsed = 0f; }
@@ -26,11 +24,7 @@ public sealed class PlayerAttackMovement : MonoBehaviour
              phase == PlayerAttackPhase.Active))
         {
             Vector3 direction;
-            // Lock-on e uma intencao explicita do jogador e sempre tem
-            // prioridade sobre qualquer alvo escolhido automaticamente.
-            if (lockOn != null && lockOn.IsLockedOn)
-                direction = lockOn.GetDirectionToLockedTarget();
-            else if (movement != null &&
+            if (movement != null &&
                 movement.DesiredDirection.sqrMagnitude > .001f)
                 direction = movement.DesiredDirection;
             else

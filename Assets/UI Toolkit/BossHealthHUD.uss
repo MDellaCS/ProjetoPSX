@@ -5,9 +5,16 @@
 #boss-hud {
     position: absolute;
     top: 32px;
-    left: 50%;
-    width: 620px;
-    margin-left: -310px;
+    transform-origin: center top;
+    left: 10%;
+    right: 10%;
+    align-items: center;
+}
+
+.boss-row {
+    width: 100%;
+    max-width: 620px;
+    margin-bottom: 4px;
     padding: 10px 14px;
     background-color: rgba(10, 8, 12, 0.84);
     border-left-width: 2px;

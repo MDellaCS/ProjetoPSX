@@ -63,7 +63,6 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         if (!connected) return false;
 
         runtime.HitConfirmed = true;
-        PlayerComboSystem.RegisterConfirmedHit(transform);
         Component audioSurfaceTarget = impactCollider != null
             ? impactCollider : enemy;
         GetComponent<PlayerAttackAudioController>()?.NotifyHit(runtime,
@@ -91,6 +90,8 @@ public sealed class PlayerAttackResolver : MonoBehaviour
             movement != null ? movement.GetJumpLaunchDuration() : .85f,
             movement != null ? movement.GetJumpLaunchHoldGravityMultiplier() : .35f
         ));
+        if (poiseHit.CanReact && effects.launchUp && TryGetComponent(out PlayerSlideAttack slide))
+            slide.HandleSlideLaunch(enemy);
         if (heat != null && heat.IsHeatModeActive &&
             runtime.Definition.kind == PlayerAttackKind.Light &&
             strike.generatesHeatOnHit)
@@ -169,30 +170,6 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         CombatPoiseSystem rules = CombatPoiseSystem.Instance;
         movement.BeginAerialLight(rules.JuggleLiftSpeed,
             rules.JuggleGravityMultiplier, rules.JuggleDuration);
-    }
-
-    public bool ApplyNonDamagingLaunchUp(EnemyBase enemy, int poiseDamage,
-        Vector3 horizontalDirection, float horizontalImpulse)
-    {
-        if (enemy == null) return false;
-        bool connected = enemy.TakeDamage(0, transform.position, poiseDamage,
-            out _, out CombatPoiseHitResult poiseHit, true,
-            PlayerAttackType.Light);
-        if (!connected || !poiseHit.CanReact)
-            return false;
-        CombatPoiseSystem rules = CombatPoiseSystem.Instance;
-        enemy.ApplyPoiseReaction(poiseHit, new CombatReactionRequest(
-            CombatReactionType.LaunchUp, transform.position,
-            GetLaunchSpeed(), GetLaunchGravity(), rules.MinimumLaunchForce,
-            0f, rules.LaunchForwardsDeceleration,
-            rules.JuggleLiftSpeed, rules.JuggleGravityMultiplier,
-            rules.JuggleDuration,
-            movement != null ? movement.GetJumpLaunchDuration() : .85f,
-            movement != null ? movement.GetJumpLaunchHoldGravityMultiplier() : .35f));
-        if (enemy.IsLaunched)
-            enemy.ApplyLaunchUpHorizontalImpulse(horizontalDirection, horizontalImpulse);
-        combatStatus?.RegisterDamageDealtToEnemy();
-        return enemy.IsLaunched;
     }
 
     private static CombatReactionType GetRequestedReaction(

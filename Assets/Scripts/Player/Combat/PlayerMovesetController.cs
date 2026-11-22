@@ -4,6 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerAttackController))]
 public sealed class PlayerMovesetController : MonoBehaviour
 {
+    private const string DebugMovesetKey = "ProjetoPSX.Debug.Moveset.v1";
     private readonly struct AttackGesture
     {
         public readonly PlayerAttackInput Input;
@@ -57,6 +58,18 @@ public sealed class PlayerMovesetController : MonoBehaviour
         catalog = PlayerMovesetCatalog.Load();
         if (catalog != null && catalog.startingMoveset != null)
             moveset = catalog.startingMoveset;
+        if (Debug.isDebugBuild && catalog != null && catalog.availableMovesets != null)
+        {
+            string savedMoveset = PlayerPrefs.GetString(DebugMovesetKey, string.Empty);
+            foreach (PlayerMovesetDefinition candidate in catalog.availableMovesets)
+            {
+                if (candidate != null && candidate.name == savedMoveset)
+                {
+                    moveset = candidate;
+                    break;
+                }
+            }
+        }
         attacks.AttackStarted += OnAttackStarted;
         attacks.AttackFinished += OnAttackFinished;
     }
@@ -108,6 +121,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
             inputBuffer?.ClearBufferedInputs(ignoreNextFrame: true);
             attacks?.CancelAttack();
             moveset = next;
+            PlayerPrefs.SetString(DebugMovesetKey, next.name);
+            PlayerPrefs.Save();
             if (TryGetComponent(out PlayerHealth health))
                 health.ResetHealthForResourceMode();
             if (TryGetComponent(out PlayerHeat heat))

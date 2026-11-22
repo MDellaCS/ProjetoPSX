@@ -255,7 +255,8 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Tooltip("Mantem o ataque na fase Active depois do tempo normal ate o player tocar o chao. Use em Dive para a hitbox e a queda terminarem juntas.")]
     public bool holdActiveUntilGrounded;
     [Header("Power")]
-    [Tooltip("Dano base antes das regras de Heat e dos multiplicadores de Strike.")]
+    [Tooltip("Dano base em unidades, convertido pelo valor global de dano do jogador antes de Heat e dos multiplicadores de Strike.")]
+    [InspectorName("Dano base (unidades)")]
     [Min(0)] public int baseDamage = 10;
     [Tooltip("Dano base de Poise antes das regras de Heat e dos multiplicadores de Strike.")]
     [Min(0)] public int basePoiseDamage = 10;

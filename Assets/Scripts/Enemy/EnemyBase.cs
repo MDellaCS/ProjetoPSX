@@ -90,11 +90,26 @@ public class EnemyBase : MonoBehaviour
         CurrentState == State.Active || CurrentState == State.Recovery;
     public bool IsLaunched => movement != null && movement.IsLaunched;
     public bool IsLaunchedForwards => movement != null && movement.IsLaunchedForwards;
-    public bool CanBeLockOnTarget => isActiveAndEnabled && !IsDead &&
+    public bool CanBeCombatTarget => isActiveAndEnabled && !IsDead &&
         !isTemporarilyUntargetable &&
         brain != null && !brain.IsWaitingForEncounter;
     public bool IsSpawning => isSpawning;
     public bool IsGrapplePulled => isGrapplePulled;
+
+    [Tooltip("Exibe a barra de chefe e participa da vitória do encontro quando derrotado.")]
+    [SerializeField] private bool isBoss;
+    [Tooltip("Nome mostrado na barra do chefe. Vazio usa o nome da entidade.")]
+    [SerializeField] private string bossName;
+    public bool IsBoss => isBoss;
+    internal string BossName => string.IsNullOrWhiteSpace(bossName)
+        ? name.Replace("(Clone)", "").Trim() : bossName.Trim();
+    internal EnemyEncounter BossEncounter { get; private set; }
+    internal bool HasLivingPlayerTarget => brain != null && brain.HasLivingPlayerTarget;
+    internal bool WaitingForEncounter => brain == null || brain.IsWaitingForEncounter;
+    internal bool HasBossContact => brain != null && brain.HasVisualContact();
+    internal bool IsInBossCombat => HasLivingPlayerTarget && !WaitingForEncounter &&
+        (brain.HoldBossTarget || (CurrentState != State.Idle && HasBossContact));
+    internal void HoldBossTarget(bool hold) => brain.HoldBossTarget = hold;
 
     [Header("Agua")]
     [Tooltip("Marque em chefes (ou qualquer inimigo) para ignorar a agua por completo: sem lentidao, flutuacao nem bloqueio de ataques.")]
@@ -177,7 +192,11 @@ public class EnemyBase : MonoBehaviour
         return component != null ? component : gameObject.AddComponent<T>();
     }
 
-    private void OnEnable() => activeEnemies.Add(this);
+    private void OnEnable()
+    {
+        if (isBoss) BossEncounter = GetComponentInParent<EnemyEncounter>();
+        activeEnemies.Add(this);
+    }
     protected virtual void OnDisable()
     {
         if (isGrapplePulled && health != null)
@@ -386,14 +405,14 @@ public class EnemyBase : MonoBehaviour
         EnsureInitialized();
         brain.SetWaitingForEncounter();
     }
-    /// <summary>Impede IA, colisao e lock-on enquanto o efeito de spawn toca.</summary>
+    /// <summary>Impede IA, colisao e selecao como alvo enquanto o efeito de spawn toca.</summary>
     public void SetSpawning(bool value)
     {
         EnsureInitialized();
         isSpawning = value;
     }
 
-    /// <summary>Oculta temporariamente este inimigo das selecoes de lock-on.</summary>
+    /// <summary>Oculta temporariamente este inimigo das selecao de alvos.</summary>
     public void SetTemporarilyUntargetable(bool value) =>
         isTemporarilyUntargetable = value;
 

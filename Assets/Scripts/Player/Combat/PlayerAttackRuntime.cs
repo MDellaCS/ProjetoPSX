@@ -26,7 +26,7 @@ public sealed class PlayerAttackRuntime
         EnemyBase assistTarget = null, Vector3 assistTargetPosition = default)
     {
         Definition = definition;
-        int damage = definition.baseDamage;
+        int damage = CombatUnitSettings.PlayerDamage(definition.baseDamage);
         int poise = definition.basePoiseDamage;
         float timing = 1f;
         float consumed = 0f;

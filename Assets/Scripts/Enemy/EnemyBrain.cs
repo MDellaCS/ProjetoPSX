@@ -163,6 +163,10 @@ public sealed class EnemyBrain : MonoBehaviour
     private PlayerHeat playerHeat;
     private PlayerMovement playerMovement;
     private PlayerHealth playerHealth;
+    private PlayerState playerState;
+    internal bool HoldBossTarget { get; set; }
+    internal bool HasLivingPlayerTarget => target != null && target.gameObject.activeInHierarchy &&
+        playerState != null && !playerState.IsDead();
     private PlayerCharacterController playerCharacterController;
     private Transform cachedComponentsTarget;
     private float nextPlayerLookupTime;
@@ -320,6 +324,8 @@ public sealed class EnemyBrain : MonoBehaviour
 
     internal void ResolvePlayer()
     {
+        if (owner.IsBoss && target != null && !target.gameObject.activeInHierarchy)
+            target = null;
         if (target == null)
         {
             // Sem jogador na cena, evita uma busca por tag em todo frame.
@@ -340,6 +346,7 @@ public sealed class EnemyBrain : MonoBehaviour
         playerHeat = target.GetComponent<PlayerHeat>();
         playerMovement = target.GetComponent<PlayerMovement>();
         playerHealth = target.GetComponent<PlayerHealth>();
+        playerState = target.GetComponent<PlayerState>();
         playerCharacterController = target.GetComponent<PlayerCharacterController>();
     }
 
@@ -749,6 +756,7 @@ public sealed class EnemyBrain : MonoBehaviour
         target = encounterPlayer;
         if (cachedComponentsTarget != target)
             CacheTargetComponents();
+        if (owner.IsBoss && !HasLivingPlayerTarget) return;
         isWaitingForEncounter = false;
         isEncounterEngaged = true;
         if (owner.CurrentState == EnemyBase.State.Idle)
@@ -788,8 +796,8 @@ public sealed class EnemyBrain : MonoBehaviour
         return direction.sqrMagnitude > .001f ? direction.normalized : Vector3.zero;
     }
 
-    private bool HasVisualContact() => target != null &&
-        (isEncounterEngaged || DistanceToTarget() <=
+    internal bool HasVisualContact() => target != null && (!owner.IsBoss || HasLivingPlayerTarget) &&
+        (isEncounterEngaged || HoldBossTarget || DistanceToTarget() <=
             (owner.CurrentState == EnemyBase.State.Idle
                 ? detectionRange : combatDetectionRange));
 

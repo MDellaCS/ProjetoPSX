@@ -6,8 +6,7 @@
     </ui:VisualElement>
     <ui:VisualElement name="debug-menu-panel">
         <ui:VisualElement class="debug-menu-row">
-            <ui:Button name="status-max-button" text="MAX ALL STATUS" />
-            <ui:Button name="status-zero-button" text="ZERO ALL STATUS" />
+            <ui:Button name="edit-levels-button" text="EDIT LEVEL UP STATS" />
         </ui:VisualElement>
         <ui:VisualElement name="heat-controls" class="debug-menu-row">
             <ui:Button name="heat-minus-button" text="HEAT -10" />
@@ -44,9 +43,6 @@
         <ui:Label name="debug-submenu-title" class="debug-menu-title" />
         <ui:ScrollView name="debug-submenu-list" />
         <ui:VisualElement class="debug-menu-row"><ui:Button name="debug-submenu-back" text="BACK" /></ui:VisualElement>
-    </ui:VisualElement>
-    <ui:VisualElement name="enemy-debug-panel" picking-mode="Ignore">
-        <ui:Label name="enemy-debug-text" text="ENEMY DEBUG" />
     </ui:VisualElement>
     <ui:VisualElement name="cutscene-debug-panel" picking-mode="Ignore">
         <ui:Label name="cutscene-debug-text" text="CUTSCENE DEBUG" />

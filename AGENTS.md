@@ -70,7 +70,7 @@ Responsável por:
 6. Não modificar arquivos sem autorização explícita.
 7. Evitar análises extensas quando desnecessárias.
 
-### ADVANCED — GPT-6 Astra
+### ADVANCED — GPT-6.2 Astra
 
 **Agente especializado em problemas complexos e decisões estruturais.**
 

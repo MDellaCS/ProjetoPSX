@@ -10,17 +10,14 @@ public enum WorldObjectHealthBarMode
     Always,
     /// <summary>Aparece ao receber um golpe e some depois de alguns segundos.</summary>
     AfterHit,
-    /// <summary>Aparece enquanto o jogador esta com a mira travada no objeto.</summary>
-    WhenLockedOn,
-    /// <summary>Aparece ao receber um golpe ou enquanto estiver travado.</summary>
-    AfterHitOrLockedOn
+
 }
 
 [Serializable]
 public sealed class WorldObjectHealthBarSettings
 {
     [Tooltip("Quando a barra de vida aparece sobre o objeto.")]
-    public WorldObjectHealthBarMode mode = WorldObjectHealthBarMode.AfterHitOrLockedOn;
+    public WorldObjectHealthBarMode mode = WorldObjectHealthBarMode.AfterHit;
     [Tooltip("Deslocamento, em unidades do mundo, da barra em relacao ao topo do objeto.")]
     public Vector3 worldOffset = new(0f, .35f, 0f);
     [Tooltip("Segundos que a barra continua visivel depois do ultimo golpe (modos After Hit).")]
@@ -31,7 +28,7 @@ public sealed class WorldObjectHealthBarSettings
 
 /// <summary>
 /// Objeto de mundo atacavel (destrutivel, alavanca, cristal, caixa...).
-/// Centraliza dano, estados, reacoes, lock-on, numeros de dano e barra de vida.
+/// Centraliza dano, estados, reacoes, numeros de dano e barra de vida.
 /// O comportamento vem dos <see cref="WorldObjectState"/> configurados no
 /// Inspector; nao e preciso escrever codigo para criar novos objetos.
 /// </summary>
@@ -68,8 +65,6 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
     private WorldObjectState currentState;
     private Collider hurtbox;
     private Renderer primaryRenderer;
-    private WorldLockOnTarget lockOnTarget;
-    private DamageNumberSpawner damageNumbers;
     private float lastHitTime = float.NegativeInfinity;
     private bool destroyed;
     private int stateChainDepth;
@@ -102,10 +97,6 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
     {
         hurtbox = GetComponent<Collider>();
         primaryRenderer = GetComponentInChildren<Renderer>(true);
-        if (!TryGetComponent(out lockOnTarget))
-            lockOnTarget = gameObject.AddComponent<WorldLockOnTarget>();
-        if (showDamageNumbers && !TryGetComponent(out damageNumbers))
-            damageNumbers = gameObject.AddComponent<DamageNumberSpawner>();
 
         stateById.Clear();
         foreach (WorldObjectState state in states)
@@ -159,8 +150,6 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
             return;
 
         destroyed = true;
-        if (lockOnTarget != null)
-            lockOnTarget.enabled = false;
         onDestroyed?.Invoke();
         Destroyed?.Invoke(this);
         Destroy(gameObject, Mathf.Max(0f, delay));
@@ -180,8 +169,8 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
             return false;
 
         lastHitTime = Time.time;
-        if (showDamageNumbers && damageNumbers != null)
-            damageNumbers.ShowDamage(damage);
+        if (showDamageNumbers)
+            DamageNumberSpawner.ShowEnemyDamage(transform, damage);
 
         WorldObjectContext context = new(this, damage, true, impactPosition,
             impactDirection);
@@ -216,7 +205,7 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
         }
     }
 
-    public bool ShouldShowHealthBar(bool lockedOn)
+    public bool ShouldShowHealthBar()
     {
         if (!HasHealthBarData)
             return false;
@@ -227,8 +216,8 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
         {
             WorldObjectHealthBarMode.Always => true,
             WorldObjectHealthBarMode.AfterHit => recentlyHit,
-            WorldObjectHealthBarMode.WhenLockedOn => lockedOn,
-            WorldObjectHealthBarMode.AfterHitOrLockedOn => recentlyHit || lockedOn,
+            (WorldObjectHealthBarMode)3 => recentlyHit,
+            (WorldObjectHealthBarMode)4 => recentlyHit,
             _ => false
         };
     }
@@ -262,8 +251,6 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
             SetObjectsActive(state.deactivateOnEnter, false);
             SetObjectsActive(state.activateOnEnter, true);
             state.damageModel?.Initialize();
-            if (lockOnTarget != null)
-                lockOnTarget.enabled = state.lockOnEnabled && !destroyed;
 
             onStateChanged?.Invoke(state.id);
             StateChanged?.Invoke(this, state.id);

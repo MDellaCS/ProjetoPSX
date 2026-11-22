@@ -56,9 +56,16 @@ half3 RetroMainLight(half3 normalWS)
     return mainLight.color * (saturate(dot(normalWS, mainLight.direction)) * mainLight.distanceAttenuation);
 }
 
-half3 RetroLocalLights(float3 positionWS, half3 normalWS)
+half RetroSpecular(half3 normalWS, half3 lightDir, half3 viewDir, half exponent)
+{
+    half3 halfway = SafeNormalize(lightDir + viewDir);
+    return pow(saturate(dot(normalWS, halfway)), exponent) * saturate(dot(normalWS, lightDir));
+}
+
+half3 RetroLocalLights(float3 positionWS, half3 normalWS, half3 viewDir, half exponent, out half3 specular)
 {
     half3 total = 0;
+    specular = 0;
     int count = (int)_RetroLightCount;
     UNITY_LOOP
     for (int i = 0; i < count; i++)
@@ -106,8 +113,16 @@ half3 RetroLocalLights(float3 positionWS, half3 normalWS)
         float wrap = shape.w;
         float diffuse = saturate((dot(normalWS, lightDir) + wrap) / (1.0 + wrap));
         total += color.rgb * (attenuation * diffuse);
+        if (exponent > 0.0)
+            specular += color.rgb * (attenuation * RetroSpecular(normalWS, lightDir, viewDir, exponent));
     }
     return total;
+}
+
+half3 RetroLocalLights(float3 positionWS, half3 normalWS)
+{
+    half3 unusedSpecular;
+    return RetroLocalLights(positionWS, normalWS, half3(0, 0, 1), 0, unusedSpecular);
 }
 
 half RetroFogFactor(float3 positionWS)

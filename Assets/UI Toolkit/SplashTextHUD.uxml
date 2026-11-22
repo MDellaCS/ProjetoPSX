@@ -1,0 +1,7 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="SplashTextHUD.uss" />
+    <ui:Label name="splash-glow-wide" class="splash-text" picking-mode="Ignore" />
+    <ui:Label name="splash-glow-medium" class="splash-text" picking-mode="Ignore" />
+    <ui:Label name="splash-glow-inner" class="splash-text" picking-mode="Ignore" />
+    <ui:Label name="splash-text" class="splash-text" picking-mode="Ignore" />
+</ui:UXML>

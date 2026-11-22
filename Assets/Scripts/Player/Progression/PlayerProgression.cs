@@ -139,6 +139,25 @@ public sealed class PlayerProgression : MonoBehaviour
         message = attribute.displayName + " aprimorado para nivel " + (level + 1) + ".";
         return true;
     }
+    /// <summary>Altera um nivel pelo menu de debug, sem cobrar currency.</summary>
+    public bool DebugSetLevel(PlayerUpgradeDefinition attribute, int level)
+    {
+        if (!Debug.isDebugBuild) return false;
+        Initialize();
+        if (Catalog == null || Catalog.attributes == null || attribute == null ||
+            !attribute.purchasable || string.IsNullOrWhiteSpace(attribute.id) ||
+            !Catalog.attributes.Contains(attribute)) return false;
+        int targetLevel = Mathf.Clamp(level, 1, attribute.MaximumLevel);
+        if (targetLevel == Level(attribute) || attribute.GetLevel(targetLevel) == null)
+            return false;
+        levels[attribute.id] = targetLevel;
+        PlayerPrefs.SetInt(SavePrefix + attribute.id, targetLevel);
+        PlayerPrefs.Save();
+        ApplyBonuses();
+        Changed?.Invoke();
+        return true;
+    }
+
     private void ApplyBonuses()
     {
         stats.Clear(); specials.Clear();
