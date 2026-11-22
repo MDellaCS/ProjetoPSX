@@ -303,6 +303,15 @@ public sealed class CombatParticleSystem : MonoBehaviour
         piece.name = isBodyPart ? "Combat Body Part Particle" :
             "Combat Visual Particle";
         piece.transform.SetParent(poolRoot);
+        MeshFilter originalFilter = piece.GetComponent<MeshFilter>();
+        MeshRenderer originalRenderer = piece.GetComponent<MeshRenderer>();
+        GameObject visual = new("Visual");
+        visual.transform.SetParent(piece.transform, false);
+        visual.AddComponent<MeshFilter>().sharedMesh = originalFilter.sharedMesh;
+        visual.AddComponent<MeshRenderer>().sharedMaterials = originalRenderer.sharedMaterials;
+        originalRenderer.enabled = false;
+        Destroy(originalFilter);
+        Destroy(originalRenderer);
         piece.AddComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         piece.AddComponent<CombatParticleCollisionFilter>();
         piece.AddComponent<CurrencyGorePickup>();

@@ -19,6 +19,10 @@ public sealed class EnemyBodyPartDeathParticles : MonoBehaviour
         bodyPartRenderers.Clear();
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
         {
+            SteppedSkinnedMesh stepped = renderer.GetComponentInParent<SteppedSkinnedMesh>();
+            if (stepped != null && stepped.IsDisplay(renderer))
+                continue;
+
             if (renderer is SkinnedMeshRenderer skinned &&
                 skinned.sharedMesh != null)
             {

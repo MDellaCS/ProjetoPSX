@@ -31,13 +31,18 @@ public sealed class CombatVisualParticle : MonoBehaviour
     private CombatParticleProfile profile;
     private EnemyBodyPartProfile bodyPartProfile;
     private float noiseSeed;
+    private Transform visualTransform;
+    private Vector3 sampledPosition;
+    private Quaternion sampledRotation;
+    private long lastVisualFrame;
 
     public bool HasExpired => Time.time >= expiresAt;
 
     private void Awake()
     {
-        meshFilter = GetComponent<MeshFilter>();
-        meshRenderer = GetComponent<MeshRenderer>();
+        visualTransform = transform.Find("Visual");
+        meshFilter = visualTransform != null ? visualTransform.GetComponent<MeshFilter>() : null;
+        meshRenderer = visualTransform != null ? visualTransform.GetComponent<MeshRenderer>() : null;
         boxCollider = GetComponent<BoxCollider>();
         if (meshFilter != null)
             defaultMesh = meshFilter.sharedMesh;
@@ -70,8 +75,11 @@ public sealed class CombatVisualParticle : MonoBehaviour
         profile = newProfile;
         bodyPartProfile = null;
         gameObject.layer = particleLayer;
+        if (visualTransform != null)
+            visualTransform.gameObject.layer = particleLayer;
         transform.SetPositionAndRotation(position, Random.rotation);
         transform.localScale = Vector3.one * size;
+        ResetVisualPose();
         Material selectedMaterial = currencyValue > 0 && currencyMaterial != null
             ? currencyMaterial : material;
         ConfigureFadeMaterials(new[] { selectedMaterial });
@@ -110,6 +118,8 @@ public sealed class CombatVisualParticle : MonoBehaviour
         profile = null;
         bodyPartProfile = newProfile;
         gameObject.layer = particleLayer;
+        if (visualTransform != null)
+            visualTransform.gameObject.layer = particleLayer;
         transform.SetPositionAndRotation(position, rotation);
         Vector3 parentScale = transform.parent != null
             ? transform.parent.lossyScale : Vector3.one;
@@ -117,6 +127,7 @@ public sealed class CombatVisualParticle : MonoBehaviour
             worldScale.x * InverseScale(parentScale.x),
             worldScale.y * InverseScale(parentScale.y),
             worldScale.z * InverseScale(parentScale.z));
+        ResetVisualPose();
 
         if (meshFilter != null)
         {
@@ -170,7 +181,7 @@ public sealed class CombatVisualParticle : MonoBehaviour
     private void ConfigureFadeMaterials(Material[] sourceMaterials)
     {
         if (meshRenderer == null)
-            meshRenderer = GetComponent<MeshRenderer>();
+            meshRenderer = visualTransform != null ? visualTransform.GetComponent<MeshRenderer>() : null;
         if (meshRenderer == null || sourceMaterials == null ||
             sourceMaterials.Length == 0)
             return;
@@ -294,9 +305,9 @@ public sealed class CombatVisualParticle : MonoBehaviour
     private void RestoreDefaultVisual()
     {
         if (meshFilter == null)
-            meshFilter = GetComponent<MeshFilter>();
+            meshFilter = visualTransform != null ? visualTransform.GetComponent<MeshFilter>() : null;
         if (meshRenderer == null)
-            meshRenderer = GetComponent<MeshRenderer>();
+            meshRenderer = visualTransform != null ? visualTransform.GetComponent<MeshRenderer>() : null;
         if (boxCollider == null)
             boxCollider = GetComponent<BoxCollider>();
 
@@ -326,6 +337,34 @@ public sealed class CombatVisualParticle : MonoBehaviour
     }
 
     private void OnDestroy() => DestroyFadeMaterials();
+
+    private void ResetVisualPose()
+    {
+        if (visualTransform == null)
+            return;
+        sampledPosition = transform.position;
+        sampledRotation = transform.rotation;
+        visualTransform.SetPositionAndRotation(sampledPosition, sampledRotation);
+        lastVisualFrame = AnimationFrameRateSettings.CurrentFrame;
+    }
+
+    private void LateUpdate()
+    {
+        if (visualTransform == null)
+            return;
+
+        long frame = AnimationFrameRateSettings.CurrentFrame;
+        if (frame != lastVisualFrame)
+        {
+            sampledPosition = transform.position;
+            sampledRotation = transform.rotation;
+            lastVisualFrame = frame;
+        }
+
+        // Apenas o filho visual fica na pose amostrada; Rigidbody, collider e
+        // coleta continuam na posicao atual da simulacao.
+        visualTransform.SetPositionAndRotation(sampledPosition, sampledRotation);
+    }
 
     private void Update()
     {

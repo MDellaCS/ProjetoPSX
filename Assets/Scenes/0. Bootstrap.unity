@@ -259,6 +259,7 @@ GameObject:
   - component: {fileID: 311817224}
   - component: {fileID: 311817223}
   - component: {fileID: 311817222}
+  - component: {fileID: 311817225}
   m_Layer: 0
   m_Name: GameRoot
   m_TagString: Untagged
@@ -266,6 +267,19 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &311817225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311817221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a06d91cc97e4cfca20b2fb67a60534c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationFrameRateSettings
+  framesPerSecond: 12
 --- !u!114 &311817222
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2754,6 +2768,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1728328394}
   - component: {fileID: 1728328395}
+  - component: {fileID: 7298473215509183621}
   m_Layer: 0
   m_Name: VisualRoot
   m_TagString: Untagged
@@ -2761,6 +2776,18 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &7298473215509183621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728328393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 647ca2457dcf4dcf88cafae5af7932ed, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SteppedMeshGroup
 --- !u!4 &1728328394
 Transform:
   m_ObjectHideFlags: 0
