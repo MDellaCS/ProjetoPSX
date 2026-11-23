@@ -8,6 +8,7 @@ public sealed class EnemyAttackPreview : MonoBehaviour
     private static EnemyAttackPreview editorTarget;
     private static EnemyAttackDefinition editorAttack;
     private static float editorTime;
+    private static PlayerCharacterController previewPlayer;
 
     [Tooltip("Ataque exibido ao selecionar este inimigo diretamente.")]
     [SerializeField] private EnemyAttackDefinition attack;
@@ -19,6 +20,9 @@ public sealed class EnemyAttackPreview : MonoBehaviour
     public static void SetEditorPreview(EnemyAttackPreview target,
         EnemyAttackDefinition definition, float time)
     {
+        if (editorTarget != target || previewPlayer == null)
+            previewPlayer = Object.FindAnyObjectByType<PlayerCharacterController>(
+                FindObjectsInactive.Include);
         editorTarget = target;
         editorAttack = definition;
         editorTime = Mathf.Max(0f, time);
@@ -34,7 +38,10 @@ public sealed class EnemyAttackPreview : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (!Application.isPlaying && editorTarget == this && editorAttack != null)
+        {
+            AttackPreviewGrid.Draw(transform, previewPlayer);
             DrawAttack(editorAttack, editorTime);
+        }
     }
 
     private void OnDrawGizmosSelected()

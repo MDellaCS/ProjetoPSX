@@ -34,6 +34,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
     {
         if (Application.isPlaying || editorTarget != this || editorAttack == null)
             return;
+        AttackPreviewGrid.Draw(transform, GetComponent<PlayerCharacterController>());
         DrawAttack(editorAttack, editorTime);
     }
 
@@ -272,5 +273,41 @@ public sealed class PlayerAttackPreview : MonoBehaviour
         Gizmos.DrawLine(a - side * radius, b - side * radius);
         Gizmos.DrawLine(a + secondSide * radius, b + secondSide * radius);
         Gizmos.DrawLine(a - secondSide * radius, b - secondSide * radius);
+    }
+}
+
+/// <summary>Grade de referencia para os previews de ataques no editor.</summary>
+internal static class AttackPreviewGrid
+{
+    public static void Draw(Transform origin, PlayerCharacterController player)
+    {
+        const int extent = 16;
+        const int spacing = 2;
+        float groundY = origin.position.y;
+        if (player != null)
+        {
+            Transform playerTransform = player.transform;
+            Vector3 scale = playerTransform.lossyScale;
+            float radius = player.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+            float height = Mathf.Max(player.height * Mathf.Abs(scale.y), radius * 2f);
+            Vector3 center = playerTransform.TransformPoint(player.center);
+            groundY = center.y - Mathf.Abs(playerTransform.up.y) *
+                (height * .5f - radius) - radius;
+        }
+
+        Color previousColor = Gizmos.color;
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Gizmos.matrix = Matrix4x4.identity;
+        Gizmos.color = new Color(.65f, .65f, .65f, .5f);
+        Vector3 position = origin.position;
+        for (int offset = -extent; offset <= extent; offset += spacing)
+        {
+            Gizmos.DrawLine(new Vector3(position.x + offset, groundY, position.z - extent),
+                new Vector3(position.x + offset, groundY, position.z + extent));
+            Gizmos.DrawLine(new Vector3(position.x - extent, groundY, position.z + offset),
+                new Vector3(position.x + extent, groundY, position.z + offset));
+        }
+        Gizmos.matrix = previousMatrix;
+        Gizmos.color = previousColor;
     }
 }

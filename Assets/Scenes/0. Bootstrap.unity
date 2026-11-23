@@ -267,19 +267,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &311817225
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 311817221}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a06d91cc97e4cfca20b2fb67a60534c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::AnimationFrameRateSettings
-  framesPerSecond: 12
 --- !u!114 &311817222
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -342,6 +329,19 @@ Transform:
   - {fileID: 1302352074}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &311817225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311817221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a06d91cc97e4cfca20b2fb67a60534c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimationFrameRateSettings
+  framesPerSecond: 30
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -2444,7 +2444,6 @@ MonoBehaviour:
   bloomDuration: 2
   bloomIntensity: 1
   bloomRadius: 33
-  bloomColor: {r: 0.7264151, g: 0.7264151, b: 0.7264151, a: 1}
   bloomTextIntensity: 1
   bloomCurve:
     serializedVersion: 2
@@ -2776,18 +2775,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &7298473215509183621
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1728328393}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 647ca2457dcf4dcf88cafae5af7932ed, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::SteppedMeshGroup
 --- !u!4 &1728328394
 Transform:
   m_ObjectHideFlags: 0
@@ -3295,6 +3282,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+--- !u!114 &7298473215509183621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728328393}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 647ca2457dcf4dcf88cafae5af7932ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteppedMeshGroup
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
