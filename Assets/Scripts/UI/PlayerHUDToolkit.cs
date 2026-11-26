@@ -342,10 +342,7 @@ public class PlayerHUDToolkit : MonoBehaviour
             BuildNotches(hotNotchParent, hotNotches, requiredHotNotches,
                 "thermometer-notch");
 
-        int completeNotches = Mathf.FloorToInt(playerHeat.CurrentHeat / PlayerHeat.HeatPerNotch);
-        int costNotches = Mathf.RoundToInt(playerHeat.HeavyAttackHeatCost / PlayerHeat.HeatPerNotch);
-        bool heavyAvailable = !playerHeat.IsBurning &&
-            playerHeat.CurrentHeat >= playerHeat.HeavyAttackHeatCost;
+        bool heavyConsumesHeat = !playerHeat.IsBurning && !playerHeat.IsRaging;
 
         for (int index = 0; index < hotNotches.Count; index++)
         {
@@ -358,8 +355,7 @@ public class PlayerHUDToolkit : MonoBehaviour
             UpdateNotchVisual(hotNotches[index],
                 EvaluateGradient(heatBarColors, Mathf.Clamp01(index / 9f)),
                 filled, lostFill, notchSize * capacity, notchSize,
-                heavyAvailable && index >= completeNotches - costNotches &&
-                index < completeNotches);
+                heavyConsumesHeat && filled > 0f);
         }
 
 

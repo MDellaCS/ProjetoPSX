@@ -16,7 +16,7 @@ MonoBehaviour:
   heavyWindupActiveRotationSpeed: 80
   specialWindupActiveRotationSpeed: 80
   extendedArmHitboxRadius: 0.25
-  maximumAttacksPerSequence: 3
+  maximumAttacksPerSequence: 4
   openings:
   - targetNodeId: GlassDoll_ArmSwing1
     selectionWeight: 100
@@ -39,6 +39,16 @@ MonoBehaviour:
       requiresHitConfirm: 1
   - nodeId: GlassDoll_ArmSwing2
     attack: {fileID: 11400000, guid: 150aab2586424d143a563125392416ca, type: 2}
+    transitions:
+    - targetNodeId: GlassDoll_ArmSwing2_Followup
+      continuationChance: 100
+      selectionWeight: 100
+      minimumDelayAfterActive: 0
+      continuationWindow: 0
+      requiresHitConfirm: 0
+      mandatoryContinuation: 1
+  - nodeId: GlassDoll_ArmSwing2_Followup
+    attack: {fileID: 11400000, guid: 4386107491554fcaa6fc68806b715cee, type: 2}
     transitions:
     - targetNodeId: QuickStabs_After_ArmSwing2
       continuationChance: 100

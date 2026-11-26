@@ -61,7 +61,7 @@ public sealed class EnemyAttackPreview : MonoBehaviour
         float windupEnd = definition.windupDuration;
         float activeEnd = windupEnd + definition.activeDuration;
         DrawMovementTrajectory(definition, origin, previewTime, activeEnd);
-        if (definition.strikes == null) return;
+        if (definition.hitboxes == null) return;
         if (previewTime < windupEnd)
         {
             DrawPhaseRing(origin, Color.green);
@@ -75,13 +75,9 @@ public sealed class EnemyAttackPreview : MonoBehaviour
 
         float progress = Mathf.InverseLerp(windupEnd, activeEnd, previewTime);
         Gizmos.color = previewColor;
-        foreach (EnemyAttackStrikeDefinition strike in definition.strikes)
         {
-            if (strike == null || progress < strike.activeStartNormalized ||
-                progress > strike.activeEndNormalized) continue;
-            float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized,
-                strike.activeEndNormalized, progress);
-            foreach (EnemyHitboxTrackDefinition track in strike.hitboxes)
+            float strikeProgress = progress;
+            foreach (EnemyHitboxTrackDefinition track in definition.hitboxes)
             {
                 if (track == null || strikeProgress < track.activeStartNormalized ||
                     strikeProgress > track.activeEndNormalized) continue;

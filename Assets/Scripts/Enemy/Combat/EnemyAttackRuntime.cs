@@ -36,7 +36,6 @@ public sealed class EnemyAttackRuntime
         ActiveDuration = Definition.activeDuration * activeMultiplier;
         RecoveryDuration = Definition.recoveryDuration * recoveryMultiplier;
         RotationSpeed = moveset.GetRotationSpeed(Definition.kind);
-        ExtendedArmHitboxRadius = Definition.usesExtendedArmHitbox
-            ? moveset.extendedArmHitboxRadius : 0f;
+        ExtendedArmHitboxRadius = moveset.extendedArmHitboxRadius;
     }
 }

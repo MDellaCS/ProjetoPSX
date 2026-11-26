@@ -74,7 +74,7 @@ public sealed class PlayerSwingAnchor : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.Swing)) return;
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.SwingAnchors)) return;
         Vector3 position = (anchorPoint != null ? anchorPoint : transform).position;
         Color anchorColor = !canAttach
             ? Color.gray

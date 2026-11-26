@@ -174,11 +174,6 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     [Min(0f)] [SerializeField] private float maximumLaunchForce = 35f;
     [Tooltip("Velocidade horizontal perdida por segundo durante Launch Forwards.")]
     [Min(.01f)] [SerializeField] private float launchForwardsDeceleration = 20f;
-    [Tooltip("Desvio angular maximo, em graus, que a assistencia global pode aplicar ao Launch Forwards inicial do player para alinhar o inimigo arremessado a outro inimigo.")]
-    [Range(0f, 90f)] [SerializeField] private float playerLaunchBodyImpactAssistAngle = 20f;
-    [Tooltip("Distancia maxima em que a assistencia global de Launch Forwards do player procura outro inimigo dentro do cone angular.")]
-    [Min(0f)] [SerializeField] private float playerLaunchBodyImpactAssistRange = 12f;
-
     [Header("Impactos e Splats Globais")]
     [Tooltip("Velocidade relativa minima para uma colisao causar dano, Poise e Stagger. Vale para parede, chao e inimigos arremessados.")]
     [Min(0f)] [SerializeField] private float minimumImpactSpeed = 10f;
@@ -205,10 +200,6 @@ public sealed class CombatPoiseSystem : MonoBehaviour
     public float RegenMaxPercentPerSecond => poiseRegenMaxPercentPerSecond;
     public float RegenFlatPerSecond => poiseRegenFlatPerSecond;
     public float LaunchForwardsDeceleration => launchForwardsDeceleration;
-    public float PlayerLaunchBodyImpactAssistAngle =>
-        playerLaunchBodyImpactAssistAngle;
-    public float PlayerLaunchBodyImpactAssistRange =>
-        playerLaunchBodyImpactAssistRange;
     public float MinimumImpactSpeed => minimumImpactSpeed;
     public float EnemyCollisionDamageProtectionDuration =>
         enemyCollisionDamageProtectionDuration;

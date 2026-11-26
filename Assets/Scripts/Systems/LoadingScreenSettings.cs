@@ -6,7 +6,7 @@ using UnityEngine.Serialization;
     fileName = "LoadingScreenSettings")]
 public sealed class LoadingScreenSettings : ScriptableObject
 {
-    public const string ResourcePath = "LoadingScreenSettings";
+    public const string ResourcePath = "LoadingScreenHUD/LoadingScreenSettings";
 
     [Tooltip("Tempo fixo, em segundos reais, que a tela de loading continua totalmente visivel DEPOIS que o carregamento chegou a 100%, antes de comecar a esmaecer. Nao depende da duracao do carregamento.")]
     [Min(0f)] public float extraWaitAfterReady = .5f;

@@ -45,7 +45,7 @@ public sealed class EnemyDodge : MonoBehaviour
     [Min(0f)] [SerializeField] private float protectionAfterDodge = .18f;
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyMovement movement;
     private EnemyAttackController attacks;
     private float hopTimeRemaining;
@@ -64,11 +64,11 @@ public sealed class EnemyDodge : MonoBehaviour
 
     private void OnDisable() => CancelDodge();
 
-    internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    internal void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyMovement enemyMovement, EnemyAttackController attackController)
     {
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         movement = enemyMovement;
         attacks = attackController;
     }

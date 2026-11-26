@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: Run
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
   attackId: Run
-  displayName: Run
   kind: 1
   context: 0
   animationStateId: Run
@@ -69,58 +68,52 @@ MonoBehaviour:
     minimumAggressionPercent: 60
     maximumAggressionPercent: 100
     preferredRange: 14
-  strikes:
-  - strikeName: Run
-    activeStartNormalized: 0
-    activeEndNormalized: 1
-    damageMultiplier: 1
-    poiseMultiplier: 1
-    reaction: 3
-    hitboxes:
-    - trackName: Run
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0, y: 0, z: 0.5}
-      endLocalPosition: {x: 0, y: 0, z: 0.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 1.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 0.85
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 0
-      allowRepeatHits: 1
-      repeatHitInterval: 2
+  reaction: 3
   usesExtendedArmHitbox: 1
+  hitboxes:
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0, y: 0, z: 0.5}
+    endLocalPosition: {x: 0, y: 0, z: 0.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 1.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0
+    activeEndNormalized: 0.85
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 0
+    allowRepeatHits: 1
+    repeatHitInterval: 2
+  attackDataVersion: 1

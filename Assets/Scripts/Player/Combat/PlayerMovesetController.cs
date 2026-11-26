@@ -34,10 +34,12 @@ public sealed class PlayerMovesetController : MonoBehaviour
     private PlayerMovesetCatalog catalog;
     private string currentNodeId;
     private float activeStartedAt;
+    private float comboExpiresAt = float.PositiveInfinity;
     private PlayerMoveNode pendingNode;
     private AttackGesture currentGesture;
     private AttackGesture pendingGesture;
     private bool startingMovesetNode;
+    private bool aerialComboUsed;
     private float GameplayTime => CombatImpactSystem.GetGameplayTime(this);
 
     public PlayerMovesetDefinition Moveset => moveset;
@@ -71,12 +73,14 @@ public sealed class PlayerMovesetController : MonoBehaviour
             }
         }
         attacks.AttackStarted += OnAttackStarted;
+        attacks.AttackActiveEnded += OnAttackActiveEnded;
         attacks.AttackFinished += OnAttackFinished;
     }
     private void OnDestroy()
     {
         if (attacks == null) return;
         attacks.AttackStarted -= OnAttackStarted;
+        attacks.AttackActiveEnded -= OnAttackActiveEnded;
         attacks.AttackFinished -= OnAttackFinished;
     }
     private void Update()
@@ -86,6 +90,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
             CombatImpactSystem.IsGameplayFrozen(this)) return;
         if (playerState != null && playerState.IsDead()) return;
         if (moveset == null) return;
+        if (currentNodeId != null && pendingNode == null && GameplayTime >= comboExpiresAt)
+            ResetSequence();
         // Ataque externo (explosao de Burn) nao pertence ao moveset: um input
         // de ataque nao pode cancela-lo nem enfileirar continuacoes.
         if (attacks.IsAttacking && playerState != null &&
@@ -175,7 +181,7 @@ public sealed class PlayerMovesetController : MonoBehaviour
             : FindContinuation(input, heldBranch, heldBranch);
         PlayerMoveNode requestedNode = continuation ??
             (heldBranch ? null : FindEntry(input));
-        if (requestedNode == null && heldBranch)
+        if (requestedNode == null)
             return;
         if (attacks.IsAttacking && requestedNode?.attack != null &&
             requestedNode.attack == attacks.CurrentAttack.Definition)
@@ -304,9 +310,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
             return null;
         }
 
-        bool isPauseInput = sinceActive >= moveset.globalPauseDelay;
         PlayerMoveTransition transition = PlayerMovesetDefinition.FindTransition(
-            current.transitions, input, heldBranch, isPauseInput);
+            current.transitions, input, heldBranch);
         return transition != null
             ? moveset.FindNode(transition.targetNodeId)
             : null;
@@ -319,6 +324,8 @@ public sealed class PlayerMovesetController : MonoBehaviour
             : movement != null && !movement.IsGrounded
                 ? PlayerAttackContext.Air
                 : PlayerAttackContext.Ground;
+        if (context == PlayerAttackContext.Air && aerialComboUsed)
+            return null;
         foreach (PlayerMovesetEntry entry in moveset.entries)
             if (entry != null && entry.input == input && entry.context == context) return moveset.FindNode(entry.targetNodeId);
         return null;
@@ -334,6 +341,12 @@ public sealed class PlayerMovesetController : MonoBehaviour
         }
         activeStartedAt = GameplayTime + (_.WindupDuration);
     }
+    private void OnAttackActiveEnded(PlayerAttackRuntime _)
+    {
+        if (currentNodeId != null || startingMovesetNode)
+            comboExpiresAt = GameplayTime + Mathf.Max(0f, moveset != null ? moveset.comboResetDelay : 0f);
+    }
+
     private void OnAttackFinished(PlayerAttackRuntime _)
     {
         if (pendingNode == null) return;
@@ -353,12 +366,20 @@ public sealed class PlayerMovesetController : MonoBehaviour
             (movement == null || !movement.InterruptGroundDashForAttack()))
             return false;
 
+        float previousExpiry = comboExpiresAt;
+        comboExpiresAt = float.PositiveInfinity;
         startingMovesetNode = true;
         bool started = attacks.TryStartAttack(node.attack);
         startingMovesetNode = false;
         if (!started)
+        {
+            comboExpiresAt = previousExpiry;
             return false;
+        }
         currentNodeId = node.nodeId;
+        if (node.attack.context == PlayerAttackContext.Air ||
+            (movement != null && !movement.IsGrounded))
+            aerialComboUsed = true;
         currentGesture = gesture;
         return true;
     }
@@ -369,23 +390,19 @@ public sealed class PlayerMovesetController : MonoBehaviour
         pendingNode = null;
         currentGesture = default;
         pendingGesture = default;
+        comboExpiresAt = float.PositiveInfinity;
     }
 
-    /// <summary>
-    /// O pouso encerra somente uma rota aerea: remove a continuacao pendente
-    /// e qualquer clique de ataque capturado no ar, sem tocar combos de chao.
-    /// </summary>
-    public void ResetAerialSequenceOnLanding()
+    /// <summary>Libera um novo combo aereo ao pular ou aterrissar.</summary>
+    public void ResetAerialCombo()
     {
-        PlayerMoveNode current = moveset != null
-            ? moveset.FindNode(currentNodeId) : null;
-        bool currentIsAir = current?.attack != null &&
-            current.attack.context == PlayerAttackContext.Air;
-        bool pendingIsAir = pendingNode?.attack != null &&
-            pendingNode.attack.context == PlayerAttackContext.Air;
-        if (!currentIsAir && !pendingIsAir)
-            return;
+        aerialComboUsed = false;
+        BreakSequence();
+    }
 
+    /// <summary>Encerra a sequencia e descarta entradas anteriores ao evento.</summary>
+    public void BreakSequence()
+    {
         ResetSequence();
         inputBuffer?.ClearBufferedAttackInputs();
     }

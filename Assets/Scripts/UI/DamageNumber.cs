@@ -1,99 +1,119 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Overlay de numero de dano usado somente enquanto o F3 esta aberto.</summary>
+/// <summary>Historico e total de dano de um alvo, exibidos enquanto o F3 esta aberto.</summary>
 public sealed class DamageNumber : MonoBehaviour
 {
-    private Transform target;
-    private Vector3 headOffset;
-    private Vector3 lastWorldPosition;
-    private string damageText;
-    private Color damageColor;
-    private Color shadowColor;
-    private float lifetime;
-    private float riseSpeed;
-    private float shadowOffsetPixels;
-    private int fontSize;
-    private float timer;
-
-    public static void Show(Transform target, int damage, Vector3 offset,
-        Color color, float horizontalScatter, float verticalScatter,
-        float lifetime, float riseSpeed, int fontSize, Color shadowColor,
-        float shadowOffsetPixels)
+    private struct Hit
     {
-        if (!PlayerDebugToolkitHUD.IsVisible || target == null || damage <= 0)
-            return;
-
-        GameObject numberObject = new("Damage Number");
-        DamageNumber number = numberObject.AddComponent<DamageNumber>();
-        Vector3 scatter = new(Random.Range(-horizontalScatter, horizontalScatter),
-            Random.Range(0f, verticalScatter), 0f);
-        number.Initialize(target, damage, offset + scatter, color, lifetime,
-            riseSpeed, fontSize, shadowColor, shadowOffsetPixels);
+        public string text;
+        public float expiresAt;
     }
 
-    private void Initialize(Transform damageTarget, int damage, Vector3 offset,
-        Color color, float newLifetime, float newRiseSpeed, int newFontSize,
-        Color newShadowColor, float newShadowOffsetPixels)
+    private static readonly Dictionary<Transform, DamageNumber> active = new();
+    private readonly List<Hit> hits = new();
+    private Transform target;
+    private Vector3 lastWorldPosition;
+    private DamageNumberStyle style;
+    private long total;
+    private string totalText;
+    private float totalExpiresAt;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => active.Clear();
+
+    public static void Show(Transform target, int damage, DamageNumberStyle style)
     {
-        target = damageTarget;
-        headOffset = offset;
-        lastWorldPosition = target.position + headOffset;
-        damageText = damage.ToString();
-        damageColor = color;
-        lifetime = Mathf.Max(.01f, newLifetime);
-        riseSpeed = Mathf.Max(0f, newRiseSpeed);
-        fontSize = Mathf.Max(1, newFontSize);
-        shadowColor = newShadowColor;
-        shadowOffsetPixels = Mathf.Max(0f, newShadowOffsetPixels);
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.DamageNumbers) ||
+            target == null || damage <= 0 || style == null || !style.enabled)
+            return;
+
+        if (!active.TryGetValue(target, out DamageNumber display) || display == null)
+        {
+            display = new GameObject("Damage Numbers").AddComponent<DamageNumber>();
+            display.target = target;
+            display.lastWorldPosition = target.position + style.spawnOffset;
+            active[target] = display;
+        }
+        display.AddHit(damage, style);
+    }
+
+    private void AddHit(int damage, DamageNumberStyle currentStyle)
+    {
+        style = currentStyle;
+        float now = Time.time;
+        if (now >= totalExpiresAt)
+            total = 0;
+        total += damage;
+        totalText = total.ToString();
+        totalExpiresAt = now + Mathf.Max(.01f, style.lifetime);
+        hits.Add(new Hit { text = damage.ToString(), expiresAt = totalExpiresAt });
     }
 
     private void Update()
     {
-        timer += Time.deltaTime;
         if (target != null)
-            lastWorldPosition = target.position + headOffset;
-        if (timer >= lifetime)
+            lastWorldPosition = target.position + style.spawnOffset;
+        float now = Time.time;
+        for (int i = hits.Count - 1; i >= 0; i--)
+            if (hits[i].expiresAt <= now) hits.RemoveAt(i);
+        if (now >= totalExpiresAt)
             Destroy(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (!ReferenceEquals(target, null) && active.TryGetValue(target, out DamageNumber current) && current == this)
+            active.Remove(target);
     }
 
     private void OnGUI()
     {
-        if (!PlayerDebugToolkitHUD.IsVisible || string.IsNullOrEmpty(damageText))
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.DamageNumbers) || style == null)
             return;
-
         Camera gameCamera = Camera.main;
-        if (gameCamera == null)
-            return;
+        if (gameCamera == null) return;
+        Vector3 screen = gameCamera.WorldToScreenPoint(lastWorldPosition);
+        if (screen.z <= 0f) return;
 
-        Vector3 worldPosition = lastWorldPosition + Vector3.up * (riseSpeed * timer);
-        Vector3 screenPosition = gameCamera.WorldToScreenPoint(worldPosition);
-        if (screenPosition.z <= 0f)
-            return;
-
-        float fade = 1f - Mathf.Clamp01(timer / lifetime);
-        GUIStyle textStyle = CreateStyle(fontSize);
-        Rect rect = new(screenPosition.x - 50f,
-            Screen.height - screenPosition.y - 16f, 100f, 32f);
+        GUIStyle textStyle = new(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            font = style.font,
+            fontStyle = FontStyle.Bold,
+            fontSize = Mathf.Max(1, style.fontSize)
+        };
+        float lifetime = Mathf.Max(.01f, style.lifetime);
+        float width = Mathf.Max(100f, style.fontSize * 6f);
+        float height = Mathf.Max(32f, style.fontSize * 1.3f);
+        float centerY = Screen.height - screen.y;
+        float spacing = Mathf.Max(0f, style.stackSpacingPixels);
+        float halfColumns = Mathf.Max(0f, style.columnSpacingPixels) * .5f;
         Color previousColor = GUI.color;
         int previousDepth = GUI.depth;
         GUI.depth = -100;
-
-        GUI.color = new Color(shadowColor.r, shadowColor.g, shadowColor.b,
-            shadowColor.a * fade);
-        GUI.Label(new Rect(rect.x + shadowOffsetPixels,
-            rect.y + shadowOffsetPixels, rect.width, rect.height), damageText, textStyle);
-        GUI.color = new Color(damageColor.r, damageColor.g, damageColor.b,
-            damageColor.a * fade);
-        GUI.Label(rect, damageText, textStyle);
-
+        for (int i = hits.Count - 1; i >= 0; i--)
+        {
+            int row = hits.Count - 1 - i;
+            float fade = Mathf.Clamp01((hits[i].expiresAt - Time.time) / lifetime);
+            DrawText(new Rect(screen.x - halfColumns - width * .5f,
+                centerY - height * .5f - row * spacing, width, height), hits[i].text, fade, textStyle);
+        }
+        float totalFade = Mathf.Clamp01((totalExpiresAt - Time.time) / lifetime);
+        DrawText(new Rect(screen.x + halfColumns - width * .5f,
+            centerY - height * .5f, width, height), totalText, totalFade, textStyle);
         GUI.depth = previousDepth;
         GUI.color = previousColor;
     }
 
-    private static GUIStyle CreateStyle(int size) => new(GUI.skin.label)
+    private void DrawText(Rect rect, string text, float fade, GUIStyle textStyle)
     {
-        alignment = TextAnchor.MiddleCenter,
-        fontStyle = FontStyle.Bold,
-        fontSize = size
-    };
+        Color shadow = style.shadowColor;
+        GUI.color = new Color(shadow.r, shadow.g, shadow.b, shadow.a * fade);
+        float offset = Mathf.Max(0f, style.shadowOffsetPixels);
+        GUI.Label(new Rect(rect.x + offset, rect.y + offset, rect.width, rect.height), text, textStyle);
+        Color color = style.color;
+        GUI.color = new Color(color.r, color.g, color.b, color.a * fade);
+        GUI.Label(rect, text, textStyle);
+    }
 }

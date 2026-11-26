@@ -30,9 +30,6 @@ public class PlayerHeat : MonoBehaviour
     [Header("Heavy Attack Power")]
     [Tooltip("Aumento do multiplicador de dano por notch de Heat. Afeta ataques pesados e o dano recebido; por exemplo, 0,5 resulta em 2x com dois notches.")]
     [Min(0f)] [SerializeField] private float damageMultiplierPerNotch = .5f;
-    [Tooltip("Quantidade de notches completos exigidos e consumidos ao iniciar um ataque pesado.")]
-    [Min(1)] [SerializeField] private int heavyAttackNotchCost = 3;
-    public float HeavyAttackHeatCost => Mathf.Max(1, heavyAttackNotchCost) * HeatPerNotch;
 
     [Header("Light Attack Heat")]
     [Tooltip("Heat gerado por cada ponto de dano realmente retirado da vida do inimigo por um ataque leve marcado para gerar Heat.")]
@@ -310,7 +307,7 @@ public class PlayerHeat : MonoBehaviour
     /// </summary>
     public HeavyAttackCharge ConsumeHeatForHeavyAttack()
     {
-        return CaptureHeavyAttackCharge(consumeHeat: true);
+        return CaptureHeavyAttackCharge();
     }
 
     /// <summary>Captura a escala Heavy no limite de Heat sem gastar recurso durante a explosao de Burn.</summary>
@@ -321,7 +318,7 @@ public class PlayerHeat : MonoBehaviour
             GetHeavyPoiseMultiplier(notches));
     }
 
-    private HeavyAttackCharge CaptureHeavyAttackCharge(bool consumeHeat)
+    private HeavyAttackCharge CaptureHeavyAttackCharge()
     {
         if (!IsHeatModeActive)
             return new HeavyAttackCharge(0f, 1f, 1f);
@@ -333,16 +330,11 @@ public class PlayerHeat : MonoBehaviour
                 GetHeavyPoiseMultiplier(notches));
         }
         float availablePositiveHeat = Mathf.Max(0f, currentHeat);
-        float consumedNotch = GetHeavyPowerNotches(availablePositiveHeat);
         float currentPowerNotch = GetHeavyPowerNotches(currentHeat);
         float damageMultiplier = GetHeavyDamageMultiplier(currentPowerNotch);
         float poiseMultiplier = GetHeavyPoiseMultiplier(currentPowerNotch);
-        // O poder ainda e discreto por notch, mas o gasto tambem: um pesado
-        // consome blocos completos de 10 Heat e a fracao extra de capacidade
-        // quando a barra estiver cheia. O restante fica para o proximo golpe.
-        float heatConsumed = Mathf.Min(HeavyAttackHeatCost, availablePositiveHeat);
-
-        if (!consumeHeat || heatConsumed <= 0f)
+        float heatConsumed = availablePositiveHeat;
+        if (heatConsumed <= 0f)
             return new HeavyAttackCharge(0f, damageMultiplier, poiseMultiplier);
 
         float previousHeat = currentHeat;

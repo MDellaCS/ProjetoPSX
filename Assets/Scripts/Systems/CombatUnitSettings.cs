@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>Valores globais das unidades usadas na vida e nos ataques.</summary>
-[CreateAssetMenu(menuName = "Projeto PSX/Combat/Unit Settings", fileName = "CombatUnitSettings")]
+[CreateAssetMenu(menuName = "Projeto PSX/Combat/Unit Settings", fileName = "Combat/CombatUnitSettings")]
 public sealed class CombatUnitSettings : ScriptableObject
 {
     private static CombatUnitSettings instance;
@@ -19,7 +19,7 @@ public sealed class CombatUnitSettings : ScriptableObject
         {
             if (instance == null)
             {
-                instance = Resources.Load<CombatUnitSettings>("CombatUnitSettings");
+                instance = Resources.Load<CombatUnitSettings>("Combat/CombatUnitSettings");
                 if (instance == null)
                 {
                     instance = CreateInstance<CombatUnitSettings>();

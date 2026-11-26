@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Define o ambiente (luz ambiente e nevoa) da cena. O ultimo ambiente ativado
+/// Define o ambiente (luz ambiente) da cena. O ultimo ambiente ativado
 /// vence; sem nenhum, vale o Default Environment do RetroLightingSettings.
 /// </summary>
 [DisallowMultipleComponent]
@@ -9,7 +9,7 @@ using UnityEngine;
 [AddComponentMenu("Projeto PSX/Lighting/Retro Lighting Environment")]
 public sealed class RetroLightingEnvironment : MonoBehaviour
 {
-    [Tooltip("Perfil de luz ambiente e nevoa aplicado enquanto este componente estiver ativo.")]
+    [Tooltip("Perfil de luz ambiente aplicado enquanto este componente estiver ativo.")]
     [SerializeField] private RetroEnvironmentProfile profile;
 
     public RetroEnvironmentProfile Profile => profile;

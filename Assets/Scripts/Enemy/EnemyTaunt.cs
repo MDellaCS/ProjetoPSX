@@ -34,7 +34,7 @@ public sealed class EnemyTaunt : MonoBehaviour
     [SerializeField] private string tauntingBoolParameter = "Taunting";
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyMovement movement;
     private float tauntTimeRemaining;
     private float cooldownRemaining;
@@ -43,11 +43,11 @@ public sealed class EnemyTaunt : MonoBehaviour
     private bool hasTauntingBool;
     private bool isTauntActive;
 
-    internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    internal void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyMovement enemyMovement)
     {
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         movement = enemyMovement;
         if (visualAnimator == null)
             visualAnimator = GetComponentInChildren<Animator>(true);

@@ -19,7 +19,7 @@ public sealed class PlayerAttackDebug : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!PlayerDebugToolkitHUD.IsVisible || attacks == null || !attacks.IsAttacking || Camera.main == null) return;
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerCurrentAttack) || attacks == null || !attacks.IsAttacking || Camera.main == null) return;
         Vector3 center = transform.position + (controller != null ? transform.rotation * controller.center : Vector3.zero);
         Vector3 screen = Camera.main.WorldToScreenPoint(center + Vector3.up * labelHeightOffset);
         if (screen.z <= 0f) return;

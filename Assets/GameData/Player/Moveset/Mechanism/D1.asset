@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: D1
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackDefinition
   attackId: D1
-  displayName: D1
   kind: 0
   context: 2
   windupDuration: 0.06
@@ -21,10 +20,11 @@ MonoBehaviour:
   recoveryDuration: 0.06
   cooldownDuration: 0
   holdActiveUntilGrounded: 0
-  baseDamage: 20
+  baseDamage: 5
   basePoiseDamage: 50
+  movementProfile: {fileID: 11400000, guid: 726fc32666db41c3bae0b1a91738b02f, type: 2}
   movement:
-    forwardDistance: 2
+    forwardDistance: 3
     startNormalized: 0
     endNormalized: 1
     movementCurve:
@@ -51,147 +51,143 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  strikes:
-  - strikeName: D1
+  damageFalloff:
+    enabled: 0
+    startDistance: 0
+    endDistance: 1
+    damageMultiplier:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  generatesHeatOnHit: 1
+  usesExtendedArmHitbox: 1
+  effects:
+    launchDown: 0
+    selfLaunchDown: 0
+    launchUp: 0
+    launchForwards: 1
+    launchBackwards: 0
+    juggle: 0
+  hitboxes:
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId: 
+    secondaryAnchorId: 
+    startLocalPosition: {x: 0, y: 0.5, z: 1}
+    endLocalPosition: {x: 0, y: 0.5, z: 1}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 2.2
+    capsuleHeight: 3.12
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
     activeStartNormalized: 0
     activeEndNormalized: 1
-    damageMultiplier: 1
-    poiseMultiplier: 1
-    damageFalloff:
-      enabled: 0
-      startDistance: 0
-      endDistance: 1
-      damageMultiplier:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 1
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-    generatesHeatOnHit: 1
-    effects:
-      launchDown: 0
-      selfLaunchDown: 0
-      launchUp: 0
-      launchForwards: 1
-      launchBackwards: 0
-      juggle: 0
-    hitboxes:
-    - trackName: L1_Vai
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.36, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 1.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 0
-          outSlope: 1
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 1
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 0
-          outSlope: 1
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 1
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 0
-          outSlope: 1
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 1
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 1.5
-      capsuleHeight: 3.12
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 1
-      sweep: 1
-      sweepStepDistance: 0.18
-      hitGroup: 0
-      allowRepeatHits: 0
-      repeatHitInterval: 0.05
-  usesExtendedArmHitbox: 1
+    trajectoryRepeats: 0
+    alternateRepeatSide: 0
+    hitGroup: 0
+    allowRepeatHits: 0
+    repeatHitInterval: 0.05
+  legacyStrikes: []
+  extendedArmMigrationVersion: 0
+  attackDataVersion: 1

@@ -61,7 +61,6 @@ public sealed class PlayerSwingController : MonoBehaviour
     private PlayerAttackController attackController;
     private PlayerMovesetController movesetController;
     private PlayerGrappleAttackController grappleAttack;
-    private PlayerTargetAssist targetAssist;
     private IGrappleTargetProvider anchorProvider;
     private IGrappleTargetProvider ladderProvider;
     private PlayerSwingAnchor currentAnchor;
@@ -95,7 +94,6 @@ public sealed class PlayerSwingController : MonoBehaviour
         movesetController = GetComponent<PlayerMovesetController>();
         grappleAttack = GetComponent<PlayerGrappleAttackController>();
         inputBuffer = PlayerInputBuffer.GetOrAdd(gameObject);
-        targetAssist = GetComponent<PlayerTargetAssist>();
         if (gameplayCamera == null)
             gameplayCamera = Camera.main;
         if (ropeRenderer != null)
@@ -202,24 +200,16 @@ public sealed class PlayerSwingController : MonoBehaviour
             return;
         }
 
-        // Sem inimigo para o ataque de grapple, o gancho atraca na escada mirada.
-        if (!HasEnemyTarget() &&
-            TryFindLadderTarget(out HandLadder ladder, out HandLadderGrip grip, out _) &&
+        // O gancho de movimento tem prioridade quando ha uma escada mirada.
+        if (TryFindLadderTarget(out HandLadder ladder, out HandLadderGrip grip, out _) &&
             movement.TryBeginLadderClimb(ladder, grip, GrappleSettings.Movement.pullSpeed))
             return;
 
         grappleAttack?.TryFire();
     }
 
-    private bool HasEnemyTarget()
-    {
-        if (targetAssist == null)
-            targetAssist = GetComponent<PlayerTargetAssist>();
-        return targetAssist != null && targetAssist.FindCombatGrappleTarget() != null;
-    }
-
     // Provedores do indicador global: pontos de balanco e escadas. Mesma ordem de
-    // prioridade do input (balanco > inimigo > escada).
+    // prioridade do input (balanco > escada).
     private sealed class AnchorProvider : IGrappleTargetProvider
     {
         private readonly PlayerSwingController owner;
@@ -254,7 +244,7 @@ public sealed class PlayerSwingController : MonoBehaviour
         {
             target = default;
             if (owner.playerState == null || !owner.playerState.IsNormal() ||
-                owner.isSwinging || owner.HasEnemyTarget() ||
+                owner.isSwinging ||
                 !owner.TryFindLadderTarget(out HandLadder ladder, out _, out Vector3 point))
                 return false;
             target = new GrappleTarget
@@ -635,7 +625,7 @@ public sealed class PlayerSwingController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.Swing) || !isSwinging ||
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.SwingRope) || !isSwinging ||
             currentAnchor == null)
         {
             return;

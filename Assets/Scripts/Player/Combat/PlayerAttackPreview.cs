@@ -63,7 +63,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
         float windupEnd = definition.windupDuration;
         float activeEnd = windupEnd + definition.activeDuration;
         DrawMovementTrajectory(definition, origin, previewTime, activeEnd);
-        if (definition.strikes == null) return;
+        if (definition.hitboxes == null) return;
         if (previewTime < windupEnd)
         {
             DrawPhaseRing(origin, capsuleRadius, Color.green);
@@ -77,23 +77,21 @@ public sealed class PlayerAttackPreview : MonoBehaviour
 
         float progress = Mathf.InverseLerp(windupEnd, activeEnd, previewTime);
         Gizmos.color = previewColor;
-        float extendedArmRadius = definition.usesExtendedArmHitbox
-            ? GetExtendedArmRadius()
-            : 0f;
-        foreach (PlayerAttackStrikeDefinition strike in definition.strikes)
+        float extendedArmRadius = GetExtendedArmRadius();
         {
-            if (strike == null || strike.hitboxes == null ||
-                progress < strike.activeStartNormalized || progress > strike.activeEndNormalized)
-                continue;
-            float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized, strike.activeEndNormalized, progress);
-            foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
+            float strikeProgress = progress;
+            foreach (PlayerHitboxTrackDefinition track in definition.hitboxes)
             {
                 if (track == null || strikeProgress < track.activeStartNormalized || strikeProgress > track.activeEndNormalized)
                     continue;
                 float t = Mathf.InverseLerp(track.activeStartNormalized, track.activeEndNormalized, strikeProgress);
+                t = PlayerHitboxRepeat.GetProgress(track, t, out _, out bool mirror);
                 GetPose(track, origin, t, out Vector3 center, out Quaternion rotation,
                     out Vector3 capsuleA, out Vector3 capsuleB,
                     out float effectiveRadius);
+                if (mirror)
+                    PlayerHitboxRepeat.MirrorPose(transform, origin, ref center,
+                        ref rotation, ref capsuleA, ref capsuleB);
             if (track.shape == PlayerHitboxShape.Sphere) Gizmos.DrawWireSphere(center, effectiveRadius);
             else if (track.shape == PlayerHitboxShape.Box)
             { Matrix4x4 old = Gizmos.matrix; Gizmos.matrix = Matrix4x4.TRS(center, rotation, Vector3.one); Gizmos.DrawWireCube(Vector3.zero, track.boxSize); Gizmos.matrix = old; }
@@ -101,7 +99,7 @@ public sealed class PlayerAttackPreview : MonoBehaviour
             {
                 DrawWireCapsule(capsuleA, capsuleB, effectiveRadius);
             }
-            if (extendedArmRadius > 0f)
+            if (definition.usesExtendedArmHitbox && extendedArmRadius > 0f)
                 DrawWireCapsule(extendedArmOrigin, center, extendedArmRadius);
             }
         }
@@ -111,8 +109,9 @@ public sealed class PlayerAttackPreview : MonoBehaviour
     private void DrawMovementTrajectory(PlayerAttackDefinition definition,
         Vector3 origin, float previewTime, float windupActiveDuration)
     {
-        PlayerAttackMovementDefinition movement = definition.movement;
-        if (movement == null || movement.forwardDistance <= 0f ||
+        if (definition.allowMovementWhileAttacking) return;
+        PlayerAttackMovementDefinition movement = definition.Movement;
+        if (movement == null || Mathf.Approximately(movement.forwardDistance, 0f) ||
             movement.endNormalized <= movement.startNormalized)
         {
             return;

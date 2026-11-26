@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24cddd07f3e94167af8f5c4af9bd7b1d, type: 3}
+  m_Name: DamageNumberSettings
+  m_EditorClassIdentifier: Assembly-CSharp::DamageNumberSettings
+  player:
+    enabled: 1
+    spawnOffset: {x: 2, y: 2, z: 0}
+    horizontalScatter: 0
+    verticalScatter: 0
+    color: {r: 1, g: 0.3, b: 0.3, a: 1}
+    fontSize: 45
+    lifetime: 3
+    riseSpeed: 0.5
+    stackSpacingPixels: 55
+    columnSpacingPixels: 120
+    font: {fileID: 12800000, guid: 4b37a041a216d8b40bbc2bed1f0ba11a, type: 3}
+    shadowColor: {r: 0, g: 0, b: 0, a: 1}
+    shadowOffsetPixels: 2
+  style:
+    enabled: 1
+    spawnOffset: {x: 0.4, y: 2, z: 0}
+    horizontalScatter: 0
+    verticalScatter: 0
+    color: {r: 1, g: 1, b: 1, a: 1}
+    fontSize: 30
+    lifetime: 3
+    riseSpeed: 0.5
+    stackSpacingPixels: 25
+    columnSpacingPixels: 75
+    font: {fileID: 12800000, guid: 4beb055f07aaff244873dec698d0363e, type: 3}
+    shadowColor: {r: 0, g: 0, b: 0, a: 1}
+    shadowOffsetPixels: 2

@@ -14,7 +14,7 @@ public sealed class GlobalRetroController : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
     {
-        var settings = Resources.Load<GlobalRetroSettings>("GlobalRetroSettings");
+        var settings = Resources.Load<GlobalRetroSettings>("Camera/GlobalRetroSettings");
         if (settings == null) return;
         var controller = new GameObject("Global Retro Controller").AddComponent<GlobalRetroController>();
         controller.settings = settings;

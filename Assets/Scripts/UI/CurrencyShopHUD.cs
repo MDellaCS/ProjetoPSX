@@ -77,7 +77,7 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         hud.progression = PlayerProgression.GetOrAdd(player.gameObject);
         hud.progression.Initialize();
         if (hud.progression.Catalog == null)
-            return OpenFailed(source, "Catalogo ausente: crie Assets/Resources/PlayerUpgradeCatalog.asset pelo menu Progression.");
+            return OpenFailed(source, "Catalogo ausente: crie Assets/Resources/Player/PlayerUpgradeCatalog.asset pelo menu Progression.");
         hud.wallet = player.GetComponent<PlayerCurrencyWallet>();
         if (hud.wallet == null)
             hud.wallet = player.gameObject.AddComponent<PlayerCurrencyWallet>();

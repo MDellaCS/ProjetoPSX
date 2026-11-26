@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
 using UnityEngine;
 
 public enum EnemyAttackKind { Light, Heavy, Special }
@@ -66,8 +67,6 @@ public sealed class EnemyAttackRequirements
 [Serializable]
 public sealed class EnemyHitboxTrackDefinition
 {
-    [Tooltip("Nome de autoria desta hitbox dentro do ataque.")]
-    public string trackName = "Hitbox";
     [Tooltip("Forma geometrica usada para detectar o jogador.")]
     public EnemyHitboxShape shape = EnemyHitboxShape.Sphere;
     [Tooltip("Procedural interpola valores locais. Follow Anchors acompanha sockets do modelo.")]
@@ -120,11 +119,7 @@ public sealed class EnemyHitboxTrackDefinition
     [Range(0f, 1f)] public float activeStartNormalized;
     [Tooltip("Fim desta Track dentro do Strike, de zero a um.")]
     [Range(0f, 1f)] public float activeEndNormalized = 1f;
-    [Tooltip("Testa o caminho entre a pose anterior e a atual para evitar atravessar o jogador.")]
-    public bool sweep = true;
-    [Tooltip("Distancia maxima entre amostras do Sweep.")]
-    [Min(.01f)] public float sweepStepDistance = .25f;
-    [Tooltip("Tracks no mesmo Hit Group acertam o jogador somente uma vez em conjunto.")]
+    [Tooltip("Tracks no mesmo Hit Group compartilham acertos e intervalo de repeticao contra o jogador.")]
     [Min(0)] public int hitGroup;
     [Tooltip("Permite acertar novamente durante o mesmo Strike.")]
     public bool allowRepeatHits;
@@ -133,20 +128,12 @@ public sealed class EnemyHitboxTrackDefinition
 }
 
 [Serializable]
-public sealed class EnemyAttackStrikeDefinition
+internal sealed class LegacyEnemyAttackStrikeDefinition
 {
-    [Tooltip("Nome deste impacto dentro do ataque.")]
-    public string strikeName = "Strike";
-    [Tooltip("Inicio do Strike dentro do Active, de zero a um.")]
-    [Range(0f, 1f)] public float activeStartNormalized;
-    [Tooltip("Fim do Strike dentro do Active, de zero a um.")]
-    [Range(0f, 1f)] public float activeEndNormalized = 1f;
-    [Tooltip("Multiplicador aplicado ao dano base neste Strike.")]
-    [Min(0f)] public float damageMultiplier = 1f;
-    [Tooltip("Multiplicador aplicado ao dano de Poise neste Strike.")]
-    [Min(0f)] public float poiseMultiplier = 1f;
     [Tooltip("Reacao solicitada caso este Strike quebre o Poise do jogador. Launch Backwards lanca o alvo na direcao do atacante.")]
     public CombatReactionType reaction = CombatReactionType.DefaultStagger;
+    [Tooltip("Cria uma hitbox entre o centro do personagem e cada track ativa deste golpe, preenchendo o espaco ate o impacto.")]
+    public bool usesExtendedArmHitbox = false;
     [Tooltip("Volumes que formam este Strike.")]
     public List<EnemyHitboxTrackDefinition> hitboxes = new();
 }
@@ -157,8 +144,6 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     [Header("Identity")]
     [Tooltip("Identificador estavel usado pelo moveset, debug e apresentacao.")]
     public string attackId = "Attack";
-    [Tooltip("Nome legivel exibido nas ferramentas de autoria e debug.")]
-    public string displayName = "Attack";
     [Tooltip("Categoria semantica do ataque.")]
     public EnemyAttackKind kind;
     [Tooltip("Contexto em que o proprio inimigo pode iniciar o ataque.")]
@@ -171,23 +156,22 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     public string specialQueueId;
 
     [Header("Timing")]
-    [Tooltip("Tempo de preparacao antes dos Strikes ficarem ativos.")]
+    [Tooltip("Tempo de preparacao antes das hitboxes ficarem ativas.")]
     [Min(0f)] public float windupDuration = .6f;
-    [Tooltip("Duracao da timeline que executa Strikes e Hitbox Tracks.")]
+    [Tooltip("Duracao da fase ativa que executa as hitboxes.")]
     [Min(.001f)] public float activeDuration = .1f;
     [Tooltip("Tempo de recuperacao depois do Active.")]
     [Min(0f)] public float recoveryDuration = .7f;
 
     [Header("Power")]
-    [Tooltip("Dano base em unidades, convertido pelo valor global de dano inimigo antes dos multiplicadores de Strike.")]
+    [Tooltip("Dano base em unidades, convertido pelo valor global de dano inimigo antes das demais regras de combate.")]
     [InspectorName("Dano base (unidades)")]
     [Min(0)] public int baseDamage = 10;
-    [Tooltip("Dano base de Poise antes dos multiplicadores de Strike.")]
+    [Tooltip("Dano base de Poise antes das demais regras de combate.")]
     [Min(0)] public int basePoiseDamage = 10;
     [Tooltip("Quando este ataque quebra o Poise do jogador, aplica HeavyStagger, que o torna imune a novos danos e permite sair mais cedo com dash ou pulo.")]
     public bool causesHeavyStagger;
 
-    [Header("Movement")]
     [Tooltip("Movimento de gameplay executado independentemente da animacao.")]
     public EnemyAttackMovementDefinition movement = new();
 
@@ -195,13 +179,30 @@ public sealed class EnemyAttackDefinition : ScriptableObject
     [Tooltip("Condicoes necessarias para este ataque ser selecionado.")]
     public EnemyAttackRequirements requirements = new();
 
-    [Header("Strikes")]
-    [Tooltip("Impactos independentes executados dentro da fase Active.")]
-    public List<EnemyAttackStrikeDefinition> strikes = new();
-
-    [Header("Extended Arm Hitbox")]
-    [Tooltip("Cria uma Capsule entre o centro do inimigo e cada Track ativa.")]
+    [Tooltip("Reacao solicitada caso este ataque quebre o Poise do jogador.")]
+    public CombatReactionType reaction = CombatReactionType.DefaultStagger;
+    [Tooltip("Cria uma Capsule entre o centro do inimigo e cada hitbox ativa deste ataque.")]
     public bool usesExtendedArmHitbox;
+    [Tooltip("Volumes que formam o ataque durante a fase Active.")]
+    public List<EnemyHitboxTrackDefinition> hitboxes = new();
+
+    [FormerlySerializedAs("strikes"), SerializeField, HideInInspector]
+    private List<LegacyEnemyAttackStrikeDefinition> legacyStrikes;
+    [SerializeField, HideInInspector] private int extendedArmMigrationVersion;
+    [SerializeField, HideInInspector] private int attackDataVersion;
+
+    private void OnEnable()
+    {
+        if (attackDataVersion != 0 || legacyStrikes == null ||
+            legacyStrikes.Count == 0 || legacyStrikes[0] == null) return;
+        var legacy = legacyStrikes[0];
+        reaction = legacy.reaction;
+        usesExtendedArmHitbox = extendedArmMigrationVersion == 0
+            ? usesExtendedArmHitbox || legacy.usesExtendedArmHitbox
+            : legacy.usesExtendedArmHitbox;
+        hitboxes = legacy.hitboxes;
+        attackDataVersion = 1;
+    }
 
     public bool HasTag(string tag)
     {

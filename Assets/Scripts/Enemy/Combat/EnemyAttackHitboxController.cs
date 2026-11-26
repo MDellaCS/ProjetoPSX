@@ -22,8 +22,8 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
 
     private readonly Dictionary<string, EnemyHitboxAnchor> anchors = new();
     private readonly Dictionary<EnemyHitboxTrackDefinition, TrackState> tracks = new();
-    private readonly HashSet<(EnemyAttackStrikeDefinition, int)> hitGroups = new();
-    private readonly Dictionary<EnemyHitboxTrackDefinition, float> repeatTimes = new();
+    private readonly HashSet<int> hitGroups = new();
+    private readonly Dictionary<int, float> repeatTimes = new();
     private Collider[] overlapBuffer = new Collider[64];
     [Tooltip("Camadas consultadas pelos volumes de ataque dos inimigos. Inclua a camada do jogador e remova camadas que nunca podem receber dano.")]
     [SerializeField] private LayerMask hitboxQueryMask = Physics.DefaultRaycastLayers;
@@ -59,24 +59,14 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
 
     public void Tick(float activeProgress)
     {
-        if (runtime == null || runtime.Definition.strikes == null)
+        if (runtime == null || runtime.Definition.hitboxes == null)
             return;
         debugVolumes.Clear();
-        foreach (EnemyAttackStrikeDefinition strike in runtime.Definition.strikes)
-        {
-            if (strike == null || activeProgress < strike.activeStartNormalized ||
-                activeProgress > strike.activeEndNormalized)
-                continue;
-            float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized,
-                strike.activeEndNormalized, activeProgress);
-            if (strike.hitboxes == null)
-                continue;
-            foreach (EnemyHitboxTrackDefinition track in strike.hitboxes)
-                EvaluateTrack(strike, track, strikeProgress);
-        }
+        foreach (EnemyHitboxTrackDefinition track in runtime.Definition.hitboxes)
+            EvaluateTrack(runtime.Definition, track, activeProgress);
     }
 
-    private void EvaluateTrack(EnemyAttackStrikeDefinition strike,
+    private void EvaluateTrack(EnemyAttackDefinition strike,
         EnemyHitboxTrackDefinition track, float strikeProgress)
     {
         if (track == null || strikeProgress < track.activeStartNormalized ||
@@ -91,9 +81,8 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
             state = new TrackState();
             tracks.Add(track, state);
         }
-        int steps = track.sweep && state.valid
-            ? Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(state.position, center) /
-                Mathf.Max(.01f, track.sweepStepDistance)), 1, 24) : 1;
+        int steps = state.valid
+            ? CombatHitboxSweep.GetStepCount(state.position, center) : 1;
         for (int index = 1; index <= steps; index++)
         {
             float t = index / (float)steps;
@@ -106,7 +95,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
             Vector3 offset = sample - center;
             Query(strike, track, sample, sampleRotation, a + offset,
                 b + offset, sampleRadius);
-            if (runtime.ExtendedArmHitboxRadius > 0f)
+            if (strike.usesExtendedArmHitbox && runtime.ExtendedArmHitboxRadius > 0f)
                 QueryExtended(strike, track, owner.AttackOrigin, sample,
                     runtime.ExtendedArmHitboxRadius);
         }
@@ -119,7 +108,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
             size = track.boxSize });
     }
 
-    private void Query(EnemyAttackStrikeDefinition strike,
+    private void Query(EnemyAttackDefinition strike,
         EnemyHitboxTrackDefinition track, Vector3 center, Quaternion rotation,
         Vector3 a, Vector3 b, float radius)
     {
@@ -145,7 +134,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
         ResolveHits(strike, track, count);
     }
 
-    private void QueryExtended(EnemyAttackStrikeDefinition strike,
+    private void QueryExtended(EnemyAttackDefinition strike,
         EnemyHitboxTrackDefinition track, Vector3 origin, Vector3 center,
         float radius)
     {
@@ -161,13 +150,13 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
         ResolveHits(strike, track, count);
     }
 
-    private void ResolveHits(EnemyAttackStrikeDefinition strike,
+    private void ResolveHits(EnemyAttackDefinition strike,
         EnemyHitboxTrackDefinition track, int count)
     {
-        var group = (strike, track.hitGroup);
+        int group = track.hitGroup;
         if (!track.allowRepeatHits && hitGroups.Contains(group))
             return;
-        if (track.allowRepeatHits && repeatTimes.TryGetValue(track,
+        if (track.allowRepeatHits && repeatTimes.TryGetValue(group,
             out float nextTime) && Time.time < nextTime)
             return;
 
@@ -177,10 +166,8 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
                 ? overlapBuffer[index].GetComponentInParent<PlayerHealth>() : null;
             if (player == null)
                 continue;
-            int damage = Mathf.RoundToInt(runtime.Damage *
-                strike.damageMultiplier);
-            int poise = Mathf.RoundToInt(runtime.PoiseDamage *
-                strike.poiseMultiplier);
+            int damage = runtime.Damage;
+            int poise = runtime.PoiseDamage;
             runtime.HitTargetPosition = player.transform.position;
             // Um golpe posterior ignorado (i-frames, bloqueio) nao deve
             // desfazer um acerto ja confirmado neste ataque.
@@ -190,7 +177,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
                 runtime.Definition.causesHeavyStagger))
                 runtime.HitConfirmed = true;
             hitGroups.Add(group);
-            repeatTimes[track] = Time.time + track.repeatHitInterval;
+            repeatTimes[group] = Time.time + track.repeatHitInterval;
             return;
         }
     }
@@ -261,7 +248,7 @@ public sealed class EnemyAttackHitboxController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyCombat))
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyHitboxes))
             return;
         Gizmos.color = Color.red;
         foreach (DebugVolume volume in debugVolumes)

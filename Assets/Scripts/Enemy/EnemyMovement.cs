@@ -49,7 +49,7 @@ public sealed class EnemyMovement : MonoBehaviour
     [SerializeField] private bool ignoreGroundEntitySeparation;
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyHealth health;
     private EnemyAttackController attacks;
     private CharacterController controller;
@@ -187,7 +187,7 @@ public sealed class EnemyMovement : MonoBehaviour
     {
         owner = enemy;
         health = enemyHealth;
-        brain = GetComponent<EnemyBrain>();
+        brain = GetComponent<EnemyDecisions>();
         attacks = GetComponent<EnemyAttackController>();
         controller = GetComponent<CharacterController>();
     }
@@ -671,10 +671,7 @@ public sealed class EnemyMovement : MonoBehaviour
         direction.y = 0f;
         if (direction.sqrMagnitude <= .001f)
             direction = transform.forward;
-        direction = GetAssistedLaunchDirection(direction);
         BeginLaunchForwards(direction, force, deceleration);
-        // O assistente pode curvar o deslocamento para outro inimigo, mas o
-        // olhar ainda comunica corretamente de onde veio o golpe original.
         FaceForceOrigin(attackerPosition);
     }
 
@@ -887,60 +884,6 @@ public sealed class EnemyMovement : MonoBehaviour
             ? impactDirection * massImpact.SourcePostImpactSpeed : Vector3.zero;
         if (launchForwardsVelocity.sqrMagnitude <= .0001f)
             ResetLaunchForwards();
-    }
-
-    private Vector3 GetAssistedLaunchDirection(Vector3 originalDirection)
-    {
-        originalDirection.y = 0f;
-        CombatPoiseSystem rules = CombatPoiseSystem.Instance;
-        float assistAngle = rules.PlayerLaunchBodyImpactAssistAngle;
-        float assistRange = rules.PlayerLaunchBodyImpactAssistRange;
-        if (originalDirection.sqrMagnitude <= .001f || assistAngle <= 0f ||
-            assistRange <= 0f)
-        {
-            return originalDirection;
-        }
-
-        Vector3 origin = GetBodyImpactOrigin();
-        Vector3 forward = originalDirection.normalized;
-        EnemyBase bestTarget = null;
-        float bestAngle = float.MaxValue;
-        float bestDistance = float.MaxValue;
-        foreach (EnemyBase candidate in EnemyBase.ActiveEnemies)
-        {
-            if (candidate == null || candidate == owner || candidate.IsDead ||
-                !candidate.isActiveAndEnabled)
-            {
-                continue;
-            }
-
-            Vector3 towardCandidate = candidate.AttackOrigin - origin;
-            towardCandidate.y = 0f;
-            float distance = towardCandidate.magnitude;
-            if (distance <= .001f || distance > assistRange)
-                continue;
-
-            float angle = Vector3.Angle(forward, towardCandidate);
-            if (angle > assistAngle ||
-                angle > bestAngle + .001f ||
-                (Mathf.Abs(angle - bestAngle) <= .001f &&
-                    distance >= bestDistance))
-            {
-                continue;
-            }
-
-            bestTarget = candidate;
-            bestAngle = angle;
-            bestDistance = distance;
-        }
-
-        if (bestTarget == null)
-            return forward;
-
-        Vector3 assistedDirection = bestTarget.AttackOrigin - origin;
-        assistedDirection.y = 0f;
-        return assistedDirection.sqrMagnitude > .001f
-            ? assistedDirection.normalized : forward;
     }
 
     private void ScanThrownBodyImpactHitbox()

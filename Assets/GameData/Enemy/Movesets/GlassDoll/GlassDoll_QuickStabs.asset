@@ -13,12 +13,11 @@ MonoBehaviour:
   m_Name: GlassDoll_QuickStabs
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
   attackId: GlassDoll_QuickStabs
-  displayName: Glass Doll Quick Stabs
   kind: 0
   context: 0
   animationStateId: GlassDoll_QuickStabs
   tags: []
-  specialQueueId: 
+  specialQueueId:
   windupDuration: 0.75
   activeDuration: 0.25
   recoveryDuration: 0.7
@@ -71,380 +70,367 @@ MonoBehaviour:
     minimumAggressionPercent: 0
     maximumAggressionPercent: 100
     preferredRange: 3
-  strikes:
-  - strikeName: GlassDoll_QuickStabs
-    activeStartNormalized: 0
-    activeEndNormalized: 1
-    damageMultiplier: 1
-    poiseMultiplier: 1
-    reaction: 0
-    hitboxes:
-    - trackName: Quick Stab 1
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 0.125
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 0
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 2
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.125
-      activeEndNormalized: 0.25
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 1
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 3
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.25
-      activeEndNormalized: 0.375
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 2
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 4
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.375
-      activeEndNormalized: 0.5
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 3
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 5
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.5
-      activeEndNormalized: 0.625
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 4
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 6
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.625
-      activeEndNormalized: 0.75
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 5
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 7
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.75
-      activeEndNormalized: 0.875
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 6
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-    - trackName: Quick Stab 8
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
-      endLocalPosition: {x: 0, y: 0.36, z: 2.5}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 0.3
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.875
-      activeEndNormalized: 1
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 7
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
+  reaction: 0
   usesExtendedArmHitbox: 1
+  hitboxes:
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0
+    activeEndNormalized: 0.125
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 0
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.125
+    activeEndNormalized: 0.25
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 1
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.25
+    activeEndNormalized: 0.375
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 2
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.375
+    activeEndNormalized: 0.5
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 3
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.5
+    activeEndNormalized: 0.625
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 4
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.625
+    activeEndNormalized: 0.75
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 5
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.75
+    activeEndNormalized: 0.875
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 6
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: -0.65, y: 0.36, z: 0.3}
+    endLocalPosition: {x: 0, y: 0.36, z: 2.5}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 0.3
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0.875
+    activeEndNormalized: 1
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 7
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  attackDataVersion: 1

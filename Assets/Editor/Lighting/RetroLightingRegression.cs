@@ -51,7 +51,7 @@ public static class RetroLightingRegression
         Check(settings.maxVisibleLights >= 1 && settings.maxVisibleLights <= RetroLightSystem.MaxLights,
             "Orcamento de luzes fora da faixa.");
 
-        foreach (string path in new[] { "Assets/Profiles/LocalLightProfile.asset", "Assets/Profiles/LocalLightProfile_Flashlight.asset" })
+        foreach (string path in new[] { "Assets/Profiles/Lighting/MechanismGlow.asset", "Assets/Profiles/Lighting/HumanFlashlight.asset" })
         {
             LocalLightProfile profile = AssetDatabase.LoadAssetAtPath<LocalLightProfile>(path);
             Check(profile != null && profile.lights.Count > 0, "Perfil invalido: " + path);

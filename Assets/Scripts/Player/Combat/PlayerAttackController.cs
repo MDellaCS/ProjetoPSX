@@ -15,7 +15,6 @@ public sealed class PlayerAttackController : MonoBehaviour
     private PlayerAttackAudioController attackAudio;
     private PlayerMovesetController movesetController;
     private PlayerMovement movement;
-    private PlayerTargetAssist targetAssist;
     private readonly Dictionary<PlayerAttackDefinition, float> attackReadyAt = new();
     private float phaseTimer;
     private bool finishAfterActive;
@@ -37,6 +36,8 @@ public sealed class PlayerAttackController : MonoBehaviour
     }
 
     public event Action<PlayerAttackRuntime> AttackStarted;
+    public event Action<PlayerAttackRuntime> AttackActiveStarted;
+    public event Action<PlayerAttackRuntime> AttackActiveEnded;
     public event Action<PlayerAttackRuntime> AttackFinished;
 
     private void Awake()
@@ -46,13 +47,6 @@ public sealed class PlayerAttackController : MonoBehaviour
         resolver = GetComponent<PlayerAttackResolver>();
         movesetController = GetComponent<PlayerMovesetController>();
         movement = GetComponent<PlayerMovement>();
-        targetAssist = GetComponent<PlayerTargetAssist>();
-        if (targetAssist == null)
-        {
-            targetAssist = gameObject.AddComponent<PlayerTargetAssist>();
-            GetComponent<PlayerGrappleAttackController>()?.CopyLegacyTargetAssistSettingsTo(
-                targetAssist);
-        }
         attackAudio = GetComponent<PlayerAttackAudioController>();
         if (attackAudio == null)
             attackAudio = gameObject.AddComponent<PlayerAttackAudioController>();
@@ -77,6 +71,8 @@ public sealed class PlayerAttackController : MonoBehaviour
                 FinishAttack();
                 return;
             }
+            attackMovement.TickLockOnRotation(CurrentPhase, Time.deltaTime);
+            attackMovement.Tick(CurrentPhase, Time.deltaTime, false);
             if (CurrentPhase == PlayerAttackPhase.Windup)
             {
                 phaseTimer -= Time.deltaTime;
@@ -112,7 +108,11 @@ public sealed class PlayerAttackController : MonoBehaviour
         if (CurrentPhase == PlayerAttackPhase.Windup) ChangePhase(PlayerAttackPhase.Active);
         else if (CurrentPhase == PlayerAttackPhase.Active)
         {
-            if (finishAfterActive) FinishAttack();
+            if (finishAfterActive)
+            {
+                AttackActiveEnded?.Invoke(CurrentAttack);
+                FinishAttack();
+            }
             else ChangePhase(PlayerAttackPhase.Recovery);
         }
         else FinishAttack();
@@ -150,27 +150,17 @@ public sealed class PlayerAttackController : MonoBehaviour
         float extendedArmHeightOffset = moveset != null
             ? moveset.extendedArmHitboxHeightOffset
             : 0f;
-        EnemyBase assistedTarget = null;
-        Vector3 assistedTargetPosition = default;
-        // Somente o grapple captura um alvo para orientar sua hitbox.
-        if (isGrappleAttack && targetAssist != null &&
-            targetAssist.TryCaptureCombatGrappleTarget(out assistedTarget,
-                out assistedTargetPosition))
-        {
-            Vector3 direction = Vector3.ProjectOnPlane(
-                assistedTargetPosition - GetPlayerCenter(), Vector3.up);
-            if (direction.sqrMagnitude > .0001f)
-                transform.rotation = Quaternion.LookRotation(direction.normalized);
-        }
-
         CurrentAttack = new PlayerAttackRuntime(definition, heat,
             rotationSpeed, extendedArmRadius, extendedArmHeightOffset,
-            isGrappleAttack, assistedTarget, assistedTargetPosition);
+            isGrappleAttack);
         RecordAttackStart(definition);
         CurrentPhase = PlayerAttackPhase.Windup; phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false; isExternalAttack = false;
         playerState.ChangeState(PlayerState.State.Attacking);
-        attackMovement.Begin(CurrentAttack); hitboxes.Begin(CurrentAttack); resolver.BeginAttack();
+        float distanceMultiplier = moveset != null
+            ? moveset.attackMovementDistanceMultiplier : 1f;
+        attackMovement.Begin(CurrentAttack, true, distanceMultiplier);
+        hitboxes.Begin(CurrentAttack); resolver.BeginAttack();
         AttackStarted?.Invoke(CurrentAttack);
         if (phaseTimer <= 0f) ChangePhase(PlayerAttackPhase.Active);
         return true;
@@ -219,13 +209,13 @@ public sealed class PlayerAttackController : MonoBehaviour
             ? heat : null;
         CurrentAttack = new PlayerAttackRuntime(definition, attackHeat,
             rotationSpeed, extendedArmRadius, extendedArmHeightOffset,
-            false, null, default);
+            false);
         RecordAttackStart(definition);
         CurrentPhase = PlayerAttackPhase.Windup;
         phaseTimer = CurrentAttack.WindupDuration;
         finishAfterActive = false;
         isExternalAttack = true;
-        attackMovement.Begin(CurrentAttack);
+        attackMovement.Begin(CurrentAttack, false);
         hitboxes.Begin(CurrentAttack);
         resolver.BeginAttack();
         AttackStarted?.Invoke(CurrentAttack);
@@ -249,9 +239,6 @@ public sealed class PlayerAttackController : MonoBehaviour
     public bool CanStartAttack(PlayerAttackDefinition definition)
     {
         if (definition == null)
-            return false;
-        if (definition.kind == PlayerAttackKind.Heavy && definition.attackId != "BurnExplosion" &&
-            heat != null && heat.IsHeatModeActive && heat.CurrentHeat < heat.HeavyAttackHeatCost)
             return false;
         if (definition.cooldownDuration <= 0f)
             return true;
@@ -316,7 +303,10 @@ public sealed class PlayerAttackController : MonoBehaviour
 
     private void ChangePhase(PlayerAttackPhase phase)
     {
+        if (CurrentPhase == PlayerAttackPhase.Active && phase == PlayerAttackPhase.Recovery)
+            AttackActiveEnded?.Invoke(CurrentAttack);
         CurrentPhase = phase; phaseTimer = GetPhaseDuration(phase);
+        if (phase == PlayerAttackPhase.Active) AttackActiveStarted?.Invoke(CurrentAttack);
         if (phase == PlayerAttackPhase.Recovery) hitboxes.End();
         if (phaseTimer <= 0f && !(phase == PlayerAttackPhase.Active &&
             ShouldHoldActiveUntilGrounded()))
@@ -329,15 +319,6 @@ public sealed class PlayerAttackController : MonoBehaviour
     private bool ShouldHoldActiveUntilGrounded() => CurrentAttack != null &&
         CurrentAttack.Definition.holdActiveUntilGrounded &&
         movement != null && !movement.IsGrounded;
-
-    private Vector3 GetPlayerCenter()
-    {
-        PlayerCharacterController controller = movement != null
-            ? movement.EntityCharacterController
-            : GetComponent<PlayerCharacterController>();
-        return transform.position + transform.rotation *
-            (controller != null ? controller.center : Vector3.zero);
-    }
 
     private float GetPhaseDuration(PlayerAttackPhase phase) => CurrentAttack == null ? 0f : phase switch
     {

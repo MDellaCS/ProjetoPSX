@@ -4,10 +4,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class GameTimeScaleEffects : MonoBehaviour
 {
-    private const string SettingsResourceName = "GameSlowMotionSettings";
+    private const string SettingsResourceName = "Gameplay/GameSlowMotionSettings";
     private static GameTimeScaleEffects instance;
     private static GameSlowMotionSettings fallbackSettings;
-    [Tooltip("Asset global que define a camera lenta padrao. Se vazio, procura Resources/GameSlowMotionSettings e usa valores internos apenas como fallback.")]
+    [Tooltip("Asset global que define a camera lenta padrao. Se vazio, procura Resources/Gameplay/GameSlowMotionSettings e usa valores internos apenas como fallback.")]
     [SerializeField] private GameSlowMotionSettings slowMotionSettings;
     private float debugTimeScale = 1f;
     private float effectDuration;

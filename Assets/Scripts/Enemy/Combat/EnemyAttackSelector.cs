@@ -6,11 +6,11 @@ public sealed class EnemyAttackSelector
 {
     private readonly List<EnemyMoveTransition> validTransitions = new();
     private readonly EnemyBase owner;
-    private readonly EnemyBrain brain;
+    private readonly EnemyDecisions brain;
     private readonly EnemyMovement movement;
     private readonly EnemyMovesetDefinition moveset;
 
-    public EnemyAttackSelector(EnemyBase owner, EnemyBrain brain,
+    public EnemyAttackSelector(EnemyBase owner, EnemyDecisions brain,
         EnemyMovement movement, EnemyMovesetDefinition moveset)
     {
         this.owner = owner;
@@ -85,7 +85,8 @@ public sealed class EnemyAttackSelector
     }
 
     public bool TrySelectContinuation(EnemyAttackRuntime runtime,
-        out EnemyMoveNode selectedNode, out float delayAfterActive)
+        out EnemyMoveNode selectedNode, out float delayAfterActive,
+        bool sequenceLimitReached = false)
     {
         selectedNode = null;
         delayAfterActive = 0f;
@@ -94,7 +95,9 @@ public sealed class EnemyAttackSelector
         validTransitions.Clear();
         float total = 0f;
         foreach (EnemyMoveTransition transition in runtime.Node.transitions)
-            if (IsValidContinuation(transition, runtime) &&
+            if (transition != null &&
+                (!sequenceLimitReached || transition.mandatoryContinuation) &&
+                IsValidContinuation(transition, runtime) &&
                 Random.value * 100f <= transition.continuationChance)
             {
                 validTransitions.Add(transition);
@@ -157,7 +160,8 @@ public sealed class EnemyAttackSelector
             transition.requiresHitConfirm && !runtime.HitConfirmed)
             return false;
         EnemyMoveNode target = moveset.FindNode(transition.targetNodeId);
-        return target != null && IsValid(target.attack);
+        return target?.attack != null &&
+            (transition.mandatoryContinuation || IsValid(target.attack));
     }
 
     private float GetContextualWeight(float baseWeight,

@@ -18,22 +18,22 @@ public static class PlayerStarterMovesetCreator
         EnsureFolder("Assets/GameData", "Player");
         EnsureFolder("Assets/GameData/Player", "Moveset");
         PlayerAttackDefinition light = CreateAttack("L1", PlayerAttackKind.Light, 10, 50, .05f, .08f, .05f, .2f);
-        light.strikes[0].hitboxes.Add(new PlayerHitboxTrackDefinition
+        light.hitboxes.Add(new PlayerHitboxTrackDefinition
         {
-            trackName = "Spear Thrust", shape = PlayerHitboxShape.Capsule,
+            shape = PlayerHitboxShape.Capsule,
             startLocalPosition = new Vector3(0f, 0f, .7f), endLocalPosition = new Vector3(0f, 0f, 1.7f),
             radius = .4f, capsuleHeight = 2.6f, capsuleAxis = PlayerHitboxAxis.Z,
-            sweep = true, sweepStepDistance = .18f, hitGroup = 0
+            hitGroup = 0
         });
         AssetDatabase.CreateAsset(light, $"{Folder}/L1.asset");
 
         PlayerAttackDefinition heavy = CreateAttack("H1", PlayerAttackKind.Heavy, 120, 60, .5f, .03f, .35f, 1f);
-        heavy.strikes[0].generatesHeatOnHit = false;
-        heavy.strikes[0].hitboxes.Add(new PlayerHitboxTrackDefinition
+        heavy.generatesHeatOnHit = false;
+        heavy.hitboxes.Add(new PlayerHitboxTrackDefinition
         {
-            trackName = "Heavy Sphere", shape = PlayerHitboxShape.Sphere,
+            shape = PlayerHitboxShape.Sphere,
             startLocalPosition = new Vector3(0f, 0f, 2f), endLocalPosition = new Vector3(0f, 0f, 2f),
-            radius = 2f, sweep = false, hitGroup = 0
+            radius = 2f, hitGroup = 0
         });
         AssetDatabase.CreateAsset(heavy, $"{Folder}/H1.asset");
 
@@ -64,12 +64,6 @@ public static class PlayerStarterMovesetCreator
         }
         Undo.RegisterFullObjectHierarchyUndo(player, "Configure Player Combat");
         GameObjectUtility.RemoveMonoBehavioursWithMissingScript(player);
-        if (player.GetComponent<PlayerTargetAssist>() == null)
-        {
-            PlayerTargetAssist targetAssist = GetOrAdd<PlayerTargetAssist>(player);
-            player.GetComponent<PlayerGrappleAttackController>()?.CopyLegacyTargetAssistSettingsTo(
-                targetAssist);
-        }
         GetOrAdd<PlayerCombatStatus>(player);
         GetOrAdd<PlayerAttackMovement>(player);
         GetOrAdd<PlayerAttackResolver>(player);
@@ -85,32 +79,6 @@ public static class PlayerStarterMovesetCreator
         previewSerialized.FindProperty("attack").objectReferenceValue = moveset.FindNode("L1")?.attack;
         previewSerialized.ApplyModifiedProperties();
         EditorUtility.SetDirty(player);
-    }
-
-    [MenuItem("Tools/Projeto PSX/Player Combat/Add Global Target Assist")]
-    public static void AddGlobalTargetAssist()
-    {
-        GameObject player = Selection.activeGameObject;
-        if (player == null)
-        {
-            EditorUtility.DisplayDialog("Global Target Assist",
-                "Selecione o objeto Player na Hierarchy.", "OK");
-            return;
-        }
-
-        PlayerTargetAssist targetAssist =
-            player.GetComponent<PlayerTargetAssist>();
-        if (targetAssist == null)
-        {
-            Undo.RegisterFullObjectHierarchyUndo(player,
-                "Add Global Target Assist");
-            targetAssist = Undo.AddComponent<PlayerTargetAssist>(player);
-            player.GetComponent<PlayerGrappleAttackController>()?.CopyLegacyTargetAssistSettingsTo(
-                targetAssist);
-            EditorUtility.SetDirty(player);
-        }
-
-        Selection.activeObject = targetAssist;
     }
 
     private static T GetOrAdd<T>(GameObject target) where T : Component
@@ -129,11 +97,15 @@ public static class PlayerStarterMovesetCreator
         int damage, int poise, float windup, float active, float recovery, float movement)
     {
         PlayerAttackDefinition attack = ScriptableObject.CreateInstance<PlayerAttackDefinition>();
-        attack.attackId = id; attack.displayName = id; attack.kind = kind; attack.context = PlayerAttackContext.Ground;
+        attack.attackId = id; attack.kind = kind; attack.context = PlayerAttackContext.Ground;
         attack.baseDamage = damage; attack.basePoiseDamage = poise;
         attack.windupDuration = windup; attack.activeDuration = active; attack.recoveryDuration = recovery;
-        attack.movement.forwardDistance = movement; attack.movement.startNormalized = 0f; attack.movement.endNormalized = kind == PlayerAttackKind.Light ? .5f : 1f;
-        attack.strikes = new List<PlayerAttackStrikeDefinition> { new() { strikeName = id } };
+        PlayerAttackMovementProfile profile = ScriptableObject.CreateInstance<PlayerAttackMovementProfile>();
+        profile.movement.forwardDistance = movement;
+        profile.movement.startNormalized = 0f;
+        profile.movement.endNormalized = kind == PlayerAttackKind.Light ? .5f : 1f;
+        AssetDatabase.CreateAsset(profile, AssetDatabase.GenerateUniqueAssetPath($"{Folder}/{id}_Movement.asset"));
+        attack.movementProfile = profile;
         return attack;
     }
 }

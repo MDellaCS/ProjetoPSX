@@ -10,17 +10,15 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
 
         DrawField("displayName");
         DrawField("resourceMode");
-        DrawField("slideAttack");
         if (serializedObject.FindProperty("resourceMode").enumValueIndex == (int)PlayerResourceMode.Heat)
             DrawField("pityMechanic", true);
 
         MovesetUsage usage = GetUsage();
-        if (usage.hasTransitions)
-            DrawField("globalPauseDelay");
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Movement Abilities", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Movimento", EditorStyles.boldLabel);
         DrawField("movementSpeedMultiplier");
+        DrawField("slideAttack");
         DrawField("allowJump");
         if (serializedObject.FindProperty("allowJump").boolValue)
         {
@@ -28,7 +26,6 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
             DrawField("jumpHeightMultiplier");
             DrawField("jumpDurationMultiplier");
         }
-
         DrawField("allowDash");
         if (serializedObject.FindProperty("allowDash").boolValue)
         {
@@ -37,52 +34,34 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
             DrawField("dashCooldown");
         }
 
-        if (usage.hasLightAttacks || usage.hasHeavyAttacks)
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Global Attack Rotation", EditorStyles.boldLabel);
-            if (usage.hasLightAttacks)
-                DrawField("lightWindupActiveRotationSpeed");
-            if (usage.hasHeavyAttacks)
-                DrawField("heavyWindupActiveRotationSpeed");
-        }
-
-        if (usage.hasHeldTransitions)
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Held Attack Branches", EditorStyles.boldLabel);
-            DrawField("heldAttackBranchThreshold");
-        }
-
-        if (usage.hasLightTransitions || usage.hasHeavyTransitions)
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Global Transition Timing", EditorStyles.boldLabel);
-            if (usage.hasLightTransitions)
-                DrawField("lightTransitionTiming");
-            if (usage.hasHeavyTransitions)
-                DrawField("heavyTransitionTiming");
-        }
-
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Ataques", EditorStyles.boldLabel);
+        DrawField("attackMovementSpeedPercent");
+        DrawField("attackMovementDistanceMultiplier");
+        if (usage.hasLightAttacks)
+            DrawField("lightWindupActiveRotationSpeed");
+        if (usage.hasHeavyAttacks)
+            DrawField("heavyWindupActiveRotationSpeed");
         if (usage.hasExtendedArmAttacks)
         {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Global Hitbox Extension", EditorStyles.boldLabel);
             DrawField("extendedArmHitboxRadius");
             DrawField("extendedArmHitboxHeightOffset");
         }
-
-        if (usage.hasLightAttacks || usage.hasHeavyAttacks)
-        {
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Global Cancel Rules", EditorStyles.boldLabel);
-            if (usage.hasLightAttacks)
-                DrawField("lightCancelRules");
-            if (usage.hasHeavyAttacks)
-                DrawField("heavyCancelRules");
-        }
+        if (usage.hasLightAttacks)
+            DrawField("lightCancelRules", true);
+        if (usage.hasHeavyAttacks)
+            DrawField("heavyCancelRules", true);
 
         EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Sequencias", EditorStyles.boldLabel);
+        if (usage.hasHeldTransitions)
+            DrawField("heldAttackBranchThreshold");
+        if (usage.hasLightTransitions || usage.hasHeavyTransitions)
+            DrawField("comboResetDelay");
+        if (usage.hasLightTransitions)
+            DrawField("lightTransitionTiming", true);
+        if (usage.hasHeavyTransitions)
+            DrawField("heavyTransitionTiming", true);
         DrawField("entries", true);
         DrawField("nodes", true);
         serializedObject.ApplyModifiedProperties();
@@ -123,7 +102,6 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
                 transitions.arraySize == 0)
                 continue;
 
-            usage.hasTransitions = true;
             if (attack != null)
             {
                 if (attack.kind == PlayerAttackKind.Heavy)
@@ -153,7 +131,6 @@ public sealed class PlayerMovesetDefinitionEditor : Editor
         public bool hasLightAttacks;
         public bool hasHeavyAttacks;
         public bool hasExtendedArmAttacks;
-        public bool hasTransitions;
         public bool hasLightTransitions;
         public bool hasHeavyTransitions;
         public bool hasHeldTransitions;

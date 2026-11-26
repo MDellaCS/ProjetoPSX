@@ -69,6 +69,7 @@ GameObject:
   - component: {fileID: 1539936370110795481}
   - component: {fileID: 6082453215620148203}
   - component: {fileID: -6311550100291000043}
+  - component: {fileID: 919822455001184337}
   m_Layer: 0
   m_Name: FlyingPuppet
   m_TagString: Untagged
@@ -166,39 +167,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5ecf5f43e7b4edcb2a3b5e2f3129441, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
-  detectionRange: 8
-  combatDetectionRange: 14
-  lastKnownSearchDuration: 2.5
-  lastKnownArrivalDistance: 0.35
-  initialAggressionPercent:
-    min: 25
-    max: 85
-  minimumAggressionPercent: 0
-  maximumAggressionPercent: 100
-  aggressionChangeRatePerSecond:
-    min: 2
-    max: 5
-  aggressionChangeInterval:
-    min: 3
-    max: 6
-  playerBackTurnedAggressionGain: 2
-  outOfCameraAggressionLoss: -4
-  cameraVisibilityPadding: 2
-  playerFarAggressionDistance: 12
-  playerFarAggressionChangePerSecond: 5
-  damageTakenAggressionChangePerMaxHealthPercent: -10
-  lowEnemyHealthPercent: 0
-  lowEnemyHealthDecreaseChance: 0
-  lowPlayerHealthPercent: 0
-  lowPlayerHealthAggressionGainPerSecond: 0
-  highPlayerHealthPercent: 0
-  highPlayerHealthAggressionLossPerSecond: 0
-  playerAirborneAggressionChangePerSecond: 10
-  retreatsWhenPlayerTakesEnemyDamage: 1
-  gainsAggressionWhenPlayerTakesEnemyDamage: 0
-  playerDamagedAggressionPercent: 0.1
-  playerDamagedAggressionFlatChange: 1
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDecisions
   decisionInterval:
     min: 4
     max: 5
@@ -234,7 +203,46 @@ MonoBehaviour:
     min: 25
     max: 50
   orbitDirectionMode: 0
-  directorWeight: 30
+--- !u!114 &919822455001184337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 832b1f8f3e64451597d914c6080e7d12, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAggression
+  initialAggressionPercent:
+    min: 25
+    max: 85
+  minimumAggressionPercent: 0
+  maximumAggressionPercent: 100
+  aggressionChangeRatePerSecond:
+    min: 2
+    max: 5
+  aggressionChangeInterval:
+    min: 3
+    max: 6
+  playerBackTurnedAggressionGain: 2
+  outOfCameraAggressionLoss: -4
+  cameraVisibilityPadding: 2
+  playerFarAggressionDistance: 12
+  playerFarAggressionChangePerSecond: 5
+  damageTakenAggressionChangePerMaxHealthPercent: -10
+  lowEnemyHealthPercent: 0
+  lowEnemyHealthDecreaseChance: 0
+  lowPlayerHealthPercent: 0
+  lowPlayerHealthAggressionGainPerSecond: 0
+  highPlayerHealthPercent: 0
+  highPlayerHealthAggressionLossPerSecond: 0
+  playerAirborneAggressionChangePerSecond: 10
+  retreatsWhenPlayerTakesEnemyDamage: 1
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
+  playerDamagedAggressionPercent: 0.1
+  playerDamagedAggressionFlatChange: 1
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -332,6 +340,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
+  directorWeight: 30
   maxHealth: 800
   isUnkillable: 0
   maxPoise: 20

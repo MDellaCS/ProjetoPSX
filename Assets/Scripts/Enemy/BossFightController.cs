@@ -125,8 +125,6 @@ public sealed class BossFightController : MonoBehaviour
     {
         if (!boss.IsBoss || !boss.HasLivingPlayerTarget || boss.WaitingForEncounter) return;
         EnemyEncounter encounter = boss.BossEncounter;
-        // Um golpe letal de abertura vale mesmo antes do primeiro TickCombat.
-        if (encounter == null && !boss.HasBossContact) return;
         if (encounter != null && (!encounter.isActiveAndEnabled ||
             encounter.CurrentState == EnemyEncounter.EncounterState.Inactive)) return;
         Entry entry = Register(boss);

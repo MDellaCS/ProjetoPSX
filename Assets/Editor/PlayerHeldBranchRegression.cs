@@ -30,10 +30,10 @@ public static class PlayerHeldBranchRegression
 
             AssertSame("clique simples", normal,
                 PlayerMovesetDefinition.FindTransition(transitions,
-                    PlayerAttackInput.Light, false, false));
+                    PlayerAttackInput.Light, false));
             AssertSame("branch segurada", held,
                 PlayerMovesetDefinition.FindTransition(transitions,
-                    PlayerAttackInput.Light, true, false));
+                    PlayerAttackInput.Light, true));
 
             AssertEligible("mesmo clique segurado", true,
                 PlayerHeldBranchRules.IsEligible(7, 7, true, false, .2f, .18f));

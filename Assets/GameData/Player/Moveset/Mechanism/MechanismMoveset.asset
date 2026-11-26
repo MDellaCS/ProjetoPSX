@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
   displayName: Mechanism
   resourceMode: 0
-  slideAttack: {fileID: 11400000, guid: 1081d7eb78aa4e6a82b92f805384fdd6, type: 2}
   pityMechanic:
     enabled: 1
     limitDamage: 1
@@ -23,7 +22,7 @@ MonoBehaviour:
     minimumVitalOilPercent: 0.3
     survivorVitalOilPercent: 0.05
     cooldownSeconds: 30
-  globalPauseDelay: 0.4
+  slideAttack: {fileID: 11400000, guid: 1081d7eb78aa4e6a82b92f805384fdd6, type: 2}
   movementSpeedMultiplier: 1
   allowDash: 1
   allowAirJump: 1
@@ -33,17 +32,19 @@ MonoBehaviour:
   jumpDurationMultiplier: 1
   dashImpulse: 12.8
   dashCooldown: 1
+  attackMovementSpeedPercent: 25
+  attackMovementDistanceMultiplier: 1
   lightWindupActiveRotationSpeed: 450
   heavyWindupActiveRotationSpeed: 350
   heldAttackBranchThreshold: 0.3
-  targetAssistRangePadding: 0.25
+  comboResetDelay: 0.4
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
     continuationWindow: 0.9
   heavyTransitionTiming:
     minimumDelayAfterWindup: 0
     continuationWindow: 0.9
-  extendedArmHitboxRadius: 0.25
+  extendedArmHitboxRadius: 0.4
   extendedArmHitboxHeightOffset: 0.45
   lightCancelRules:
   - action: 2
@@ -91,12 +92,10 @@ MonoBehaviour:
     - input: 0
       targetNodeId: L2
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
     - input: 0
       targetNodeId: L1h
       requiresHeldInput: 1
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: L1h
     attack: {fileID: 11400000, guid: db7e686f168096f489b9adcbf6f25a88, type: 2}
@@ -107,47 +106,55 @@ MonoBehaviour:
     - input: 0
       targetNodeId: L3
       requiresHeldInput: 0
-      requiresPause: 0
-      requiresHitConfirm: 0
-    - input: 0
-      targetNodeId: L3p
-      requiresHeldInput: 0
-      requiresPause: 1
       requiresHitConfirm: 0
   - nodeId: L3
+    attack: {fileID: 11400000, guid: 7eb2d7179b066614ba4aa85aaf5bbe60, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L4
+      requiresHeldInput: 0
+      requiresHitConfirm: 0
+  - nodeId: L4
     attack: {fileID: 11400000, guid: 0521bd37a88a5e84a9d37f42db85c475, type: 2}
     transitions:
     - input: 0
-      targetNodeId: L4
+      targetNodeId: L5
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
     - input: 0
-      targetNodeId: L3h
+      targetNodeId: L4h
       requiresHeldInput: 1
-      requiresPause: 0
       requiresHitConfirm: 0
-  - nodeId: L3h
+  - nodeId: L4h
     attack: {fileID: 11400000, guid: 1602d7647da607f46ad944461f452088, type: 2}
     transitions:
     - input: 0
-      targetNodeId: L4
+      targetNodeId: L5
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
-  - nodeId: L3p
-    attack: {fileID: 11400000, guid: 06ff9d088f5a4af4e90452ef7653392b, type: 2}
+  - nodeId: L5
+    attack: {fileID: 11400000, guid: 61356a9b9eba36744a549e75037abf35, type: 2}
     transitions:
     - input: 0
-      targetNodeId: L4p
+      targetNodeId: L6
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
-  - nodeId: L4
-    attack: {fileID: 11400000, guid: 25871bd56eaedcc4da477ff5382d1d40, type: 2}
-    transitions: []
-  - nodeId: L4p
-    attack: {fileID: 11400000, guid: 726d7b2a73827a149a94f2a00ac0fe3c, type: 2}
+  - nodeId: L6
+    attack: {fileID: 11400000, guid: 7dacf8ccf41e40789165c6dfb59d9fe6, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L7
+      requiresHeldInput: 0
+      requiresHitConfirm: 0
+  - nodeId: L7
+    attack: {fileID: 11400000, guid: 43a428bfc90fbb041a7ccbc86b0e37f1, type: 2}
+    transitions:
+    - input: 0
+      targetNodeId: L8
+      requiresHeldInput: 0
+      requiresHitConfirm: 0
+  - nodeId: L8
+    attack: {fileID: 11400000, guid: 8c00a2b75b6c79d41bc82816b221af28, type: 2}
     transitions: []
   - nodeId: H1
     attack: {fileID: 11400000, guid: 8a9407bd5f8cbaa45b8e5b21f924c8ea, type: 2}
@@ -161,7 +168,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL2
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL2
     attack: {fileID: 11400000, guid: f56c932af45fe8d4ca6b29f134a6729c, type: 2}
@@ -169,7 +175,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL3
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL3
     attack: {fileID: 11400000, guid: dd2e98d891c8fb248b41a9d1e11a3e3c, type: 2}
@@ -177,7 +182,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL4
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL4
     attack: {fileID: 11400000, guid: a76ca13646650bf4a8f2755e05b49ea0, type: 2}
@@ -185,7 +189,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL5
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL5
     attack: {fileID: 11400000, guid: 1b6c98b8d19cbfc4c8460f94a0388957, type: 2}
@@ -193,7 +196,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL6
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL6
     attack: {fileID: 11400000, guid: 2c5cfa9cdb4398349858171fe4330323, type: 2}
@@ -201,18 +203,9 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL7
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL7
     attack: {fileID: 11400000, guid: aaec7f07e29e7054c9651fa6014127bf, type: 2}
-    transitions:
-    - input: 0
-      targetNodeId: AirL8
-      requiresHeldInput: 0
-      requiresPause: 0
-      requiresHitConfirm: 0
-  - nodeId: AirL8
-    attack: {fileID: 11400000, guid: df3b5c96e8b99da4e998203a701c3e53, type: 2}
     transitions: []
   - nodeId: AirH1
     attack: {fileID: 11400000, guid: 2f2381b2b926b3644816e32e4242ce22, type: 2}

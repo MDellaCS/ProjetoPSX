@@ -104,12 +104,51 @@
                     "interactions": "",
                     "initialStateCheck": false
                 },
-                {"name":"HeavyAttack","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e11","expectedControlType":"Button"},
-                {"name":"Pause","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e14","expectedControlType":"Button"},
-                {"name":"UnlockCursor","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e15","expectedControlType":"Button"},
-                {"name":"DebugHUD","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e16","expectedControlType":"Button"},
-                {"name":"Restart","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e1c","expectedControlType":"Button"},
-                {"name":"Inventory","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022001","expectedControlType":"Button"}
+                {
+                    "name": "HeavyAttack",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e11",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "Pause",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e14",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "UnlockCursor",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e15",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "DebugHUD",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e16",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "Restart",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e1c",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "Inventory",
+                    "type": "Button",
+                    "id": "9328bbd1-013d-4ceb-a9dd-8a931b022001",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "LockOn",
+                    "type": "Button",
+                    "id": "c236f3b4-0487-4a66-9af5-7a7475df5f20",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
             ],
             "bindings": [
                 {
@@ -486,29 +525,145 @@
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e21","path":"<Mouse>/backButton","action":"Crouch"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e22","path":"<Mouse>/rightButton","action":"HeavyAttack","groups":"Keyboard&Mouse"},
-                {"name":"","id":"89518af9-dd92-454f-ad04-82193951fd6c","path":"<Gamepad>/rightShoulder","action":"HeavyAttack","groups":"Gamepad"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e25","path":"<Keyboard>/q","action":"Pause","groups":"Keyboard&Mouse"},
-                {"name":"","id":"eff0b601-79dd-4e59-877b-c7c014ad32a8","path":"<Gamepad>/start","action":"Pause","groups":"Gamepad"},
-                {"name":"","id":"88b1f686-493a-4b55-b173-45084c1dfb09","path":"<Keyboard>/f","action":"Swing","groups":"Keyboard&Mouse"},
-                {"name":"","id":"85b2a4fd-a877-4f13-860f-1a23109a5911","path":"<Gamepad>/leftTrigger","action":"Swing","groups":"Gamepad"},
-                {"name":"","id":"03f30217-e329-43ba-8496-4ae030ef574c","path":"<Keyboard>/space","action":"CutsceneSkip","groups":"Keyboard&Mouse"},
-                {"name":"","id":"a2fe1f06-c765-46b3-9273-96b5c7bed1e3","path":"<Gamepad>/buttonSouth","action":"CutsceneSkip","groups":"Gamepad"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e26","path":"<Keyboard>/escape","action":"UnlockCursor"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e27","path":"<Keyboard>/f3","action":"DebugHUD"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e2d","path":"<Keyboard>/r","action":"Restart"},
-                {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022002","path":"<Keyboard>/i","action":"Inventory","groups":"Keyboard&Mouse"}
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e21",
+                    "path": "<Mouse>/backButton",
+                    "action": "Crouch"
+                },
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e22",
+                    "path": "<Mouse>/rightButton",
+                    "action": "HeavyAttack",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "89518af9-dd92-454f-ad04-82193951fd6c",
+                    "path": "<Gamepad>/rightShoulder",
+                    "action": "HeavyAttack",
+                    "groups": "Gamepad"
+                },
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e25",
+                    "path": "<Keyboard>/q",
+                    "action": "Pause",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "eff0b601-79dd-4e59-877b-c7c014ad32a8",
+                    "path": "<Gamepad>/start",
+                    "action": "Pause",
+                    "groups": "Gamepad"
+                },
+                {
+                    "name": "",
+                    "id": "88b1f686-493a-4b55-b173-45084c1dfb09",
+                    "path": "<Keyboard>/f",
+                    "action": "Swing",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "85b2a4fd-a877-4f13-860f-1a23109a5911",
+                    "path": "<Gamepad>/leftTrigger",
+                    "action": "Swing",
+                    "groups": "Gamepad"
+                },
+                {
+                    "name": "",
+                    "id": "03f30217-e329-43ba-8496-4ae030ef574c",
+                    "path": "<Keyboard>/space",
+                    "action": "CutsceneSkip",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "a2fe1f06-c765-46b3-9273-96b5c7bed1e3",
+                    "path": "<Gamepad>/buttonSouth",
+                    "action": "CutsceneSkip",
+                    "groups": "Gamepad"
+                },
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e26",
+                    "path": "<Keyboard>/escape",
+                    "action": "UnlockCursor"
+                },
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e27",
+                    "path": "<Keyboard>/f3",
+                    "action": "DebugHUD"
+                },
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e2d",
+                    "path": "<Keyboard>/r",
+                    "action": "Restart"
+                },
+                {
+                    "name": "",
+                    "id": "9328bbd1-013d-4ceb-a9dd-8a931b022002",
+                    "path": "<Keyboard>/i",
+                    "action": "Inventory",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "e52bcb50-5f37-4657-a82d-09a0de270665",
+                    "path": "<Mouse>/middleButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "LockOn",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a563c1fd-a8c8-4a19-9ca6-74e574453ce1",
+                    "path": "<Gamepad>/rightStickPress",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "LockOn",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
             ]
         },
         {
             "name": "UI",
             "id": "272f6d14-89ba-496f-b7ff-215263d3219f",
             "actions": [
-                {"name":"Pause","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e31","expectedControlType":"Button"},
-                {"name":"Inventory","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022003","expectedControlType":"Button"},
-                {"name":"CloseModal","type":"Button","id":"9328bbd1-013d-4ceb-a9dd-8a931b022004","expectedControlType":"Button"},
-                {"name":"DebugHUD","type":"Button","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e32","expectedControlType":"Button"},
+                {
+                    "name": "Pause",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e31",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "Inventory",
+                    "type": "Button",
+                    "id": "9328bbd1-013d-4ceb-a9dd-8a931b022003",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "CloseModal",
+                    "type": "Button",
+                    "id": "9328bbd1-013d-4ceb-a9dd-8a931b022004",
+                    "expectedControlType": "Button"
+                },
+                {
+                    "name": "DebugHUD",
+                    "type": "Button",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e32",
+                    "expectedControlType": "Button"
+                },
                 {
                     "name": "Navigate",
                     "type": "PassThrough",
@@ -601,11 +756,40 @@
                 }
             ],
             "bindings": [
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e33","path":"<Keyboard>/q","action":"Pause","groups":"Keyboard&Mouse"},
-                {"name":"","id":"e096f45b-03f3-4c04-aeef-53a16ccb8103","path":"<Gamepad>/start","action":"Pause","groups":"Gamepad"},
-                {"name":"","id":"a87e74ad-74b0-4f8d-9fb1-b24c93731e34","path":"<Keyboard>/f3","action":"DebugHUD"},
-                {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022005","path":"<Keyboard>/i","action":"Inventory","groups":"Keyboard&Mouse"},
-                {"name":"","id":"9328bbd1-013d-4ceb-a9dd-8a931b022006","path":"<Keyboard>/e","action":"CloseModal","groups":"Keyboard&Mouse"},
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e33",
+                    "path": "<Keyboard>/q",
+                    "action": "Pause",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "e096f45b-03f3-4c04-aeef-53a16ccb8103",
+                    "path": "<Gamepad>/start",
+                    "action": "Pause",
+                    "groups": "Gamepad"
+                },
+                {
+                    "name": "",
+                    "id": "a87e74ad-74b0-4f8d-9fb1-b24c93731e34",
+                    "path": "<Keyboard>/f3",
+                    "action": "DebugHUD"
+                },
+                {
+                    "name": "",
+                    "id": "9328bbd1-013d-4ceb-a9dd-8a931b022005",
+                    "path": "<Keyboard>/i",
+                    "action": "Inventory",
+                    "groups": "Keyboard&Mouse"
+                },
+                {
+                    "name": "",
+                    "id": "9328bbd1-013d-4ceb-a9dd-8a931b022006",
+                    "path": "<Keyboard>/e",
+                    "action": "CloseModal",
+                    "groups": "Keyboard&Mouse"
+                },
                 {
                     "name": "Gamepad",
                     "id": "809f371f-c5e2-4e7a-83a1-d867598f40dd",

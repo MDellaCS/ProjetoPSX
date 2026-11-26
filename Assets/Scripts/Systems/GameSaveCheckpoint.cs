@@ -29,7 +29,7 @@ public sealed class GameSaveCheckpoint : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.World)) return;
+        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.WorldCheckpoints)) return;
         Collider collider = trigger != null ? trigger : GetComponent<Collider>();
         if (collider == null) return;
         Gizmos.color = new Color(.3f, .9f, .95f, .8f);

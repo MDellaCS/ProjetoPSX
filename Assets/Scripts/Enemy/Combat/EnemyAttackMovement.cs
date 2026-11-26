@@ -4,18 +4,18 @@ using UnityEngine;
 public sealed class EnemyAttackMovement : MonoBehaviour
 {
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyMovement movement;
     private EnemyAttackRuntime runtime;
     private float previousCurveValue;
     private Transform attackTarget;
     private Vector3 attackDirection;
 
-    public void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    public void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyMovement locomotion)
     {
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         movement = locomotion;
     }
 

@@ -271,7 +271,7 @@ internal static class SplineExtrudeHandLadderPlacerRegression
             foreach (GameObject root in testScene.GetRootGameObjects())
                 extrusions.AddRange(root.GetComponentsInChildren<SplineExtrude>(true));
             HandLadderProfile profile = AssetDatabase.LoadAssetAtPath<HandLadderProfile>(
-                "Assets/Profiles/HandLadderProfile.asset");
+                "Assets/Profiles/HandLadders/HandLadderProfile.asset");
 
             for (int i = 0; i < extrusions.Count; i++)
             {

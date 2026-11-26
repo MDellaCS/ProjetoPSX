@@ -4,20 +4,22 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerHitboxController : MonoBehaviour
 {
-    private sealed class TrackState { public Vector3 position; public Quaternion rotation; public float radius; public bool valid; }
+    private sealed class TrackState { public Vector3 position; public Quaternion rotation; public float radius; public bool valid; public int cycle = -1; }
     private readonly Dictionary<string, PlayerHitboxAnchor> anchors = new();
     private readonly Dictionary<PlayerHitboxTrackDefinition, TrackState> trackStates = new();
-    private readonly Dictionary<(PlayerAttackStrikeDefinition, int), HashSet<EnemyBase>> groupHits = new();
-    private readonly Dictionary<(PlayerAttackStrikeDefinition, int), HashSet<IPlayerAttackTarget>> utilityGroupHits = new();
-    private readonly Dictionary<(PlayerHitboxTrackDefinition, IPlayerAttackTarget), float> utilityRepeatTimes = new();
-    private readonly HashSet<PlayerAttackStrikeDefinition> startedStrikes = new();
-    private readonly HashSet<PlayerHitboxTrackDefinition> activeTrackWindows = new();
-    private readonly Dictionary<(PlayerHitboxTrackDefinition, EnemyBase), float> repeatTimes = new();
+    private readonly Dictionary<(int, int), HashSet<EnemyBase>> groupHits = new();
+    private readonly Dictionary<(int, int), HashSet<IPlayerAttackTarget>> utilityGroupHits = new();
+    private readonly Dictionary<(int, IPlayerAttackTarget, int), float> utilityRepeatTimes = new();
+    private bool attackStarted;
+    private readonly Dictionary<PlayerHitboxTrackDefinition, int> activeTrackWindows = new();
+    private readonly Dictionary<(int, EnemyBase, int), float> repeatTimes = new();
     [Tooltip("Camadas consultadas pelas hitboxes de ataques. Inclua os inimigos e objetos interativos que podem receber golpes.")]
     [SerializeField] private LayerMask hitboxQueryMask = Physics.DefaultRaycastLayers;
     private Collider[] overlapBuffer = new Collider[64];
     private readonly List<MonoBehaviour> componentBuffer = new();
     private readonly List<DebugVolume> debugVolumes = new();
+    private int currentCycle;
+    private bool mirrorPose;
     private PlayerAttackRuntime runtime;
     private PlayerAttackResolver resolver;
     private PlayerAttackAudioController attackAudio;
@@ -37,7 +39,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
     public void Begin(PlayerAttackRuntime attack)
     {
         runtime = attack; trackStates.Clear(); groupHits.Clear(); utilityGroupHits.Clear(); repeatTimes.Clear(); utilityRepeatTimes.Clear();
-        startedStrikes.Clear(); activeTrackWindows.Clear(); debugVolumes.Clear();
+        attackStarted = false; activeTrackWindows.Clear(); debugVolumes.Clear();
     }
     public void End()
     {
@@ -53,72 +55,50 @@ public sealed class PlayerHitboxController : MonoBehaviour
         PlayerAttackRuntime activeRuntime = runtime;
         debugVolumes.Clear();
         activeTrackWindows.Clear();
-        foreach (PlayerAttackStrikeDefinition strike in activeRuntime.Definition.strikes)
+        PlayerAttackDefinition strike = activeRuntime.Definition;
+        if (strike.hitboxes == null) return;
+        foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
         {
-            if (strike == null || activeProgress < strike.activeStartNormalized ||
-                activeProgress > strike.activeEndNormalized ||
-                strike.hitboxes == null)
+            if (track != null && activeProgress >= track.activeStartNormalized &&
+                activeProgress <= track.activeEndNormalized)
             {
-                continue;
-            }
-
-            float strikeProgress = Mathf.InverseLerp(
-                strike.activeStartNormalized, strike.activeEndNormalized,
-                activeProgress);
-            foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
-            {
-                if (track != null &&
-                    strikeProgress >= track.activeStartNormalized &&
-                    strikeProgress <= track.activeEndNormalized)
-                {
-                    activeTrackWindows.Add(track);
-                }
+                float trackProgress = Mathf.InverseLerp(track.activeStartNormalized,
+                    track.activeEndNormalized, activeProgress);
+                PlayerHitboxRepeat.GetProgress(track, trackProgress, out int cycle, out _);
+                activeTrackWindows[track] = cycle;
             }
         }
 
         attackAudio ??= GetComponent<PlayerAttackAudioController>();
-        attackAudio?.SyncActiveHitboxTracks(activeRuntime,
-            activeTrackWindows);
-
-        foreach (PlayerAttackStrikeDefinition strike in activeRuntime.Definition.strikes)
+        attackAudio?.SyncActiveHitboxTracks(activeRuntime, activeTrackWindows);
+        if (!attackStarted)
         {
-            if (strike == null || strike.hitboxes == null ||
-                activeProgress < strike.activeStartNormalized ||
-                activeProgress > strike.activeEndNormalized)
-            {
-                continue;
-            }
-            if (startedStrikes.Add(strike))
-            {
-                if (strike.effects.selfLaunchDown)
-                    resolver.ApplySelfLaunchDown();
-            }
-            float strikeProgress = Mathf.InverseLerp(strike.activeStartNormalized, strike.activeEndNormalized, activeProgress);
-            foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
-            {
-                EvaluateTrack(strike, track, strikeProgress);
-                // Um alvo interativo pode iniciar uma cutscene e cancelar o
-                // ataque no meio desta consulta. Nao continue acessando o
-                // runtime que acabou de ser encerrado nesse mesmo frame.
-                if (runtime != activeRuntime)
-                    return;
-            }
+            attackStarted = true;
+            if (strike.effects.selfLaunchDown) resolver.ApplySelfLaunchDown();
+        }
+        foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
+        {
+            EvaluateTrack(strike, track, activeProgress);
+            if (runtime != activeRuntime) return;
         }
     }
 
-    private void EvaluateTrack(PlayerAttackStrikeDefinition strike, PlayerHitboxTrackDefinition track, float strikeProgress)
+    private void EvaluateTrack(PlayerAttackDefinition strike, PlayerHitboxTrackDefinition track, float strikeProgress)
     {
         if (track == null || strikeProgress < track.activeStartNormalized || strikeProgress > track.activeEndNormalized) return;
         PlayerAttackRuntime activeRuntime = runtime;
         if (activeRuntime == null)
             return;
         float progress = Mathf.InverseLerp(track.activeStartNormalized, track.activeEndNormalized, strikeProgress);
+        progress = PlayerHitboxRepeat.GetProgress(track, progress,
+            out currentCycle, out mirrorPose);
         GetPose(track, progress, out Vector3 center, out Quaternion rotation,
             out Vector3 a, out Vector3 b, out float effectiveRadius);
         if (!trackStates.TryGetValue(track, out TrackState state)) { state = new TrackState(); trackStates.Add(track, state); }
+        if (state.cycle != currentCycle) { state.valid = false; state.cycle = currentCycle; }
         int steps = 1;
-        if (track.sweep && state.valid)
-            steps = Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(state.position, center) / track.sweepStepDistance), 1, 24);
+        if (state.valid)
+            steps = CombatHitboxSweep.GetStepCount(state.position, center);
         Vector3 previousSampleCenter = state.valid
             ? state.position
             : GetInitialImpactDirectionReference(track, progress, center, rotation);
@@ -138,7 +118,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
                 sampleRadius, impactDirection);
             if (runtime != activeRuntime)
                 return;
-            if (activeRuntime.ExtendedArmHitboxRadius > 0f)
+            if (strike.usesExtendedArmHitbox && activeRuntime.ExtendedArmHitboxRadius > 0f)
                 QueryExtendedArm(strike, track, GetPlayerCenter() +
                     transform.up * activeRuntime.ExtendedArmHitboxHeightOffset,
                     sampleCenter, activeRuntime.ExtendedArmHitboxRadius, impactDirection);
@@ -149,7 +129,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
         state.position = center; state.rotation = rotation;
         state.radius = effectiveRadius; state.valid = true;
         debugVolumes.Add(new DebugVolume { shape = track.shape, center = center, rotation = rotation, a = a, b = b, radius = effectiveRadius, size = track.boxSize });
-        if (activeRuntime.ExtendedArmHitboxRadius > 0f)
+        if (strike.usesExtendedArmHitbox && activeRuntime.ExtendedArmHitboxRadius > 0f)
         {
             Vector3 extendedArmOrigin = GetPlayerCenter() +
                 transform.up * activeRuntime.ExtendedArmHitboxHeightOffset;
@@ -164,7 +144,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
         }
     }
 
-    private void Query(PlayerAttackStrikeDefinition strike, PlayerHitboxTrackDefinition track,
+    private void Query(PlayerAttackDefinition strike, PlayerHitboxTrackDefinition track,
         Vector3 center, Quaternion rotation, Vector3 a, Vector3 b,
         float effectiveRadius, Vector3 impactDirection)
     {
@@ -179,7 +159,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
         ResolveHits(strike, track, count, reach, center, impactDirection);
     }
 
-    private void QueryExtendedArm(PlayerAttackStrikeDefinition strike,
+    private void QueryExtendedArm(PlayerAttackDefinition strike,
         PlayerHitboxTrackDefinition track, Vector3 playerCenter,
         Vector3 hitboxCenter, float radius, Vector3 impactDirection)
     {
@@ -189,11 +169,11 @@ public sealed class PlayerHitboxController : MonoBehaviour
         ResolveHits(strike, track, count, reach, hitboxCenter, impactDirection);
     }
 
-    private void ResolveHits(PlayerAttackStrikeDefinition strike,
+    private void ResolveHits(PlayerAttackDefinition strike,
         PlayerHitboxTrackDefinition track, int count, float attackReach,
         Vector3 hitboxCenter, Vector3 impactDirection)
     {
-        var groupKey = (strike, track.hitGroup);
+        var groupKey = (track.hitGroup, currentCycle);
         if (!groupHits.TryGetValue(groupKey, out HashSet<EnemyBase> hitSet))
         { hitSet = new HashSet<EnemyBase>(); groupHits.Add(groupKey, hitSet); }
         for (int i = 0; i < count; i++)
@@ -217,7 +197,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
                     utilityGroupHits.Add(groupKey, utilityHitSet);
                 }
                 if (!track.allowRepeatHits && utilityHitSet.Contains(target)) continue;
-                var utilityKey = (track, target);
+                var utilityKey = (track.hitGroup, target, currentCycle);
                 if (track.allowRepeatHits &&
                     utilityRepeatTimes.TryGetValue(utilityKey, out float utilityNext) &&
                     Time.time < utilityNext) continue;
@@ -229,7 +209,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
                     utilityImpact, impactDirection, track, overlapBuffer[i]);
                 continue;
             }
-            var key = (track, enemy);
+            var key = (track.hitGroup, enemy, currentCycle);
             if (!track.allowRepeatHits && hitSet.Contains(enemy)) continue;
             if (track.allowRepeatHits && repeatTimes.TryGetValue(key, out float next) && Time.time < next) continue;
             hitSet.Add(enemy); repeatTimes[key] = Time.time + track.repeatHitInterval;
@@ -371,6 +351,17 @@ public sealed class PlayerHitboxController : MonoBehaviour
         out Quaternion rotation, out Vector3 a, out Vector3 b,
         out float effectiveRadius)
     {
+        GetUnmirroredPose(track, progress, out center, out rotation, out a, out b,
+            out effectiveRadius);
+        if (!mirrorPose) return;
+        PlayerHitboxRepeat.MirrorPose(transform, GetPlayerCenter(),
+            ref center, ref rotation, ref a, ref b);
+    }
+
+    private void GetUnmirroredPose(PlayerHitboxTrackDefinition track, float progress, out Vector3 center,
+        out Quaternion rotation, out Vector3 a, out Vector3 b,
+        out float effectiveRadius)
+    {
         if (track.anchorMode == PlayerHitboxAnchorMode.FollowAnchors &&
             anchors.TryGetValue(track.primaryAnchorId ?? string.Empty, out PlayerHitboxAnchor primary))
         {
@@ -399,38 +390,9 @@ public sealed class PlayerHitboxController : MonoBehaviour
                 track.orbitStartRadius, track.orbitEndRadius, radiusProgress));
             center = origin + transform.rotation * local;
         }
-        else if (track.trajectoryMode ==
-            PlayerHitboxTrajectoryMode.TargetAssist &&
-            runtime != null && runtime.HasAssistTarget &&
-            runtime.IsGrappleAttack)
-        {
-            Vector3 start = origin +
-                transform.rotation * track.startLocalPosition;
-            Vector3 aimDirection = runtime.AssistTargetPosition - start;
-            if (aimDirection.sqrMagnitude <= .0001f)
-                aimDirection = transform.forward;
-
-            // Mantem a inclinacao 3D do alvo, mas estende o trajeto ate o
-            // alcance completo configurado no endpoint da track.
-            float fullReach = Vector3.Distance(track.startLocalPosition,
-                track.endLocalPosition);
-            center = start + aimDirection.normalized * fullReach * progress;
-            effectiveRadius = track.radius;
-        }
-        else if (track.trajectoryMode ==
-            PlayerHitboxTrajectoryMode.TargetAssist &&
-            runtime != null && runtime.HasAssistTarget)
-        {
-            Vector3 start = origin +
-                transform.rotation * track.startLocalPosition;
-            center = Vector3.Lerp(start, runtime.AssistTargetPosition,
-                progress);
-            effectiveRadius = track.radius;
-        }
         else
         {
-            // Trajetorias lineares e ataques sem alvo assistido usam os
-            // endpoints locais configurados no asset.
+            // Trajetorias lineares usam os endpoints locais do asset.
             local = Vector3.Lerp(track.startLocalPosition,
                 track.endLocalPosition, progress);
             effectiveRadius = track.radius;
@@ -459,7 +421,7 @@ public sealed class PlayerHitboxController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerCombat)) return;
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerHitboxes)) return;
         Gizmos.color = Color.crimson;
         foreach (DebugVolume volume in debugVolumes)
         {
@@ -484,5 +446,41 @@ public sealed class PlayerHitboxController : MonoBehaviour
         Gizmos.DrawLine(a - side * radius, b - side * radius);
         Gizmos.DrawLine(a + secondSide * radius, b + secondSide * radius);
         Gizmos.DrawLine(a - secondSide * radius, b - secondSide * radius);
+    }
+}
+
+// Regras compartilhadas pelo sweep das hitboxes de jogador e inimigos.
+internal static class CombatHitboxSweep
+{
+    private const float StepDistance = .2f;
+    private const int MaxSteps = 24;
+
+    public static int GetStepCount(Vector3 previous, Vector3 current) =>
+        Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(previous, current) /
+            StepDistance), 1, MaxSteps);
+}
+
+internal static class PlayerHitboxRepeat
+{
+    public static float GetProgress(PlayerHitboxTrackDefinition track,
+        float progress, out int cycle, out bool mirror)
+    {
+        int repeats = Mathf.Clamp(track.trajectoryRepeats, 0, int.MaxValue - 1) + 1;
+        float scaled = Mathf.Clamp01(progress) * repeats;
+        cycle = Mathf.Min(Mathf.FloorToInt(scaled), repeats - 1);
+        mirror = track.anchorMode == PlayerHitboxAnchorMode.Procedural &&
+            track.alternateRepeatSide && (cycle & 1) != 0;
+        return Mathf.Clamp01(scaled - cycle);
+    }
+
+    public static void MirrorPose(Transform player, Vector3 origin,
+        ref Vector3 center, ref Quaternion rotation, ref Vector3 a, ref Vector3 b)
+    {
+        Vector3 normal = player.right;
+        center -= 2f * Vector3.Dot(center - origin, normal) * normal;
+        a -= 2f * Vector3.Dot(a - origin, normal) * normal;
+        b -= 2f * Vector3.Dot(b - origin, normal) * normal;
+        Quaternion local = Quaternion.Inverse(player.rotation) * rotation;
+        rotation = player.rotation * new Quaternion(local.x, -local.y, -local.z, local.w);
     }
 }

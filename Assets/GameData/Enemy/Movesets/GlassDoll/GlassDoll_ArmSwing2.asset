@@ -13,22 +13,21 @@ MonoBehaviour:
   m_Name: GlassDoll_ArmSwing2
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
   attackId: GlassDoll_ArmSwing2
-  displayName: Glass Doll Arm Swing 2
   kind: 0
   context: 0
   animationStateId: GlassDoll_ArmSwing2
   tags: []
-  specialQueueId: 
+  specialQueueId:
   windupDuration: 0.8
-  activeDuration: 1.1
-  recoveryDuration: 0.7
+  activeDuration: 0.165
+  recoveryDuration: 0
   baseDamage: 15
   basePoiseDamage: 40
   causesHeavyStagger: 0
   movement:
     approachTargetUntilPreferredRange: 0
     approachSpeed: 0
-    forwardDistance: 2.8
+    forwardDistance: 0.72227978
     lateralDistance: 0
     startNormalized: 0
     endNormalized: 1
@@ -71,111 +70,52 @@ MonoBehaviour:
     minimumAggressionPercent: 0
     maximumAggressionPercent: 100
     preferredRange: 3
-  strikes:
-  - strikeName: GlassDoll_ArmSwing2
-    activeStartNormalized: 0
-    activeEndNormalized: 1
-    damageMultiplier: 1
-    poiseMultiplier: 1
-    reaction: 0
-    hitboxes:
-    - trackName: Direita
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0.53, y: 0, z: 0.3}
-      endLocalPosition: {x: -0.2, y: 0.36, z: 1}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 1
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 0.15
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 0
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
-  - strikeName: GlassDoll_ArmSwing2
-    activeStartNormalized: 0
-    activeEndNormalized: 1
-    damageMultiplier: 3
-    poiseMultiplier: 2.5
-    reaction: 0
-    hitboxes:
-    - trackName: Esquerda
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: -0.71, y: 0.5, z: -0.2}
-      endLocalPosition: {x: 0.35, y: 0.18, z: 1.8}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 360
-      orbitStartDistance: 1
-      orbitEndDistance: 1
-      orbitHeight: 0
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.5
-      orbitEndRadius: 0.5
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 1
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0.85
-      activeEndNormalized: 1
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 1
-      allowRepeatHits: 0
-      repeatHitInterval: 0.1
+  reaction: 0
   usesExtendedArmHitbox: 1
+  hitboxes:
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0.53, y: 0, z: 0.3}
+    endLocalPosition: {x: -0.2, y: 0.36, z: 1}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 1
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0
+    activeEndNormalized: 1
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 0
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  attackDataVersion: 1

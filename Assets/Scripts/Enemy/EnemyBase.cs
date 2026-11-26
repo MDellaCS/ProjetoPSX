@@ -7,7 +7,8 @@ using UnityEngine;
 /// componentes do mesmo GameObject; inimigos especificos sobrescrevem ganchos.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
-[RequireComponent(typeof(EnemyBrain))]
+[RequireComponent(typeof(EnemyDecisions))]
+[RequireComponent(typeof(EnemyAggression))]
 [RequireComponent(typeof(EnemyAttackController))]
 [RequireComponent(typeof(EnemyMovement))]
 [RequireComponent(typeof(EnemyHealth))]
@@ -36,7 +37,7 @@ public class EnemyBase : MonoBehaviour
     public event Action<EnemyBase, int, int> HealthChanged;
     public event Action<EnemyBase> Died;
 
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyAttackController attacks;
     private EnemyMovement movement;
     private EnemyHealth health;
@@ -106,9 +107,8 @@ public class EnemyBase : MonoBehaviour
     internal EnemyEncounter BossEncounter { get; private set; }
     internal bool HasLivingPlayerTarget => brain != null && brain.HasLivingPlayerTarget;
     internal bool WaitingForEncounter => brain == null || brain.IsWaitingForEncounter;
-    internal bool HasBossContact => brain != null && brain.HasVisualContact();
     internal bool IsInBossCombat => HasLivingPlayerTarget && !WaitingForEncounter &&
-        (brain.HoldBossTarget || (CurrentState != State.Idle && HasBossContact));
+        (brain.HoldBossTarget || CurrentState != State.Idle);
     internal void HoldBossTarget(bool hold) => brain.HoldBossTarget = hold;
 
     [Header("Agua")]
@@ -127,9 +127,19 @@ public class EnemyBase : MonoBehaviour
     public Vector3 LaunchForwardsVelocity => movement != null
         ? movement.LaunchForwardsVelocity : Vector3.zero;
     public float CurrentAggressionPercent => brain != null ? brain.CurrentAggressionPercent : 0f;
-    public float DirectorWeight => brain != null ? brain.DirectorWeight : 100f;
+    internal float DirectorSelectionAggressionPercent => brain != null
+        ? brain.DirectorSelectionAggressionPercent : 0f;
+    public float DirectorWeight => health != null ? health.DirectorWeight : 100f;
     public Transform Target => brain != null ? brain.Target : null;
-    public bool IsSearchingLastKnownPosition => brain != null && brain.IsSearchingLastKnownPosition;
+    internal bool IsPlayerLockTarget
+    {
+        get
+        {
+            PlayerLockOn lockOn = brain != null && brain.TargetMovement != null
+                ? brain.TargetMovement.LockOn : null;
+            return lockOn != null && lockOn.isActiveAndEnabled && lockOn.Target == this;
+        }
+    }
     public bool IsGuarding => guard != null && guard.IsGuarding;
     /// <summary>
     /// Centro de combate do inimigo. Hitboxes e ataques sem um ponto visual
@@ -146,9 +156,17 @@ public class EnemyBase : MonoBehaviour
                 : transform.position;
         }
     }
+    [Tooltip("Transform filho usado como ponto de mira do lock-on. Se vazio, usa o centro de combate do inimigo.")]
+    [SerializeField] private Transform lockOnAimPoint;
+    [Tooltip("Deslocamento local aplicado ao ponto de mira do lock-on, em metros.")]
+    [SerializeField] private Vector3 lockOnAimOffset;
+    public Vector3 LockOnAimPoint => lockOnAimPoint != null
+        ? lockOnAimPoint.TransformPoint(lockOnAimOffset)
+        : AttackOrigin + transform.TransformVector(lockOnAimOffset);
+
     protected EnemyAttackDefinition CurrentAttack =>
         attacks != null ? attacks.CurrentAttack?.Definition : null;
-    protected EnemyBrain Brain => brain;
+    protected EnemyDecisions Brain => brain;
     protected EnemyAttackController AttackController => attacks;
     protected EnemyMovement Movement => movement;
     protected EnemyHealth Health => health;
@@ -159,7 +177,7 @@ public class EnemyBase : MonoBehaviour
     {
         if (initialized)
             return;
-        brain = GetOrAdd<EnemyBrain>();
+        brain = GetOrAdd<EnemyDecisions>();
         attacks = GetOrAdd<EnemyAttackController>();
         movement = GetOrAdd<EnemyMovement>();
         GetOrAdd<GameplayFootstepEmitter>();
@@ -234,6 +252,8 @@ public class EnemyBase : MonoBehaviour
 
     private void Update()
     {
+        if (!GamePauseController.IsPaused && !IsDead)
+            brain.ResolvePlayer();
         if (GamePauseController.IsPaused || CutsceneController.AreEnemiesFrozen ||
             IsDead || isSpawning ||
             brain.IsWaitingForEncounter ||
@@ -243,7 +263,6 @@ public class EnemyBase : MonoBehaviour
         TickEnemySpecificSystems();
         EnemySpecialAttackQueue.Tick();
 
-        brain.ResolvePlayer();
         brain.TickAggression();
         guard?.TickCooldown();
         dodge?.TickTimers();

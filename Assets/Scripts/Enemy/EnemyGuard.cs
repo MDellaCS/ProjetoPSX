@@ -50,7 +50,7 @@ public sealed class EnemyGuard : MonoBehaviour
     [Min(0f)] [SerializeField] private float staggerGuardDelay = .2f;
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyHealth health;
     private EnemyAttackController attacks;
     private EnemyMovement movement;
@@ -64,12 +64,12 @@ public sealed class EnemyGuard : MonoBehaviour
     public float CurrentGuardHealth => currentGuardHealth;
     public float MaxGuardHealth => maxGuardHealth;
 
-    internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    internal void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyHealth enemyHealth, EnemyAttackController attackController,
         EnemyMovement enemyMovement)
     {
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         health = enemyHealth;
         attacks = attackController;
         movement = enemyMovement;

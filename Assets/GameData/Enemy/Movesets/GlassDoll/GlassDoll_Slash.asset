@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: GlassDoll_Slash
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
   attackId: GlassDoll_Slash
-  displayName: Glass Doll Slash
   kind: 2
   context: 0
   animationStateId: GlassDoll_Slash
@@ -73,94 +72,88 @@ MonoBehaviour:
     minimumAggressionPercent: 0
     maximumAggressionPercent: 100
     preferredRange: 6
-  strikes:
-  - strikeName: GlassDoll_Slash
+  reaction: 3
+  usesExtendedArmHitbox: 0
+  hitboxes:
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: 0, y: 0, z: 0}
+    endLocalPosition: {x: 0, y: 0, z: 0}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 3985
+    orbitStartDistance: 1
+    orbitEndDistance: 2.5
+    orbitHeight: 0.3
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.6
+    orbitEndRadius: 0.6
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 1.2
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
     activeStartNormalized: 0
     activeEndNormalized: 1
-    damageMultiplier: 1
-    poiseMultiplier: 1
-    reaction: 3
-    hitboxes:
-    - trackName: Run
-      shape: 0
-      anchorMode: 0
-      trajectoryMode: 0
-      primaryAnchorId: 
-      secondaryAnchorId: 
-      startLocalPosition: {x: 0, y: 0, z: 0}
-      endLocalPosition: {x: 0, y: 0, z: 0}
-      startLocalEuler: {x: 0, y: 0, z: 0}
-      endLocalEuler: {x: 0, y: 0, z: 0}
-      orbitStartAngleDegrees: 0
-      orbitEndAngleDegrees: 3985
-      orbitStartDistance: 1
-      orbitEndDistance: 2.5
-      orbitHeight: 0.3
-      orbitAngleCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitDistanceCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 0
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 0
-          outSlope: 0
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      orbitStartRadius: 0.6
-      orbitEndRadius: 0.6
-      orbitRadiusCurve:
-        serializedVersion: 2
-        m_Curve: []
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      radius: 1.2
-      capsuleHeight: 1
-      capsuleAxis: 2
-      boxSize: {x: 1, y: 1, z: 1}
-      activeStartNormalized: 0
-      activeEndNormalized: 1
-      sweep: 1
-      sweepStepDistance: 0.25
-      hitGroup: 0
-      allowRepeatHits: 0
-      repeatHitInterval: 3
-  usesExtendedArmHitbox: 0
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 0
+    allowRepeatHits: 0
+    repeatHitInterval: 3
+  attackDataVersion: 1

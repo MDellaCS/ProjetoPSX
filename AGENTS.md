@@ -8,7 +8,7 @@ Este repositório contém um jogo desenvolvido na **Unity 6000.6.4f1**, utilizan
 
 - **Gênero:** hack-and-slash de terror.
 - **Inspirações:** God of War, Devil May Cry, Dark Souls e Silent Hill.
-- **Estética:** retrô PS1–PS2, com modelos low/mid-poly.
+- **Estética:** visual genérico durante a fase atual de desenvolvimento, sem restrições de estilo ou contagem de polígonos.
 - **Combate:** agressivo, intenso e orientado a decisões de risco.
 - **Filosofia de gameplay:** recompensar agressividade, domínio mecânico e decisões arriscadas, mantendo consequências significativas para erros.
 
@@ -273,15 +273,11 @@ Não introduzir alterações de narrativa, atmosfera ou direção artística for
 
 ### 5.3. Identidade visual
 
-Preservar a estética retrô PS1–PS2:
+Nesta fase, utilizar um visual genérico e funcional, sem exigir estética retrô ou limites específicos de polígonos.
 
-- Modelos low/mid-poly.
-- Direção artística coerente com as limitações estéticas escolhidas.
-- Efeitos visuais compatíveis com o estilo.
-- Materiais, iluminação e pós-processamento consistentes.
-- Legibilidade adequada durante combates intensos.
-
-Não adicionar efeitos modernos excessivos apenas por serem tecnicamente possíveis.
+- Priorizar clareza visual durante os combates.
+- Manter materiais, iluminação e efeitos coerentes com as necessidades atuais do jogo.
+- Não presumir uma direção artística definitiva sem solicitação do usuário.
 
 ---
 

@@ -153,6 +153,8 @@ GameObject:
   - component: {fileID: 825647914}
   - component: {fileID: 825647915}
   - component: {fileID: 825647916}
+  - component: {fileID: 825647918}
+  - component: {fileID: 825647919}
   - component: {fileID: 825647917}
   m_Layer: 0
   m_Name: Player
@@ -326,7 +328,6 @@ Transform:
   - {fileID: 1501661495}
   - {fileID: 1841670994}
   - {fileID: 832575519}
-  - {fileID: 1302352074}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &311817225
@@ -341,7 +342,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a06d91cc97e4cfca20b2fb67a60534c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnimationFrameRateSettings
-  framesPerSecond: 30
+  framesPerSecond: 100
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -501,11 +502,10 @@ MonoBehaviour:
   targetHeightOffsetPercent: 27
   gameplayCamera: {fileID: 0}
   gameplayCameraPriority: 10
-  distance: 5.2
-  initialYaw: 0
-  initialPitch: 22.1
-  minimumPitch: -89
-  maximumPitch: 89
+  cameraProfile: {fileID: 11400000, guid: db87a5e7bc4c493cb2f5d57669b004dc, type: 2}
+  distance: 17.49
+  yaw: 0
+  pitch: 0
   horizontalMouseSensitivity: 0.04
   gamepadLookSpeed: 180
   verticalMouseSensitivity: 0.04
@@ -568,31 +568,6 @@ MonoBehaviour:
   maximumHeatTemperature: 6
   maximumHeatSaturation: 10
   maximumHeatContrast: 10
-  playerCenteredFogEnabled: 0
-  playerCenteredFogColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
-  playerCenteredFogStartRadius: 0
-  playerCenteredFogEndRadius: 170
-  playerCenteredFogBaseHeightOffset: 50
-  playerCenteredFogHeight: 5
-  playerCenteredFogOpacity: 0.8
-  playerCenteredFogNoiseScale: 1
-  playerCenteredFogNoiseStrength: 0.08
-  playerCenteredFogNoiseSpeed: 2
-  playerCenteredVolumetricFogEnabled: 0
-  playerCenteredVolumetricDensity: 0.035
-  playerCenteredVolumetricOpacity: 1
-  playerCenteredVolumetricMaxDistance: 60
-  playerCenteredVolumetricSteps: 16
-  playerCenteredVolumetricNoiseScale: 0.12
-  playerCenteredVolumetricNoiseStrength: 0.35
-  playerCenteredVolumetricWind: {x: 0.12, y: 0, z: 0.06}
-  playerCenteredVolumetricHeightFalloff: 7
-  playerCenteredVolumetricScattering: 0.35
-  playerCenteredVolumetricLocalLightScattering: 1
-  playerCenteredVolumetricLocalLightLimit: 4
-  playerCenteredVolumetricAnisotropy: 0.2
-  playerCenteredVolumetricColor: {r: 0.34, g: 0.41, b: 0.4, a: 1}
-  playerCenteredVolumetricUpperColor: {r: 0.42, g: 0.46, b: 0.45, a: 1}
 --- !u!114 &330585550
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1205,6 +1180,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 207c5dbdc6724d3aa925ed69fb155ee9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttackMovement
+  lockOnAttackStopDistance: 0.15
 --- !u!114 &825647898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1297,9 +1273,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHeat
   maxHeat: 100
-  damageMultiplierPerNotch: 0.75
-  heavyAttackNotchCost: 4
-  heatGeneratedPerDamageDealt: 0.3
+  damageMultiplierPerNotch: 1
+  heatGeneratedPerDamageDealt: 0.8
   passiveHeatCoolingAfterGainDelay: 5
   initialPassiveHeatCoolingPerSecond: 0.2
   finalPassiveHeatCoolingPerSecond: 18
@@ -1550,13 +1525,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerGrappleAttackController
   attackDefinition: {fileID: 11400000, guid: f985f7c3642c44b4c8f83801acf329a3, type: 2}
-  targetAssistRange: 16
-  targetAssistAngle: 55
-  targetAssistNearAngle: 90
-  targetObstructionMask:
-    serializedVersion: 2
-    m_Bits: 243
-  useTargetAssist: 1
 --- !u!114 &825647914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1650,37 +1618,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0936a69cb783462fbfa6b3856689d0c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerTargetAssist
-  targetAssistEnabled: 1
-  targetAssistRange: 20
-  targetAssistAngle: 20
-  targetAssistNearAngle: 35
-  targetAssistNearAngleDistanceCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  targetObstructionMask:
-    serializedVersion: 2
-    m_Bits: 243
 --- !u!114 &825647916
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1719,6 +1656,81 @@ MonoBehaviour:
   responseTime: 0.7
   maximumHeatPulse: 0.213
   pulseFrequency: 1
+--- !u!114 &825647918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 536ee412887f1af498cd4e6038c32726, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerLockOn
+  acquisitionRange: 20
+  lossRange: 25
+  stickDeadZone: 0.6
+  switchInterval: 0.2
+  mouseThreshold: 120
+  mouseProgressInterval: 0.3
+  mouseMinimumProgress: 5
+  deathDelay: 0.2
+  magnetismSpeed: 260
+  inputAngleLimit: 100
+  cameraTargetWeight: 0.25
+  lockOnStartSound: {fileID: 8300000, guid: 9c851fc311da2a347ae2893e220617bd, type: 3}
+  lockOnStartVolume: 0.4
+  lockOnEndSound: {fileID: 8300000, guid: 748bfd26f2844f948993407bd191e6a9, type: 3}
+  lockOnEndVolume: 0.4
+  lockOnSwitchSound: {fileID: 8300000, guid: 71b585cdf5918d4459c3290859a3026f, type: 3}
+  lockOnSwitchVolume: 0.6
+--- !u!114 &825647919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 181039840}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74bdc247eeab4af7a3bb75e594d28c46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LockOnSpotlight
+  transitionDuration: 0.2
+  transitionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  fadeDuration: 0.2
+  lightColor: {r: 1, g: 0.92, b: 0.75, a: 1}
+  lightIntensity: 7
+  lightHeight: 20
+  lightRange: 50
+  coneAngle: 10
+  beamOpacity: 0.12
+  darkness: 0.85
+  edgeSoftness: 0.1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1928,8 +1940,6 @@ MonoBehaviour:
   minimumLaunchForce: 35
   maximumLaunchForce: 100
   launchForwardsDeceleration: 120
-  playerLaunchBodyImpactAssistAngle: 80
-  playerLaunchBodyImpactAssistRange: 40
   minimumImpactSpeed: 25
   impactDamagePerIntensity: 20
   impactPoisePerIntensity: 30
@@ -2046,6 +2056,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDebugToolkitHUD
   panelRenderer: {fileID: 915318202}
   playerTransform: {fileID: 0}
+  dpsWindowSeconds: 1
+  dpsSampleInterval: 0.25
+  dpsHistorySeconds: 15
+  bpm: 120
+  bpmHistoryBeats: 8
 --- !u!1 &960078786
 GameObject:
   m_ObjectHideFlags: 0
@@ -2587,86 +2602,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CurrencyShopHUD
   panelRenderer: {fileID: 0}
---- !u!1001 &1302352072
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 311817224}
-    m_Modifications:
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4352663743551470645, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: m_Name
-      value: DamageNumber
-      objectReference: {fileID: 0}
-    - target: {fileID: 9130623380947641839, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      propertyPath: damageText
-      value: 
-      objectReference: {fileID: 1302352073}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 1340465912913753623, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-  m_SourcePrefab: {fileID: 100100000, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
---- !u!114 &1302352073 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1827016650977688310, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-  m_PrefabInstance: {fileID: 1302352072}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
---- !u!4 &1302352074 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 2567655860001781519, guid: 1e59fd78368f3a944be476e35533d821, type: 3}
-  m_PrefabInstance: {fileID: 1302352072}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1501661494
 GameObject:
   m_ObjectHideFlags: 0
@@ -2868,6 +2803,7 @@ MonoBehaviour:
   leadAggressionBonus: 0
   supportAggressionPenalty: 70
   proximityPriorityPerUnit: 12
+  lockOnSelectionMultiplier: 3
   undodgeableDamagePercentOfMaximumHealth: 50
   airborneDodgeChanceMultiplier: 0.1
 --- !u!4 &1841670994
@@ -3166,7 +3102,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: damageMultiplierPerNotch
-      value: 0.75
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burnMovementSpeedMultiplier
@@ -3174,7 +3110,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: heatGeneratedPerDamageDealt
-      value: 0.3
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: 6816606002197494582, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
       propertyPath: burningHeatDescentCurve.m_Curve.Array.data[1].inSlope
@@ -3280,7 +3216,13 @@ PrefabInstance:
     - {fileID: 0}
     - {fileID: 0}
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3481279927476739912, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 825647918}
+    - targetCorrespondingSourceObject: {fileID: 3481279927476739912, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 825647919}
   m_SourcePrefab: {fileID: 100100000, guid: 61f2cef516f881249a01a95c8ee504d7, type: 3}
 --- !u!114 &7298473215509183621
 MonoBehaviour:

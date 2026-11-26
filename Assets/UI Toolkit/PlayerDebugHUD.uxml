@@ -4,6 +4,43 @@
     <ui:VisualElement name="debug-panel" picking-mode="Ignore">
         <ui:Label name="debug-text" text="DEBUG HUD" />
     </ui:VisualElement>
+    <ui:VisualElement name="debug-bpm-panel" class="debug-bpm-panel" picking-mode="Ignore">
+        <ui:VisualElement name="debug-bpm-timeline" class="debug-bpm-timeline" picking-mode="Ignore">
+            <ui:VisualElement name="debug-bpm-intervals" class="debug-bpm-intervals" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="debug-dps-panel" class="debug-dps-panel" picking-mode="Ignore">
+        <ui:Label name="debug-dps-text" class="debug-dps-text" text="DPS: 0" />
+        <ui:VisualElement name="debug-dps-graph" class="debug-dps-graph" picking-mode="Ignore" />
+        <ui:Label name="debug-dps-range" class="debug-dps-range" />
+    </ui:VisualElement>
+    <ui:VisualElement name="lockon-debug-stick" class="lockon-debug-panel lockon-debug-left" picking-mode="Ignore">
+        <ui:Label text="CONTROLE" class="lockon-debug-title" />
+        <ui:VisualElement class="lockon-debug-pad">
+            <ui:VisualElement class="lockon-debug-axis-x" />
+            <ui:VisualElement class="lockon-debug-axis-y" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-nw" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-ne" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-sw" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-se" />
+            <ui:VisualElement name="lockon-stick-deadzone" class="lockon-debug-deadzone" />
+            <ui:VisualElement name="lockon-stick-dot" class="lockon-debug-dot" />
+        </ui:VisualElement>
+        <ui:Label name="lockon-stick-text" class="lockon-debug-text" />
+    </ui:VisualElement>
+    <ui:VisualElement name="lockon-debug-mouse" class="lockon-debug-panel lockon-debug-right" picking-mode="Ignore">
+        <ui:Label text="MOUSE" class="lockon-debug-title" />
+        <ui:VisualElement class="lockon-debug-pad">
+            <ui:VisualElement class="lockon-debug-axis-x" />
+            <ui:VisualElement class="lockon-debug-axis-y" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-nw" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-ne" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-sw" />
+            <ui:VisualElement class="lockon-debug-diagonal lockon-debug-se" />
+            <ui:VisualElement name="lockon-mouse-dot" class="lockon-debug-dot" />
+        </ui:VisualElement>
+        <ui:Label name="lockon-mouse-text" class="lockon-debug-text" />
+    </ui:VisualElement>
     <ui:VisualElement name="debug-menu-panel">
         <ui:VisualElement class="debug-menu-row">
             <ui:Button name="edit-levels-button" text="EDIT LEVEL UP STATS" />
@@ -23,6 +60,14 @@
             <ui:Button name="slow-motion-button" text="SLOW MOTION: OFF" />
         </ui:VisualElement>
         <ui:VisualElement class="debug-menu-row">
+            <ui:FloatField name="debug-time-scale-input" label="Game time" value="0.25" />
+            <ui:Button name="debug-time-scale-apply" text="APPLY GAME TIME" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
+            <ui:IntegerField name="debug-bpm-input" label="BPM" value="120" />
+            <ui:Button name="debug-bpm-apply" text="APPLY BPM" />
+        </ui:VisualElement>
+        <ui:VisualElement class="debug-menu-row">
             <ui:Button name="kill-player-button" text="KILL PLAYER" class="debug-danger" />
             <ui:Button name="next-moveset-button" text="NEXT MOVESET" />
             <ui:Button name="select-scene-button" text="SELECT SCENE" />
@@ -36,12 +81,56 @@
             <ui:Button name="reset-save-button" text="RESET GAME SAVE" class="debug-danger" />
             <ui:Button name="clear-key-items-button" text="CLEAR KEY ITEMS" class="debug-danger" />
             <ui:Button name="select-gizmos-button" text="F3 GIZMOS" />
+            <ui:Button name="select-camera-profile-button" text="CAMERA PROFILE" />
         </ui:VisualElement>
         <ui:Label name="debug-action-status" text="Ready." class="debug-menu-status" />
     </ui:VisualElement>
     <ui:VisualElement name="debug-submenu" class="debug-submenu">
         <ui:Label name="debug-submenu-title" class="debug-menu-title" />
         <ui:ScrollView name="debug-submenu-list" />
+        <ui:ScrollView name="debug-gizmo-list" class="debug-gizmo-list">
+            <ui:VisualElement class="debug-gizmo-group">
+                <ui:Label text="COMBAT" class="debug-gizmo-heading" />
+                <ui:Toggle name="gizmo-debug-hud" label="Player debug HUD" />
+                <ui:Toggle name="gizmo-enemy-aggression" label="Enemy aggression data" />
+                <ui:Toggle name="gizmo-player-current-attack" label="Player current attack" />
+                <ui:Toggle name="gizmo-player-bpm" label="Player attack BPM" />
+                <ui:Toggle name="gizmo-player-dps" label="Player DPS graph" />
+                <ui:Toggle name="gizmo-damage-numbers" label="Damage numbers" />
+                <ui:Toggle name="gizmo-player-hitboxes" label="Player attack hitboxes" />
+                <ui:Toggle name="gizmo-enemy-hitboxes" label="Enemy attack hitboxes" />
+                <ui:Toggle name="gizmo-player-lockon" label="Player lock-on and input debug" />
+                <ui:Toggle name="gizmo-enemy-distance" label="Enemy aggression distance" />
+            </ui:VisualElement>
+            <ui:VisualElement class="debug-gizmo-group">
+                <ui:Label text="FLYING PUPPET" class="debug-gizmo-heading" />
+                <ui:Toggle name="gizmo-puppet-bones" label="Bones" />
+                <ui:Toggle name="gizmo-puppet-landing" label="Landing area" />
+            </ui:VisualElement>
+            <ui:VisualElement class="debug-gizmo-group">
+                <ui:Label text="INTERACTION AND MOVEMENT" class="debug-gizmo-heading" />
+                <ui:Toggle name="gizmo-interaction" label="Interaction areas and ladders" />
+                <ui:Toggle name="gizmo-swing-anchors" label="Swing anchors" />
+                <ui:Toggle name="gizmo-swing-rope" label="Swing rope" />
+            </ui:VisualElement>
+            <ui:VisualElement class="debug-gizmo-group">
+                <ui:Label text="ENCOUNTERS AND SPAWNS" class="debug-gizmo-heading" />
+                <ui:Toggle name="gizmo-encounter-triggers" label="Enemy encounter triggers" />
+                <ui:Toggle name="gizmo-encounter-spawns" label="Enemy spawn areas" />
+                <ui:Toggle name="gizmo-player-spawns" label="Player spawn points" />
+            </ui:VisualElement>
+            <ui:VisualElement class="debug-gizmo-group">
+                <ui:Label text="WORLD" class="debug-gizmo-heading" />
+                <ui:Toggle name="gizmo-world-objects" label="World objects" />
+                <ui:Toggle name="gizmo-world-levers" label="Levers" />
+                <ui:Toggle name="gizmo-world-checkpoints" label="Save checkpoints" />
+                <ui:Toggle name="gizmo-world-titles" label="Area title triggers" />
+                <ui:Toggle name="gizmo-world-prompts" label="World prompt triggers" />
+                <ui:Toggle name="gizmo-camera-zones" label="Camera zones" />
+                <ui:Toggle name="gizmo-lights" label="Lights" />
+                <ui:Toggle name="gizmo-water" label="Water" />
+            </ui:VisualElement>
+        </ui:ScrollView>
         <ui:VisualElement class="debug-menu-row"><ui:Button name="debug-submenu-back" text="BACK" /></ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="cutscene-debug-panel" picking-mode="Ignore">

@@ -593,16 +593,19 @@ public class FlyingPuppet : EnemyBase
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying ||
-            !DebugGizmoSettings.Enabled(DebugGizmoGroup.FlyingPuppet))
+        if (!Application.isPlaying)
             return;
 
-        ResolveBoneGizmoAnchors();
-        DrawBoneGizmoLine(headGizmoAnchor, new Color(.1f, 1f, .9f));
-        DrawBoneGizmoLine(leftHandGizmoAnchor, new Color(1f, .65f, .1f));
-        DrawBoneGizmoLine(rightHandGizmoAnchor, new Color(.8f, .35f, 1f));
+        if (DebugGizmoSettings.Enabled(DebugGizmoGroup.FlyingPuppetBones))
+        {
+            ResolveBoneGizmoAnchors();
+            DrawBoneGizmoLine(headGizmoAnchor, new Color(.1f, 1f, .9f));
+            DrawBoneGizmoLine(leftHandGizmoAnchor, new Color(1f, .65f, .1f));
+            DrawBoneGizmoLine(rightHandGizmoAnchor, new Color(.8f, .35f, 1f));
+        }
 
-        if (teleportDivePhase != TeleportDivePhase.HiddenWindup)
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.FlyingPuppetLanding) ||
+            teleportDivePhase != TeleportDivePhase.HiddenWindup)
             return;
 
         Vector3 size = new(

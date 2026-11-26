@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f866ba2019842c69225bd732513f481, type: 3}
+  m_Name: Fog Night
+  m_EditorClassIdentifier: Assembly-CSharp::FogProfile
+  transitionTime: 1
+  colorEnabled: 1
+  color: {r: 0.26, g: 0.29, b: 0.34, a: 1}
+  colorStart: 12
+  colorEnd: 65
+  colorMin: 0
+  colorMax: 0.5
+  colorCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  blurEnabled: 1
+  blurStart: 25
+  blurEnd: 75
+  blurMin: 0
+  blurMax: 0.3
+  blurRadius: 2
+  blurCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  volumetricEnabled: 0
+  volumetricColor: {r: 0.46, g: 0.51, b: 0.54, a: 1}
+  density: 0.025
+  volumetricOpacity: 0.5
+  baseHeight: 0
+  height: 5
+  maxDistance: 40
+  steps: 6
+  noiseScale: 0.12
+  noiseStrength: 0.5
+  wind: {x: 0.15, y: 0, z: 0.05}

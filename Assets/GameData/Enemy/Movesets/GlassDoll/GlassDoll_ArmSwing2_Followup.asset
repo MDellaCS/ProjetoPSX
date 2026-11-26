@@ -1,0 +1,121 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1000000000000000000000000000001, type: 3}
+  m_Name: GlassDoll_ArmSwing2_Followup
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackDefinition
+  attackId: GlassDoll_ArmSwing2_Followup
+  kind: 0
+  context: 0
+  animationStateId:
+  tags: []
+  specialQueueId:
+  windupDuration: 0.77
+  activeDuration: 0.165
+  recoveryDuration: 0.7
+  baseDamage: 45
+  basePoiseDamage: 100
+  causesHeavyStagger: 0
+  movement:
+    approachTargetUntilPreferredRange: 0
+    approachSpeed: 0
+    forwardDistance: 2.07772022
+    lateralDistance: 0
+    startNormalized: 0
+    endNormalized: 1
+    movementCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0.67364747
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1.32635253
+        outSlope: 1.32635253
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    faceTargetDuringWindup: 0
+    faceTargetDuringActive: 0
+  requirements:
+    minimumRange: 0
+    maximumRange: 4
+    selfContext: 2
+    targetContext: 2
+    maximumTargetAngle: 120
+    requiresLineOfSight: 1
+    lineOfSightBlockingLayers:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    minimumAggressionPercent: 0
+    maximumAggressionPercent: 100
+    preferredRange: 3
+  reaction: 0
+  usesExtendedArmHitbox: 1
+  hitboxes:
+  - shape: 0
+    anchorMode: 0
+    trajectoryMode: 0
+    primaryAnchorId:
+    secondaryAnchorId:
+    startLocalPosition: {x: -0.71, y: 0.5, z: -0.2}
+    endLocalPosition: {x: 0.35, y: 0.18, z: 1.8}
+    startLocalEuler: {x: 0, y: 0, z: 0}
+    endLocalEuler: {x: 0, y: 0, z: 0}
+    orbitStartAngleDegrees: 0
+    orbitEndAngleDegrees: 360
+    orbitStartDistance: 1
+    orbitEndDistance: 1
+    orbitHeight: 0
+    orbitAngleCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitDistanceCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    orbitStartRadius: 0.5
+    orbitEndRadius: 0.5
+    orbitRadiusCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    radius: 1
+    capsuleHeight: 1
+    capsuleAxis: 2
+    boxSize: {x: 1, y: 1, z: 1}
+    activeStartNormalized: 0
+    activeEndNormalized: 1
+    sweep: 1
+    sweepStepDistance: 0.25
+    hitGroup: 1
+    allowRepeatHits: 0
+    repeatHitInterval: 0.1
+  attackDataVersion: 1

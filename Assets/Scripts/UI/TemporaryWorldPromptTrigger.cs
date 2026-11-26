@@ -290,7 +290,7 @@ public class TemporaryWorldPromptTrigger : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.World))
+        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.WorldPrompts))
             return;
 
         Collider collider = GetComponent<Collider>();

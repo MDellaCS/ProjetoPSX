@@ -118,7 +118,7 @@ Shader "Projeto PSX/Retro Lit"
                 float2 uv : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
                 half3 normalWS : TEXCOORD2;
-                half4 vertexLocal : TEXCOORD3;              // rgb luzes locais, a nevoa (modo Vertex)
+                half4 vertexLocal : TEXCOORD3;              // rgb luzes locais (modo Vertex)
                 half3 vertexMain : TEXCOORD4;               // luz direcional (modo Vertex)
                 nointerpolation half3 flatLocal : TEXCOORD5; // mesma luz, sem interpolar (Flat Shading)
                 nointerpolation half3 flatMain : TEXCOORD6;
@@ -147,7 +147,7 @@ Shader "Projeto PSX/Retro Lit"
                 {
                     half3 local = RetroLocalLights(position.positionWS, normalWS);
                     half3 main = RetroMainLight(normalWS);
-                    output.vertexLocal = half4(local, RetroFogFactor(position.positionWS));
+                    output.vertexLocal = half4(local, 0);
                     output.vertexMain = main;
                     output.flatLocal = local;
                     output.flatMain = main;
@@ -180,12 +180,10 @@ Shader "Projeto PSX/Retro Lit"
                 float3 samplePosition = input.positionWS;
                 half3 local;
                 half3 main;
-                half fog;
                 if (mode < 0.5)
                 {
                     local = flatShading ? input.flatLocal : input.vertexLocal.rgb;
                     main = flatShading ? input.flatMain : input.vertexMain;
-                    fog = input.vertexLocal.a;
                 }
                 else
                 {
@@ -193,7 +191,6 @@ Shader "Projeto PSX/Retro Lit"
                         samplePosition = RetroSnapToGrid(input.positionWS, normalWS, RetroResolveGridSize(_GridSize));
                     local = RetroLocalLights(samplePosition, normalWS);
                     main = RetroMainLight(normalWS);
-                    fog = RetroFogFactor(input.positionWS);
                 }
 
                 half shadow = 1.0;
@@ -236,7 +233,6 @@ Shader "Projeto PSX/Retro Lit"
                     emission += emissionMask * _ReactiveGlowColor.rgb * (_ReactiveGlowMax * response);
                 }
                 half3 color = albedo.rgb * (ambient + main * shadow + local) + emission + shine;
-                color = RetroApplyFog(color, fog, local);
                 color = RetroQuantize(color, input.positionCS.xy);
                 return half4(color, 1.0);
             }

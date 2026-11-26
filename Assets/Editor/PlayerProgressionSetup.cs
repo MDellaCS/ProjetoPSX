@@ -7,7 +7,7 @@ using UnityEngine;
 public static class PlayerProgressionSetup
 {
     private const string DataFolder = "Assets/GameData/Player/Progression";
-    private const string CatalogPath = "Assets/Resources/PlayerUpgradeCatalog.asset";
+    private const string CatalogPath = "Assets/Resources/Player/PlayerUpgradeCatalog.asset";
     private const string PrefabPath = "Assets/Prefabs/World/UpgradeShop.prefab";
     private const string RagePath = DataFolder + "/Rage.asset";
 
@@ -18,7 +18,7 @@ public static class PlayerProgressionSetup
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) return;
         EnsureFolder(DataFolder);
-        EnsureFolder("Assets/Resources");
+        EnsureFolder("Assets/Resources/Player");
         EnsureFolder("Assets/Prefabs/World");
         PlayerRageUpgradeEffect rage = AssetDatabase.LoadAssetAtPath<PlayerRageUpgradeEffect>(RagePath);
         if (rage == null)

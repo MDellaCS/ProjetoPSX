@@ -100,7 +100,7 @@ public sealed class StrenghLever : MonoBehaviour, IPlayerAttackTarget
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.World))
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.WorldLevers))
             return;
 
         Collider collider = hurtbox != null ? hurtbox : GetComponent<Collider>();

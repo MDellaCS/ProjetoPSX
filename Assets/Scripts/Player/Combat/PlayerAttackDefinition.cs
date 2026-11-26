@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
 using UnityEngine;
 
 public enum PlayerAttackKind
@@ -31,9 +32,7 @@ public enum PlayerHitboxAnchorMode
 public enum PlayerHitboxTrajectoryMode
 {
     Linear,
-    Orbit,
-    [InspectorName("Posição do alvo assistido")]
-    TargetAssist
+    Orbit
 }
 
 public enum PlayerHitboxAxis
@@ -77,8 +76,8 @@ public class PlayerAttackCancelRule
 [Serializable]
 public class PlayerAttackMovementDefinition
 {
-    [Tooltip("Distancia total percorrida para frente durante Windup e Active.")]
-    [Min(0f)] public float forwardDistance;
+    [Tooltip("Distancia percorrida durante Windup e Active: valor positivo avanca e negativo recua, em metros.")]
+    public float forwardDistance;
     [Tooltip("Ponto normalizado de Windup + Active em que o movimento comeca.")]
     [Range(0f, 1f)] public float startNormalized;
     [Tooltip("Ponto normalizado de Windup + Active em que o movimento termina.")]
@@ -137,14 +136,12 @@ public class PlayerAttackDamageFalloffDefinition
 [Serializable]
 public class PlayerHitboxTrackDefinition
 {
-    [Tooltip("Nome de autoria desta hitbox dentro do ataque.")]
-    public string trackName = "Hitbox";
     [Tooltip("Forma geometrica usada para detectar inimigos.")]
     public PlayerHitboxShape shape = PlayerHitboxShape.Sphere;
     [Tooltip("Procedural interpola os valores locais. Follow Anchors acompanha sockets do modelo sem depender deles para o tempo do ataque.")]
     public PlayerHitboxAnchorMode anchorMode =
         PlayerHitboxAnchorMode.Procedural;
-    [Tooltip("Linear interpola entre Start e End. Orbit faz a hitbox circular ao redor do centro real do jogador. Posição do alvo assistido move a hitbox de Start até a posição do inimigo capturada no início do ataque. Exige um alvo válido dentro do alcance global; sem alvo, usa End Local Position.")]
+    [Tooltip("Linear interpola entre Start e End. Orbit faz a hitbox circular ao redor do centro real do jogador.")]
     public PlayerHitboxTrajectoryMode trajectoryMode =
         PlayerHitboxTrajectoryMode.Linear;
     [Tooltip("ID do anchor principal quando Anchor Mode e Follow Anchors.")]
@@ -193,11 +190,11 @@ public class PlayerHitboxTrackDefinition
     [Range(0f, 1f)] public float activeStartNormalized;
     [Tooltip("Fim desta Track dentro do Active, de 0 a 1.")]
     [Range(0f, 1f)] public float activeEndNormalized = 1f;
-    [Tooltip("Testa tambem o caminho entre a pose anterior e a atual, evitando atravessar inimigos entre frames.")]
-    public bool sweep = true;
-    [Tooltip("Distancia maxima entre amostras do Sweep. Valores menores aumentam precisao e custo.")]
-    [Min(.01f)] public float sweepStepDistance = .25f;
-    [Tooltip("Tracks com o mesmo Hit Group atingem cada inimigo somente uma vez em conjunto.")]
+    [Tooltip("Quantidade de repeticoes adicionais da trajetoria durante a janela ativa. Zero executa o golpe uma vez; cada repeticao permite um novo acerto por inimigo.")]
+    [Min(0)] public int trajectoryRepeats;
+    [Tooltip("Espelha a trajetoria procedural no eixo lateral do jogador a cada repeticao alternada.")]
+    public bool alternateRepeatSide;
+    [Tooltip("Tracks com o mesmo Hit Group compartilham acertos, sons e intervalo de repeticao por alvo e ciclo.")]
     [Min(0)] public int hitGroup;
     [Tooltip("Permite que o mesmo inimigo seja atingido novamente por esta Track depois do intervalo.")]
     public bool allowRepeatHits;
@@ -206,24 +203,16 @@ public class PlayerHitboxTrackDefinition
 }
 
 [Serializable]
-public class PlayerAttackStrikeDefinition
+internal class LegacyPlayerAttackStrikeDefinition
 {
-    [Tooltip("Nome de autoria deste impacto dentro do ataque.")]
-    public string strikeName = "Strike";
-    [Tooltip("Inicio do Strike dentro do Active, de 0 a 1.")]
-    [Range(0f, 1f)] public float activeStartNormalized;
-    [Tooltip("Fim do Strike dentro do Active, de 0 a 1.")]
-    [Range(0f, 1f)] public float activeEndNormalized = 1f;
-    [Tooltip("Multiplicador aplicado ao dano final do ataque neste Strike.")]
-    [Min(0f)] public float damageMultiplier = 1f;
-    [Tooltip("Multiplicador aplicado ao Poise final do ataque neste Strike.")]
-    [Min(0f)] public float poiseMultiplier = 1f;
     [Tooltip("Reducao opcional do dano conforme o alvo se afasta da origem do Strike.")]
     public PlayerAttackDamageFalloffDefinition damageFalloff = new();
     [Tooltip("Leves geram o Heat global ao conectar quando esta opcao esta ativa.")]
     public bool generatesHeatOnHit = true;
     [Tooltip("Efeitos adicionais aplicados por este Strike.")]
     public PlayerAttackEffectsDefinition effects = new();
+    [Tooltip("Cria uma hitbox entre o centro do personagem e cada track ativa deste golpe, preenchendo o espaco ate o impacto.")]
+    public bool usesExtendedArmHitbox = false;
     [Tooltip("Volumes que formam este Strike.")]
     public List<PlayerHitboxTrackDefinition> hitboxes = new();
 }
@@ -236,17 +225,15 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Header("Identity")]
     [Tooltip("Identificador estavel usado pelo moveset, debug e bindings opcionais de animacao.")]
     public string attackId = "Attack";
-    [Tooltip("Nome legivel exibido nas ferramentas de debug.")]
-    public string displayName = "Attack";
     [Tooltip("Categoria do ataque, usada por Heat, cancelamentos e impacto.")]
     public PlayerAttackKind kind;
     [Tooltip("Contexto em que o ataque pode ser iniciado.")]
     public PlayerAttackContext context = PlayerAttackContext.Ground;
 
     [Header("Timing")]
-    [Tooltip("Tempo de preparacao antes dos Strikes ficarem ativos.")]
+    [Tooltip("Tempo de preparacao antes das hitboxes ficarem ativas.")]
     [Min(0f)] public float windupDuration = .1f;
-    [Tooltip("Duracao da timeline que executa os Strikes e Hitbox Tracks.")]
+    [Tooltip("Duracao da fase ativa que executa as hitboxes.")]
     [Min(.001f)] public float activeDuration = .1f;
     [Tooltip("Tempo de recuperacao depois do Active.")]
     [Min(0f)] public float recoveryDuration = .2f;
@@ -255,116 +242,51 @@ public sealed class PlayerAttackDefinition : ScriptableObject
     [Tooltip("Mantem o ataque na fase Active depois do tempo normal ate o player tocar o chao. Use em Dive para a hitbox e a queda terminarem juntas.")]
     public bool holdActiveUntilGrounded;
     [Header("Power")]
-    [Tooltip("Dano base em unidades, convertido pelo valor global de dano do jogador antes de Heat e dos multiplicadores de Strike.")]
+    [Tooltip("Dano base em unidades, convertido pelo valor global de dano do jogador antes de Heat.")]
     [InspectorName("Dano base (unidades)")]
     [Min(0)] public int baseDamage = 10;
-    [Tooltip("Dano base de Poise antes das regras de Heat e dos multiplicadores de Strike.")]
+    [Tooltip("Dano base de Poise antes das regras de Heat.")]
     [Min(0)] public int basePoiseDamage = 10;
 
     [Header("Movement")]
-    [Tooltip("Movimento de gameplay executado independentemente da animacao.")]
-    public PlayerAttackMovementDefinition movement = new();
+    [Tooltip("Permite que o jogador se mova durante todas as fases do ataque usando a porcentagem de velocidade do moveset. Quando ativo, ignora o perfil de movimento.")]
+    public bool allowMovementWhileAttacking;
 
-    [Header("Strikes")]
-    [Tooltip("Impactos independentes executados dentro da fase Active.")]
-    public List<PlayerAttackStrikeDefinition> strikes = new();
+    [Tooltip("Perfil de deslocamento durante Windup e Active, usado apenas quando o movimento livre esta desativado. Sem perfil, usa o movimento antigo preservado no ataque.")]
+    public PlayerAttackMovementProfile movementProfile;
+    [SerializeField, HideInInspector] private PlayerAttackMovementDefinition movement = new();
 
-    [Header("Extended Arm Hitbox")]
-    [Tooltip("Cria uma hitbox reta entre o centro real do player e cada Hitbox Track ativa, evitando espacos vazios em ataques longos ou orbitais.")]
+    public PlayerAttackMovementDefinition Movement => movementProfile != null && movementProfile.movement != null
+        ? movementProfile.movement : movement;
+
+    [Tooltip("Reducao opcional do dano conforme o alvo se afasta da origem do ataque.")]
+    public PlayerAttackDamageFalloffDefinition damageFalloff = new();
+    [Tooltip("Ataques leves geram Heat ao conectar quando esta opcao esta ativa.")]
+    public bool generatesHeatOnHit = true;
+    [Tooltip("Cria uma hitbox entre o centro do jogador e cada hitbox ativa do ataque.")]
     public bool usesExtendedArmHitbox;
+    [Tooltip("Efeitos adicionais aplicados pelo ataque.")]
+    public PlayerAttackEffectsDefinition effects = new();
+    [Tooltip("Volumes que formam o ataque durante a fase Active.")]
+    public List<PlayerHitboxTrackDefinition> hitboxes = new();
 
-    /// <summary>
-    /// Retorna o maior alcance horizontal que este ataque pode cobrir, medido
-    /// a partir do centro do jogador antes do deslocamento de ataque.
-    /// </summary>
-    public float GetTargetAssistRange(float rangePadding)
+    [FormerlySerializedAs("strikes"), SerializeField, HideInInspector]
+    private List<LegacyPlayerAttackStrikeDefinition> legacyStrikes;
+    [SerializeField, HideInInspector] private int extendedArmMigrationVersion;
+    [SerializeField, HideInInspector] private int attackDataVersion;
+
+    private void OnEnable()
     {
-        float padding = Mathf.Max(0f, rangePadding);
-        float reach = padding +
-            Mathf.Max(0f, movement?.forwardDistance ?? 0f);
-        if (strikes == null)
-            return reach;
-
-        foreach (PlayerAttackStrikeDefinition strike in strikes)
-        {
-            if (strike?.hitboxes == null)
-                continue;
-
-            foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
-            {
-                if (track == null ||
-                    track.anchorMode == PlayerHitboxAnchorMode.FollowAnchors ||
-                    track.trajectoryMode == PlayerHitboxTrajectoryMode.TargetAssist)
-                {
-                    continue;
-                }
-
-                reach = Mathf.Max(reach, GetTrackTargetAssistReach(track) +
-                    Mathf.Max(0f, movement?.forwardDistance ?? 0f) +
-                    padding);
-            }
-        }
-
-        return reach;
+        if (attackDataVersion != 0 || legacyStrikes == null ||
+            legacyStrikes.Count == 0 || legacyStrikes[0] == null) return;
+        var legacy = legacyStrikes[0];
+        damageFalloff = legacy.damageFalloff;
+        generatesHeatOnHit = legacy.generatesHeatOnHit;
+        usesExtendedArmHitbox = extendedArmMigrationVersion == 0
+            ? usesExtendedArmHitbox || legacy.usesExtendedArmHitbox
+            : legacy.usesExtendedArmHitbox;
+        effects = legacy.effects;
+        hitboxes = legacy.hitboxes;
+        attackDataVersion = 1;
     }
-
-    /// <summary>Indica se alguma hitbox usa o alcance global de Target Assist.</summary>
-    public bool UsesTargetAssistTrajectory
-    {
-        get
-        {
-            if (strikes == null)
-                return false;
-
-            foreach (PlayerAttackStrikeDefinition strike in strikes)
-            {
-                if (strike?.hitboxes == null)
-                    continue;
-
-                foreach (PlayerHitboxTrackDefinition track in strike.hitboxes)
-                {
-                    if (track != null &&
-                        track.trajectoryMode == PlayerHitboxTrajectoryMode.TargetAssist)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-    }
-
-    private static float GetTrackTargetAssistReach(
-        PlayerHitboxTrackDefinition track)
-    {
-        float centerReach;
-        float volumeReach;
-        if (track.trajectoryMode == PlayerHitboxTrajectoryMode.Orbit)
-        {
-            centerReach = Mathf.Max(0f, track.orbitStartDistance,
-                track.orbitEndDistance);
-            volumeReach = Mathf.Max(.01f, track.orbitStartRadius,
-                track.orbitEndRadius);
-        }
-        else
-        {
-            centerReach = Mathf.Max(
-                HorizontalMagnitude(track.startLocalPosition),
-                HorizontalMagnitude(track.endLocalPosition));
-            volumeReach = track.shape switch
-            {
-                PlayerHitboxShape.Box => track.boxSize.magnitude * .5f,
-                PlayerHitboxShape.Capsule => Mathf.Max(.01f, track.radius) +
-                    Mathf.Max(0f, track.capsuleHeight * .5f - track.radius),
-                _ => Mathf.Max(.01f, track.radius)
-            };
-        }
-
-        return centerReach + volumeReach;
-    }
-
-    private static float HorizontalMagnitude(Vector3 value) =>
-        Mathf.Sqrt(value.x * value.x + value.z * value.z);
-
 }

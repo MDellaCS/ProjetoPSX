@@ -72,18 +72,12 @@ public static class RetroLightSystem
     private static readonly int LightCountId = Shader.PropertyToID("_RetroLightCount");
     private static readonly int AmbientSkyId = Shader.PropertyToID("_RetroAmbientSky");
     private static readonly int AmbientGroundId = Shader.PropertyToID("_RetroAmbientGround");
-    private static readonly int FogColorId = Shader.PropertyToID("_RetroFogColor");
-    private static readonly int FogParamsId = Shader.PropertyToID("_RetroFogParams");
-    private static readonly int FogCenterId = Shader.PropertyToID("_RetroFogCenter");
-    private static readonly int FogHeightId = Shader.PropertyToID("_RetroFogHeight");
     private static readonly int GlobalParamsId = Shader.PropertyToID("_RetroLightingGlobal");
 
     private static bool hooked;
     private static bool environmentDirty = true;
     private static int selectedEnvironmentIndex = -1;
 
-    /// <summary>Alvo usado como origem da nevoa no modo Player (definido pela camera de gameplay).</summary>
-    public static Transform FogFocus { get; set; }
     public static int RegisteredLightCount => Lights.Count;
     /// <summary>Luzes enviadas a GPU na ultima camera renderizada.</summary>
     public static int VisibleLightCount { get; private set; }
@@ -96,7 +90,6 @@ public static class RetroLightSystem
         Lights.Clear();
         Environments.Clear();
         System.Array.Clear(Selected, 0, Selected.Length);
-        FogFocus = null;
         VisibleLightCount = 0;
         selectedEnvironmentIndex = -1;
         environmentDirty = true;
@@ -247,38 +240,18 @@ public static class RetroLightSystem
             return;
         RetroLightingSettings settings = RetroLightingSettings.Instance;
         RetroEnvironmentProfile environment = ActiveEnvironment;
-        UploadEnvironment(settings, environment, camera);
+        UploadEnvironment(settings, environment);
         UploadLights(settings, camera);
         if (environmentDirty && Application.isPlaying)
             ApplyUnityRenderSettings(settings, environment);
     }
 
-    private static void UploadEnvironment(RetroLightingSettings settings, RetroEnvironmentProfile environment, Camera camera)
+    private static void UploadEnvironment(RetroLightingSettings settings, RetroEnvironmentProfile environment)
     {
         Color sky = environment != null ? environment.AmbientSky : new Color(.16f, .16f, .18f);
         Color ground = environment != null ? environment.AmbientGround : new Color(.07f, .06f, .06f);
         Shader.SetGlobalVector(AmbientSkyId, (Vector4)sky.linear);
         Shader.SetGlobalVector(AmbientGroundId, (Vector4)ground.linear);
-
-        bool fog = environment != null && environment.fogEnabled;
-        if (fog)
-        {
-            Color fogColor = environment.fogColor.linear;
-            fogColor.a = 1f;
-            Shader.SetGlobalVector(FogColorId, (Vector4)fogColor);
-            Shader.SetGlobalVector(FogParamsId, new Vector4(environment.fogStart,
-                1f / Mathf.Max(.01f, environment.fogEnd - environment.fogStart),
-                environment.fogMaxOpacity, environment.fogLightPierce));
-
-            bool usePlayer = environment.fogCenter == RetroFogCenter.Player && FogFocus != null &&
-                camera.cameraType == CameraType.Game;
-            Vector3 center = usePlayer ? FogFocus.position : camera.transform.position;
-            Shader.SetGlobalVector(FogCenterId, new Vector4(center.x, center.y, center.z, 1f));
-            Shader.SetGlobalVector(FogHeightId, new Vector4(center.y + environment.heightFogBaseOffset,
-                1f / Mathf.Max(.01f, environment.heightFogThickness), environment.heightFog ? 1f : 0f, 0f));
-        }
-        else
-            Shader.SetGlobalVector(FogColorId, Vector4.zero);
 
         // x: modo forcado + 1 (0 = por material); y: grade forcada; z: niveis de cor; w: dither.
         float mode = settings != null ? (float)settings.lightingModeOverride : 0f;
@@ -389,13 +362,5 @@ public static class RetroLightSystem
         RenderSettings.ambientProbe = probe;
         RenderSettings.reflectionIntensity = environment.unityReflectionIntensity;
 
-        RenderSettings.fog = environment.fogEnabled;
-        if (environment.fogEnabled)
-        {
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = environment.fogColor;
-            RenderSettings.fogStartDistance = environment.fogStart;
-            RenderSettings.fogEndDistance = environment.fogEnd;
-        }
     }
 }

@@ -70,6 +70,7 @@ GameObject:
   - component: {fileID: -3204485085092350537}
   - component: {fileID: -7745750461247089783}
   - component: {fileID: -6311550100291000042}
+  - component: {fileID: 919822455001184337}
   m_Layer: 0
   m_Name: RagDoll_Boss
   m_TagString: Untagged
@@ -144,39 +145,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5ecf5f43e7b4edcb2a3b5e2f3129441, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyBrain
-  detectionRange: 8
-  combatDetectionRange: 14
-  lastKnownSearchDuration: 2.5
-  lastKnownArrivalDistance: 0.35
-  initialAggressionPercent:
-    min: 30
-    max: 90
-  minimumAggressionPercent: 0
-  maximumAggressionPercent: 100
-  aggressionChangeRatePerSecond:
-    min: 1
-    max: 3
-  aggressionChangeInterval:
-    min: 5
-    max: 6
-  playerBackTurnedAggressionGain: 5
-  outOfCameraAggressionLoss: -2
-  cameraVisibilityPadding: 1
-  playerFarAggressionDistance: 7
-  playerFarAggressionChangePerSecond: 2
-  damageTakenAggressionChangePerMaxHealthPercent: -1.2
-  lowEnemyHealthPercent: 0.3
-  lowEnemyHealthDecreaseChance: 0.5
-  lowPlayerHealthPercent: 0.5
-  lowPlayerHealthAggressionGainPerSecond: 5
-  highPlayerHealthPercent: 0.9
-  highPlayerHealthAggressionLossPerSecond: 5
-  playerAirborneAggressionChangePerSecond: -1
-  retreatsWhenPlayerTakesEnemyDamage: 1
-  gainsAggressionWhenPlayerTakesEnemyDamage: 0
-  playerDamagedAggressionPercent: 0.1
-  playerDamagedAggressionFlatChange: 2
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDecisions
   decisionInterval:
     min: 0.2
     max: 2.2
@@ -212,7 +181,46 @@ MonoBehaviour:
     min: 25
     max: 50
   orbitDirectionMode: 0
-  directorWeight: 20
+--- !u!114 &919822455001184337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7502535439468429065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 832b1f8f3e64451597d914c6080e7d12, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAggression
+  initialAggressionPercent:
+    min: 30
+    max: 90
+  minimumAggressionPercent: 0
+  maximumAggressionPercent: 100
+  aggressionChangeRatePerSecond:
+    min: 1
+    max: 3
+  aggressionChangeInterval:
+    min: 5
+    max: 6
+  playerBackTurnedAggressionGain: 5
+  outOfCameraAggressionLoss: -2
+  cameraVisibilityPadding: 1
+  playerFarAggressionDistance: 7
+  playerFarAggressionChangePerSecond: 2
+  damageTakenAggressionChangePerMaxHealthPercent: -1.2
+  lowEnemyHealthPercent: 0.3
+  lowEnemyHealthDecreaseChance: 0.5
+  lowPlayerHealthPercent: 0.5
+  lowPlayerHealthAggressionGainPerSecond: 5
+  highPlayerHealthPercent: 0.9
+  highPlayerHealthAggressionLossPerSecond: 5
+  playerAirborneAggressionChangePerSecond: -1
+  retreatsWhenPlayerTakesEnemyDamage: 1
+  gainsAggressionWhenPlayerTakesEnemyDamage: 0
+  playerDamagedAggressionPercent: 0.1
+  playerDamagedAggressionFlatChange: 2
 --- !u!114 &485302232963280403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -310,6 +318,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd27130c0f0c46e5b35773076480e6fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
+  directorWeight: 20
   maxHealth: 2000
   isUnkillable: 0
   maxPoise: 25

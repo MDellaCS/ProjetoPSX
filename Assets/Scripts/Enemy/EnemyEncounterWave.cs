@@ -221,7 +221,7 @@ public sealed class EnemyEncounterWave : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (source != EnemyEncounterWaveSource.SpawnPrefabs ||
-            (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.Encounters))) return;
+            (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.EncounterSpawnAreas))) return;
         Gizmos.color = new Color(.2f, .9f, 1f, .8f);
         Gizmos.matrix = transform.localToWorldMatrix;
         Gizmos.DrawWireCube(Vector3.zero, new Vector3(areaSize.x, .1f, areaSize.y));

@@ -22,7 +22,7 @@ public enum RetroLightingRendererOverride
 
 /// <summary>
 /// Configuracao GLOBAL da iluminacao retro (Resources/Lighting/RetroLightingSettings).
-/// Ambiente e nevoa ficam em RetroEnvironmentProfile; luzes em LocalLightProfile.
+/// Ambiente fica em RetroEnvironmentProfile; luzes em LocalLightProfile.
 /// </summary>
 [CreateAssetMenu(menuName = "Projeto PSX/Lighting/Retro Lighting Settings", fileName = "RetroLightingSettings")]
 public sealed class RetroLightingSettings : ScriptableObject
@@ -50,7 +50,7 @@ public sealed class RetroLightingSettings : ScriptableObject
     public RetroEnvironmentProfile defaultEnvironment;
     [Tooltip("Perfis disponiveis para alternar durante o Play Mode com [ e ]. O primeiro perfil valido e usado ao iniciar, salvo quando a cena tem um Retro Lighting Environment ativo.")]
     public RetroEnvironmentProfile[] environmentProfiles = System.Array.Empty<RetroEnvironmentProfile>();
-    [Tooltip("Em Play, aplica a cor ambiente e a nevoa tambem nos materiais que nao usam Retro Lit (URP Lit), substituindo a sonda ambiente salva na cena. Evita o mundo azulado do skybox padrao.")]
+    [Tooltip("Em Play, aplica a cor ambiente tambem nos materiais que nao usam Retro Lit (URP Lit), substituindo a sonda ambiente salva na cena. Evita o mundo azulado do skybox padrao.")]
     public bool applyToUnityRenderSettings = true;
 
     [Header("Materiais")]

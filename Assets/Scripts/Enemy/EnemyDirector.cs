@@ -33,6 +33,10 @@ public class EnemyDirector : MonoBehaviour
     [Tooltip("Quanto a proximidade do jogador pesa na escolha do proximo atacante. Cada unidade de distancia reduz esta pontuacao.")]
     [Min(0f)] [SerializeField] private float proximityPriorityPerUnit = 8f;
 
+    [Header("Lock-on")]
+    [Tooltip("Multiplica a chance relativa do inimigo travado ser escolhido como proximo atacante. 1 mantem a prioridade normal.")]
+    [Min(1f)] [SerializeField] private float lockOnSelectionMultiplier = 3f;
+
     [Header("Global Dodge Rules")]
     [Tooltip("Inimigos nao esquivam de um golpe cujo dano bruto seja igual ou maior que esta porcentagem da vida maxima. Use 100 para bloquear apenas golpes capazes de remover uma barra inteira de uma vez.")]
     [Range(0f, 100f)] [SerializeField] private float undodgeableDamagePercentOfMaximumHealth = 50f;
@@ -46,6 +50,8 @@ public class EnemyDirector : MonoBehaviour
     private readonly List<EnemyBase> releasedEnemies = new();
     private readonly List<EnemyBase> replacementLeads = new();
     private EnemyBase nextAttacker;
+    private EnemyBase observedLockTarget;
+    private int lockTargetCheckFrame = -1;
 
     public float CurrentLeadWeight => GetOccupiedLeadWeight();
     public static int SpecialAttackQueueDelayFrames => activeDirector != null
@@ -91,6 +97,8 @@ public class EnemyDirector : MonoBehaviour
             director.runtimeWeights.Clear();
             director.openingCache.Clear();
             director.nextAttacker = null;
+            director.observedLockTarget = null;
+            director.lockTargetCheckFrame = -1;
             enabledDirectors.Add(director);
             activeDirector = director;
         }
@@ -111,6 +119,7 @@ public class EnemyDirector : MonoBehaviour
         halfWeightSpawnChance = Mathf.Clamp(halfWeightSpawnChance, 0f, 100f);
         doubleWeightSpawnChance = Mathf.Clamp(doubleWeightSpawnChance,
             0f, 100f - halfWeightSpawnChance);
+        lockOnSelectionMultiplier = Mathf.Max(1f, lockOnSelectionMultiplier);
     }
 
     private void OnDisable()
@@ -133,6 +142,8 @@ public class EnemyDirector : MonoBehaviour
         activeAttackers.Clear();
         lastAttackAt.Clear();
         nextAttacker = null;
+        observedLockTarget = null;
+        lockTargetCheckFrame = -1;
         runtimeWeights.Clear();
         openingCache.Clear();
     }
@@ -142,6 +153,7 @@ public class EnemyDirector : MonoBehaviour
         if (!controlAttackTurns)
             return;
         RefreshAttackTurns();
+        RefreshLockTarget();
         TryReplaceDistantLead();
         SelectNextAttacker();
     }
@@ -201,7 +213,8 @@ public class EnemyDirector : MonoBehaviour
 
     public static float GetAssignedWeight(EnemyBase enemy) =>
         activeDirector != null && enemy != null
-            ? activeDirector.GetRuntimeWeight(enemy) : 0f;
+            ? activeDirector.GetRuntimeWeight(enemy)
+            : enemy != null ? enemy.DirectorWeight : 0f;
 
     public static float GetCurrentLeadWeight() => activeDirector != null
         ? activeDirector.GetOccupiedLeadWeight() : 0f;
@@ -233,6 +246,7 @@ public class EnemyDirector : MonoBehaviour
 
     private void SelectNextAttacker()
     {
+        RefreshLockTarget();
         float availableWeight = GetAvailableLeadWeight();
         if (availableWeight < 1f)
         {
@@ -247,33 +261,74 @@ public class EnemyDirector : MonoBehaviour
         nextAttacker = FindBestCandidate(availableWeight);
 
         if (nextAttacker != null)
-            nextAttacker.GetComponent<EnemyBrain>()?.DecideImmediately();
+            nextAttacker.GetComponent<EnemyDecisions>()?.DecideImmediately();
     }
 
     private EnemyBase FindBestCandidate(float availableWeight)
     {
         EnemyBase best = null;
         float bestScore = float.NegativeInfinity;
+        bool lockedCandidateEligible = false;
         foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
         {
             if (!IsCandidate(enemy) ||
                 GetRuntimeWeight(enemy) > availableWeight)
                 continue;
 
-            float distance = HorizontalDistanceToTarget(enemy);
-            float score = enemy.CurrentAggressionPercent * .2f -
-                distance * proximityPriorityPerUnit;
-            if (lastAttackAt.TryGetValue(enemy, out float lastTime))
-                score += Mathf.Min(20f, (Time.time - lastTime) * 5f);
-            else
-                score += 20f;
+            float score = GetCandidateScore(enemy);
+            if (enemy == observedLockTarget) lockedCandidateEligible = true;
 
             if (score <= bestScore)
                 continue;
             best = enemy;
             bestScore = score;
         }
-        return best;
+        if (!lockedCandidateEligible || lockOnSelectionMultiplier <= 1f)
+            return best;
+
+        // Os scores podem ser negativos: subtrair o melhor evita overflow e
+        // preserva a razao entre os pesos antes de aplicar o multiplicador.
+        float total = 0f;
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
+        {
+            if (!IsCandidate(enemy) || GetRuntimeWeight(enemy) > availableWeight) continue;
+            total += EnemyDirectorSelectionMath.SelectionWeight(GetCandidateScore(enemy),
+                bestScore, enemy == observedLockTarget, lockOnSelectionMultiplier);
+        }
+        float choice = Random.value * total;
+        EnemyBase fallback = best;
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
+        {
+            if (!IsCandidate(enemy) || GetRuntimeWeight(enemy) > availableWeight) continue;
+            fallback = enemy;
+            choice -= EnemyDirectorSelectionMath.SelectionWeight(GetCandidateScore(enemy),
+                bestScore, enemy == observedLockTarget, lockOnSelectionMultiplier);
+            if (choice <= 0f) return enemy;
+        }
+        return fallback;
+    }
+
+    private float GetCandidateScore(EnemyBase enemy)
+    {
+        float score = enemy.DirectorSelectionAggressionPercent * .2f -
+            HorizontalDistanceToTarget(enemy) * proximityPriorityPerUnit;
+        return score + (lastAttackAt.TryGetValue(enemy, out float lastTime)
+            ? Mathf.Min(20f, (Time.time - lastTime) * 5f) : 20f);
+    }
+
+    private void RefreshLockTarget()
+    {
+        if (lockTargetCheckFrame == Time.frameCount) return;
+        lockTargetCheckFrame = Time.frameCount;
+        EnemyBase locked = null;
+        foreach (EnemyBase enemy in EnemyBase.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead && enemy.IsPlayerLockTarget)
+            { locked = enemy; break; }
+        }
+        if (observedLockTarget == locked) return;
+        observedLockTarget = locked;
+        nextAttacker = null;
     }
 
     private bool IsCandidate(EnemyBase enemy)
@@ -281,7 +336,7 @@ public class EnemyDirector : MonoBehaviour
         if (enemy == null || !enemy.isActiveAndEnabled || enemy.IsDead ||
             enemy.CurrentState != EnemyBase.State.Combat ||
             enemy.IsLaunched || enemy.IsLaunchedForwards ||
-            enemy.Target == null || enemy.IsSearchingLastKnownPosition ||
+            enemy.Target == null ||
             activeAttackers.Contains(enemy))
             return false;
 
@@ -319,15 +374,15 @@ public class EnemyDirector : MonoBehaviour
     {
         if (enemy == null)
             return maximumLeadWeight;
-        if (runtimeWeights.TryGetValue(enemy, out float weight))
-            return weight;
-
-        float roll = Random.value * 100f;
-        float multiplier = roll < halfWeightSpawnChance ? .5f :
-            roll < halfWeightSpawnChance + doubleWeightSpawnChance ? 2f : 1f;
-        weight = Mathf.Clamp(enemy.DirectorWeight * multiplier,
-            1f, maximumLeadWeight);
-        runtimeWeights[enemy] = weight;
+        if (!runtimeWeights.TryGetValue(enemy, out float weight))
+        {
+            float roll = Random.value * 100f;
+            float multiplier = roll < halfWeightSpawnChance ? .5f :
+                roll < halfWeightSpawnChance + doubleWeightSpawnChance ? 2f : 1f;
+            weight = Mathf.Clamp(enemy.DirectorWeight * multiplier,
+                1f, maximumLeadWeight);
+            runtimeWeights[enemy] = weight;
+        }
         return weight;
     }
 
@@ -389,7 +444,7 @@ public class EnemyDirector : MonoBehaviour
         for (int i = 0; i < replacementCount; i++)
             activeAttackers.Remove(replacementLeads[i]);
         nextAttacker = challenger;
-        challenger.GetComponent<EnemyBrain>()?.DecideImmediately();
+        challenger.GetComponent<EnemyDecisions>()?.DecideImmediately();
     }
 
     private EnemyBase FindClosestWaitingCandidate()
@@ -434,4 +489,11 @@ public class EnemyDirector : MonoBehaviour
         if (nextAttacker == enemy)
             nextAttacker = null;
     }
+}
+
+internal static class EnemyDirectorSelectionMath
+{
+    internal static float SelectionWeight(float score, float bestScore, bool locked, float multiplier) =>
+        Mathf.Exp(Mathf.Clamp((score - bestScore) * .05f, -60f, 0f)) *
+        (locked ? Mathf.Max(1f, multiplier) : 1f);
 }

@@ -24,6 +24,12 @@ public sealed class EnemyHealth : MonoBehaviour
     [Tooltip("Impede que a vida chegue a zero; util para bonecos de teste.")]
     [SerializeField] private bool isUnkillable;
 
+    [Header("Enemy Director")]
+    [Tooltip("Quantidade do orcamento do Director ocupada quando este inimigo se torna Lead. Pesos menores permitem mais inimigos atacando ao mesmo tempo.")]
+    [Range(1f, 100f)] [SerializeField] private float directorWeight = 30f;
+
+    public float DirectorWeight => Mathf.Clamp(directorWeight, 1f, 100f);
+
     [Header("Poise")]
     [Tooltip("Poise necessario para causar Stagger.")]
     [Min(1)] [SerializeField] private int maxPoise = 60;
@@ -55,7 +61,7 @@ public sealed class EnemyHealth : MonoBehaviour
     [SerializeField] private Color specialQueueStateColor = new(.2f, .8f, 1f, 1f);
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyMovement movement;
     private EnemyAttackController attacks;
     private EnemyGuard guard;
@@ -99,7 +105,7 @@ public sealed class EnemyHealth : MonoBehaviour
         return true;
     }
 
-    internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    internal void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyMovement locomotion, EnemyAttackController attackController,
         EnemyGuard enemyGuard, EnemyDodge enemyDodge)
     {
@@ -107,7 +113,7 @@ public sealed class EnemyHealth : MonoBehaviour
             colorBlock = new MaterialPropertyBlock();
 
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         movement = locomotion;
         attacks = attackController;
         guard = enemyGuard;
@@ -195,6 +201,7 @@ public sealed class EnemyHealth : MonoBehaviour
             {
                 CurrentHealth = 0;
                 damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+                if (fromPlayerAttack) PlayerDebugToolkitHUD.RecordPlayerDamage(damageDealt);
                 brain.OnDamaged(damageDealt);
                 Vector3 resolvedDirection = ResolveImpactDirection(attackerPosition,
                     impactDirection);
@@ -211,6 +218,7 @@ public sealed class EnemyHealth : MonoBehaviour
             }
         }
         damageDealt = Mathf.Max(0, healthBeforeDamage - CurrentHealth);
+        if (fromPlayerAttack) PlayerDebugToolkitHUD.RecordPlayerDamage(damageDealt);
         brain.OnDamaged(damageDealt);
         owner.RaiseHealthChanged();
         Vector3 resolvedHitDirection = ResolveImpactDirection(attackerPosition,

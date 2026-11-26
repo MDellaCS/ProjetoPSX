@@ -81,7 +81,6 @@ public static class EnemyStarterMovesetCreator
             EnemyAttackKind.Special, EnemyAttackContext.Any);
         if (createdSpin)
         {
-            spin.displayName = "Flyer Air Spin";
             spin.tags = new List<string> { "AirSpin" };
             spin.requirements.targetContext = EnemyAttackContext.Air;
             EditorUtility.SetDirty(spin);
@@ -104,7 +103,6 @@ public static class EnemyStarterMovesetCreator
         if (attack != null) return attack;
         attack = ScriptableObject.CreateInstance<EnemyAttackDefinition>();
         attack.attackId = id;
-        attack.displayName = id;
         attack.kind = kind;
         attack.context = context;
         attack.windupDuration = windup;
@@ -115,20 +113,12 @@ public static class EnemyStarterMovesetCreator
         attack.requirements.maximumRange = maxRange;
         attack.requirements.preferredRange = Mathf.Clamp(hitboxDistance,
             0f, maxRange);
-        attack.strikes.Add(new EnemyAttackStrikeDefinition
+        attack.reaction = CombatReactionType.LaunchForwards;
+        attack.hitboxes.Add(new EnemyHitboxTrackDefinition
         {
-            strikeName = id,
-            reaction = CombatReactionType.LaunchForwards,
-            hitboxes = new List<EnemyHitboxTrackDefinition>
-            {
-                new()
-                {
-                    trackName = id + " Hitbox",
-                    startLocalPosition = Vector3.forward * hitboxDistance,
-                    endLocalPosition = Vector3.forward * hitboxDistance,
-                    radius = hitboxRadius
-                }
-            }
+            startLocalPosition = Vector3.forward * hitboxDistance,
+            endLocalPosition = Vector3.forward * hitboxDistance,
+            radius = hitboxRadius
         });
         AssetDatabase.CreateAsset(attack, path);
         return attack;

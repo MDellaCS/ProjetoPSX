@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>Assistencia de mira, impacto e puxao do ataque especial de grapple.</summary>
+/// <summary>Impacto e puxao do ataque especial de grapple.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerAttackController), typeof(PlayerMovement),
     typeof(PlayerState))]
@@ -20,17 +20,9 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
     }
 
     [Header("Attack")]
-    [Tooltip("Definicao normal de ataque usada pelo grapple. Configure seus tempos, strikes e hitboxes como qualquer outro ataque do jogador.")]
+    [Tooltip("Definicao normal de ataque usada pelo grapple. Configure seus tempos e hitboxes como qualquer outro ataque do jogador.")]
     [SerializeField] private PlayerAttackDefinition attackDefinition;
 
-    [HideInInspector, SerializeField] private float targetAssistRange = 16f;
-    [HideInInspector, SerializeField] private float targetAssistAngle = 55f;
-    [HideInInspector, SerializeField] private float targetAssistNearAngle = 90f;
-    [HideInInspector, SerializeField] private LayerMask targetObstructionMask = 243;
-    [HideInInspector, SerializeField] private bool useTargetAssist = true;
-
-    // Alcance, velocidades e assistencia do gancho de combate sao globais:
-    // Assets/Resources/GrappleSettings (secao Combat).
     private float pullStopDistance => GrappleSettings.Combat.pullStopDistance;
     private float lighterEnemyPullSpeed => GrappleSettings.Combat.lighterEnemyPullSpeed;
     private float heavierEnemyPullSpeed => GrappleSettings.Combat.heavierEnemyPullSpeed;
@@ -67,16 +59,6 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         heat = GetComponent<PlayerHeat>();
         combatStatus = GetComponent<PlayerCombatStatus>();
         movesetController = GetComponent<PlayerMovesetController>();
-    }
-
-    /// <summary>Transfere a antiga configuracao do grapple para o assistente global.</summary>
-    public void CopyLegacyTargetAssistSettingsTo(PlayerTargetAssist targetAssist)
-    {
-        if (targetAssist == null)
-            return;
-
-        targetAssist.ConfigureFromLegacy(targetAssistRange, targetAssistAngle,
-            targetAssistNearAngle, targetObstructionMask, useTargetAssist);
     }
 
     private void Update()
@@ -161,7 +143,7 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
             EndPull();
     }
 
-    /// <summary>Dispara o ataque especial, mirando um inimigo elegivel se houver um proximo.</summary>
+    /// <summary>Dispara o ataque especial na direcao do jogador.</summary>
     public bool TryFire()
     {
         if (attackDefinition == null || attacks == null ||
@@ -177,7 +159,7 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
 
     /// <summary>Resolve o impacto da hitbox e inicia a interacao de massa no primeiro alvo valido.</summary>
     internal bool ResolveHit(PlayerAttackRuntime runtime,
-        PlayerAttackStrikeDefinition strike, EnemyBase enemy,
+        PlayerAttackDefinition strike, EnemyBase enemy,
         float attackReach, Vector3 impactPosition, Vector3 impactDirection,
         PlayerHitboxTrackDefinition hitboxTrack, Collider impactCollider)
     {
@@ -192,10 +174,8 @@ public sealed class PlayerGrappleAttackController : MonoBehaviour
         float falloff = strike.damageFalloff != null
             ? strike.damageFalloff.Evaluate(distanceFromPlayer)
             : 1f;
-        int damage = Mathf.RoundToInt(runtime.Damage *
-            strike.damageMultiplier * falloff);
-        int poiseDamage = Mathf.RoundToInt(runtime.PoiseDamage *
-            strike.poiseMultiplier);
+        int damage = Mathf.RoundToInt(runtime.Damage * falloff);
+        int poiseDamage = runtime.PoiseDamage;
         PlayerAttackType type = runtime.Definition.kind == PlayerAttackKind.Heavy
             ? PlayerAttackType.Heavy : PlayerAttackType.Light;
 

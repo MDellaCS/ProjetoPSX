@@ -3,11 +3,12 @@ using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Ponte entre o gameplay e o rig Cinemachine. O Cinemachine resolve a camera
-/// final; este componente fornece o centro correto do player, a orbita do mouse
-/// e os modificadores produzidos pelas mecanicas do jogo.
+/// final; este componente fornece o centro correto do player, a orientacao
+/// da camera e os modificadores produzidos pelas mecanicas do jogo.
 /// </summary>
 [DefaultExecutionOrder(-100)]
 [DisallowMultipleComponent]
@@ -34,27 +35,41 @@ public sealed class CameraFollow : MonoBehaviour
     [Tooltip("Prioridade da camera de gameplay perante outras cameras Cinemachine. Valores maiores vencem.")]
     [SerializeField] private int gameplayCameraPriority = 10;
 
-    [Header("Orbit")]
-    [Tooltip("Distancia base entre a camera e o centro real do player.")]
-    [Min(.1f)] [SerializeField] private float distance = 5.7f;
-    [Tooltip("Offset horizontal inicial em relacao a direcao para a qual o player esta olhando. Zero inicia a camera exatamente nas costas do player.")]
-    [SerializeField] private float initialYaw;
-    [Tooltip("Rotacao vertical inicial da camera, em graus positivos olhando de cima.")]
-    [SerializeField] private float initialPitch = 18f;
-    [Tooltip("Menor angulo vertical permitido ao mover o mouse.")]
-    [Range(-89f, 89f)] [SerializeField] private float minimumPitch = -15f;
-    [Tooltip("Maior angulo vertical permitido ao mover o mouse.")]
-    [Range(-89f, 89f)] [SerializeField] private float maximumPitch = 65f;
+    [Header("Perfil da camera")]
+    [Tooltip("Perfil com distancia, yaw, pitch e campo de visao da camera. Sem perfil, usa os valores anteriores preservados neste componente.")]
+    [SerializeField] private CameraFollowProfile cameraProfile;
+    private CameraFollowProfile debugProfile;
+    private bool debugProfileOverride;
 
-    [Header("Input")]
-    [Tooltip("Sensibilidade horizontal do mouse em graus por pixel.")]
-    [Min(0f)] [SerializeField] private float horizontalMouseSensitivity = .05f;
-    [Tooltip("Velocidade de giro em graus por segundo ao usar o analógico direito.")]
-    [Min(0f)] [SerializeField] private float gamepadLookSpeed = 180f;
-    [Tooltip("Sensibilidade vertical do mouse em graus por pixel.")]
-    [Min(0f)] [SerializeField] private float verticalMouseSensitivity = .04f;
-    [Tooltip("Inverte o movimento vertical da camera.")]
-    [SerializeField] private bool invertVerticalInput;
+    public CameraFollowProfile ActiveProfile => debugProfileOverride ? debugProfile : cameraProfile;
+    public bool IsDebugProfileOverride => debugProfileOverride;
+    public bool IsCameraZoneActive => activeFixedCameraZone != null;
+
+    /// <summary>Seleciona temporariamente um perfil ou restaura o da cena.</summary>
+    public void DebugSetProfile(CameraFollowProfile profile, bool useOverride)
+    {
+        if (!Debug.isDebugBuild) return;
+        debugProfile = profile;
+        debugProfileOverride = useOverride && profile != null;
+        followTransitionActive = false;
+    }
+
+    // Fallback para cenas existentes que ainda nao possuem um perfil atribuido.
+    [HideInInspector] [SerializeField] private float distance = 5.7f;
+    [FormerlySerializedAs("initialYaw")]
+    [HideInInspector] [SerializeField] private float yaw;
+    [FormerlySerializedAs("initialPitch")]
+    [HideInInspector] [SerializeField] private float pitch = 18f;
+
+    // Valores antigos preservados para nao descartar configuracoes serializadas.
+#pragma warning disable 0414
+    [HideInInspector] [SerializeField] private float horizontalMouseSensitivity = .05f;
+    [HideInInspector] [SerializeField] private float gamepadLookSpeed = 180f;
+    [HideInInspector] [SerializeField] private float verticalMouseSensitivity = .04f;
+    [HideInInspector] [SerializeField] private bool invertVerticalInput;
+#pragma warning restore 0414
+
+    [Header("Cursor")]
     [Tooltip("Prende o cursor ao iniciar. Escape libera e clique esquerdo prende novamente.")]
     [SerializeField] private bool lockCursorOnStart = true;
 
@@ -74,9 +89,12 @@ public sealed class CameraFollow : MonoBehaviour
     [Tooltip("Tempo para a camera voltar para longe depois que a parede deixa de bloquear.")]
     [Min(0f)] [SerializeField] private float collisionOutSmoothTime = .25f;
 
-    [Header("Lens")]
-    [Tooltip("Campo de visao base. Modificadores podem somar alteracoes sem substituir este valor.")]
-    [Range(1f, 179f)] [SerializeField] private float baseFieldOfView = 60f;
+    [HideInInspector] [SerializeField] private float baseFieldOfView = 60f;
+
+    private float ProfileDistance => ActiveProfile != null ? Mathf.Max(.1f, ActiveProfile.distance) : distance;
+    private float ProfileYaw => ActiveProfile != null ? ActiveProfile.yaw : yaw;
+    private float ProfilePitch => ActiveProfile != null ? ActiveProfile.pitch : pitch;
+    private float ProfileFieldOfView => ActiveProfile != null ? Mathf.Clamp(ActiveProfile.fieldOfView, 1f, 179f) : baseFieldOfView;
 
     private PlayerCharacterController targetController;
     private CinemachineBrain brain;
@@ -96,8 +114,7 @@ public sealed class CameraFollow : MonoBehaviour
     private Coroutine fixedCameraBlendRestoreRoutine;
     private Vector3 previousTargetCenter;
     private PlayerMovement targetMovement;
-    private float yaw;
-    private float pitch;
+    private PlayerLockOn targetLockOn;
     private FixedCameraZone activeFixedCameraZone;
     private int movementCameraVersion;
     private FollowCameraSettings followTransitionFrom;
@@ -154,6 +171,8 @@ public sealed class CameraFollow : MonoBehaviour
         EnsureCinemachineRig();
         targetController = target != null
             ? target.GetComponent<PlayerCharacterController>() : null;
+        targetMovement = null;
+        targetLockOn = null;
         initialized = false;
         Initialize();
         if (gameplayCamera != null)
@@ -200,9 +219,6 @@ public sealed class CameraFollow : MonoBehaviour
 
     private void OnValidate()
     {
-        maximumPitch = Mathf.Max(minimumPitch, maximumPitch);
-        initialPitch = Mathf.Clamp(initialPitch, minimumPitch, maximumPitch);
-
         // As configuracoes de colisao deixaram de ser reaplicadas a cada
         // frame; ajustes no Inspector durante o Play entram por aqui.
         if (Application.isPlaying && thirdPersonFollow != null &&
@@ -222,7 +238,7 @@ public sealed class CameraFollow : MonoBehaviour
                 HandleCursorLock();
             return;
         }
-        UpdateMouseOrbit();
+        if (lockCursorOnStart) HandleCursorLock();
     }
 
     private void LateUpdate()
@@ -364,7 +380,7 @@ public sealed class CameraFollow : MonoBehaviour
         menuCamera.LookAt = null;
         menuCamera.transform.SetPositionAndRotation(worldPosition,
             Quaternion.Euler(worldEulerAngles));
-        menuCamera.Lens.FieldOfView = baseFieldOfView;
+        menuCamera.Lens.FieldOfView = ProfileFieldOfView;
         menuCamera.PreviousStateIsValid = false;
         menuCamera.Priority = gameplayCameraPriority + 1;
     }
@@ -487,7 +503,7 @@ public sealed class CameraFollow : MonoBehaviour
         // usando CameraSide. Em .5, o resultado e sempre zero, anulando o eixo
         // X de Follow With Overrides (e qualquer offset lateral de camera).
         thirdPersonFollow.CameraSide = 1f;
-        thirdPersonFollow.CameraDistance = distance;
+        thirdPersonFollow.CameraDistance = ProfileDistance;
         thirdPersonFollow.AvoidObstacles.Enabled =
             cinemachineCollisionLayers.value != 0;
         thirdPersonFollow.AvoidObstacles.CollisionFilter =
@@ -495,7 +511,7 @@ public sealed class CameraFollow : MonoBehaviour
         thirdPersonFollow.AvoidObstacles.CameraRadius = collisionRadius;
         thirdPersonFollow.AvoidObstacles.DampingIntoCollision = collisionInSmoothTime;
         thirdPersonFollow.AvoidObstacles.DampingFromCollision = collisionOutSmoothTime;
-        gameplayCamera.Lens.FieldOfView = baseFieldOfView;
+        gameplayCamera.Lens.FieldOfView = ProfileFieldOfView;
     }
 
     private void Initialize()
@@ -504,8 +520,6 @@ public sealed class CameraFollow : MonoBehaviour
             return;
 
         targetController = target.GetComponent<PlayerCharacterController>();
-        yaw = target.eulerAngles.y + initialYaw;
-        pitch = Mathf.Clamp(initialPitch, minimumPitch, maximumPitch);
         previousTargetCenter = GetTargetCenter();
 
         if (trackingPivot == null)
@@ -518,7 +532,7 @@ public sealed class CameraFollow : MonoBehaviour
 
         trackingPivot.SetPositionAndRotation(
             previousTargetCenter,
-            Quaternion.Euler(pitch, yaw, 0f)
+            Quaternion.Euler(ProfilePitch, ProfileYaw, 0f)
         );
         gameplayCamera.Follow = trackingPivot;
         gameplayCamera.LookAt = trackingPivot;
@@ -551,6 +565,15 @@ public sealed class CameraFollow : MonoBehaviour
     {
         Vector3 center = GetTargetCenter();
         Vector3 displacement = center - previousTargetCenter;
+        if (targetLockOn == null && targetMovement != null)
+            targetLockOn = targetMovement.GetComponent<PlayerLockOn>();
+        previousTargetCenter = center;
+        if (CanFrameLockTarget())
+        {
+            Vector3 targetPoint = targetLockOn.Target.LockOnAimPoint;
+            targetPoint.y = center.y;
+            center = Vector3.Lerp(center, targetPoint, targetLockOn.CameraTargetWeight);
+        }
         trackingPivot.position = center;
 
         if (teleportSnapDistance > 0f &&
@@ -560,8 +583,12 @@ public sealed class CameraFollow : MonoBehaviour
             gameplayCamera.PreviousStateIsValid = false;
         }
 
-        previousTargetCenter = center;
     }
+
+    private bool CanFrameLockTarget() =>
+        (activeFixedCameraZone == null ||
+         activeFixedCameraZone.CameraMode == CameraZoneMode.FollowWithOverrides) &&
+        targetLockOn != null && targetLockOn.Target != null;
 
     private void ApplyCameraState()
     {
@@ -577,9 +604,7 @@ public sealed class CameraFollow : MonoBehaviour
         thirdPersonFollow.Damping = Vector3.one * settings.smoothTime;
         thirdPersonFollow.ShoulderOffset = effects.cameraLocalOffset + settings.positionOffset;
         thirdPersonFollow.CameraDistance = Mathf.Max(
-            .1f,
-            settings.distance + effects.distanceOffset
-        );
+            .1f, settings.distance + effects.distanceOffset);
         gameplayCamera.Lens.FieldOfView = Mathf.Clamp(
             settings.fieldOfView + effects.fieldOfViewOffset,
             1f,
@@ -603,12 +628,12 @@ public sealed class CameraFollow : MonoBehaviour
             }
             : new FollowCameraSettings
             {
-                yaw = yaw,
-                pitch = pitch,
+                yaw = ProfileYaw,
+                pitch = ProfilePitch,
                 smoothTime = followSmoothTime,
                 positionOffset = Vector3.zero,
-                distance = distance,
-                fieldOfView = baseFieldOfView
+                distance = ProfileDistance,
+                fieldOfView = ProfileFieldOfView
             };
 
         if (!followTransitionActive)
@@ -651,12 +676,12 @@ public sealed class CameraFollow : MonoBehaviour
             }
             : new FollowCameraSettings
             {
-                yaw = yaw,
-                pitch = pitch,
+                yaw = ProfileYaw,
+                pitch = ProfilePitch,
                 smoothTime = followSmoothTime,
                 positionOffset = Vector3.zero,
-                distance = distance,
-                fieldOfView = baseFieldOfView
+                distance = ProfileDistance,
+                fieldOfView = ProfileFieldOfView
             };
         followTransitionDuration = blend.BlendTime;
         followTransitionCurve = blend.BlendCurve;
@@ -688,31 +713,6 @@ public sealed class CameraFollow : MonoBehaviour
         }
 
         return target.position;
-    }
-
-    private void UpdateMouseOrbit()
-    {
-        if (target == null)
-            return;
-        if (lockCursorOnStart && !HandleCursorLock())
-            return;
-
-        Vector2 mouseDelta = GameInput.Look;
-        float sensitivity = GameSettingsService.Applied.cameraSensitivity;
-        float lookScale = GameInput.LookIsMouseDelta
-            ? horizontalMouseSensitivity
-            : gamepadLookSpeed * Time.unscaledDeltaTime;
-        yaw += mouseDelta.x * lookScale * sensitivity;
-        float verticalSign = invertVerticalInput ^
-            GameSettingsService.Applied.invertCameraY ? 1f : -1f;
-        pitch = Mathf.Clamp(
-            pitch + mouseDelta.y * (GameInput.LookIsMouseDelta
-                ? verticalMouseSensitivity
-                : gamepadLookSpeed * Time.unscaledDeltaTime) *
-                sensitivity * verticalSign,
-            minimumPitch,
-            maximumPitch
-        );
     }
 
     private bool HandleCursorLock()

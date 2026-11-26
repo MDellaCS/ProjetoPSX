@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovesetDefinition
   displayName: Human
   resourceMode: 1
-  globalPauseDelay: 0.5
   movementSpeedMultiplier: 0.65
   allowDash: 0
   allowAirJump: 0
@@ -27,7 +26,6 @@ MonoBehaviour:
   lightWindupActiveRotationSpeed: 450
   heavyWindupActiveRotationSpeed: 350
   heldAttackBranchThreshold: 0.3
-  targetAssistRangePadding: 0.25
   lightTransitionTiming:
     minimumDelayAfterWindup: 0
     continuationWindow: 0.9
@@ -76,7 +74,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: L2
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: L2
     attack: {fileID: 11400000, guid: 118d9b41db4de3246a77cbb35ac6f33f, type: 2}
@@ -84,12 +81,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: L3
       requiresHeldInput: 0
-      requiresPause: 0
-      requiresHitConfirm: 0
-    - input: 0
-      targetNodeId: L3p
-      requiresHeldInput: 0
-      requiresPause: 1
       requiresHitConfirm: 0
   - nodeId: L3
     attack: {fileID: 11400000, guid: 31c2010bba316b141823847018791753, type: 2}
@@ -97,21 +88,9 @@ MonoBehaviour:
     - input: 0
       targetNodeId: L4
       requiresHeldInput: 0
-      requiresPause: 0
-      requiresHitConfirm: 0
-  - nodeId: L3p
-    attack: {fileID: 11400000, guid: ebcae8a04f5bb0844bae7fe97c6d897c, type: 2}
-    transitions:
-    - input: 0
-      targetNodeId: L4p
-      requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: L4
     attack: {fileID: 11400000, guid: f880ab7b17f2eea459267ed79dc025cd, type: 2}
-    transitions: []
-  - nodeId: L4p
-    attack: {fileID: 11400000, guid: abbe91d9563134b419fb59634d46e1ed, type: 2}
     transitions: []
   - nodeId: H1
     attack: {fileID: 11400000, guid: 95941554b61b46d45aa574e36b69c975, type: 2}
@@ -125,7 +104,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL2
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL2
     attack: {fileID: 11400000, guid: 94f11a5cf075c8d4a9b656ad5fc3abc9, type: 2}
@@ -133,7 +111,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL3
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL3
     attack: {fileID: 0}
@@ -141,7 +118,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL4
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL4
     attack: {fileID: 0}
@@ -149,7 +125,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL5
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL5
     attack: {fileID: 0}
@@ -157,7 +132,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL6
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL6
     attack: {fileID: 0}
@@ -165,7 +139,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL7
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL7
     attack: {fileID: 0}
@@ -173,7 +146,6 @@ MonoBehaviour:
     - input: 0
       targetNodeId: AirL8
       requiresHeldInput: 0
-      requiresPause: 0
       requiresHitConfirm: 0
   - nodeId: AirL8
     attack: {fileID: 0}

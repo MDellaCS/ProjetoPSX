@@ -316,7 +316,7 @@ public sealed class WorldObject : MonoBehaviour, IPlayerAttackTarget
 
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.World))
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.WorldObjects))
             return;
 
         Collider collider = hurtbox != null ? hurtbox : GetComponent<Collider>();

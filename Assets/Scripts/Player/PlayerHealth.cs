@@ -303,6 +303,9 @@ public class PlayerHealth : MonoBehaviour
         if (playerState.IsDead() || playerState.IsHeavyStaggered())
             return false;
 
+        if (damage > 0)
+            movesetController?.BreakSequence();
+
         // Um ataque inimigo conectado mantém o jogador em combate.
         if (causedByEnemy)
         {

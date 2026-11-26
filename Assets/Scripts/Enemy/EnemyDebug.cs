@@ -9,18 +9,18 @@ public sealed class EnemyDebug : MonoBehaviour
     private static GUIStyle leadArrowStyle;
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyAttackController attacks;
     private EnemyMovement movement;
     private EnemyHealth health;
     private CharacterController characterController;
 
-    internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    internal void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyAttackController attackController, EnemyMovement locomotion,
         EnemyHealth enemyHealth)
     {
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         attacks = attackController;
         movement = locomotion;
         health = enemyHealth;
@@ -29,7 +29,7 @@ public sealed class EnemyDebug : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!Application.isPlaying || !PlayerDebugToolkitHUD.IsVisible ||
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyAggression) ||
             owner == null || owner.IsDead || brain == null)
         {
             return;
@@ -49,13 +49,15 @@ public sealed class EnemyDebug : MonoBehaviour
             return;
 
         EnsureWorldDebugStyles();
-        const float width = 180f;
+        const float width = 260f;
         float x = screenPosition.x - width * .5f;
         float y = Screen.height - screenPosition.y;
         string realAggressionText =
-            brain.CurrentAggressionPercent.ToString("0.0") + "%";
+            "\u2694 REAL " + brain.CurrentAggressionPercent.ToString("0.0") + "%";
         string effectiveAggressionText =
-            brain.EffectiveAggressionPercent.ToString("0.0") + "%";
+            "\u26A1 EFETIVA " + brain.EffectiveAggressionPercent.ToString("0.0") + "%";
+        string directorWeightText = "\u2696 PESO " +
+            EnemyDirector.GetAssignedWeight(owner).ToString("0.#");
 
         int previousDepth = GUI.depth;
         Color previousColor = GUI.color;
@@ -63,10 +65,13 @@ public sealed class EnemyDebug : MonoBehaviour
 
         Rect realAggressionRect = new Rect(x, y, width, 38f);
         Rect effectiveAggressionRect = new Rect(x, y + 31f, width, 38f);
+        Rect directorWeightRect = new Rect(x, y + 62f, width, 38f);
         DrawWorldDebugText(realAggressionRect, realAggressionText,
             Color.white);
         DrawWorldDebugText(effectiveAggressionRect, effectiveAggressionText,
             new Color(.3f, .9f, 1f, 1f));
+        DrawWorldDebugText(directorWeightRect, directorWeightText,
+            new Color(1f, .82f, .3f, 1f));
 
         if (EnemyDirector.IsLeadEnemy(owner))
         {
@@ -97,7 +102,7 @@ public sealed class EnemyDebug : MonoBehaviour
         {
             alignment = TextAnchor.MiddleCenter,
             fontStyle = FontStyle.Bold,
-            fontSize = 28
+            fontSize = 24
         };
         aggressionShadowStyle = new GUIStyle(aggressionStyle);
         leadArrowStyle = new GUIStyle(aggressionStyle)
@@ -108,13 +113,11 @@ public sealed class EnemyDebug : MonoBehaviour
 
     public void DrawGizmos()
     {
-        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyCombat))
+        if (!Application.isPlaying || !DebugGizmoSettings.Enabled(DebugGizmoGroup.EnemyDistance))
             return;
         if (brain == null || attacks == null)
             return;
 
-        Gizmos.color = new Color(.2f, .85f, 1f, .7f);
-        Gizmos.DrawWireSphere(transform.position, brain.DetectionRange);
         DrawPlayerFarAggressionDistance();
 
         // As formas ativas sao desenhadas pelo EnemyAttackHitboxController.
@@ -177,7 +180,7 @@ public sealed class EnemyDebug : MonoBehaviour
             return "Enemy: aguardando inicializacao";
 
         EnemyAttackDefinition attack = attacks.CurrentAttack?.Definition;
-        string attackName = attack != null ? attack.displayName : "-";
+        string attackName = attack != null ? attack.attackId : "-";
         EnemyAttackRuntime runtime = attacks.CurrentAttack;
         string timings = runtime != null
             ? runtime.WindupDuration.ToString("0.00") + " / " +
@@ -186,7 +189,7 @@ public sealed class EnemyDebug : MonoBehaviour
             : "-";
         string status = movement.IsLaunchedForwards ? "LAUNCHED FORWARDS" :
             movement.IsLaunched ? "LAUNCHED" :
-            brain.IsSearchingLastKnownPosition ? "SEARCHING" : "GROUND";
+            "GROUND";
         string cameraStatus = brain.IsCameraVisible ? "VISIBLE" : "HIDDEN";
         return owner.GetType().Name + "\n" +
             "HP: " + health.CurrentHealth + " / " + health.MaxHealth +
@@ -224,8 +227,7 @@ public sealed class EnemyDebug : MonoBehaviour
             "MOVE SLOW/STANDARD/FAST: " + movement.SlowSpeed.ToString("0.00") + "/" +
                 movement.StandardSpeed.ToString("0.00") + "/" +
                 movement.FastSpeed.ToString("0.00") +
-                "   DETECT: " + brain.DetectionRange.ToString("0.00") +
-                " / " + brain.CombatDetectionRange.ToString("0.00") + "\n" +
+                "\n" +
             "ATTACK: " + attackName + "\n" +
             "W/A/R: " + timings + "\n" +
             "TARGET: " + (brain.Target != null ? brain.Target.name : "None");

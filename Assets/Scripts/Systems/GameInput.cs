@@ -35,6 +35,7 @@ public static class GameInput
 
     public static Vector2 Move => ReadVector2("Move");
     public static Vector2 Look => ReadVector2("Look");
+    public static bool LockOnPressed => Pressed("LockOn");
     public static bool LookIsMouseDelta
     {
         get

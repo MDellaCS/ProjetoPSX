@@ -107,6 +107,7 @@ public partial class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
 
     public Vector3 DesiredDirection { get; private set; }
+    internal PlayerLockOn LockOn => lockOn;
     public float Speed => speed;
     public float EnemyHeadSeparationSpeed => enemyHeadSeparationSpeed;
     public float HorizontalSpeed => horizontalVelocity.magnitude;
@@ -230,8 +231,14 @@ public partial class PlayerMovement : MonoBehaviour
         movesetController.Moveset == null ||
         movesetController.Moveset.allowDash;
 
+    private PlayerLockOn lockOn;
+
     private void Awake()
     {
+        lockOn = GetComponent<PlayerLockOn>();
+        if (lockOn == null) lockOn = gameObject.AddComponent<PlayerLockOn>();
+        if (GetComponent<LockOnSpotlight>() == null)
+            gameObject.AddComponent<LockOnSpotlight>();
         controller = PlayerCharacterController.GetOrAdd(gameObject);
         playerState = GetComponent<PlayerState>();
         swingController = GetComponent<PlayerSwingController>();
@@ -334,7 +341,7 @@ public partial class PlayerMovement : MonoBehaviour
         if (wasAirborne && IsFloatingOnWater && verticalVelocity <= 0f)
         {
             if (movesetController != null)
-                movesetController.ResetAerialSequenceOnLanding();
+                movesetController.ResetAerialCombo();
             wasAirborne = false;
         }
 
@@ -383,7 +390,7 @@ public partial class PlayerMovement : MonoBehaviour
         return currentBounds;
     }
 
-    private Vector3 ReadMovementDirection()
+    internal Vector3 ReadMovementDirection()
     {
         Vector2 input = GameInput.Move;
         Vector2 normalizedInput = input.sqrMagnitude > .0001f
@@ -638,6 +645,7 @@ public partial class PlayerMovement : MonoBehaviour
             }
         }
 
+        movesetController?.ResetAerialCombo();
         BeginJumpAscent(GetJumpHeight() + jumpHeightBonus);
         isStandardJump = true;
         isLaunched = false;
@@ -648,18 +656,19 @@ public partial class PlayerMovement : MonoBehaviour
         PlayerBufferedInput input,
         RecoveryCancelAction action)
     {
-        if (!inputBuffer.HasBuffered(input) ||
-            attackController == null ||
-            !attackController.RequestCancel(action == RecoveryCancelAction.Jump
-                ? PlayerAttackCancelAction.Jump : PlayerAttackCancelAction.Dash))
+        PlayerAttackCancelAction cancelAction = action == RecoveryCancelAction.Jump
+            ? PlayerAttackCancelAction.Jump : PlayerAttackCancelAction.Dash;
+        if (!inputBuffer.HasBuffered(input) || attackController == null ||
+            !attackController.CanRequestCancel(cancelAction))
         {
             return;
         }
 
+        // O cancelamento pode encerrar o golpe e disparar AttackFinished imediatamente.
+        movesetController?.ResetSequence();
+        if (!attackController.RequestCancel(cancelAction)) return;
         inputBuffer.TryConsume(input);
         queuedRecoveryCancelAction = action;
-        if (movesetController != null)
-            movesetController.ResetSequence();
     }
 
     private void ResetAirActionsWhenGrounded()
@@ -687,7 +696,7 @@ public partial class PlayerMovement : MonoBehaviour
 
         if (wasAirborne)
             if (movesetController != null)
-                movesetController.ResetAerialSequenceOnLanding();
+                movesetController.ResetAerialCombo();
         wasAirborne = false;
         if (verticalVelocity <= 0f && !isLaunched)
             isStandardJump = false;
@@ -1032,6 +1041,13 @@ public partial class PlayerMovement : MonoBehaviour
         if (playerState.IsAttacking())
         {
             isDashJump = false;
+            if (attackController != null && attackController.CurrentAttack != null &&
+                attackController.CurrentAttack.Definition.allowMovementWhileAttacking)
+            {
+                float percent = movesetController != null && movesetController.Moveset != null
+                    ? movesetController.Moveset.attackMovementSpeedPercent : 50f;
+                return CalculateWalkVelocity(Mathf.Clamp01(percent / 100f));
+            }
             // O avanco proprio do ataque e aplicado por PlayerAttackMovement. Aqui desaceleramos o movimento que ja existia para evitar um corte brusco de velocidade ao atacar enquanto corre.
             return Vector3.MoveTowards(
                 horizontalVelocity,
@@ -1223,13 +1239,13 @@ public partial class PlayerMovement : MonoBehaviour
         SetCrouching(IsGrounded && IsCrouchHeld());
     }
 
-    private Vector3 CalculateWalkVelocity()
+    private Vector3 CalculateWalkVelocity(float speedMultiplier = 1f)
     {
         // Flutuando, o bobbing e a mola geram velocidade vertical positiva sem
         // que o jogador esteja no ar: continua valendo o movimento de "chao".
         if (verticalVelocity > 0f && !IsFloatingOnWater)
         {
-            return CalculateAirVelocity();
+            return CalculateAirVelocity(speedMultiplier);
         }
 
         // O Slide manual tem prioridade em CalculateHorizontalVelocity. Aqui
@@ -1239,9 +1255,9 @@ public partial class PlayerMovement : MonoBehaviour
             return CalculateSteepSlopeVelocity(downhillDirection);
 
         if (!IsGrounded)
-            return CalculateAirVelocity();
+            return CalculateAirVelocity(speedMultiplier);
 
-        float movementSpeed = GetMovementSpeed();
+        float movementSpeed = GetMovementSpeed() * speedMultiplier;
         float currentSpeed = isCrouching
             ? movementSpeed * crouchSpeedMultiplier
             : movementSpeed;
@@ -1361,11 +1377,11 @@ public partial class PlayerMovement : MonoBehaviour
         return true;
     }
 
-    private Vector3 CalculateAirVelocity()
+    private Vector3 CalculateAirVelocity(float speedMultiplier)
     {
         if (DesiredDirection.sqrMagnitude > 0.0001f)
         {
-            float maximumAirSpeed = GetMovementSpeed() * airMaxSpeedMultiplier;
+            float maximumAirSpeed = GetMovementSpeed() * airMaxSpeedMultiplier * speedMultiplier;
             Vector3 targetVelocity =
                 DesiredDirection * maximumAirSpeed;
 
@@ -1499,10 +1515,13 @@ public partial class PlayerMovement : MonoBehaviour
             return;
         }
 
-        if (DesiredDirection.sqrMagnitude < 0.0001f)
+        Vector3 facing = lockOn != null && lockOn.Target != null
+            ? Vector3.ProjectOnPlane(lockOn.Target.LockOnAimPoint - transform.position, Vector3.up)
+            : DesiredDirection;
+        if (facing.sqrMagnitude < 0.0001f)
             return;
 
-        Quaternion targetRotation = Quaternion.LookRotation(DesiredDirection);
+        Quaternion targetRotation = Quaternion.LookRotation(facing);
 
         float blend = 1f - Mathf.Exp(-rotationSpeed * Time.deltaTime);
         transform.rotation = Quaternion.Slerp(transform.rotation,
@@ -1591,7 +1610,7 @@ public partial class PlayerMovement : MonoBehaviour
             (collisionFlags & CollisionFlags.Below) != 0)
         {
             if (movesetController != null)
-                movesetController.ResetAerialSequenceOnLanding();
+                movesetController.ResetAerialCombo();
             wasAirborne = false;
         }
 

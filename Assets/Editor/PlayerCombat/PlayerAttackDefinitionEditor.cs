@@ -9,10 +9,9 @@ public sealed class PlayerAttackDefinitionEditor : Editor
     private PlayerAttackPreview previewTarget;
     private float previewTime;
     private float previewSpeed = 1f;
-    private bool animatePreview;
+    private bool animatePreview = true;
     private double lastEditorTime;
     private bool wasAnimatingPreview;
-    private int curveStrikeIndex;
     private int curveSourceTrackIndex;
     private int curveDestinationTrackIndex = 1;
 
@@ -63,15 +62,11 @@ public sealed class PlayerAttackDefinitionEditor : Editor
                 new GUIContent("Preview Time", "Tempo atual dentro de Windup + Active + Recovery."),
                 Mathf.Clamp(previewTime, 0f, duration), 0f, duration);
             if (EditorGUI.EndChangeCheck()) UpdatePreview();
-            EditorGUILayout.HelpBox(
-                "Em 1x, Animate Preview leva exatamente Windup + Active + Recovery. " +
-                "Windup mostra um aro amarelo; Active mostra as hitboxes; Recovery mostra um aro laranja.",
-                MessageType.Info);
         }
 
         EditorGUILayout.Space();
         EditorGUI.BeginChangeCheck();
-        DrawDefaultInspector();
+        AttackDefinitionInspector.Draw(serializedObject, true);
         if (EditorGUI.EndChangeCheck())
         {
             serializedObject.ApplyModifiedProperties();
@@ -122,7 +117,7 @@ public sealed class PlayerAttackDefinitionEditor : Editor
 
     private void DrawOrbitCurveTools()
     {
-        if (Attack.strikes == null || Attack.strikes.Count == 0)
+        if (Attack.hitboxes == null || Attack.hitboxes.Count == 0)
             return;
 
         EditorGUILayout.Space();
@@ -132,17 +127,14 @@ public sealed class PlayerAttackDefinitionEditor : Editor
             "a curva de 0 a 1, mas inverte a aceleracao: onde a primeira acelera, a segunda desacelera.",
             MessageType.Info);
 
-        curveStrikeIndex = EditorGUILayout.Popup("Strike", Mathf.Clamp(curveStrikeIndex, 0,
-            Attack.strikes.Count - 1), GetStrikeNames());
-        PlayerAttackStrikeDefinition strike = Attack.strikes[curveStrikeIndex];
-        if (strike == null || strike.hitboxes == null || strike.hitboxes.Count < 2)
+        if (Attack.hitboxes.Count < 2)
         {
-            EditorGUILayout.HelpBox("Este Strike precisa de ao menos duas Hitbox Tracks para copiar uma curva para outra.",
+            EditorGUILayout.HelpBox("Este ataque precisa de ao menos duas Hitbox Tracks para copiar uma curva para outra.",
                 MessageType.None);
             return;
         }
 
-        string[] trackNames = GetTrackNames(strike);
+        string[] trackNames = GetTrackNames(Attack.hitboxes, Attack.attackId);
         curveSourceTrackIndex = EditorGUILayout.Popup("Track de origem",
             Mathf.Clamp(curveSourceTrackIndex, 0, trackNames.Length - 1), trackNames);
         curveDestinationTrackIndex = EditorGUILayout.Popup("Track de destino",
@@ -152,8 +144,8 @@ public sealed class PlayerAttackDefinitionEditor : Editor
         {
             if (GUILayout.Button("Aplicar curvas opostas (espelho temporal)"))
             {
-                PlayerHitboxTrackDefinition source = strike.hitboxes[curveSourceTrackIndex];
-                PlayerHitboxTrackDefinition destination = strike.hitboxes[curveDestinationTrackIndex];
+                PlayerHitboxTrackDefinition source = Attack.hitboxes[curveSourceTrackIndex];
+                PlayerHitboxTrackDefinition destination = Attack.hitboxes[curveDestinationTrackIndex];
                 Undo.RecordObject(Attack, "Espelhar curvas orbitais");
                 destination.orbitAngleCurve = MirrorTemporal(source.orbitAngleCurve);
                 destination.orbitDistanceCurve = MirrorTemporal(source.orbitDistanceCurve);
@@ -164,19 +156,11 @@ public sealed class PlayerAttackDefinitionEditor : Editor
         }
     }
 
-    private string[] GetStrikeNames()
+    private static string[] GetTrackNames(System.Collections.Generic.List<PlayerHitboxTrackDefinition> hitboxes, string attackId)
     {
-        string[] names = new string[Attack.strikes.Count];
+        string[] names = new string[hitboxes.Count];
         for (int index = 0; index < names.Length; index++)
-            names[index] = $"{index}: {Attack.strikes[index]?.strikeName ?? "Strike"}";
-        return names;
-    }
-
-    private static string[] GetTrackNames(PlayerAttackStrikeDefinition strike)
-    {
-        string[] names = new string[strike.hitboxes.Count];
-        for (int index = 0; index < names.Length; index++)
-            names[index] = $"{index}: {strike.hitboxes[index]?.trackName ?? "Hitbox"}";
+            names[index] = $"{attackId} - Hitbox {index}";
         return names;
     }
 
@@ -212,5 +196,54 @@ public sealed class PlayerAttackDefinitionEditor : Editor
         bool hasOut = (mode & WeightedMode.Out) != 0;
         return (hasIn ? WeightedMode.Out : WeightedMode.None) |
                (hasOut ? WeightedMode.In : WeightedMode.None);
+    }
+}
+
+internal static class AttackDefinitionInspector
+{
+    public static void Draw(SerializedObject serializedObject, bool isPlayer)
+    {
+        serializedObject.Update();
+        SerializedProperty property = serializedObject.GetIterator();
+        bool enterChildren = true;
+        while (property.NextVisible(enterChildren))
+        {
+            enterChildren = false;
+            if (property.propertyPath == "movement")
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Movement", EditorStyles.boldLabel);
+                DrawMovement(property, isPlayer);
+                continue;
+            }
+
+            if (isPlayer && property.propertyPath == "movementProfile")
+            {
+                SerializedProperty allowMovement = serializedObject.FindProperty("allowMovementWhileAttacking");
+                using (new EditorGUI.DisabledScope(allowMovement != null && allowMovement.boolValue))
+                    EditorGUILayout.PropertyField(property, true);
+                continue;
+            }
+
+            using (new EditorGUI.DisabledScope(property.propertyPath == "m_Script"))
+                EditorGUILayout.PropertyField(property, true);
+        }
+        serializedObject.ApplyModifiedProperties();
+    }
+
+    private static void DrawMovement(SerializedProperty movement, bool isPlayer)
+    {
+        SerializedProperty child = movement.Copy();
+        SerializedProperty end = child.GetEndProperty();
+        bool enterChildren = true;
+        while (child.NextVisible(enterChildren) &&
+            !SerializedProperty.EqualContents(child, end))
+        {
+            enterChildren = false;
+            if (isPlayer && child.name != "forwardDistance" &&
+                movement.FindPropertyRelative("forwardDistance").floatValue == 0f)
+                continue;
+            EditorGUILayout.PropertyField(child, true);
+        }
     }
 }

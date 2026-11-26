@@ -24,7 +24,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         lastSelfJuggleFrame = -1;
     }
 
-    public bool Resolve(PlayerAttackRuntime runtime, PlayerAttackStrikeDefinition strike,
+    public bool Resolve(PlayerAttackRuntime runtime, PlayerAttackDefinition strike,
         EnemyBase enemy, float attackReach, Vector3 impactPosition,
         Vector3 impactDirection, PlayerHitboxTrackDefinition hitboxTrack,
         Collider impactCollider)
@@ -41,9 +41,9 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         float falloffMultiplier = strike.damageFalloff != null
             ? strike.damageFalloff.Evaluate(distanceFromPlayer)
             : 1f;
-        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier *
+        int damage = Mathf.RoundToInt(runtime.Damage *
             falloffMultiplier);
-        int poise = Mathf.RoundToInt(runtime.PoiseDamage * strike.poiseMultiplier);
+        int poise = Mathf.RoundToInt(runtime.PoiseDamage);
         PlayerAttackType type = runtime.Definition.context switch
         {
             PlayerAttackContext.Dash => runtime.Definition.kind == PlayerAttackKind.Heavy
@@ -102,7 +102,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
 
     /// <summary>Aplica o dano final do golpe a objetos interativos do mundo.</summary>
     public bool ResolveUtilityTarget(PlayerAttackRuntime runtime,
-        PlayerAttackStrikeDefinition strike, IPlayerAttackTarget target,
+        PlayerAttackDefinition strike, IPlayerAttackTarget target,
         Vector3 impactPosition, Vector3 impactDirection,
         PlayerHitboxTrackDefinition hitboxTrack, Collider impactCollider)
     {
@@ -114,7 +114,7 @@ public sealed class PlayerAttackResolver : MonoBehaviour
         float falloffMultiplier = strike.damageFalloff != null
             ? strike.damageFalloff.Evaluate(distanceFromPlayer)
             : 1f;
-        int damage = Mathf.RoundToInt(runtime.Damage * strike.damageMultiplier *
+        int damage = Mathf.RoundToInt(runtime.Damage *
             falloffMultiplier);
         bool connected = target.ReceivePlayerAttack(damage, impactPosition,
             impactDirection);

@@ -26,6 +26,8 @@ public sealed class EnemyMoveTransition
     [Min(0f)] public float minimumDelayAfterActive;
     [Tooltip("Janela apos o fim do Active em que esta continuacao permanece valida. Zero usa toda a Recovery.")]
     [Min(0f)] public float continuationWindow;
+    [Tooltip("Continua mesmo no limite da sequencia ou quando o alvo sai das condicoes normais de selecao. O ataque ainda pode ser interrompido por eventos de combate.")]
+    public bool mandatoryContinuation;
     [Tooltip("Exige que algum Strike do ataque atual tenha acertado o jogador.")]
     public bool requiresHitConfirm;
 }

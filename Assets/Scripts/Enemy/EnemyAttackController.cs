@@ -13,7 +13,7 @@ public sealed class EnemyAttackController : MonoBehaviour
     [SerializeField] private EnemyMovesetDefinition moveset;
 
     private EnemyBase owner;
-    private EnemyBrain brain;
+    private EnemyDecisions brain;
     private EnemyMovement locomotion;
     private EnemyAttackSelector selector;
     private EnemyAttackMovement authoredMovement;
@@ -38,11 +38,11 @@ public sealed class EnemyAttackController : MonoBehaviour
         Mathf.Clamp01(1f - phaseTimer /
             Mathf.Max(.0001f, GetPhaseDuration(CurrentPhase)));
 
-    internal void Initialize(EnemyBase enemy, EnemyBrain enemyBrain,
+    internal void Initialize(EnemyBase enemy, EnemyDecisions enemyDecisions,
         EnemyMovement enemyMovement)
     {
         owner = enemy;
-        brain = enemyBrain;
+        brain = enemyDecisions;
         locomotion = enemyMovement;
         if (!TryGetComponent(out authoredMovement))
             authoredMovement = gameObject.AddComponent<EnemyAttackMovement>();
@@ -279,10 +279,9 @@ public sealed class EnemyAttackController : MonoBehaviour
         PhaseChanged?.Invoke(CurrentAttack, CurrentPhase);
         pendingContinuation = null;
         pendingContinuationDelay = 0f;
-        if (attacksInSequence < Mathf.Max(1,
-            moveset.maximumAttacksPerSequence))
-            selector.TrySelectContinuation(CurrentAttack,
-                out pendingContinuation, out pendingContinuationDelay);
+        selector.TrySelectContinuation(CurrentAttack,
+            out pendingContinuation, out pendingContinuationDelay,
+            attacksInSequence >= Mathf.Max(1, moveset.maximumAttacksPerSequence));
         SkipEmptyPhases();
     }
 
@@ -337,12 +336,18 @@ public sealed class EnemyAttackController : MonoBehaviour
         hitboxes?.End();
         owner.NotifyAttackEnded(ended.Definition);
         AttackEnded?.Invoke(ended);
+        bool previousHitConfirmed = ended.HitConfirmed;
+        bool mandatory = ended.Node.transitions != null &&
+            ended.Node.transitions.Exists(t => t != null &&
+                t.targetNodeId == continuation.nodeId && t.mandatoryContinuation);
         if (!BeginOrQueueAttack(continuation, null))
         {
             CancelAttack();
             owner.CurrentState = EnemyBase.State.Combat;
             brain.ScheduleNextDecision();
         }
+        else if (mandatory && CurrentAttack != null)
+            CurrentAttack.HitConfirmed = previousHitConfirmed;
     }
 
     public void CancelAttack()

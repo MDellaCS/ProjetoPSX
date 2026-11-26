@@ -42,8 +42,6 @@ public class PlayerMoveTransition
     public string targetNodeId;
     [Tooltip("Exige que o mesmo clique que iniciou o ataque atual continue pressionado ate esta transicao. Cada clique so pode selecionar uma transicao segurada.")]
     public bool requiresHeldInput;
-    [Tooltip("Exige que o input aconteca depois do Global Pause Delay. Se nao existir uma rota Pause para este input, a rota normal ainda funciona como fallback dentro da Continuation Window.")]
-    public bool requiresPause;
     [Tooltip("Exige que ao menos um Strike tenha conectado em um inimigo.")]
     public bool requiresHitConfirm;
 }
@@ -92,10 +90,7 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     public PlayerPityMechanicSettings pityMechanic = new();
     [Tooltip("Ataque executado automaticamente durante o slide deste moveset. Vazio deixa o slide sem ataque.")]
     public PlayerAttackDefinition slideAttack;
-    [Tooltip("Tempo global sem novo input que classifica a proxima entrada como PAUSE.")]
-    [Min(0f)] public float globalPauseDelay = .25f;
 
-    [Header("Movement Abilities")]
     [Tooltip("Multiplicador da velocidade de caminhada base do PlayerMovement para este moveset. 1 mantem a velocidade base; valores menores ou maiores ajustam apenas este moveset.")]
     [Min(0f)] public float movementSpeedMultiplier = 1f;
     [Tooltip("Permite iniciar dash no chao ou no ar. Quando desativado, o input de dash nao inicia nem cancela ataques para executar um dash.")]
@@ -115,33 +110,32 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
     [Tooltip("Tempo, em segundos, até o próximo dash poder ser iniciado.")]
     [Min(0f)] public float dashCooldown = 1.3f;
 
-    [Header("Global Attack Rotation")]
+    [Tooltip("Porcentagem da velocidade normal disponivel ao caminhar durante ataques que permitem movimento. Zero impede o movimento por comando; 100 usa a velocidade normal.")]
+    [Range(0f, 100f)] public float attackMovementSpeedPercent = 50f;
+    [Tooltip("Multiplica a distancia dos ataques normais e do grapple deste moveset. 1 preserva as distancias dos ataques; 2 dobra e 0 impede o deslocamento. Slide e efeitos externos mantem suas regras.")]
+    [Min(0f)] public float attackMovementDistanceMultiplier = 1f;
+
     [Tooltip("Velocidade global de giro dos ataques leves durante Windup + Active, em graus por segundo. Zero impede o giro.")]
     [Min(0f)] public float lightWindupActiveRotationSpeed = 1500f;
     [Tooltip("Velocidade global de giro dos ataques pesados durante Windup + Active, em graus por segundo. Zero impede o giro.")]
     [Min(0f)] public float heavyWindupActiveRotationSpeed = 1500f;
 
-    [Header("Held Attack Branches")]
     [Tooltip("Tempo minimo que o clique original precisa permanecer pressionado para habilitar uma transicao marcada como Held Input. Soltar o botao invalida essa branch.")]
     [Min(0f)] public float heldAttackBranchThreshold = .18f;
 
-    [Header("Global Target Assist")]
-    [Tooltip("Margem extra, em metros, somada ao alcance calculado das hitboxes de todos os ataques deste moveset para selecionar um alvo assistido. Compensa o volume do inimigo sem permitir que ataques curtos girem para alvos distantes.")]
-    [Min(0f)] public float targetAssistRangePadding = .25f;
+    [Tooltip("Tempo maximo em segundos apos o fim da fase Active para manter a sequencia, inclusive durante Recovery. Zero encerra imediatamente; continuacoes ja enfileiradas sao preservadas.")]
+    [Min(0f)] public float comboResetDelay = 1f;
 
-    [Header("Global Transition Timing")]
     [Tooltip("Tempos de transicao compartilhados por todos os ataques leves.")]
     public PlayerTransitionTimingSettings lightTransitionTiming = new();
     [Tooltip("Tempos de transicao compartilhados por todos os ataques pesados.")]
     public PlayerTransitionTimingSettings heavyTransitionTiming = new();
 
-    [Header("Global Hitbox Extension")]
     [Tooltip("Raio global da linha de colisao criada entre o centro do player e a hitbox de ataques com Extended Arm Hitbox. Representa metade da grossura total.")]
     [Min(.01f)] public float extendedArmHitboxRadius = .25f;
     [Tooltip("Deslocamento vertical global do ponto inicial da linha Extended Arm Hitbox em relação ao centro do jogador. Aplica-se a todos os ataques deste moveset que usam essa extensão.")]
     public float extendedArmHitboxHeightOffset;
 
-    [Header("Global Cancel Rules")]
     [Tooltip("Regras de cancelamento compartilhadas por todos os ataques leves deste moveset.")]
     public List<PlayerAttackCancelRule> lightCancelRules = CreateLightCancelRules();
     [Tooltip("Regras de cancelamento compartilhadas por todos os ataques pesados deste moveset.")]
@@ -161,27 +155,15 @@ public sealed class PlayerMovesetDefinition : ScriptableObject
 
     public static PlayerMoveTransition FindTransition(
         List<PlayerMoveTransition> transitions, PlayerAttackInput input,
-        bool requiresHeldInput, bool isPauseInput)
+        bool requiresHeldInput)
     {
         if (transitions == null)
             return null;
-
-        PlayerMoveTransition normalFallback = null;
         foreach (PlayerMoveTransition transition in transitions)
-        {
-            if (transition == null || transition.input != input ||
-                transition.requiresHeldInput != requiresHeldInput)
-                continue;
-            if (transition.requiresPause == isPauseInput)
+            if (transition != null && transition.input == input &&
+                transition.requiresHeldInput == requiresHeldInput)
                 return transition;
-
-            if (isPauseInput && !transition.requiresPause &&
-                normalFallback == null)
-            {
-                normalFallback = transition;
-            }
-        }
-        return normalFallback;
+        return null;
     }
 
     public List<PlayerAttackCancelRule> GetCancelRules(PlayerAttackKind kind) =>

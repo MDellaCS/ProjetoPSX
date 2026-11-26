@@ -1,20 +1,9 @@
 using UnityEngine;
 
-/// <summary>Gancho de combate (ataque de grapple em inimigo): alcance, assistencia de mira e velocidades.</summary>
+/// <summary>Gancho de combate (ataque de grapple em inimigo): puxao e velocidades.</summary>
 [System.Serializable]
 public sealed class CombatGrappleSettings
 {
-    [Header("Alcance e assistencia de mira")]
-    [Tooltip("Alcance horizontal do cone frontal de assistencia do grapple, em metros, medido a partir do centro do jogador.")]
-    [Min(0f)] public float range = 20f;
-    [Tooltip("Abertura do cone frontal em graus para cada lado da direcao do jogador.")]
-    [Range(0f, 180f)] public float assistAngle = 20f;
-    [Tooltip("Raio horizontal, em metros, da area circular ao redor do jogador que tambem seleciona inimigos para o grapple.")]
-    [Min(0f)] public float assistCircleRadius = 3f;
-    [Tooltip("Altura total, em metros, da area de assistencia do grapple, dividida igualmente acima e abaixo do centro do jogador.")]
-    [Min(0f)] public float assistHeight = 8f;
-    [HideInInspector] public float assistNearAngle = 35f;
-
     [Header("Puxao")]
     [Tooltip("Distancia minima entre as superficies do jogador e do inimigo ao terminar o puxao, em metros.")]
     [Min(0f)] public float pullStopDistance = 1f;
@@ -45,12 +34,12 @@ public sealed class MovementGrappleSettings
 
 /// <summary>
 /// Configuracao global do gancho, separada em Combat (ataque) e Movement
-/// (travessia). Fica em Resources/GrappleSettings; sem o asset usa os padroes.
+/// (travessia). Fica em Resources/Player/GrappleSettings; sem o asset usa os padroes.
 /// </summary>
 [CreateAssetMenu(menuName = "Projeto PSX/Grapple Settings", fileName = "GrappleSettings")]
 public sealed class GrappleSettings : ScriptableObject
 {
-    private const string ResourcePath = "GrappleSettings";
+    private const string ResourcePath = "Player/GrappleSettings";
     private static GrappleSettings instance;
 
     [Tooltip("Gancho de combate: o ataque especial que puxa inimigos (ou puxa o jogador ate eles).")]

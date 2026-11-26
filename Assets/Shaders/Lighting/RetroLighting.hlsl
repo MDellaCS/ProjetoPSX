@@ -15,10 +15,6 @@ float _RetroLightCount;
 
 float4 _RetroAmbientSky;     // rgb linear
 float4 _RetroAmbientGround;  // rgb linear
-float4 _RetroFogColor;       // rgb linear, a = 1 quando a nevoa esta ligada
-float4 _RetroFogParams;      // x inicio, y 1/(fim - inicio), z opacidade maxima, w perfuracao por luz
-float4 _RetroFogCenter;      // xyz origem da nevoa
-float4 _RetroFogHeight;      // x base, y 1/espessura, z ligada
 float4 _RetroLightingGlobal; // x modo forcado + 1 (0 = material), y grade forcada, z niveis de cor, w dither
 
 // 0 = Vertex, 1 = Grid, 2 = Pixel
@@ -123,24 +119,6 @@ half3 RetroLocalLights(float3 positionWS, half3 normalWS)
 {
     half3 unusedSpecular;
     return RetroLocalLights(positionWS, normalWS, half3(0, 0, 1), 0, unusedSpecular);
-}
-
-half RetroFogFactor(float3 positionWS)
-{
-    if (_RetroFogColor.a <= 0.0)
-        return 0.0;
-    float distanceToCenter = distance(positionWS, _RetroFogCenter.xyz);
-    half fog = saturate((distanceToCenter - _RetroFogParams.x) * _RetroFogParams.y);
-    if (_RetroFogHeight.z > 0.5)
-        fog *= 1.0 - saturate((positionWS.y - _RetroFogHeight.x) * _RetroFogHeight.y);
-    return fog * _RetroFogParams.z;
-}
-
-half3 RetroApplyFog(half3 color, half fog, half3 localLight)
-{
-    // Superficies bem iluminadas por luzes locais furam a nevoa (lanterna no nevoeiro).
-    half pierce = saturate(dot(localLight, half3(0.299, 0.587, 0.114)) * _RetroFogParams.w);
-    return lerp(color, _RetroFogColor.rgb, fog * (1.0 - pierce));
 }
 
 // Reducao de cor com dither ordenado 4x4, como a saida de 15/16 bits do PS1/PS2.

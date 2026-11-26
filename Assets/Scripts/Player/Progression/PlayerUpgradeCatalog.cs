@@ -4,7 +4,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Projeto PSX/Progression/Catalog")]
 public sealed class PlayerUpgradeCatalog : ScriptableObject
 {
-    public const string ResourcePath = "PlayerUpgradeCatalog";
+    public const string ResourcePath = "Player/PlayerUpgradeCatalog";
     [Tooltip("Titulo da unica loja compartilhada por todos os terminais.")]
     public string shopTitle = "APRIMORAMENTOS";
     [Tooltip("Atributos disponiveis, na ordem da tela. Adicione ou remova assets para alterar a loja global.")]

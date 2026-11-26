@@ -1,4 +1,5 @@
 using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,6 +10,7 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(PanelRenderer))]
 public class PlayerDebugToolkitHUD : MonoBehaviour
 {
+    private static PlayerDebugToolkitHUD activeDpsHud;
     public static bool IsVisible { get; private set; }
     public static bool IsDebugMenuVisible { get; private set; }
 
@@ -17,11 +19,47 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     {
         IsVisible = false;
         IsDebugMenuVisible = false;
+        activeDpsHud = null;
     }
 
     [Header("References")]
     [SerializeField] private PanelRenderer panelRenderer;
     [SerializeField] private Transform playerTransform;
+
+    [Header("DPS Debug")]
+    [Tooltip("Periodo em segundos usado para calcular a media de dano por segundo.")]
+    [Min(.1f)] [SerializeField] private float dpsWindowSeconds = 1f;
+    [Tooltip("Intervalo em segundos entre pontos sucessivos do grafico de DPS.")]
+    [Min(.05f)] [SerializeField] private float dpsSampleInterval = .25f;
+    [Tooltip("Duracao em segundos do historico exibido no grafico de DPS.")]
+    [Min(1f)] [SerializeField] private float dpsHistorySeconds = 15f;
+
+    [Header("BPM Debug")]
+    [Tooltip("Velocidade inicial das batidas de referencia em tempo de jogo; tambem pode ser alterada no F4.")]
+    [Range(20, 400)] [SerializeField] private int bpm = 120;
+    [Tooltip("Quantidade de batidas mostradas no historico de golpes do jogador.")]
+    [Range(2, 32)] [SerializeField] private int bpmHistoryBeats = 8;
+
+    private readonly Queue<float> bpmAttacks = new();
+    private PlayerAttackController bpmAttackSource;
+    private VisualElement bpmPanel;
+    private VisualElement bpmTimeline;
+    private VisualElement bpmIntervals;
+    private readonly List<Label> bpmIntervalLabels = new();
+    private IntegerField bpmInput;
+    private float bpmOrigin;
+    private bool bpmVisible;
+
+    private struct DpsHit { public float time; public int damage; }
+    private readonly Queue<DpsHit> dpsHits = new();
+    private readonly List<float> dpsSamples = new();
+    private long dpsDamage;
+    private float nextDpsSample;
+    private bool dpsVisible;
+    private VisualElement dpsPanel;
+    private VisualElement dpsGraph;
+    private Label dpsText;
+    private Label dpsRange;
 
     private readonly StringBuilder textBuilder = new StringBuilder();
     private readonly StringBuilder cutsceneTextBuilder = new StringBuilder();
@@ -36,18 +74,28 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private PlayerCurrencyWallet playerCurrency;
     private PlayerCharacterController playerCharacterController;
     private WaterSensor waterSensor;
+    private PlayerLockOn playerLockOn;
 
     private VisualElement rootVisualElement;
     private VisualElement debugPanel;
     private Label debugText;
     private Label waterStateLabel;
+    private VisualElement lockOnStickPanel;
+    private VisualElement lockOnMousePanel;
+    private VisualElement lockOnStickDeadZone;
+    private VisualElement lockOnStickDot;
+    private VisualElement lockOnMouseDot;
+    private Label lockOnStickText;
+    private Label lockOnMouseText;
     private VisualElement cutsceneDebugPanel;
     private Label cutsceneDebugText;
     private VisualElement cutsceneTimelineFill;
     private VisualElement debugMenuPanel;
     private VisualElement heatControls;
     private VisualElement boundButtonRoot;
+    private VisualElement boundGizmoRoot;
     private IntegerField currencyInput;
+    private FloatField debugTimeScaleInput;
     private Label debugActionStatus;
     private Button godModeButton;
     private Button combatOverrideButton;
@@ -57,12 +105,16 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
     private VisualElement debugSubmenu;
     private Label debugSubmenuTitle;
     private ScrollView debugSubmenuList;
+    private ScrollView debugGizmoList;
     private UnityEngine.CursorLockMode cursorLockBeforeDebug;
     private bool cursorVisibleBeforeDebug;
     private bool isVisible;
+    private bool lockOnDebugVisible;
+    private bool debugPanelVisible;
 
     private void Awake()
     {
+        activeDpsHud = this;
         if (panelRenderer == null)
             panelRenderer = GetComponent<PanelRenderer>();
 
@@ -76,6 +128,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (activeDpsHud == this) activeDpsHud = null;
+        if (dpsGraph != null) dpsGraph.generateVisualContent -= DrawDpsGraph;
+        if (bpmTimeline != null) bpmTimeline.generateVisualContent -= DrawBpmTimeline;
+        if (bpmAttackSource != null) bpmAttackSource.AttackActiveStarted -= OnBpmAttackActiveStarted;
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
 
@@ -99,6 +155,10 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (GameInput.DebugMenuPressed)
             SetDebugMenuVisible(!IsDebugMenuVisible);
 
+        UpdateDps();
+        UpdateBpm();
+        UpdateDebugPanelVisibility();
+
         if ((!isVisible && !IsDebugMenuVisible) || debugText == null)
             return;
 
@@ -106,7 +166,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
             movesetController == null)
             ResolvePlayerComponents();
 
-        UpdateDebugText();
+        if (debugPanelVisible) UpdateDebugText();
         UpdateDebugActionLabels();
         UpdateCutsceneDebug();
     }
@@ -119,16 +179,44 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (rootVisualElement == null)
             return;
 
+        if (dpsGraph != null) dpsGraph.generateVisualContent -= DrawDpsGraph;
+        if (bpmTimeline != null) bpmTimeline.generateVisualContent -= DrawBpmTimeline;
         this.rootVisualElement = rootVisualElement;
+        bpmPanel = rootVisualElement.Q<VisualElement>("debug-bpm-panel");
+        bpmTimeline = rootVisualElement.Q<VisualElement>("debug-bpm-timeline");
+        bpmIntervals = rootVisualElement.Q<VisualElement>("debug-bpm-intervals");
+        bpmIntervalLabels.Clear();
+        bpmIntervals?.Clear();
+        bpmInput = rootVisualElement.Q<IntegerField>("debug-bpm-input");
+        if (bpmInput != null) bpmInput.SetValueWithoutNotify(Mathf.Clamp(bpm, 20, 400));
+        if (bpmTimeline != null) bpmTimeline.generateVisualContent += DrawBpmTimeline;
+        bpmVisible = false;
+        dpsPanel = rootVisualElement.Q<VisualElement>("debug-dps-panel");
+        dpsGraph = rootVisualElement.Q<VisualElement>("debug-dps-graph");
+        dpsText = rootVisualElement.Q<Label>("debug-dps-text");
+        dpsRange = rootVisualElement.Q<Label>("debug-dps-range");
+        if (dpsGraph != null) dpsGraph.generateVisualContent += DrawDpsGraph;
+        dpsVisible = false;
         debugPanel = rootVisualElement.Q<VisualElement>("debug-panel");
+        debugPanelVisible = false;
+        if (debugPanel != null) debugPanel.style.display = DisplayStyle.None;
         debugText = rootVisualElement.Q<Label>("debug-text");
         waterStateLabel = rootVisualElement.Q<Label>("water-state-label");
+        lockOnStickPanel = rootVisualElement.Q<VisualElement>("lockon-debug-stick");
+        lockOnMousePanel = rootVisualElement.Q<VisualElement>("lockon-debug-mouse");
+        lockOnStickDeadZone = rootVisualElement.Q<VisualElement>("lockon-stick-deadzone");
+        lockOnStickDot = rootVisualElement.Q<VisualElement>("lockon-stick-dot");
+        lockOnMouseDot = rootVisualElement.Q<VisualElement>("lockon-mouse-dot");
+        lockOnStickText = rootVisualElement.Q<Label>("lockon-stick-text");
+        lockOnMouseText = rootVisualElement.Q<Label>("lockon-mouse-text");
+        lockOnDebugVisible = false;
         cutsceneDebugPanel = rootVisualElement.Q<VisualElement>("cutscene-debug-panel");
         cutsceneDebugText = rootVisualElement.Q<Label>("cutscene-debug-text");
         cutsceneTimelineFill = rootVisualElement.Q<VisualElement>("cutscene-timeline-fill");
         debugMenuPanel = rootVisualElement.Q<VisualElement>("debug-menu-panel");
         heatControls = rootVisualElement.Q<VisualElement>("heat-controls");
         currencyInput = rootVisualElement.Q<IntegerField>("currency-input");
+        debugTimeScaleInput = rootVisualElement.Q<FloatField>("debug-time-scale-input");
         debugActionStatus = rootVisualElement.Q<Label>("debug-action-status");
         godModeButton = rootVisualElement.Q<Button>("god-mode-button");
         combatOverrideButton = rootVisualElement.Q<Button>("combat-override-button");
@@ -137,7 +225,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         debugSubmenu = rootVisualElement.Q<VisualElement>("debug-submenu");
         debugSubmenuTitle = rootVisualElement.Q<Label>("debug-submenu-title");
         debugSubmenuList = rootVisualElement.Q<ScrollView>("debug-submenu-list");
+        debugGizmoList = rootVisualElement.Q<ScrollView>("debug-gizmo-list");
         BindDebugButtons(rootVisualElement);
+        BindGizmoCallbacks();
 
 
         SetHudVisible(isVisible);
@@ -148,6 +238,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdateLockOnDebug();
         if (waterStateLabel == null)
             return;
 
@@ -217,10 +308,17 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         playerHealth = playerTransform.GetComponent<PlayerHealth>();
         combatStatus = playerTransform.GetComponent<PlayerCombatStatus>();
         attackController = playerTransform.GetComponent<PlayerAttackController>();
+        if (bpmAttackSource != attackController)
+        {
+            if (bpmAttackSource != null) bpmAttackSource.AttackActiveStarted -= OnBpmAttackActiveStarted;
+            bpmAttackSource = attackController;
+            if (bpmAttackSource != null) bpmAttackSource.AttackActiveStarted += OnBpmAttackActiveStarted;
+        }
         movesetController = playerTransform.GetComponent<PlayerMovesetController>();
         playerCurrency = playerTransform.GetComponent<PlayerCurrencyWallet>();
         playerCharacterController = playerTransform.GetComponent<PlayerCharacterController>();
         waterSensor = playerTransform.GetComponent<WaterSensor>();
+        playerLockOn = playerTransform.GetComponent<PlayerLockOn>();
     }
 
     private bool HasPlayerComponents()
@@ -238,10 +336,264 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         isVisible = value;
         IsVisible = value;
 
-        if (debugPanel != null)
-            debugPanel.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
+        UpdateDebugPanelVisibility();
         if (cutsceneDebugPanel != null)
             cutsceneDebugPanel.style.display = DisplayStyle.None;
+        if (!value) SetLockOnDebugVisible(false);
+        UpdateDps();
+        UpdateBpm();
+    }
+
+    // Ferramenta temporaria de debug: registra apenas dano efetivo causado pelo jogador.
+    public static void RecordPlayerDamage(int damage)
+    {
+        if (!Debug.isDebugBuild || !IsVisible || damage <= 0 || activeDpsHud == null ||
+            !DebugGizmoSettings.Selected(DebugGizmoGroup.PlayerDps)) return;
+        activeDpsHud.dpsHits.Enqueue(new DpsHit { time = Time.time, damage = damage });
+        activeDpsHud.dpsDamage += damage;
+    }
+
+    private void UpdateDps()
+    {
+        bool visible = Debug.isDebugBuild && isVisible &&
+            DebugGizmoSettings.Selected(DebugGizmoGroup.PlayerDps);
+        if (dpsPanel != null && visible != dpsVisible)
+            dpsPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        if (!visible)
+        {
+            if (dpsVisible || dpsHits.Count != 0 || dpsSamples.Count != 0)
+            {
+                dpsHits.Clear();
+                dpsSamples.Clear();
+                dpsDamage = 0;
+                nextDpsSample = 0f;
+            }
+            dpsVisible = false;
+            return;
+        }
+        dpsVisible = true;
+        float now = Time.time;
+        float window = Mathf.Max(.1f, dpsWindowSeconds);
+        while (dpsHits.Count > 0 && dpsHits.Peek().time <= now - window)
+            dpsDamage -= dpsHits.Dequeue().damage;
+        if (now < nextDpsSample) return;
+        float interval = Mathf.Max(.05f, dpsSampleInterval);
+        float history = Mathf.Max(1f, dpsHistorySeconds);
+        nextDpsSample = now + interval;
+        float dps = dpsDamage / window;
+        dpsSamples.Add(dps);
+        int capacity = Mathf.Clamp(Mathf.CeilToInt(history / interval) + 1, 2, 1201);
+        if (dpsSamples.Count > capacity) dpsSamples.RemoveRange(0, dpsSamples.Count - capacity);
+        if (dpsText != null) dpsText.text = $"DPS: {dps:0.0}  |  janela: {window:0.0}s";
+        float peak = 1f;
+        for (int i = 0; i < dpsSamples.Count; i++) peak = Mathf.Max(peak, dpsSamples[i]);
+        if (dpsRange != null) dpsRange.text = $"Escala: 0 - {peak:0.0} DPS  |  {Mathf.Min(history, (capacity - 1) * interval):0.0}s (tempo de jogo)";
+        dpsGraph?.MarkDirtyRepaint();
+    }
+
+    private void DrawDpsGraph(MeshGenerationContext context)
+    {
+        if (dpsSamples.Count < 2 || dpsGraph == null) return;
+        Rect rect = dpsGraph.contentRect;
+        if (rect.width <= 0f || rect.height <= 0f) return;
+        float peak = 1f;
+        for (int i = 0; i < dpsSamples.Count; i++) peak = Mathf.Max(peak, dpsSamples[i]);
+        float interval = Mathf.Max(.05f, dpsSampleInterval);
+        int capacity = Mathf.Clamp(Mathf.CeilToInt(Mathf.Max(1f, dpsHistorySeconds) / interval) + 1, 2, 1201);
+        var painter = context.painter2D;
+        painter.strokeColor = new Color(.4f, 1f, .65f);
+        painter.lineWidth = 2f;
+        painter.BeginPath();
+        for (int i = 0; i < dpsSamples.Count; i++)
+        {
+            float x = rect.xMax - (dpsSamples.Count - 1 - i) * rect.width / (capacity - 1);
+            float y = rect.yMax - Mathf.Clamp01(dpsSamples[i] / peak) * (rect.height - 3f);
+            if (i == 0) painter.MoveTo(new Vector2(x, y));
+            else painter.LineTo(new Vector2(x, y));
+        }
+        painter.Stroke();
+    }
+
+    private void OnBpmAttackActiveStarted(PlayerAttackRuntime attack)
+    {
+        if (!Debug.isDebugBuild || !isVisible ||
+            !DebugGizmoSettings.Selected(DebugGizmoGroup.PlayerAttackBpm)) return;
+        bpmAttacks.Enqueue(Time.time);
+    }
+
+    private void UpdateBpm()
+    {
+        bool visible = Debug.isDebugBuild && isVisible &&
+            DebugGizmoSettings.Selected(DebugGizmoGroup.PlayerAttackBpm);
+        if (bpmPanel != null && visible != bpmVisible)
+            bpmPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        if (!visible)
+        {
+            if (bpmVisible || bpmAttacks.Count > 0) bpmAttacks.Clear();
+            foreach (Label label in bpmIntervalLabels)
+                label.style.display = DisplayStyle.None;
+            bpmVisible = false;
+            return;
+        }
+        if (!bpmVisible) bpmOrigin = Time.time;
+        bpmVisible = true;
+        int beats = Mathf.Clamp(bpmHistoryBeats, 2, 32);
+        float interval = 60f / Mathf.Clamp(bpm, 20, 400);
+        float now = Time.time;
+        while (bpmAttacks.Count > 0 && bpmAttacks.Peek() < now - beats * interval)
+            bpmAttacks.Dequeue();
+        UpdateBpmIntervalLabels(now, beats * interval);
+        bpmTimeline?.MarkDirtyRepaint();
+    }
+
+    private void UpdateBpmIntervalLabels(float now, float duration)
+    {
+        if (bpmIntervals == null || bpmTimeline == null) return;
+        float width = bpmTimeline.contentRect.width;
+        if (width <= 0f) return;
+        float previous = 0f;
+        bool hasPrevious = false;
+        int count = 0;
+        foreach (float timestamp in bpmAttacks)
+        {
+            if (hasPrevious)
+            {
+                if (count == bpmIntervalLabels.Count)
+                {
+                    Label label = new();
+                    label.AddToClassList("debug-bpm-interval");
+                    label.pickingMode = PickingMode.Ignore;
+                    bpmIntervals.Add(label);
+                    bpmIntervalLabels.Add(label);
+                }
+                Label intervalLabel = bpmIntervalLabels[count];
+                int milliseconds = Mathf.RoundToInt((timestamp - previous) * 1000f);
+                if (!(intervalLabel.userData is int oldValue) || oldValue != milliseconds)
+                {
+                    intervalLabel.text = $"{milliseconds} ms";
+                    intervalLabel.userData = milliseconds;
+                }
+                float midpoint = (previous + timestamp) * .5f;
+                intervalLabel.style.left = width * (1f - (now - midpoint) / duration);
+                intervalLabel.style.top = 8f + (count % 3) * 27f;
+                intervalLabel.style.display = DisplayStyle.Flex;
+                count++;
+            }
+            previous = timestamp;
+            hasPrevious = true;
+        }
+        for (int i = count; i < bpmIntervalLabels.Count; i++)
+            bpmIntervalLabels[i].style.display = DisplayStyle.None;
+    }
+
+    private void DrawBpmTimeline(MeshGenerationContext context)
+    {
+        if (!bpmVisible || bpmTimeline == null) return;
+        Rect rect = bpmTimeline.contentRect;
+        if (rect.width <= 0f || rect.height <= 0f) return;
+        float now = Time.time;
+        float interval = 60f / Mathf.Clamp(bpm, 20, 400);
+        float duration = Mathf.Clamp(bpmHistoryBeats, 2, 32) * interval;
+        float elapsed = Mathf.Max(0f, now - bpmOrigin);
+        float sinceBeat = elapsed % interval;
+        var painter = context.painter2D;
+        painter.lineWidth = 1f;
+        painter.strokeColor = new Color(.35f, .7f, 1f, .8f);
+        painter.BeginPath();
+        for (float age = sinceBeat; age <= duration && age <= elapsed; age += interval)
+        {
+            float x = rect.xMax - age / duration * rect.width;
+            painter.MoveTo(new Vector2(x, rect.yMin + 4f));
+            painter.LineTo(new Vector2(x, rect.yMax - 4f));
+        }
+        painter.Stroke();
+        painter.lineWidth = 3f;
+        painter.strokeColor = new Color(1f, .8f, .2f);
+        painter.BeginPath();
+        foreach (float timestamp in bpmAttacks)
+        {
+            float age = now - timestamp;
+            if (age < 0f || age > duration) continue;
+            float x = rect.xMax - age / duration * rect.width;
+            painter.MoveTo(new Vector2(x, rect.yMin + 8f));
+            painter.LineTo(new Vector2(x, rect.yMax - 8f));
+        }
+        painter.Stroke();
+    }
+
+    private void ApplyDebugBpm()
+    {
+        if (!Debug.isDebugBuild || bpmInput == null) return;
+        int value = bpmInput.value;
+        if (value < 20 || value > 400)
+        {
+            SetActionStatus("BPM must be between 20 and 400.");
+            return;
+        }
+        bpm = value;
+        bpmOrigin = Time.time;
+        SetActionStatus($"BPM set to {bpm}.");
+    }
+
+    private void UpdateDebugPanelVisibility()
+    {
+        bool visible = isVisible && DebugGizmoSettings.Selected(DebugGizmoGroup.DebugHud);
+        if (debugPanelVisible == visible) return;
+        debugPanelVisible = visible;
+        if (debugPanel != null)
+            debugPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    private void SetLockOnDebugVisible(bool visible)
+    {
+        if (lockOnDebugVisible == visible) return;
+        lockOnDebugVisible = visible;
+        if (lockOnStickPanel != null)
+            lockOnStickPanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        if (lockOnMousePanel != null)
+            lockOnMousePanel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        debugPanel?.EnableInClassList("lockon-debug-shifted", visible);
+    }
+
+    private void UpdateLockOnDebug()
+    {
+        if (!isVisible) return;
+        if (!DebugGizmoSettings.Enabled(DebugGizmoGroup.PlayerLockOn))
+        {
+            SetLockOnDebugVisible(false);
+            return;
+        }
+        if (playerLockOn == null && playerMovement != null)
+            playerLockOn = playerMovement.LockOn;
+        if (playerLockOn == null || playerLockOn.Target == null ||
+            lockOnStickDot == null || lockOnMouseDot == null ||
+            lockOnStickDeadZone == null || lockOnStickText == null || lockOnMouseText == null)
+        {
+            SetLockOnDebugVisible(false);
+            return;
+        }
+
+        SetLockOnDebugVisible(true);
+        const float radius = 46f;
+        const float dotRadius = 4f;
+        float deadZone = playerLockOn.StickSwitchDeadZone;
+        float diameter = deadZone * radius * 2f;
+        lockOnStickDeadZone.style.width = diameter;
+        lockOnStickDeadZone.style.height = diameter;
+        lockOnStickDeadZone.style.left = radius - diameter * .5f;
+        lockOnStickDeadZone.style.top = radius - diameter * .5f;
+
+        Vector2 stick = Vector2.ClampMagnitude(playerLockOn.StickSwitchInput, 1f);
+        Vector2 mouse = playerLockOn.MouseSwitchProgress;
+        Vector2 mousePosition = Vector2.ClampMagnitude(mouse / playerLockOn.MouseSwitchThreshold, 1f);
+        lockOnStickDot.style.left = radius + stick.x * radius - dotRadius;
+        lockOnStickDot.style.top = radius - stick.y * radius - dotRadius;
+        lockOnMouseDot.style.left = radius + mousePosition.x * radius - dotRadius;
+        lockOnMouseDot.style.top = radius - mousePosition.y * radius - dotRadius;
+        lockOnStickText.text = $"Entrada: {stick.magnitude:0.00} / Zona: {deadZone:0.00}";
+        lockOnMouseText.text = $"{mouse.magnitude:0.0} / {playerLockOn.MouseSwitchThreshold:0.0} px\n" +
+            (playerLockOn.SwitchOnCooldown ? "Intervalo de troca" :
+                $"Prazo: {playerLockOn.MouseProgressTimeRemaining:0.00} s");
     }
 
     private void SetDebugMenuVisible(bool value)
@@ -282,9 +634,12 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         BindButton(root, "combat-override-button", CycleCombatOverride);
         BindButton(root, "kill-player-button", KillPlayer);
         BindButton(root, "slow-motion-button", ToggleSlowMotion);
+        BindButton(root, "debug-time-scale-apply", ApplyDebugTimeScale);
+        BindButton(root, "debug-bpm-apply", ApplyDebugBpm);
         BindButton(root, "next-moveset-button", CycleMoveset);
         BindButton(root, "select-scene-button", OpenSceneSelector);
         BindButton(root, "select-gizmos-button", OpenGizmoSelector);
+        BindButton(root, "select-camera-profile-button", OpenCameraProfileSelector);
         BindButton(root, "environment-previous-button", () => CycleEnvironment(-1));
         BindButton(root, "environment-next-button", () => CycleEnvironment(1));
         BindButton(root, "reload-scene-button", ReloadScene);
@@ -314,6 +669,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         debugSubmenu.style.display = DisplayStyle.Flex;
         debugSubmenuTitle.text = title;
         debugSubmenuList.Clear();
+        debugSubmenuList.style.display = DisplayStyle.Flex;
+        if (debugGizmoList != null) debugGizmoList.style.display = DisplayStyle.None;
+        debugSubmenu.RemoveFromClassList("debug-gizmo-submenu");
         return true;
     }
 
@@ -333,18 +691,115 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         }
     }
 
+    private void OpenCameraProfileSelector()
+    {
+        if (!OpenSubmenu("CAMERA PROFILE")) return;
+        CameraFollow cameraFollow = CameraFollow.Instance;
+        if (cameraFollow == null)
+        {
+            debugSubmenuList.Add(new Label("Camera indisponivel."));
+            return;
+        }
+        if (cameraFollow.IsCameraZoneActive)
+            debugSubmenuList.Add(new Label("Uma zona de camera esta ativa e pode substituir o perfil selecionado."));
+        var sceneButton = new Button(() =>
+        {
+            cameraFollow.DebugSetProfile(null, false);
+            SetDebugMenuVisible(false);
+        }) { text = cameraFollow.IsDebugProfileOverride ? "SCENE DEFAULT" : "SCENE DEFAULT [ACTIVE]" };
+        debugSubmenuList.Add(sceneButton);
+        CameraFollowProfile[] profiles = Resources.LoadAll<CameraFollowProfile>("CameraFollowProfiles");
+        System.Array.Sort(profiles, (a, b) => string.Compare(a.name, b.name, System.StringComparison.OrdinalIgnoreCase));
+        foreach (CameraFollowProfile profile in profiles)
+        {
+            CameraFollowProfile selected = profile;
+            var button = new Button(() =>
+            {
+                cameraFollow.DebugSetProfile(selected, true);
+                SetDebugMenuVisible(false);
+            }) { text = profile.name + (cameraFollow.IsDebugProfileOverride && cameraFollow.ActiveProfile == profile ? " [ACTIVE]" : "") };
+            debugSubmenuList.Add(button);
+        }
+    }
+
     private void OpenGizmoSelector()
     {
-        if (!OpenSubmenu("F3 GIZMOS")) return;
-        string[] labels = { "Interaction areas and ladders", "Lights", "Camera zones", "Water", "World objects and triggers", "Enemy encounters", "Player spawn points", "Player combat", "Enemy combat and detection", "Swing anchors and rope", "Flying puppet" };
-        foreach (DebugGizmoGroup group in System.Enum.GetValues(typeof(DebugGizmoGroup)))
-        {
-            DebugGizmoGroup selected = group;
-            var toggle = new Toggle(labels[(int)group]);
-            toggle.SetValueWithoutNotify(DebugGizmoSettings.Selected(group));
-            toggle.RegisterValueChangedCallback(evt => DebugGizmoSettings.Set(selected, evt.newValue));
-            debugSubmenuList.Add(toggle);
-        }
+        if (debugGizmoList == null || !OpenSubmenu("F3 GIZMOS")) return;
+        debugSubmenu.AddToClassList("debug-gizmo-submenu");
+        debugSubmenuList.style.display = DisplayStyle.None;
+        debugGizmoList.style.display = DisplayStyle.Flex;
+        BindGizmoToggle("gizmo-debug-hud", DebugGizmoGroup.DebugHud);
+        BindGizmoToggle("gizmo-enemy-aggression", DebugGizmoGroup.EnemyAggression);
+        BindGizmoToggle("gizmo-player-current-attack", DebugGizmoGroup.PlayerCurrentAttack);
+        BindGizmoToggle("gizmo-player-bpm", DebugGizmoGroup.PlayerAttackBpm);
+        BindGizmoToggle("gizmo-player-dps", DebugGizmoGroup.PlayerDps);
+        BindGizmoToggle("gizmo-damage-numbers", DebugGizmoGroup.DamageNumbers);
+        BindGizmoToggle("gizmo-player-hitboxes", DebugGizmoGroup.PlayerHitboxes);
+        BindGizmoToggle("gizmo-enemy-hitboxes", DebugGizmoGroup.EnemyHitboxes);
+        BindGizmoToggle("gizmo-player-lockon", DebugGizmoGroup.PlayerLockOn);
+        BindGizmoToggle("gizmo-enemy-distance", DebugGizmoGroup.EnemyDistance);
+        BindGizmoToggle("gizmo-puppet-bones", DebugGizmoGroup.FlyingPuppetBones);
+        BindGizmoToggle("gizmo-puppet-landing", DebugGizmoGroup.FlyingPuppetLanding);
+        BindGizmoToggle("gizmo-interaction", DebugGizmoGroup.Interaction);
+        BindGizmoToggle("gizmo-swing-anchors", DebugGizmoGroup.SwingAnchors);
+        BindGizmoToggle("gizmo-swing-rope", DebugGizmoGroup.SwingRope);
+        BindGizmoToggle("gizmo-encounter-triggers", DebugGizmoGroup.EncounterTriggers);
+        BindGizmoToggle("gizmo-encounter-spawns", DebugGizmoGroup.EncounterSpawnAreas);
+        BindGizmoToggle("gizmo-player-spawns", DebugGizmoGroup.Spawns);
+        BindGizmoToggle("gizmo-world-objects", DebugGizmoGroup.WorldObjects);
+        BindGizmoToggle("gizmo-world-levers", DebugGizmoGroup.WorldLevers);
+        BindGizmoToggle("gizmo-world-checkpoints", DebugGizmoGroup.WorldCheckpoints);
+        BindGizmoToggle("gizmo-world-titles", DebugGizmoGroup.WorldAreaTitles);
+        BindGizmoToggle("gizmo-world-prompts", DebugGizmoGroup.WorldPrompts);
+        BindGizmoToggle("gizmo-camera-zones", DebugGizmoGroup.Camera);
+        BindGizmoToggle("gizmo-lights", DebugGizmoGroup.Lights);
+        BindGizmoToggle("gizmo-water", DebugGizmoGroup.Water);
+    }
+
+    private void BindGizmoCallbacks()
+    {
+        if (debugGizmoList == null || boundGizmoRoot == debugGizmoList) return;
+        boundGizmoRoot = debugGizmoList;
+        RegisterGizmoToggle("gizmo-debug-hud", DebugGizmoGroup.DebugHud);
+        RegisterGizmoToggle("gizmo-enemy-aggression", DebugGizmoGroup.EnemyAggression);
+        RegisterGizmoToggle("gizmo-player-current-attack", DebugGizmoGroup.PlayerCurrentAttack);
+        RegisterGizmoToggle("gizmo-player-bpm", DebugGizmoGroup.PlayerAttackBpm);
+        RegisterGizmoToggle("gizmo-player-dps", DebugGizmoGroup.PlayerDps);
+        RegisterGizmoToggle("gizmo-damage-numbers", DebugGizmoGroup.DamageNumbers);
+        RegisterGizmoToggle("gizmo-player-hitboxes", DebugGizmoGroup.PlayerHitboxes);
+        RegisterGizmoToggle("gizmo-enemy-hitboxes", DebugGizmoGroup.EnemyHitboxes);
+        RegisterGizmoToggle("gizmo-player-lockon", DebugGizmoGroup.PlayerLockOn);
+        RegisterGizmoToggle("gizmo-enemy-distance", DebugGizmoGroup.EnemyDistance);
+        RegisterGizmoToggle("gizmo-puppet-bones", DebugGizmoGroup.FlyingPuppetBones);
+        RegisterGizmoToggle("gizmo-puppet-landing", DebugGizmoGroup.FlyingPuppetLanding);
+        RegisterGizmoToggle("gizmo-interaction", DebugGizmoGroup.Interaction);
+        RegisterGizmoToggle("gizmo-swing-anchors", DebugGizmoGroup.SwingAnchors);
+        RegisterGizmoToggle("gizmo-swing-rope", DebugGizmoGroup.SwingRope);
+        RegisterGizmoToggle("gizmo-encounter-triggers", DebugGizmoGroup.EncounterTriggers);
+        RegisterGizmoToggle("gizmo-encounter-spawns", DebugGizmoGroup.EncounterSpawnAreas);
+        RegisterGizmoToggle("gizmo-player-spawns", DebugGizmoGroup.Spawns);
+        RegisterGizmoToggle("gizmo-world-objects", DebugGizmoGroup.WorldObjects);
+        RegisterGizmoToggle("gizmo-world-levers", DebugGizmoGroup.WorldLevers);
+        RegisterGizmoToggle("gizmo-world-checkpoints", DebugGizmoGroup.WorldCheckpoints);
+        RegisterGizmoToggle("gizmo-world-titles", DebugGizmoGroup.WorldAreaTitles);
+        RegisterGizmoToggle("gizmo-world-prompts", DebugGizmoGroup.WorldPrompts);
+        RegisterGizmoToggle("gizmo-camera-zones", DebugGizmoGroup.Camera);
+        RegisterGizmoToggle("gizmo-lights", DebugGizmoGroup.Lights);
+        RegisterGizmoToggle("gizmo-water", DebugGizmoGroup.Water);
+    }
+
+    private void RegisterGizmoToggle(string name, DebugGizmoGroup group)
+    {
+        Toggle toggle = debugGizmoList.Q<Toggle>(name);
+        if (toggle != null)
+            toggle.RegisterValueChangedCallback(evt => DebugGizmoSettings.Set(group, evt.newValue));
+    }
+
+    private void BindGizmoToggle(string name, DebugGizmoGroup group)
+    {
+        Toggle toggle = debugGizmoList.Q<Toggle>(name);
+        if (toggle == null) return;
+        toggle.SetValueWithoutNotify(DebugGizmoSettings.Selected(group));
     }
 
     private void OpenLevelEditor()
@@ -354,7 +809,7 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         if (playerTransform == null) return;
         PlayerProgression progression = PlayerProgression.GetOrAdd(playerTransform.gameObject);
         progression.Initialize();
-        VisualTreeAsset rowTemplate = Resources.Load<VisualTreeAsset>("DebugLevelRow");
+        VisualTreeAsset rowTemplate = Resources.Load<VisualTreeAsset>("Debug/DebugLevelRow");
         if (progression.Catalog == null || progression.Catalog.attributes == null || rowTemplate == null)
         {
             SetActionStatus("Level editor unavailable.");
@@ -436,6 +891,24 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
         UpdateDebugActionLabels();
     }
 
+    private void ApplyDebugTimeScale()
+    {
+        if (!Debug.isDebugBuild || debugTimeScaleInput == null) return;
+        float value = debugTimeScaleInput.value;
+        if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
+        {
+            SetActionStatus("Game time must be a finite value of zero or greater.");
+            return;
+        }
+        if (!GameDebugTimeScale.SetScale(value))
+        {
+            SetActionStatus("Resume the game before changing game time.");
+            return;
+        }
+        SetActionStatus($"Game time set to {value:0.###}x.");
+        UpdateDebugActionLabels();
+    }
+
     private void CycleMoveset()
     {
         if (!Debug.isDebugBuild || movesetController == null) return;
@@ -498,8 +971,9 @@ public class PlayerDebugToolkitHUD : MonoBehaviour
                 (combatStatus == null || !combatStatus.IsCombatStateForced
                     ? "NEUTRAL" : combatStatus.IsForcedInCombat ? "FORCE IN" : "FORCE OUT");
         if (slowMotionButton != null)
-            slowMotionButton.text = "SLOW MOTION: " +
-                (GameDebugTimeScale.IsSlowMotion ? "ON" : "OFF");
+            slowMotionButton.text = GameDebugTimeScale.IsSlowMotion
+                ? $"RESET GAME TIME ({GameDebugTimeScale.CurrentScale:0.###}x)"
+                : "SLOW MOTION: OFF";
         if (resetSaveButton != null && Time.unscaledTime > resetConfirmationExpiresAt)
             resetSaveButton.text = "RESET GAME SAVE";
     }

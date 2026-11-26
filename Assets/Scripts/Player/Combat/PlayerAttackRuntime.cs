@@ -15,15 +15,11 @@ public sealed class PlayerAttackRuntime
     public readonly float ExtendedArmHitboxRadius;
     public readonly float ExtendedArmHitboxHeightOffset;
     public readonly bool IsGrappleAttack;
-    public readonly EnemyBase AssistTarget;
-    public readonly Vector3 AssistTargetPosition;
-    public readonly bool HasAssistTarget;
     public bool HitConfirmed;
 
     public PlayerAttackRuntime(PlayerAttackDefinition definition, PlayerHeat heat,
         float windupActiveRotationSpeed, float extendedArmHitboxRadius,
-        float extendedArmHitboxHeightOffset, bool isGrappleAttack = false,
-        EnemyBase assistTarget = null, Vector3 assistTargetPosition = default)
+        float extendedArmHitboxHeightOffset, bool isGrappleAttack = false)
     {
         Definition = definition;
         int damage = CombatUnitSettings.PlayerDamage(definition.baseDamage);
@@ -49,15 +45,8 @@ public sealed class PlayerAttackRuntime
         HeatConsumed = consumed;
         WindupActiveRotationSpeed = Mathf.Max(0f,
             windupActiveRotationSpeed);
-        ExtendedArmHitboxRadius = definition.usesExtendedArmHitbox
-            ? Mathf.Max(.01f, extendedArmHitboxRadius)
-            : 0f;
-        ExtendedArmHitboxHeightOffset = definition.usesExtendedArmHitbox
-            ? extendedArmHitboxHeightOffset
-            : 0f;
+        ExtendedArmHitboxRadius = Mathf.Max(.01f, extendedArmHitboxRadius);
+        ExtendedArmHitboxHeightOffset = extendedArmHitboxHeightOffset;
         IsGrappleAttack = isGrappleAttack;
-        AssistTarget = assistTarget;
-        AssistTargetPosition = assistTargetPosition;
-        HasAssistTarget = assistTarget != null;
     }
 }

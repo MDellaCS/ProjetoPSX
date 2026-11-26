@@ -2,43 +2,19 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-[CustomPropertyDrawer(typeof(PlayerAttackStrikeDefinition))]
-public sealed class PlayerAttackStrikeDefinitionDrawer : EditorPropertyDrawerBase
-{
-    protected override string GetFoldoutTitle(SerializedProperty property,
-        GUIContent label)
-    {
-        SerializedProperty name = property.FindPropertyRelative("strikeName");
-        return string.IsNullOrWhiteSpace(name.stringValue)
-            ? label.text : name.stringValue;
-    }
-
-    protected override IEnumerable<string> GetVisibleProperties(
-        SerializedProperty property)
-    {
-        yield return "strikeName";
-        yield return "activeStartNormalized";
-        yield return "activeEndNormalized";
-        yield return "damageMultiplier";
-        yield return "poiseMultiplier";
-        yield return "damageFalloff";
-        yield return "generatesHeatOnHit";
-        yield return "effects";
-        yield return "hitboxes";
-    }
-}
-
 [CustomPropertyDrawer(typeof(PlayerHitboxTrackDefinition))]
 public sealed class PlayerHitboxTrackDefinitionDrawer : EditorPropertyDrawerBase
 {
     protected override string GetFoldoutTitle(SerializedProperty property,
         GUIContent label)
     {
-        SerializedProperty name = property.FindPropertyRelative("trackName");
+        SerializedProperty attackId = property.serializedObject.FindProperty("attackId");
         SerializedProperty shape = property.FindPropertyRelative("shape");
         string shapeName = shape.hasMultipleDifferentValues
             ? "Varia" : shape.enumDisplayNames[shape.enumValueIndex];
-        return $"{(string.IsNullOrWhiteSpace(name.stringValue) ? label.text : name.stringValue)} ({shapeName})";
+        string id = attackId != null && !string.IsNullOrWhiteSpace(attackId.stringValue)
+            ? attackId.stringValue : "Attack";
+        return $"{id} - {label.text} ({shapeName})";
     }
 
     protected override IEnumerable<string> GetVisibleProperties(
@@ -52,15 +28,13 @@ public sealed class PlayerHitboxTrackDefinitionDrawer : EditorPropertyDrawerBase
         bool orbit = !followsAnchors && trajectoryMode.enumValueIndex ==
             (int)PlayerHitboxTrajectoryMode.Orbit;
 
-        yield return "trackName";
         yield return "shape";
         yield return "anchorMode";
 
         if (followsAnchors)
         {
             yield return "primaryAnchorId";
-            if (shape.enumValueIndex == (int)PlayerHitboxShape.Capsule)
-                yield return "secondaryAnchorId";
+            yield return "secondaryAnchorId";
         }
         else
         {
@@ -91,7 +65,7 @@ public sealed class PlayerHitboxTrackDefinitionDrawer : EditorPropertyDrawerBase
             }
         }
 
-        if (shape.enumValueIndex != (int)PlayerHitboxShape.Box)
+        if (shape.enumValueIndex != (int)PlayerHitboxShape.Box && !orbit)
             yield return "radius";
         if (shape.enumValueIndex == (int)PlayerHitboxShape.Capsule)
         {
@@ -103,9 +77,9 @@ public sealed class PlayerHitboxTrackDefinitionDrawer : EditorPropertyDrawerBase
 
         yield return "activeStartNormalized";
         yield return "activeEndNormalized";
-        yield return "sweep";
-        if (property.FindPropertyRelative("sweep").boolValue)
-            yield return "sweepStepDistance";
+        yield return "trajectoryRepeats";
+        if (!followsAnchors && property.FindPropertyRelative("trajectoryRepeats").intValue > 0)
+            yield return "alternateRepeatSide";
         yield return "hitGroup";
         yield return "allowRepeatHits";
         if (property.FindPropertyRelative("allowRepeatHits").boolValue)
@@ -120,7 +94,7 @@ public sealed class PlayerAttackMovementDefinitionDrawer : EditorPropertyDrawerB
         SerializedProperty property)
     {
         yield return "forwardDistance";
-        if (property.FindPropertyRelative("forwardDistance").floatValue <= 0f)
+        if (property.FindPropertyRelative("forwardDistance").floatValue == 0f)
             yield break;
 
         yield return "startNormalized";

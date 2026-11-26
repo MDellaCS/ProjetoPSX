@@ -54,7 +54,12 @@ public static class InteractionGizmos
     }
 }
 
-public enum DebugGizmoGroup { Interaction, Lights, Camera, Water, World, Encounters, Spawns, PlayerCombat, EnemyCombat, Swing, FlyingPuppet }
+public enum DebugGizmoGroup { Interaction, Lights, Camera, Water, World, Encounters, Spawns, PlayerCombat, EnemyCombat, Swing, FlyingPuppet,
+    PlayerHitboxes, PlayerLockOn, EnemyHitboxes, EnemyDistance,
+    WorldObjects, WorldLevers, WorldCheckpoints, WorldAreaTitles, WorldPrompts,
+    EncounterTriggers, EncounterSpawnAreas, SwingAnchors, SwingRope,
+    FlyingPuppetBones, FlyingPuppetLanding, DamageNumbers, PlayerDps,
+    DebugHud, EnemyAggression, PlayerCurrentAttack, PlayerAttackBpm }
 
 public static class DebugGizmoSettings
 {
@@ -67,10 +72,34 @@ public static class DebugGizmoSettings
     {
         if (!values.TryGetValue(group, out bool value))
         {
-            value = PlayerPrefs.GetInt("Debug.Gizmo." + group, 1) != 0;
+            value = PlayerPrefs.GetInt("Debug.Gizmo." + group,
+                PlayerPrefs.GetInt("Debug.Gizmo." + PreviousGroup(group), 1)) != 0;
             values[group] = value;
         }
         return value;
+    }
+
+    private static DebugGizmoGroup PreviousGroup(DebugGizmoGroup group)
+    {
+        switch (group)
+        {
+            case DebugGizmoGroup.PlayerHitboxes:
+            case DebugGizmoGroup.PlayerLockOn: return DebugGizmoGroup.PlayerCombat;
+            case DebugGizmoGroup.EnemyHitboxes:
+            case DebugGizmoGroup.EnemyDistance: return DebugGizmoGroup.EnemyCombat;
+            case DebugGizmoGroup.WorldObjects:
+            case DebugGizmoGroup.WorldLevers:
+            case DebugGizmoGroup.WorldCheckpoints:
+            case DebugGizmoGroup.WorldAreaTitles:
+            case DebugGizmoGroup.WorldPrompts: return DebugGizmoGroup.World;
+            case DebugGizmoGroup.EncounterTriggers:
+            case DebugGizmoGroup.EncounterSpawnAreas: return DebugGizmoGroup.Encounters;
+            case DebugGizmoGroup.SwingAnchors:
+            case DebugGizmoGroup.SwingRope: return DebugGizmoGroup.Swing;
+            case DebugGizmoGroup.FlyingPuppetBones:
+            case DebugGizmoGroup.FlyingPuppetLanding: return DebugGizmoGroup.FlyingPuppet;
+            default: return group;
+        }
     }
 
     public static void Set(DebugGizmoGroup group, bool value)

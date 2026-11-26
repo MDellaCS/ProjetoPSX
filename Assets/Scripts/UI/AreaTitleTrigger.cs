@@ -85,7 +85,7 @@ public class AreaTitleTrigger : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.World))
+        if (Application.isPlaying && !DebugGizmoSettings.Enabled(DebugGizmoGroup.WorldAreaTitles))
             return;
 
         Collider triggerCollider = GetComponent<Collider>();

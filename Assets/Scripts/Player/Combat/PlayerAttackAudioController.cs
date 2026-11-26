@@ -1,17 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Cuida dos sons de inicio e do primeiro acerto de cada hitbox do jogador.</summary>
+/// <summary>Cuida dos sons de inicio e do primeiro acerto de cada grupo e ciclo.</summary>
 [DisallowMultipleComponent]
 public sealed class PlayerAttackAudioController : MonoBehaviour
 {
     private PlayerAttackController attacks;
     private PlayerAttackRuntime currentRuntime;
-    private readonly Dictionary<PlayerHitboxTrackDefinition,
-        List<AudioPlaybackHandle>> trackStartPlaybacks = new();
-    private readonly HashSet<PlayerHitboxTrackDefinition> startedTracks = new();
-    private readonly HashSet<PlayerHitboxTrackDefinition> hitSoundPlayedTracks = new();
-    private readonly List<PlayerHitboxTrackDefinition> tracksToStop = new();
+    private readonly Dictionary<(int group, int cycle),
+        List<AudioPlaybackHandle>> groupStartPlaybacks = new();
+    private readonly Dictionary<PlayerHitboxTrackDefinition, int> activeTrackCycles = new();
+    private readonly HashSet<(int group, int cycle)> startedGroups = new();
+    private readonly HashSet<(int group, int cycle)> hitSoundPlayedGroups = new();
 
     internal void Initialize(PlayerAttackController attackController)
     {
@@ -49,27 +49,21 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
     }
 
     internal void SyncActiveHitboxTracks(PlayerAttackRuntime runtime,
-        HashSet<PlayerHitboxTrackDefinition> activeTracks)
+        Dictionary<PlayerHitboxTrackDefinition, int> activeTracks)
     {
         if (runtime == null || runtime != currentRuntime)
             return;
 
-        tracksToStop.Clear();
-        foreach (PlayerHitboxTrackDefinition track in startedTracks)
-        {
-            if (activeTracks.Contains(track))
-                continue;
-
-            tracksToStop.Add(track);
-        }
-        foreach (PlayerHitboxTrackDefinition track in tracksToStop)
-            startedTracks.Remove(track);
-
+        activeTrackCycles.Clear();
         GameplayAttackAudioSet audioSet = SfxAudio.CurrentSettings
             .GetPlayerAttackAudio(runtime.Definition.kind);
-        foreach (PlayerHitboxTrackDefinition track in activeTracks)
+        foreach (var entry in activeTracks)
         {
-            if (!startedTracks.Add(track))
+            PlayerHitboxTrackDefinition track = entry.Key;
+            int cycle = entry.Value;
+            activeTrackCycles[track] = cycle;
+            var group = (track.hitGroup, cycle);
+            if (!startedGroups.Add(group))
                 continue;
 
             AudioPlaybackHandle playback = SfxAudio.PlayTracked(
@@ -77,11 +71,11 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
                 transform.position);
             if (playback != null)
             {
-                if (!trackStartPlaybacks.TryGetValue(track,
+                if (!groupStartPlaybacks.TryGetValue(group,
                     out List<AudioPlaybackHandle> playbacks))
                 {
                     playbacks = new List<AudioPlaybackHandle>();
-                    trackStartPlaybacks.Add(track, playbacks);
+                    groupStartPlaybacks.Add(group, playbacks);
                 }
                 playbacks.Add(playback);
             }
@@ -103,8 +97,11 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
         if (runtime == null || runtime != currentRuntime)
             return;
 
-        StopTrackStartSound(track);
-        if (!hitSoundPlayedTracks.Add(track))
+        if (track == null || !activeTrackCycles.TryGetValue(track, out int cycle))
+            return;
+        var group = (track.hitGroup, cycle);
+        StopGroupStartSound(group);
+        if (!hitSoundPlayedGroups.Add(group))
             return;
 
         GameplayAttackAudioSet audioSet = SfxAudio.CurrentSettings
@@ -125,21 +122,21 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
         currentRuntime = null;
     }
 
-    private void StopTrackStartSound(PlayerHitboxTrackDefinition track)
+    private void StopGroupStartSound((int group, int cycle) group)
     {
-        if (trackStartPlaybacks.TryGetValue(track,
+        if (groupStartPlaybacks.TryGetValue(group,
             out List<AudioPlaybackHandle> playbacks))
         {
             foreach (AudioPlaybackHandle playback in playbacks)
                 playback?.Stop();
-            trackStartPlaybacks.Remove(track);
+            groupStartPlaybacks.Remove(group);
         }
     }
 
     private void StopAllTrackStartSounds()
     {
         foreach (List<AudioPlaybackHandle> playbacks in
-            trackStartPlaybacks.Values)
+            groupStartPlaybacks.Values)
         {
             foreach (AudioPlaybackHandle playback in playbacks)
                 playback?.Stop();
@@ -149,10 +146,10 @@ public sealed class PlayerAttackAudioController : MonoBehaviour
 
     private void ClearTrackStartSoundReferences()
     {
-        trackStartPlaybacks.Clear();
-        startedTracks.Clear();
-        hitSoundPlayedTracks.Clear();
-        tracksToStop.Clear();
+        groupStartPlaybacks.Clear();
+        activeTrackCycles.Clear();
+        startedGroups.Clear();
+        hitSoundPlayedGroups.Clear();
     }
 
 }
