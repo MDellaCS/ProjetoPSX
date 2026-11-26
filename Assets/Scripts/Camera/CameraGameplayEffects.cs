@@ -75,6 +75,10 @@ public sealed class CameraGameplayEffects : MonoBehaviour
         player = playerTarget;
         FogRuntime.Player = playerTarget;
         effects = stack;
+        if (!TryGetComponent(out CameraRain rain))
+            rain = gameObject.AddComponent<CameraRain>();
+        rain.enabled = true;
+        rain.Initialize();
         // Uma troca de cena destroi o Volume global antigo; sem isso a busca em
         // cache nunca seria refeita e o grading termico pararia silenciosamente.
         if (cachedGlobalVolume == null)
@@ -95,6 +99,8 @@ public sealed class CameraGameplayEffects : MonoBehaviour
 
     private void OnDisable()
     {
+        if (TryGetComponent(out CameraRain rain))
+            rain.enabled = false;
         if (FogRuntime.Player == player)
             FogRuntime.Player = null;
         if (effects != null)

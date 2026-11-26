@@ -18,6 +18,10 @@ public sealed class RetroEnvironmentProfile : ScriptableObject
     [Tooltip("Perfil de nevoa aplicado junto com este ambiente. Sem perfil, a nevoa fica desligada.")]
     public FogProfile fogProfile;
 
+    [Header("Chuva")]
+    [Tooltip("Perfil de chuva do ambiente. Sem perfil, a chuva para gradualmente.")]
+    public RainProfile rainProfile;
+
     public Color AmbientSky => ambientSkyColor * ambientIntensity;
     public Color AmbientGround => ambientGroundColor * ambientIntensity;
 

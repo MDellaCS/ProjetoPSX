@@ -17,3 +17,4 @@ MonoBehaviour:
   ambientIntensity: 6.74
   unityReflectionIntensity: 0
   fogProfile: {fileID: 11400000, guid: 8e9c90505c30f4d4c8e44766df6f1f9f, type: 2}
+  rainProfile: {fileID: 11400000, guid: f8c644650b024ab3aa4a5717db5921b3, type: 2}
