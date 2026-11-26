@@ -13,18 +13,23 @@ MonoBehaviour:
   m_Name: Rain Default
   m_EditorClassIdentifier: Assembly-CSharp::RainProfile
   enabled: 1
-  emissionRate: 350
-  maxParticles: 1200
-  transitionTime: 2
-  volumeSize: {x: 18, y: 12, z: 18}
+  emissionRate: 99999
+  maxParticles: 10000
+  transitionTime: 0
+  volumeSize: {x: 70, y: 15, z: 70}
   heightOffset: 1
   movementLead: 2
-  lifetime: {x: 0.5, y: 1.1}
-  speed: {x: 12, y: 18}
-  angle: 8
-  direction: 0
+  lifetime: {x: 0.5, y: 3}
+  speed: {x: 21.23, y: 30.9}
+  angleRange: {x: 15, y: 80}
+  directionRange: {x: 2.27, y: 39.1}
+  legacyAngle: -1
+  legacyDirection: -1
   dropWidth: {x: 0.012, y: 0.025}
-  lengthScale: 12
-  velocityStretch: 0.015
-  color: {r: 0.72, g: 0.8, b: 0.88, a: 0.38}
+  lengthScale: 0.01
+  velocityStretch: 0.03
+  color: {r: 0.7216981, g: 0.8714908, b: 1, a: 0.38}
+  transparency: 0.578
+  cameraSafeRadius: 8
+  cameraSafeFade: 8
   freeformStretching: 1

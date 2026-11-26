@@ -15,7 +15,8 @@ Shader "Hidden/ProjetoPSX/Environment Fog"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
             TEXTURE2D(_PSXFogCurves); SAMPLER(sampler_PSXFogCurves);
             float4 _PSXFogColor, _PSXFogColorRange, _PSXFogBlurRange, _PSXFogOrigin;
-            float4 _PSXFogVolumeColor, _PSXFogVolumeParams, _PSXFogNoise, _PSXFogWind;
+            float _PSXFogAnimationTime;
+            float4 _PSXFogVolumeColor, _PSXFogVolumeParams, _PSXFogVolumeRange, _PSXFogVolumeHeight, _PSXFogNoise, _PSXFogWind;
 
             float Hash(float3 p) { return frac(sin(dot(p, float3(127.1, 311.7, 74.7))) * 43758.5453); }
             float Noise(float3 p)
@@ -29,7 +30,7 @@ Shader "Hidden/ProjetoPSX/Environment Fog"
                 float t = saturate((d - range.x) / max(.01, range.y - range.x));
                 float2 uv = float2((t * 127.0 + .5) / 128.0, .5);
                 float4 c = SAMPLE_TEXTURE2D(_PSXFogCurves, sampler_PSXFogCurves, uv);
-                return lerp(range.z, range.w, channel == 0 ? c.r : c.g);
+                return lerp(range.z, range.w, channel == 0 ? c.r : (channel == 1 ? c.g : c.b));
             }
             half4 Frag(Varyings input) : SV_Target
             {
@@ -38,16 +39,18 @@ Shader "Hidden/ProjetoPSX/Environment Fog"
                 half4 scene = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
                 float raw = SampleSceneDepth(uv);
                 #if UNITY_REVERSED_Z
-                if (raw <= .00001) return scene;
+                bool hasGeometry = raw > .00001;
+                raw = hasGeometry ? raw : .00001;
                 #else
-                if (raw >= .99999) return scene;
+                bool hasGeometry = raw < .99999;
+                raw = hasGeometry ? raw : .99999;
                 raw = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, raw);
                 #endif
                 float3 world = ComputeWorldSpacePosition(uv, raw, UNITY_MATRIX_I_VP);
                 float3 ray = world - _WorldSpaceCameraPos;
                 float dist = length(ray);
                 float fogDistance = distance(world, _PSXFogOrigin.xyz);
-                float blur = max(0, Curve(fogDistance, _PSXFogBlurRange, 1));
+                float blur = hasGeometry ? max(0, Curve(fogDistance, _PSXFogBlurRange, 1)) : 0;
                 if (blur > .001)
                 {
                     float2 pixel = _BlitTexture_TexelSize.xy * blur;
@@ -64,7 +67,8 @@ Shader "Hidden/ProjetoPSX/Environment Fog"
                     }
                     scene.rgb = sum / weight;
                 }
-                scene.rgb = lerp(scene.rgb, _PSXFogColor.rgb, saturate(Curve(fogDistance, _PSXFogColorRange, 0)));
+                if (hasGeometry)
+                    scene.rgb = lerp(scene.rgb, _PSXFogColor.rgb, saturate(Curve(fogDistance, _PSXFogColorRange, 0)));
                 if (_PSXFogVolumeParams.x > .00001 && _PSXFogVolumeParams.y > .00001 && dist > .001)
                 {
                     float lengthRay = min(dist, _PSXFogNoise.z);
@@ -76,11 +80,14 @@ Shader "Hidden/ProjetoPSX/Environment Fog"
                     {
                         float3 p = _WorldSpaceCameraPos + direction * ((i + .5) * stepSize);
                         float h = (p.y - _PSXFogVolumeParams.z) / max(.01, _PSXFogVolumeParams.w);
-                        float layer = smoothstep(0, .15, h) * (1.0 - smoothstep(.5, 1, h));
-                        float n = Noise((p - _PSXFogWind.xyz * _Time.y) * _PSXFogNoise.x);
+                        float limited = smoothstep(0, .15, h) * (1.0 - smoothstep(.5, 1, h));
+                        float heightLimit = lerp(_PSXFogVolumeHeight.x, _PSXFogVolumeHeight.y, _PSXFogVolumeHeight.z);
+                        float layer = lerp(1.0, limited, heightLimit);
+                        float n = Noise((p - _PSXFogWind.xyz * _PSXFogAnimationTime) * _PSXFogNoise.x);
                         accumulated += layer * lerp(1.0, n * 2.0, _PSXFogNoise.y) * stepSize;
                     }
                     float opacity = min(_PSXFogVolumeParams.y, 1.0 - exp(-accumulated * _PSXFogVolumeParams.x));
+                    opacity *= saturate(Curve(fogDistance, _PSXFogVolumeRange, 2));
                     scene.rgb = lerp(scene.rgb, _PSXFogVolumeColor.rgb, saturate(opacity));
                 }
                 return scene;

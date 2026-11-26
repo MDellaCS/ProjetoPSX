@@ -124,14 +124,14 @@ public sealed class PauseMenuHUD : MonoBehaviour
         if (instance == this) instance = null;
         GameSettingsService.Changed -= RefreshScale;
         KeyItemInventory.Changed -= RefreshInventory;
-        Resume();
+        Resume(false);
     }
 
     private void OnDestroy()
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
-        Resume();
+        Resume(false);
     }
 
     private void Update()
@@ -884,13 +884,16 @@ public sealed class PauseMenuHUD : MonoBehaviour
             ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
-    public void Resume()
+    public void Resume() => Resume(true);
+
+    private void Resume(bool playSound)
     {
         if (!IsOpen)
             return;
         if (settingsOpen)
-            CloseSettings();
-        MenuUIAudio.Play(MenuAudioCue.MenuClose);
+            CloseSettings(playSound);
+        if (playSound)
+            MenuUIAudio.Play(MenuAudioCue.MenuClose);
         IsOpen = false;
         hoveredIndex = -1;
         pending = PendingConfirm.None;
@@ -918,9 +921,12 @@ public sealed class PauseMenuHUD : MonoBehaviour
     }
 
     // As alteracoes sao salvas a cada mudanca; Voltar so fecha a tela.
-    private void CloseSettings()
+    private void CloseSettings() => CloseSettings(true);
+
+    private void CloseSettings(bool playSound)
     {
-        MenuUIAudio.Play(MenuAudioCue.Back);
+        if (playSound)
+            MenuUIAudio.Play(MenuAudioCue.Back);
         GameInputBindings.CancelRebind();
         pending = PendingConfirm.None;
         settingsOpen = false;

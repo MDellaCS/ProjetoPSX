@@ -10,9 +10,12 @@ public static class FogRuntime
     private static readonly int ColorId = Shader.PropertyToID("_PSXFogColor");
     private static readonly int ColorRangeId = Shader.PropertyToID("_PSXFogColorRange");
     private static readonly int BlurRangeId = Shader.PropertyToID("_PSXFogBlurRange");
+    private static readonly int VolumeRangeId = Shader.PropertyToID("_PSXFogVolumeRange");
+    private static readonly int VolumeHeightId = Shader.PropertyToID("_PSXFogVolumeHeight");
     private static readonly int VolumeColorId = Shader.PropertyToID("_PSXFogVolumeColor");
     private static readonly int VolumeParamsId = Shader.PropertyToID("_PSXFogVolumeParams");
     private static readonly int NoiseId = Shader.PropertyToID("_PSXFogNoise");
+    private static readonly int AnimationTimeId = Shader.PropertyToID("_PSXFogAnimationTime");
     private static readonly int WindId = Shader.PropertyToID("_PSXFogWind");
     private static readonly int CurveId = Shader.PropertyToID("_PSXFogCurves");
     private static readonly Color[] CurvePixels = new Color[CurveSamples];
@@ -21,12 +24,16 @@ public static class FogRuntime
     private static FogProfile previous;
     private static float transitionStart;
     private static bool dirty = true;
+    private static float animationTime;
+    private static int animationFrame = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()
     {
         RenderPipelineManager.beginCameraRendering -= UpdateCamera;
         current = previous = null;
+        animationTime = 0f;
+        animationFrame = -1;
         Player = null;
         dirty = true;
         if (curves != null) Object.Destroy(curves);
@@ -47,6 +54,12 @@ public static class FogRuntime
     private static void UpdateCamera(ScriptableRenderContext context, Camera camera)
     {
         if (camera.cameraType != CameraType.Game) return;
+        if (animationFrame != Time.frameCount)
+        {
+            animationFrame = Time.frameCount;
+            animationTime += GamePauseController.IsPaused ? Time.unscaledDeltaTime : Time.deltaTime;
+        }
+        Shader.SetGlobalFloat(AnimationTimeId, animationTime);
         FogProfile target = RetroLightSystem.ActiveEnvironment != null ? RetroLightSystem.ActiveEnvironment.fogProfile : null;
         if (target != current)
         {
@@ -79,7 +92,7 @@ public static class FogRuntime
             for (int i = 0; i < CurveSamples; i++)
             {
                 float x = (float)i / (CurveSamples - 1);
-                CurvePixels[i] = new Color(Value(Curve(a.colorCurve, x), Curve(b.colorCurve, x), t), Value(Curve(a.blurCurve, x), Curve(b.blurCurve, x), t), 0, 1);
+                CurvePixels[i] = new Color(Value(Curve(a.colorCurve, x), Curve(b.colorCurve, x), t), Value(Curve(a.blurCurve, x), Curve(b.blurCurve, x), t), Value(Curve(a.volumeCurve, x), Curve(b.volumeCurve, x), t), 1);
             }
             curves.SetPixels(CurvePixels);
             curves.Apply(false, false);
@@ -95,6 +108,8 @@ public static class FogRuntime
         Shader.SetGlobalColor(ColorId, Color.Lerp(a.color.linear, b.color.linear, t));
         Shader.SetGlobalVector(ColorRangeId, new Vector4(Value(a.colorStart,b.colorStart,t), Value(a.colorEnd,b.colorEnd,t), Value(a.colorEnabled ? a.colorMin : 0,b.colorEnabled ? b.colorMin : 0,t) * fade, Value(a.colorEnabled ? a.colorMax : 0,b.colorEnabled ? b.colorMax : 0,t) * fade));
         Shader.SetGlobalVector(BlurRangeId, new Vector4(Value(a.blurStart,b.blurStart,t), Value(a.blurEnd,b.blurEnd,t), Value(a.blurEnabled ? a.blurMin*a.blurRadius : 0,b.blurEnabled ? b.blurMin*b.blurRadius : 0,t) * fade, Value(a.blurEnabled ? a.blurMax*a.blurRadius : 0,b.blurEnabled ? b.blurMax*b.blurRadius : 0,t) * fade));
+        Shader.SetGlobalVector(VolumeRangeId, new Vector4(Value(a.volumeStart,b.volumeStart,t), Value(a.volumeEnd,b.volumeEnd,t), Value(a.volumeMin,b.volumeMin,t), Value(a.volumeMax,b.volumeMax,t)));
+        Shader.SetGlobalVector(VolumeHeightId, new Vector4(a.limitVolumeHeight ? 1f : 0f, b.limitVolumeHeight ? 1f : 0f, t, 0f));
         Shader.SetGlobalColor(VolumeColorId, Color.Lerp(a.volumetricColor.linear,b.volumetricColor.linear,t));
         Shader.SetGlobalVector(VolumeParamsId, new Vector4(Value(a.volumetricEnabled ? a.density : 0,b.volumetricEnabled ? b.density : 0,t) * fade, Value(a.volumetricEnabled ? a.volumetricOpacity : 0,b.volumetricEnabled ? b.volumetricOpacity : 0,t) * fade, Value(a.baseHeight,b.baseHeight,t), Value(a.height,b.height,t)));
         Shader.SetGlobalVector(NoiseId, new Vector4(Value(a.noiseScale,b.noiseScale,t),Value(a.noiseStrength,b.noiseStrength,t),Value(a.maxDistance,b.maxDistance,t),Value(a.steps,b.steps,t)));

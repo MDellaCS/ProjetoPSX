@@ -17,6 +17,7 @@ public static class RetroLightingRegression
         try
         {
             CheckAssets();
+            CheckSkybox();
             CheckShader();
             CheckFalloff();
             CheckFlicker();
@@ -41,6 +42,66 @@ public static class RetroLightingRegression
     {
         Run();
         EditorApplication.Exit(0);
+    }
+
+    public static void RunSkyboxBatch()
+    {
+        try
+        {
+            CheckSkybox();
+            Debug.Log("PASS: Retro environment skybox regression.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            EditorApplication.Exit(1);
+        }
+    }
+
+    private static void CheckSkybox()
+    {
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+        Type system = typeof(RetroLightSystem);
+        var apply = system.GetMethod("ApplySkybox", flags);
+        var capture = system.GetField("sceneSkyboxCaptured", flags);
+        var sceneSkybox = system.GetField("sceneSkybox", flags);
+        var loaded = system.GetMethod("OnSceneLoaded", flags);
+        var dirty = system.GetField("environmentDirty", flags);
+        Material oldSkybox = RenderSettings.skybox;
+        object oldDirty = dirty.GetValue(null);
+        object oldCapture = capture.GetValue(null);
+        object oldSceneSkybox = sceneSkybox.GetValue(null);
+        Shader shader = Shader.Find("Skybox/Procedural");
+        Check(shader != null, "Shader de teste de skybox indisponivel.");
+        Material original = new(shader), first = new(shader), second = new(shader), nextScene = new(shader);
+        try
+        {
+            capture.SetValue(null, false);
+            RenderSettings.skybox = original;
+            apply.Invoke(null, new object[] { first });
+            Check(RenderSettings.skybox == first, "O material do ambiente deve substituir o skybox da cena.");
+            apply.Invoke(null, new object[] { second });
+            Check(RenderSettings.skybox == second, "A troca de perfil deve atualizar o skybox.");
+            apply.Invoke(null, new object[] { null });
+            Check(RenderSettings.skybox == original, "Perfil sem skybox deve restaurar o skybox da cena.");
+            RenderSettings.skybox = nextScene;
+            loaded.Invoke(null, new object[] { default(UnityEngine.SceneManagement.Scene), UnityEngine.SceneManagement.LoadSceneMode.Single });
+            apply.Invoke(null, new object[] { first });
+            apply.Invoke(null, new object[] { null });
+            Check(RenderSettings.skybox == nextScene, "Ao trocar de cena, deve restaurar o novo skybox da cena.");
+        }
+        finally
+        {
+            RenderSettings.skybox = oldSkybox;
+            dirty.SetValue(null, oldDirty);
+            capture.SetValue(null, oldCapture);
+            sceneSkybox.SetValue(null, oldSceneSkybox);
+            UnityEngine.Object.DestroyImmediate(original);
+            UnityEngine.Object.DestroyImmediate(first);
+            UnityEngine.Object.DestroyImmediate(second);
+            UnityEngine.Object.DestroyImmediate(nextScene);
+        }
     }
 
     private static void CheckAssets()

@@ -75,7 +75,7 @@ public static class RetroMaterialSwapper
                 continue;
             if (!Cache.TryGetValue(source, out Material retro) || retro == null)
             {
-                retro = new Material(source) { name = source.name + " (Retro)" };
+                retro = RetroMaterialConversion.CreateCopy(source);
                 if (!RetroMaterialConversion.Convert(retro))
                 {
                     Object.Destroy(retro);

@@ -13,6 +13,10 @@ public sealed class CameraRain : MonoBehaviour
     private int configuredRevision = -1;
     private float rate;
     private float rateVelocity;
+    private float emissionCarry;
+    private MaterialPropertyBlock properties;
+    private static readonly int SafeRadiusId = Shader.PropertyToID("_RainSafeRadius");
+    private static readonly int SafeFadeId = Shader.PropertyToID("_RainSafeFade");
     private Vector3 previousPosition;
     private bool hasPosition;
     private Material material;
@@ -48,7 +52,10 @@ public sealed class CameraRain : MonoBehaviour
         main.gravityModifier = 0f;
         main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
         var shape = particles.shape;
-        shape.shapeType = ParticleSystemShapeType.Box;
+        shape.enabled = false;
+        var emission = particles.emission;
+        emission.enabled = false;
+        properties = new MaterialPropertyBlock();
         var fade = particles.colorOverLifetime;
         fade.enabled = true;
         var gradient = new Gradient();
@@ -73,8 +80,6 @@ public sealed class CameraRain : MonoBehaviour
         float duration = profile != null ? Mathf.Max(0f, profile.transitionTime) : configured != null ? Mathf.Max(0f, configured.transitionTime) : 0f;
         rate = duration <= 0f ? desiredRate : Mathf.SmoothDamp(rate, desiredRate, ref rateVelocity, duration, Mathf.Infinity, Time.unscaledDeltaTime);
         if (Mathf.Abs(rate - desiredRate) < .01f) rate = desiredRate;
-        var emission = particles.emission;
-        emission.rateOverTime = rate;
         RainProfile active = profile != null ? profile : configured;
         if (active == null) return;
         Vector3 cameraPosition = transform.position;
@@ -86,9 +91,15 @@ public sealed class CameraRain : MonoBehaviour
             particles.Clear(true);
         previousPosition = cameraPosition;
         hasPosition = true;
+        bool useUnscaledTime = GamePauseController.IsPaused || PauseMenuHUD.IsMainMenuOpen;
+        var main = particles.main;
+        if (main.useUnscaledTime != useUnscaledTime)
+            main.useUnscaledTime = useUnscaledTime;
         if (rate > .01f && !particles.isPlaying) particles.Play();
         else if (rate <= .01f && desiredRate == 0f && particles.isPlaying)
             particles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        if (rate > .01f && particles.isPlaying)
+            EmitDrops(active, center, useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime);
     }
 
     private void Configure(RainProfile value)
@@ -99,28 +110,40 @@ public sealed class CameraRain : MonoBehaviour
         main.maxParticles = Mathf.Clamp(value.maxParticles, 1, 10000);
         main.startLifetime = new ParticleSystem.MinMaxCurve(Mathf.Max(.01f, value.lifetime.x), Mathf.Max(value.lifetime.x, value.lifetime.y));
         main.startSize = new ParticleSystem.MinMaxCurve(Mathf.Max(.001f, value.dropWidth.x), Mathf.Max(value.dropWidth.x, value.dropWidth.y));
-        main.startColor = value.color;
-        var shape = particles.shape;
-        shape.scale = new Vector3(Mathf.Max(.1f, value.volumeSize.x), Mathf.Max(.1f, value.volumeSize.y), Mathf.Max(.1f, value.volumeSize.z));
-        float inclination = Mathf.Clamp(value.angle, 0f, 80f) * Mathf.Deg2Rad;
-        float azimuth = value.direction * Mathf.Deg2Rad;
-        Vector3 direction = new Vector3(Mathf.Sin(inclination) * Mathf.Sin(azimuth), -Mathf.Cos(inclination), Mathf.Sin(inclination) * Mathf.Cos(azimuth));
-        var velocity = particles.velocityOverLifetime;
-        velocity.enabled = true;
-        velocity.space = ParticleSystemSimulationSpace.World;
-        velocity.x = direction.x;
-        velocity.y = direction.y;
-        velocity.z = direction.z;
-        velocity.speedModifier = new ParticleSystem.MinMaxCurve(Mathf.Max(.01f, value.speed.x), Mathf.Max(value.speed.x, value.speed.y));
+        Color color = value.color;
+        color.a *= 1f - Mathf.Clamp01(value.transparency);
+        main.startColor = color;
+        particleRenderer.GetPropertyBlock(properties);
+        properties.SetFloat(SafeRadiusId, Mathf.Max(0f, value.cameraSafeRadius));
+        properties.SetFloat(SafeFadeId, Mathf.Max(0f, value.cameraSafeFade));
+        particleRenderer.SetPropertyBlock(properties);
         particleRenderer.lengthScale = Mathf.Max(.01f, value.lengthScale);
         particleRenderer.velocityScale = Mathf.Max(0f, value.velocityStretch);
         particleRenderer.freeformStretching = value.freeformStretching;
     }
 
+    private void EmitDrops(RainProfile value, Vector3 center, float deltaTime)
+    {
+        emissionCarry += rate * Mathf.Max(0f, deltaTime);
+        int count = Mathf.Min(Mathf.FloorToInt(emissionCarry), Mathf.Max(0, value.maxParticles - particles.particleCount));
+        emissionCarry -= Mathf.Floor(emissionCarry);
+        Vector3 half = new Vector3(Mathf.Max(.1f, value.volumeSize.x), Mathf.Max(.1f, value.volumeSize.y), Mathf.Max(.1f, value.volumeSize.z)) * .5f;
+        var emit = new ParticleSystem.EmitParams();
+        for (int i = 0; i < count; i++)
+        {
+            float inclination = Random.Range(value.angleRange.x, value.angleRange.y) * Mathf.Deg2Rad;
+            float azimuth = Random.Range(value.directionRange.x, value.directionRange.y) * Mathf.Deg2Rad;
+            float speed = Random.Range(value.speed.x, value.speed.y);
+            emit.position = center + new Vector3(Random.Range(-half.x, half.x), Random.Range(-half.y, half.y), Random.Range(-half.z, half.z));
+            emit.velocity = new Vector3(Mathf.Sin(inclination) * Mathf.Sin(azimuth), -Mathf.Cos(inclination), Mathf.Sin(inclination) * Mathf.Cos(azimuth)) * speed;
+            particles.Emit(emit, 1);
+        }
+    }
+
     private void OnDisable()
     {
         if (particles != null) particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        rate = rateVelocity = 0f;
+        rate = rateVelocity = emissionCarry = 0f;
         hasPosition = false;
     }
 }

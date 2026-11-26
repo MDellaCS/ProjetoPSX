@@ -43,6 +43,11 @@ public static class RetroMaterialConversion
         Shader shader = RetroShader;
         if (shader == null || !CanConvert(material))
             return false;
+#if UNITY_EDITOR
+        // Variantes herdam o shader do material pai e nao podem troca-lo diretamente.
+        if (material.isVariant)
+            return false;
+#endif
 
         string sourceName = material.shader.name;
         Texture baseMap = GetTexture(material, "_BaseMap", "_MainTex");
@@ -77,6 +82,17 @@ public static class RetroMaterialConversion
         material.SetFloat("_UseVertexColor", sourceName.Contains("Vertex Color") ? 1f : 0f);
         material.renderQueue = -1;
         return true;
+    }
+
+    /// <summary>Cria um material independente, preservando os valores efetivos da origem.</summary>
+    public static Material CreateCopy(Material source)
+    {
+        if (!CanConvert(source))
+            return null;
+
+        Material copy = new Material(source.shader) { name = source.name + " (Retro)" };
+        copy.CopyPropertiesFromMaterial(source);
+        return copy;
     }
 
     private static Texture GetTexture(Material material, params string[] names)

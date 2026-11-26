@@ -8,7 +8,7 @@ public sealed class FogProfile : ScriptableObject
     [Header("Transicao")]
     [Tooltip("Tempo em segundos para misturar os valores ao trocar de ambiente.")]
     [Min(0f)] public float transitionTime = 1f;
-    [Tooltip("Define se a distancia para cor e desfoque e medida a partir da camera ou do jogador; sem jogador, usa a camera.")]
+    [Tooltip("Define se a distancia para cor, desfoque e nevoa volumetrica e medida a partir da camera ou do jogador; sem jogador, usa a camera.")]
     public FogDistanceOrigin distanceOrigin;
     [Header("Cor por distancia")]
     [Tooltip("Ativa a coloracao gradual do cenario distante.")]
@@ -49,9 +49,21 @@ public sealed class FogProfile : ScriptableObject
     [Min(0)] public float density = .025f;
     [Tooltip("Opacidade maxima da camada volumetrica.")]
     [Range(0, 1)] public float volumetricOpacity = .5f;
-    [Tooltip("Altura mundial da base da camada volumetrica, em metros.")]
+    [Tooltip("Distancia da origem escolhida onde a intensidade volumetrica comeca a mudar, em metros.")]
+    [Min(0f)] public float volumeStart = 8f;
+    [Tooltip("Distancia da origem escolhida onde a intensidade volumetrica atinge o valor final, em metros.")]
+    [Min(.01f)] public float volumeEnd = 60f;
+    [Tooltip("Intensidade volumetrica na distancia inicial.")]
+    [Range(0f, 1f)] public float volumeMin;
+    [Tooltip("Intensidade volumetrica na distancia final.")]
+    [Range(0f, 1f)] public float volumeMax = 1f;
+    [Tooltip("Curva da intensidade volumetrica entre as distancias inicial e final.")]
+    public AnimationCurve volumeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [Tooltip("Limita a nevoa entre alturas mundiais especificas. Desativado preenche todas as alturas.")]
+    public bool limitVolumeHeight;
+    [Tooltip("Altura mundial da base da camada volumetrica, quando o limite de altura esta ativo, em metros.")]
     public float baseHeight;
-    [Tooltip("Espessura da camada acima da base, em metros.")]
+    [Tooltip("Altura da camada acima da base quando o limite de altura esta ativo, em metros.")]
     [Min(.01f)] public float height = 5f;
     [Tooltip("Distancia maxima acumulada pela nevoa volumetrica, em metros.")]
     [Min(1)] public float maxDistance = 40f;
@@ -68,6 +80,8 @@ public sealed class FogProfile : ScriptableObject
     {
         colorEnd = Mathf.Max(colorStart + .01f, colorEnd);
         blurEnd = Mathf.Max(blurStart + .01f, blurEnd);
+        volumeStart = Mathf.Max(0f, volumeStart);
+        volumeEnd = Mathf.Max(volumeStart + .01f, volumeEnd);
         height = Mathf.Max(.01f, height);
         maxDistance = Mathf.Max(1f, maxDistance);
         steps = Mathf.Clamp(steps, 2, 16);

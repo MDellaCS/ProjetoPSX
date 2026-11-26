@@ -45,7 +45,7 @@ public sealed class ItemAcquisitionModalHUD : MonoBehaviour
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
-        Close();
+        Close(false);
         if (instance == this)
             instance = null;
     }
@@ -100,7 +100,9 @@ public sealed class ItemAcquisitionModalHUD : MonoBehaviour
             Close();
     }
 
-    public void Close()
+    public void Close() => Close(true);
+
+    private void Close(bool playSound)
     {
         if (!isOpen)
             return;
@@ -111,7 +113,8 @@ public sealed class ItemAcquisitionModalHUD : MonoBehaviour
         UnityEngine.Cursor.lockState = previousCursorLock;
         UnityEngine.Cursor.visible = previousCursorVisible;
         lastCloseFrame = Time.frameCount;
-        MenuUIAudio.Play(MenuAudioCue.Back);
+        if (playSound)
+            MenuUIAudio.Play(MenuAudioCue.Back);
     }
 
     private void EnsureUI(VisualElement visualRoot)

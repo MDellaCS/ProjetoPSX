@@ -76,6 +76,8 @@ public static class RetroLightSystem
 
     private static bool hooked;
     private static bool environmentDirty = true;
+    private static Material sceneSkybox;
+    private static bool sceneSkyboxCaptured;
     private static int selectedEnvironmentIndex = -1;
 
     public static int RegisteredLightCount => Lights.Count;
@@ -93,6 +95,8 @@ public static class RetroLightSystem
         VisibleLightCount = 0;
         selectedEnvironmentIndex = -1;
         environmentDirty = true;
+        sceneSkybox = null;
+        sceneSkyboxCaptured = false;
         hooked = false;
     }
 
@@ -226,7 +230,12 @@ public static class RetroLightSystem
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // A cena carregada traz a propria sonda ambiente; reaplica o ambiente retro.
+        // Cenas carregadas em modo Single trazem suas proprias configuracoes de renderizacao.
+        if (mode == LoadSceneMode.Single)
+        {
+            sceneSkybox = RenderSettings.skybox;
+            sceneSkyboxCaptured = true;
+        }
         environmentDirty = true;
     }
 
@@ -243,7 +252,22 @@ public static class RetroLightSystem
         UploadEnvironment(settings, environment);
         UploadLights(settings, camera);
         if (environmentDirty && Application.isPlaying)
+        {
+            ApplySkybox(environment != null ? environment.skyboxMaterial : null);
             ApplyUnityRenderSettings(settings, environment);
+        }
+    }
+
+    private static void ApplySkybox(Material overrideMaterial)
+    {
+        if (!sceneSkyboxCaptured)
+        {
+            sceneSkybox = RenderSettings.skybox;
+            sceneSkyboxCaptured = true;
+        }
+        Material target = overrideMaterial != null ? overrideMaterial : sceneSkybox;
+        if (RenderSettings.skybox != target)
+            RenderSettings.skybox = target;
     }
 
     private static void UploadEnvironment(RetroLightingSettings settings, RetroEnvironmentProfile environment)

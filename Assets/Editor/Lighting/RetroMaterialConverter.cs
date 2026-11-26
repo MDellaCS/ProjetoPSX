@@ -35,7 +35,7 @@ public static class RetroMaterialConverter
             Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null || material.shader == null || material.shader.name == ShaderName)
                 continue;
-            if (!CanConvert(material))
+            if (!CanConvert(material) || material.isVariant)
             {
                 skipped.Add(path + " (" + material.shader.name + ")");
                 continue;
@@ -57,7 +57,7 @@ public static class RetroMaterialConverter
         }
         AssetDatabase.SaveAssets();
         Debug.Log($"Retro Lit: {converted} materiais convertidos, {models} modelos reimportados. " +
-            $"Ignorados (shader nao suportado ou transparente): {skipped.Count}\n" + string.Join("\n", skipped));
+            $"Ignorados (shader nao suportado, transparente ou variante): {skipped.Count}\n" + string.Join("\n", skipped));
     }
 
     [MenuItem(MenuRoot + "Substituir materiais padrao nas cenas abertas")]
@@ -123,7 +123,7 @@ public static class RetroMaterialConverter
         if (existing != null)
             return existing;
 
-        Material copy = new(source);
+        Material copy = RetroMaterialConversion.CreateCopy(source);
         if (!Convert(copy))
             return null;
         AssetDatabase.CreateAsset(copy, path);

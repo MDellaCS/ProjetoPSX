@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 31ed170670914140a1af0a2fe4995f2a, type: 3}
   m_Name: ProjetoPSX
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollowProfile
-  distance: 5.2
-  yaw: 0
-  pitch: 22.1
-  fieldOfView: 60
+  distance: 1.2
+  yaw: -86.3
+  pitch: 48.4
+  fieldOfView: 140.3

@@ -14,6 +14,10 @@ public sealed class RetroEnvironmentProfile : ScriptableObject
     [Tooltip("Intensidade dos reflexos do skybox nos materiais URP Lit (fora do Retro Lit). Zero remove o brilho azulado do skybox padrao.")]
     [Range(0f, 1f)] public float unityReflectionIntensity;
 
+    [Header("Skybox")]
+    [Tooltip("Material de skybox aplicado durante este ambiente. Se vazio, usa o skybox definido na cena.")]
+    public Material skyboxMaterial;
+
     [Header("Nevoa")]
     [Tooltip("Perfil de nevoa aplicado junto com este ambiente. Sem perfil, a nevoa fica desligada.")]
     public FogProfile fogProfile;

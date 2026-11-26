@@ -50,12 +50,12 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         panelRenderer.RegisterUIReloadCallback(HandleUIReload);
         EnsureUI(GetComponent<PauseMenuHUD>()?.UIRoot);
     }
-    private void OnDisable() => Close();
+    private void OnDisable() => Close(false);
     private void OnDestroy()
     {
         if (panelRenderer != null)
             panelRenderer.UnregisterUIReloadCallback(HandleUIReload);
-        Close();
+        Close(false);
         if (instance == this) instance = null;
     }
     public static bool Open(CurrencyShopTerminal source, Transform player)
@@ -114,7 +114,9 @@ public sealed class CurrencyShopHUD : MonoBehaviour
     {
         if (instance != null && instance.terminal == source) instance.Close();
     }
-    public void Close()
+    public void Close() => Close(true);
+
+    private void Close(bool playSound)
     {
         if (!isOpen) return;
         // Cada tela libera somente seu proprio pedido de pausa.
@@ -128,7 +130,8 @@ public sealed class CurrencyShopHUD : MonoBehaviour
         if (overlay != null) overlay.style.display = DisplayStyle.None;
         if (wasOpen)
         {
-            MenuUIAudio.Play(MenuAudioCue.Back);
+            if (playSound)
+                MenuUIAudio.Play(MenuAudioCue.Back);
             lastCloseFrame = Time.frameCount;
             UnityEngine.Cursor.lockState = previousCursorLock;
             UnityEngine.Cursor.visible = previousCursorVisible;
